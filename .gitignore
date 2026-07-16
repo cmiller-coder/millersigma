@@ -1,0 +1,18 @@
+# Secrets — never commit
+.env
+.env.*
+*.pem
+/tmp/.sigma_token
+
+# Upstream skill mirror (cloned on demand by scripts/refresh-vendor.sh)
+vendor/
+
+# OS / editor junk
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc

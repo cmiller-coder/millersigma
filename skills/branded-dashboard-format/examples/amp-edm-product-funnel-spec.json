@@ -1,0 +1,772 @@
+{
+  "workbookId": "b3158e5a-1496-4d46-93b7-ba5730c5d46c",
+  "name": "AMP — Product Performance (EDM)",
+  "url": "https://app.sigmacomputing.com/admarketplace/workbook/AMP-Product-Performance-EDM-5rVtCc9RuzJjF5D7K1GDY8",
+  "documentVersion": 4,
+  "latestDocumentVersion": 4,
+  "ownerId": "QlzQX1HtNbg03NZjiwDdpDYFWyUfA",
+  "folderId": "00000000-0000-0000-0000-000000000000",
+  "createdBy": "QlzQX1HtNbg03NZjiwDdpDYFWyUfA",
+  "updatedBy": "QlzQX1HtNbg03NZjiwDdpDYFWyUfA",
+  "createdAt": "2026-06-27T22:37:47.017Z",
+  "updatedAt": "2026-06-27T22:58:59.083Z",
+  "schemaVersion": 1,
+  "pages": [
+    {
+      "id": "page-funnel",
+      "name": "Funnel Overview",
+      "elements": [
+        {
+          "id": "container-header",
+          "kind": "container"
+        },
+        {
+          "id": "img-logo",
+          "kind": "image",
+          "url": "https://cdn.prod.website-files.com/64d626ea4b535c7a17b83b78/6a1e79c2d7675464a178bed9_adMarketplace-logo.svg"
+        },
+        {
+          "id": "text-title",
+          "kind": "text",
+          "body": "## **Product Performance**\n\nAd funnel: requests → impressions → clicks → conversions · EDM semantic model",
+          "verticalAlign": "middle"
+        },
+        {
+          "kind": "control",
+          "controlId": "Date-Range",
+          "id": "ctrl-date",
+          "name": "Date Range",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-base"
+              },
+              "columnId": "col-reportdate"
+            }
+          ],
+          "controlType": "date-range",
+          "mode": "between",
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "c-dategrain",
+          "id": "ctrl-dategrain",
+          "name": "Date Grain",
+          "controlType": "segmented",
+          "source": {
+            "kind": "manual",
+            "valueType": "text",
+            "values": [
+              "Day",
+              "Week",
+              "Month"
+            ],
+            "labels": [
+              "Day",
+              "Week",
+              "Month"
+            ]
+          },
+          "value": "Month"
+        },
+        {
+          "id": "container-filters",
+          "kind": "container"
+        },
+        {
+          "kind": "control",
+          "controlId": "Publisher",
+          "id": "ctrl-pub",
+          "name": "Publisher Name",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-base"
+              },
+              "columnId": "col-pub"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-base"
+            },
+            "columnId": "col-pub"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Placement",
+          "id": "ctrl-placement",
+          "name": "Placement Name",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-base"
+              },
+              "columnId": "col-placement"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-base"
+            },
+            "columnId": "col-placement"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Geo",
+          "id": "ctrl-geo",
+          "name": "Request Geo",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-base"
+              },
+              "columnId": "col-geo"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-base"
+            },
+            "columnId": "col-geo"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Query-Intent",
+          "id": "ctrl-intent",
+          "name": "Query Intent",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-base"
+              },
+              "columnId": "col-intent"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-base"
+            },
+            "columnId": "col-intent"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Media-Product",
+          "id": "ctrl-mproduct",
+          "name": "Media Product",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-base"
+              },
+              "columnId": "col-mproduct"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-base"
+            },
+            "columnId": "col-mproduct"
+          }
+        },
+        {
+          "kind": "control",
+          "controlId": "Media-Channel",
+          "id": "ctrl-mchannel",
+          "name": "Media Channel",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "tbl-base"
+              },
+              "columnId": "col-mchannel"
+            }
+          ],
+          "controlType": "list",
+          "mode": "include",
+          "selectionMode": "multiple",
+          "values": [],
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-base"
+            },
+            "columnId": "col-mchannel"
+          }
+        },
+        {
+          "id": "kpi-adreq",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-adreq-val",
+              "formula": "[Metrics/Ad Requests]",
+              "name": "Ad Requests"
+            },
+            {
+              "id": "kpi-adreq-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-adreq-val"
+          },
+          "name": "Ad Requests"
+        },
+        {
+          "id": "kpi-answreq",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-answreq-val",
+              "formula": "[Metrics/Answered Requests]",
+              "name": "Answered Requests"
+            },
+            {
+              "id": "kpi-answreq-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-answreq-val"
+          },
+          "name": "Answered Requests"
+        },
+        {
+          "id": "kpi-adresp",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-adresp-val",
+              "formula": "[Metrics/Ad Responses]",
+              "name": "Ad Responses"
+            },
+            {
+              "id": "kpi-adresp-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-adresp-val"
+          },
+          "name": "Ad Responses"
+        },
+        {
+          "id": "kpi-impr",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-impr-val",
+              "formula": "[Metrics/Impressions]",
+              "name": "Impressions"
+            },
+            {
+              "id": "kpi-impr-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-impr-val"
+          },
+          "name": "Impressions"
+        },
+        {
+          "id": "kpi-clicks",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-clicks-val",
+              "formula": "[Metrics/Total Clicks]",
+              "name": "Total Clicks"
+            },
+            {
+              "id": "kpi-clicks-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-clicks-val"
+          },
+          "name": "Total Clicks"
+        },
+        {
+          "id": "kpi-conv",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-conv-val",
+              "formula": "[Metrics/Conversions]",
+              "name": "Conversions"
+            },
+            {
+              "id": "kpi-conv-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-conv-val"
+          },
+          "name": "Conversions"
+        },
+        {
+          "id": "kpi-coverage",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-coverage-val",
+              "formula": "[Metrics/Coverage]",
+              "name": "Coverage"
+            },
+            {
+              "id": "kpi-coverage-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-coverage-val"
+          },
+          "name": "Coverage"
+        },
+        {
+          "id": "kpi-ctr",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-ctr-val",
+              "formula": "[Metrics/CTR]",
+              "name": "CTR"
+            },
+            {
+              "id": "kpi-ctr-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-ctr-val"
+          },
+          "name": "CTR"
+        },
+        {
+          "id": "kpi-cvr",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-cvr-val",
+              "formula": "[Metrics/CVR]",
+              "name": "CVR"
+            },
+            {
+              "id": "kpi-cvr-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-cvr-val"
+          },
+          "name": "CVR"
+        },
+        {
+          "id": "kpi-cpc",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-cpc-val",
+              "formula": "[Metrics/CPC]",
+              "name": "CPC"
+            },
+            {
+              "id": "kpi-cpc-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-cpc-val"
+          },
+          "name": "CPC"
+        },
+        {
+          "id": "kpi-rpc",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "kpi-rpc-val",
+              "formula": "[Metrics/RPC]",
+              "name": "RPC"
+            },
+            {
+              "id": "kpi-rpc-mo",
+              "formula": "DateTrunc(\"month\", [Performance/Report Date])"
+            }
+          ],
+          "value": {
+            "columnId": "kpi-rpc-val"
+          },
+          "name": "RPC"
+        },
+        {
+          "id": "chart-trend",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "tr-period",
+              "formula": "DateTrunc([c-dategrain], [Performance/Report Date])"
+            },
+            {
+              "id": "tr-adreq",
+              "formula": "[Metrics/Ad Requests]",
+              "name": "Ad Requests"
+            },
+            {
+              "id": "tr-impr",
+              "formula": "[Metrics/Impressions]",
+              "name": "Impressions"
+            },
+            {
+              "id": "tr-clicks",
+              "formula": "[Metrics/Total Clicks]",
+              "name": "Total Clicks"
+            },
+            {
+              "id": "tr-conv",
+              "formula": "[Metrics/Conversions]",
+              "name": "Conversions"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "tr-adreq",
+              "tr-impr",
+              "tr-clicks",
+              "tr-conv"
+            ]
+          },
+          "xAxis": {
+            "columnId": "tr-period"
+          },
+          "name": "Funnel Volume Over Time"
+        },
+        {
+          "id": "pivot-product",
+          "kind": "pivot-table",
+          "source": {
+            "elementId": "tbl-base",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "pv-pub",
+              "formula": "[Performance/Publisher Name]",
+              "name": "Publisher Name"
+            },
+            {
+              "id": "pv-placement",
+              "formula": "[Performance/Placement Name]",
+              "name": "Placement Name"
+            },
+            {
+              "id": "pv-geo",
+              "formula": "[Performance/Request Geo]",
+              "name": "Request Geo"
+            },
+            {
+              "id": "pv-intent",
+              "formula": "[Performance/Query Intent]",
+              "name": "Query Intent"
+            },
+            {
+              "id": "pv-impr",
+              "formula": "[Metrics/Impressions]",
+              "name": "Impressions"
+            },
+            {
+              "id": "pv-clicks",
+              "formula": "[Metrics/Total Clicks]",
+              "name": "Total Clicks"
+            },
+            {
+              "id": "pv-conv",
+              "formula": "[Metrics/Conversions]",
+              "name": "Conversions"
+            },
+            {
+              "id": "pv-gmv",
+              "formula": "[Metrics/GMV]",
+              "name": "GMV"
+            },
+            {
+              "id": "pv-spend",
+              "formula": "[Metrics/Spend]",
+              "name": "Spend"
+            },
+            {
+              "id": "pv-cvr",
+              "formula": "[Metrics/CVR]",
+              "name": "CVR"
+            },
+            {
+              "id": "pv-ctr",
+              "formula": "[Metrics/CTR]",
+              "name": "CTR"
+            },
+            {
+              "id": "pv-cpc",
+              "formula": "[Metrics/CPC]",
+              "name": "CPC"
+            },
+            {
+              "id": "pv-rpc",
+              "formula": "[Metrics/RPC]",
+              "name": "RPC"
+            }
+          ],
+          "values": [
+            "pv-impr",
+            "pv-clicks",
+            "pv-conv",
+            "pv-gmv",
+            "pv-spend",
+            "pv-cvr",
+            "pv-ctr",
+            "pv-cpc",
+            "pv-rpc"
+          ],
+          "rowsBy": [
+            {
+              "id": "pv-pub"
+            },
+            {
+              "id": "pv-placement"
+            },
+            {
+              "id": "pv-geo"
+            },
+            {
+              "id": "pv-intent"
+            }
+          ],
+          "name": "Product Performance — Publisher / Placement / Geo / Intent"
+        },
+        {
+          "id": "tbl-base",
+          "kind": "table",
+          "source": {
+            "dataModelId": "fcf6eef9-627d-4809-bbec-833e59e889ae",
+            "elementId": "PSuJb5vlK0",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "col-pub",
+              "formula": "[Base Table/Publisher Name]",
+              "name": "Publisher Name"
+            },
+            {
+              "id": "col-placement",
+              "formula": "[Base Table/Name]",
+              "name": "Placement Name"
+            },
+            {
+              "id": "col-geo",
+              "formula": "[Base Table/Request Geo]",
+              "name": "Request Geo"
+            },
+            {
+              "id": "col-intent",
+              "formula": "[Base Table/Query Intent (Calculated)]",
+              "name": "Query Intent"
+            },
+            {
+              "id": "col-mproduct",
+              "formula": "[Base Table/Media Product]",
+              "name": "Media Product"
+            },
+            {
+              "id": "col-mchannel",
+              "formula": "[Base Table/Media Channel]",
+              "name": "Media Channel"
+            },
+            {
+              "id": "col-device",
+              "formula": "[Base Table/Request Device Type]",
+              "name": "Request Device Type"
+            },
+            {
+              "id": "col-tacevent",
+              "formula": "[Base Table/Tac Event]",
+              "name": "Tac Event"
+            },
+            {
+              "id": "col-reportdate",
+              "formula": "[Base Table/Report Date]",
+              "name": "Report Date"
+            },
+            {
+              "id": "col-adreq",
+              "formula": "[Base Table/Ad Requests]",
+              "name": "Ad Requests"
+            },
+            {
+              "id": "col-answreq",
+              "formula": "[Base Table/Answered Requests]",
+              "name": "Answered Requests"
+            },
+            {
+              "id": "col-adresp",
+              "formula": "[Base Table/Ad Responses]",
+              "name": "Ad Responses"
+            },
+            {
+              "id": "col-impr",
+              "formula": "[Base Table/Impressions]",
+              "name": "Impressions"
+            },
+            {
+              "id": "col-nonamz",
+              "formula": "[Base Table/Non Amz Clicks]",
+              "name": "Non Amz Clicks"
+            },
+            {
+              "id": "col-mla",
+              "formula": "[Base Table/Mla Clicks]",
+              "name": "Mla Clicks"
+            },
+            {
+              "id": "col-conv",
+              "formula": "[Base Table/Primary Conversions]",
+              "name": "Primary Conversions"
+            },
+            {
+              "id": "col-gmv",
+              "formula": "[Base Table/Gmv Non Amz]",
+              "name": "Gmv Non Amz"
+            },
+            {
+              "id": "col-spend",
+              "formula": "[Base Table/Predicted Spend Non Amz]",
+              "name": "Predicted Spend Non Amz"
+            },
+            {
+              "id": "col-rext",
+              "formula": "[Base Table/Rext]",
+              "name": "Rext"
+            }
+          ],
+          "name": "Performance",
+          "order": [
+            "col-pub",
+            "col-placement",
+            "col-geo",
+            "col-intent",
+            "col-mproduct",
+            "col-mchannel",
+            "col-device",
+            "col-tacevent",
+            "col-reportdate",
+            "col-adreq",
+            "col-answreq",
+            "col-adresp",
+            "col-impr",
+            "col-nonamz",
+            "col-mla",
+            "col-conv",
+            "col-gmv",
+            "col-spend",
+            "col-rext"
+          ]
+        }
+      ]
+    }
+  ],
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-funnel\">\n  <GridContainer elementId=\"container-header\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"img-logo\" gridColumn=\"1 / 5\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"text-title\" gridColumn=\"5 / 14\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-date\" gridColumn=\"14 / 20\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-dategrain\" gridColumn=\"20 / 25\" gridRow=\"1 / 4\"/>\n  </GridContainer>\n  <GridContainer elementId=\"container-filters\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"4 / 7\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"ctrl-pub\" gridColumn=\"1 / 5\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-placement\" gridColumn=\"5 / 9\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-geo\" gridColumn=\"9 / 13\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-intent\" gridColumn=\"13 / 17\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-mproduct\" gridColumn=\"17 / 21\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"ctrl-mchannel\" gridColumn=\"21 / 25\" gridRow=\"1 / 4\"/>\n  </GridContainer>\n  <LayoutElement elementId=\"kpi-adreq\" gridColumn=\"1 / 5\" gridRow=\"7 / 15\"/>\n  <LayoutElement elementId=\"kpi-answreq\" gridColumn=\"5 / 9\" gridRow=\"7 / 15\"/>\n  <LayoutElement elementId=\"kpi-adresp\" gridColumn=\"9 / 13\" gridRow=\"7 / 15\"/>\n  <LayoutElement elementId=\"kpi-impr\" gridColumn=\"13 / 17\" gridRow=\"7 / 15\"/>\n  <LayoutElement elementId=\"kpi-clicks\" gridColumn=\"17 / 21\" gridRow=\"7 / 15\"/>\n  <LayoutElement elementId=\"kpi-conv\" gridColumn=\"21 / 25\" gridRow=\"7 / 15\"/>\n  <LayoutElement elementId=\"kpi-coverage\" gridColumn=\"1 / 6\" gridRow=\"15 / 23\"/>\n  <LayoutElement elementId=\"kpi-ctr\" gridColumn=\"6 / 11\" gridRow=\"15 / 23\"/>\n  <LayoutElement elementId=\"kpi-cvr\" gridColumn=\"11 / 16\" gridRow=\"15 / 23\"/>\n  <LayoutElement elementId=\"kpi-cpc\" gridColumn=\"16 / 20\" gridRow=\"15 / 23\"/>\n  <LayoutElement elementId=\"kpi-rpc\" gridColumn=\"20 / 25\" gridRow=\"15 / 23\"/>\n  <LayoutElement elementId=\"chart-trend\" gridColumn=\"1 / 25\" gridRow=\"23 / 38\"/>\n  <LayoutElement elementId=\"pivot-product\" gridColumn=\"1 / 25\" gridRow=\"38 / 62\"/>\n  <LayoutElement elementId=\"tbl-base\" gridColumn=\"1 / 25\" gridRow=\"62 / 76\"/>\n</Page>\n"
+}

@@ -1,0 +1,12 @@
+{
+  "name": "millersigma",
+  "version": "0.1.0",
+  "description": "Chris Miller's Sigma Computing skill collection — workbook/data-model authoring conventions, branded dashboard format, embed portals, and plugin development. Skills are auto-discovered from ./skills.",
+  "author": {
+    "name": "Chris Miller",
+    "email": "cmiller@sigmacomputing.com"
+  },
+  "homepage": "https://github.com/cmiller-coder/millersigma",
+  "repository": "https://github.com/cmiller-coder/millersigma",
+  "keywords": ["sigma", "sigma-computing", "workbook", "dashboard", "plugin", "embed", "skills"]
+}
