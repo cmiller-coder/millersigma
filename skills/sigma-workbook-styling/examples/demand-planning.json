@@ -1,0 +1,3130 @@
+{
+  "workbookId": "66ca5984-5914-48c2-83b3-fb15d26b2b67",
+  "name": "Demand Planning (1)",
+  "url": "https://app.sigmacomputing.com/demeng/workbook/Demand-Planning-1-37XGRN3nF8zDRgsyPxgbav",
+  "documentVersion": 1,
+  "latestDocumentVersion": 1,
+  "ownerId": "K5lhCS7lto6YCmTrWxcT2fTXZU8fZ",
+  "folderId": "3a773978-c8b2-426c-b678-bdaf3f6a9ec6",
+  "createdBy": "K5lhCS7lto6YCmTrWxcT2fTXZU8fZ",
+  "updatedBy": "K5lhCS7lto6YCmTrWxcT2fTXZU8fZ",
+  "createdAt": "2026-07-16T13:24:26.918Z",
+  "updatedAt": "2026-07-16T13:24:26.918Z",
+  "schemaVersion": 1,
+  "pages": [
+    {
+      "id": "MkOiw-rNEx",
+      "name": "Submit",
+      "elements": [
+        {
+          "id": "d9K4g04pFJ",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        {
+          "id": "6tiom6Ek1r",
+          "kind": "text",
+          "body": "<span style=\"font-size: 15px\">**Unit sales - actuals vs demand**</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "BhV9PvY57_",
+          "kind": "text",
+          "body": "<p class=\"p-small\" style=\"text-align: right\">horizon in relative month:</p>",
+          "verticalAlign": "middle"
+        },
+        {
+          "kind": "control",
+          "controlId": "c.relative_month",
+          "id": "-WbuuUL-UEcon",
+          "name": "c.relative_month",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "ejzvZijw4U"
+              },
+              "columnId": "lD05X4TBMQ"
+            }
+          ],
+          "controlType": "number-range",
+          "includeNulls": "when-no-value-is-selected",
+          "min": -6,
+          "max": 12
+        },
+        {
+          "id": "t_C7l51sUr",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "ejzvZijw4U",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "AdHDBXxIGq",
+              "formula": "DateTrunc(\"day\", [month_start])",
+              "name": "Month",
+              "format": {
+                "kind": "datetime",
+                "formatString": "%m/%d/%Y"
+              }
+            },
+            {
+              "id": "oqiqC5NBGH",
+              "formula": "Sum([volume_forecast])",
+              "name": "Statistical forecast, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "ItCgQJxClz",
+              "formula": "Sum([sales])",
+              "name": "Actual sales, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "vEFz8Inncj",
+              "formula": "Sum([volume_demand_plot])",
+              "name": "Proposed demand, ea"
+            },
+            {
+              "id": "6Jp5hPPkCO",
+              "formula": "Sum([volume_forecast])",
+              "name": "Forecast, ea"
+            },
+            {
+              "id": "DR9xZ7LtSl",
+              "formula": "Sum([sales])",
+              "name": "Sales, ea"
+            },
+            {
+              "id": "KCzBA7eJCD",
+              "formula": "[Sales, ea] - [Forecast, ea]",
+              "name": "Sales less demand, ea"
+            },
+            {
+              "id": "c62mlckske",
+              "formula": "[BE - plot visualisation/month_start]"
+            },
+            {
+              "id": "FifpQODGTD",
+              "formula": "[BE - plot visualisation/relative_month]"
+            },
+            {
+              "id": "aHd6ybZgC4",
+              "formula": "[BE - plot visualisation/region]"
+            },
+            {
+              "id": "RT4tNvNNX0",
+              "formula": "[BE - plot visualisation/channel]"
+            },
+            {
+              "id": "NVJCjfgvyw",
+              "formula": "[BE - plot visualisation/brand]"
+            },
+            {
+              "id": "MTH039POMe",
+              "formula": "[BE - plot visualisation/forecast_base]"
+            },
+            {
+              "id": "GtwPKBNE8i",
+              "formula": "[BE - plot visualisation/forecast_season]"
+            },
+            {
+              "id": "10HQqxH0B1",
+              "formula": "[BE - plot visualisation/forecast_growth]"
+            },
+            {
+              "id": "UIa1voGC0F",
+              "formula": "[BE - plot visualisation/volume_forecast]"
+            },
+            {
+              "id": "M9LwOXny3T",
+              "formula": "[BE - plot visualisation/sales]"
+            },
+            {
+              "id": "685acaf33664c3fc2c7470e648bbc599",
+              "formula": "[BE - plot visualisation/volume_demand]"
+            },
+            {
+              "id": "a19c331d591d1dcc3d9e7e5e962f7f9e",
+              "formula": "[BE - plot visualisation/volume_demand_plot]"
+            },
+            {
+              "id": "86cb2e98c1dbc66164ccacf42728b721",
+              "formula": "[BE - plot visualisation/demand_base]"
+            },
+            {
+              "id": "2f8defdee66c75bb86cd90ab4f9363d6",
+              "formula": "[BE - plot visualisation/demand_season]"
+            },
+            {
+              "id": "4a4191072fe405b3ad92c8a925bf05e2",
+              "formula": "[BE - plot visualisation/demand_growth]"
+            },
+            {
+              "id": "f3c9dc0087b3cde0ae14daabbeea1069",
+              "formula": "[BE - plot visualisation/demand_event]"
+            },
+            {
+              "id": "13e513ea996e52213d69896f7020fccf",
+              "formula": "[BE - plot visualisation/comments]"
+            },
+            {
+              "id": "4cb5810cdd5db18116befeb4db16c3e3",
+              "formula": "[BE - plot visualisation/demand_base_plot]"
+            },
+            {
+              "id": "6bbf54bda884db6047fbc9c11b7bf2de",
+              "formula": "[BE - plot visualisation/demand_season_plot]"
+            },
+            {
+              "id": "e041eda6016d6f20bf0cdf6413e9a6d4",
+              "formula": "[BE - plot visualisation/demand_growth_plot]"
+            },
+            {
+              "id": "e7be1dd51540e882eecb07ccf2a08ca2",
+              "formula": "[BE - plot visualisation/demand_events_plot]"
+            },
+            {
+              "id": "08b9dfaf0042b06a5b252126f8dbc91a",
+              "formula": "[BE - plot visualisation/comments_plot]"
+            },
+            {
+              "id": "7d0a58929ce269aab60d6c6573f41be0",
+              "formula": "[BE - plot visualisation/#]"
+            },
+            {
+              "id": "1e7e625789aa1a46e9b693b8a27cbc35",
+              "formula": "[BE - plot visualisation/Month]"
+            },
+            {
+              "id": "30781f2a974c114335d68f94be65e39e",
+              "formula": "[BE - plot visualisation/Edit]"
+            },
+            {
+              "id": "3bf685b2c62f6337a2d7cdfe58eb2fe2",
+              "formula": "[BE - plot visualisation/ai_impact_pct]"
+            },
+            {
+              "id": "6940583347a0df9a304b456fcdb28dec",
+              "formula": "[BE - plot visualisation/ai_acitivty]"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "oqiqC5NBGH",
+              "ItCgQJxClz",
+              "vEFz8Inncj"
+            ],
+            "format": {
+              "labels": {
+                "fontSize": 14
+              },
+              "marks": "grid",
+              "scale": {
+                "type": "linear",
+                "zero": true,
+                "hideZeroLine": true
+              }
+            }
+          },
+          "xAxis": {
+            "columnId": "AdHDBXxIGq",
+            "format": {
+              "labels": {
+                "labelAngle": 0,
+                "fontSize": 14
+              },
+              "marks": "tick",
+              "scale": {
+                "type": "time",
+                "zero": false,
+                "reverse": false
+              }
+            }
+          },
+          "dataLabel": {
+            "labels": "hidden"
+          },
+          "name": {
+            "visibility": "hidden"
+          },
+          "legend": {
+            "position": "top-left",
+            "fontSize": 14
+          },
+          "style": {
+            "padding": "none"
+          },
+          "refMarks": [
+            {
+              "type": "band",
+              "axis": "axis",
+              "value": {
+                "type": "formula",
+                "formula": "DateTrunc(\"month\", Now())"
+              },
+              "line": {
+                "color": {
+                  "kind": "theme",
+                  "ref": "colors-fillSuccess"
+                }
+              },
+              "label": {
+                "visibility": "shown",
+                "text": "Forecast"
+              },
+              "caption": {
+                "position": "bottom-right",
+                "color": "#545454"
+              },
+              "endValue": {
+                "type": "column",
+                "columnId": "AdHDBXxIGq",
+                "func": "max"
+              },
+              "fill": {
+                "color": "#d8e3e0"
+              }
+            }
+          ],
+          "lineAreaStyle": {
+            "interpolation": "monotone",
+            "missing": "hide",
+            "points": {
+              "visibility": "hidden"
+            }
+          }
+        },
+        {
+          "id": "1BCZ6qbvma",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "UEt4am1ixp",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "b-CdrxwupQ",
+              "formula": "DateTrunc(\"month\", [month_start])"
+            },
+            {
+              "id": "H-pLI8vRcX",
+              "formula": "[Metrics/Forecast accuracy WAPE, %]"
+            },
+            {
+              "id": "KHz2xFRSk5",
+              "formula": "[IT - fct - KPIs/relative_month]"
+            },
+            {
+              "id": "DI1zGBgEDL",
+              "formula": "[IT - fct - KPIs/month_start]"
+            },
+            {
+              "id": "VpUMMyPiWe",
+              "formula": "[IT - fct - KPIs/region]"
+            },
+            {
+              "id": "KGcNe5zwVy",
+              "formula": "[IT - fct - KPIs/channel]"
+            },
+            {
+              "id": "h-SdxEZTt0",
+              "formula": "[IT - fct - KPIs/brand]"
+            },
+            {
+              "id": "GJi61lcl4l",
+              "formula": "[IT - fct - KPIs/demand_base]"
+            },
+            {
+              "id": "3d9VOtLwuj",
+              "formula": "[IT - fct - KPIs/demand_season]"
+            },
+            {
+              "id": "Z674Wj22S-",
+              "formula": "[IT - fct - KPIs/demand_growth]"
+            },
+            {
+              "id": "3AkrcVTZkl",
+              "formula": "[IT - fct - KPIs/demand_fcst]"
+            },
+            {
+              "id": "X_uekaVOVc",
+              "formula": "[IT - fct - KPIs/sales]"
+            },
+            {
+              "id": "6f94f88d04291aeeb58eb9364a045a03",
+              "formula": "[IT - fct - KPIs/inv_open]"
+            },
+            {
+              "id": "eeca9ee59a7920ffdad72fcebfd5c356",
+              "formula": "[IT - fct - KPIs/consumption]"
+            },
+            {
+              "id": "da4ee894280ecf2fdc22c09c9ac1268c",
+              "formula": "[IT - fct - KPIs/supply]"
+            },
+            {
+              "id": "8fcfc2802419c8e831c7a54d253d9734",
+              "formula": "[IT - fct - KPIs/inv_close]"
+            }
+          ],
+          "value": {
+            "columnId": "H-pLI8vRcX"
+          },
+          "name": {
+            "text": "Forecast accuracy WAPE",
+            "fontWeight": "normal",
+            "fontSize": 18
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderColor": "#333333",
+            "borderWidth": 1
+          },
+          "layout": {
+            "anchor": "middle"
+          },
+          "timeline": {
+            "columnId": "b-CdrxwupQ"
+          },
+          "periodComparison": "month"
+        },
+        {
+          "id": "bJAV1XP6ZE",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "UEt4am1ixp",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "b-CdrxwupQ",
+              "formula": "DateTrunc(\"month\", [month_start])"
+            },
+            {
+              "id": "u96AcqsMl4",
+              "formula": "[Metrics/Forecast bias, %]",
+              "format": {
+                "kind": "number",
+                "formatString": ",.1%",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "KHz2xFRSk5",
+              "formula": "[IT - fct - KPIs/relative_month]"
+            },
+            {
+              "id": "DI1zGBgEDL",
+              "formula": "[IT - fct - KPIs/month_start]"
+            },
+            {
+              "id": "VpUMMyPiWe",
+              "formula": "[IT - fct - KPIs/region]"
+            },
+            {
+              "id": "KGcNe5zwVy",
+              "formula": "[IT - fct - KPIs/channel]"
+            },
+            {
+              "id": "h-SdxEZTt0",
+              "formula": "[IT - fct - KPIs/brand]"
+            },
+            {
+              "id": "GJi61lcl4l",
+              "formula": "[IT - fct - KPIs/demand_base]"
+            },
+            {
+              "id": "3d9VOtLwuj",
+              "formula": "[IT - fct - KPIs/demand_season]"
+            },
+            {
+              "id": "Z674Wj22S-",
+              "formula": "[IT - fct - KPIs/demand_growth]"
+            },
+            {
+              "id": "3AkrcVTZkl",
+              "formula": "[IT - fct - KPIs/demand_fcst]"
+            },
+            {
+              "id": "X_uekaVOVc",
+              "formula": "[IT - fct - KPIs/sales]"
+            },
+            {
+              "id": "6f94f88d04291aeeb58eb9364a045a03",
+              "formula": "[IT - fct - KPIs/inv_open]"
+            },
+            {
+              "id": "eeca9ee59a7920ffdad72fcebfd5c356",
+              "formula": "[IT - fct - KPIs/consumption]"
+            },
+            {
+              "id": "da4ee894280ecf2fdc22c09c9ac1268c",
+              "formula": "[IT - fct - KPIs/supply]"
+            },
+            {
+              "id": "8fcfc2802419c8e831c7a54d253d9734",
+              "formula": "[IT - fct - KPIs/inv_close]"
+            }
+          ],
+          "value": {
+            "columnId": "u96AcqsMl4"
+          },
+          "name": {
+            "text": "Forecast bias",
+            "fontWeight": "normal",
+            "fontSize": 18
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderColor": "#333333",
+            "borderWidth": 1
+          },
+          "layout": {
+            "anchor": "middle"
+          },
+          "timeline": {
+            "columnId": "b-CdrxwupQ"
+          },
+          "periodComparison": "month"
+        },
+        {
+          "id": "S7-V5sM_RT",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        {
+          "id": "Tt2NIbgNgY",
+          "kind": "text",
+          "body": "<span style=\"font-size: 15px\">**Data for **</span><span style=\"font-size: 15px\">**{{If([c.selected_plan_name] = \"Default\", \"all regions, channels and brands\", [v.selected_plan_region] & \" region, \" & [v.selected_plan_channel] & \" channel, \" & [v.selected_plan_brand])}}**</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "PYGDfQBq-i",
+          "kind": "input-table",
+          "source": {
+            "kind": "linked",
+            "from": "3YKeEU_r0J"
+          },
+          "inputMode": "view",
+          "name": {
+            "visibility": "hidden"
+          },
+          "style": {
+            "padding": "none"
+          },
+          "tableComponents": {
+            "summaryBar": "hidden"
+          },
+          "tableStyle": {
+            "cellSpacing": "medium",
+            "textStyles": {
+              "header": {
+                "fontWeight": "normal",
+                "backgroundColor": "#fcfcfc",
+                "textWrap": "wrap"
+              }
+            }
+          },
+          "sort": [
+            {
+              "columnId": "ERLEDVQ6NL",
+              "direction": "ascending",
+              "nulls": "connection-default"
+            },
+            {
+              "columnId": "FHOWCU-Z2M",
+              "direction": "ascending",
+              "nulls": "connection-default"
+            },
+            {
+              "columnId": "ZTAJHB38JL",
+              "direction": "ascending",
+              "nulls": "connection-default"
+            }
+          ],
+          "columns": [
+            {
+              "id": "ERLEDVQ6NL",
+              "key": "mACMDMw-Ye"
+            },
+            {
+              "id": "FHOWCU-Z2M",
+              "key": "rxJuX1mdwN",
+              "hidden": true
+            },
+            {
+              "id": "ZTAJHB38JL",
+              "key": "pYkyYOgAQO",
+              "name": "#"
+            },
+            {
+              "id": "RKktLHgiUM",
+              "formula": "[BE - crossjoin skeleton/month_start]",
+              "name": "Month"
+            },
+            {
+              "id": "KkAD_wRwvh",
+              "formula": "\"https://cdn3.emoji.gg/emojis/408875-pencil.png\"",
+              "name": "Edit"
+            },
+            {
+              "id": "V9bQuEqZFL",
+              "formula": "Zn([Base]) + Zn([Seasonality]) + Zn([Growth]) + Zn([Events effect])",
+              "name": "Demand",
+              "format": {
+                "kind": "number",
+                "formatString": ",d"
+              }
+            },
+            {
+              "id": "YNE2VNAQYG",
+              "type": "number",
+              "name": "Base"
+            },
+            {
+              "id": "DDE1-FGGNB",
+              "type": "number",
+              "name": "Seasonality"
+            },
+            {
+              "id": "3YYT0D0AQC",
+              "type": "number",
+              "name": "Growth"
+            },
+            {
+              "id": "VX_ZANIYRM",
+              "type": "number",
+              "name": "Events effect"
+            },
+            {
+              "id": "XJAPEL_CLC",
+              "type": "text",
+              "name": "Comments"
+            },
+            {
+              "id": "C8rKtkbOqL",
+              "formula": "Lookup([BE - AI summary output/ai_impact_pct], [#], [BE - AI summary output/relative_month])",
+              "name": "ai_impact_pct",
+              "hidden": true
+            },
+            {
+              "id": "6iOhx-NbtM",
+              "formula": "[ai_impact_pct/activity]",
+              "name": "ai_acitivty",
+              "hidden": true
+            },
+            {
+              "id": "iKyrR1_tNs",
+              "formula": "[BE - crossjoin skeleton/forecast_base]",
+              "hidden": true
+            },
+            {
+              "id": "rPcnUBea_U",
+              "formula": "[BE - crossjoin skeleton/forecast_growth]",
+              "hidden": true
+            },
+            {
+              "id": "srs9Gt8kRg",
+              "formula": "[BE - crossjoin skeleton/forecast_season]",
+              "hidden": true
+            },
+            {
+              "id": "mzjPS8Ja6V",
+              "formula": "[BE - crossjoin skeleton/volume_sales]",
+              "hidden": true
+            },
+            {
+              "id": "tI4xMNMEzz",
+              "formula": "[BE - crossjoin skeleton/status]",
+              "hidden": true
+            },
+            {
+              "id": "aIXCBcIbc9",
+              "formula": "[BE - crossjoin skeleton/region]",
+              "hidden": true
+            },
+            {
+              "id": "rhUY3KWA9W",
+              "formula": "[BE - crossjoin skeleton/channel]",
+              "hidden": true
+            },
+            {
+              "id": "ojhIB473uC",
+              "formula": "[BE - crossjoin skeleton/brand]",
+              "hidden": true
+            }
+          ],
+          "conditionalFormats": [
+            {
+              "type": "dataBars",
+              "columnIds": [
+                "V9bQuEqZFL"
+              ],
+              "scheme": [
+                "#F05351",
+                "#d8e3e0"
+              ]
+            },
+            {
+              "type": "single",
+              "columnIds": [
+                "YNE2VNAQYG",
+                "I-EIATNVBB",
+                "18FJIC4BER",
+                "Q-DMRWP1VZ",
+                "XJAPEL_CLC"
+              ],
+              "condition": "formula",
+              "formula": "True",
+              "style": {
+                "backgroundColor": "#f5f6f7"
+              }
+            }
+          ]
+        },
+        {
+          "id": "svWWyEq6H5",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "PYGDfQBq-i",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "u96AcqsMl4",
+              "formula": "Sum([FE - demand plan submission/forecast_base]) + Sum([FE - demand plan submission/forecast_season]) + Sum([FE - demand plan submission/forecast_growth])",
+              "name": "Total statistical demand, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "OISF_1E-gf",
+              "formula": "[FE - demand plan submission/Month]"
+            },
+            {
+              "id": "KHz2xFRSk5",
+              "formula": "[FE - demand plan submission/#]"
+            },
+            {
+              "id": "4fa4f206136eb7f67f492c34868ba635",
+              "formula": "[FE - demand plan submission/ai_impact_pct]"
+            },
+            {
+              "id": "26afd72a7efdf22a5c95742b76e96e5f",
+              "formula": "[FE - demand plan submission/ai_acitivty]"
+            },
+            {
+              "id": "_LhNvbozv8",
+              "formula": "[FE - demand plan submission/Edit]"
+            },
+            {
+              "id": "bAMQYzeCFN",
+              "formula": "[FE - demand plan submission/Demand]"
+            },
+            {
+              "id": "zOte8Y2m3N",
+              "formula": "[FE - demand plan submission/Base]"
+            },
+            {
+              "id": "tQKA8u7q-D",
+              "formula": "[FE - demand plan submission/Seasonality]"
+            },
+            {
+              "id": "z4LEePJ_Yp",
+              "formula": "[FE - demand plan submission/Growth]"
+            },
+            {
+              "id": "myoJMiXTXy",
+              "formula": "[FE - demand plan submission/Events effect]"
+            },
+            {
+              "id": "OqPgtH3Obu",
+              "formula": "[FE - demand plan submission/Comments]"
+            }
+          ],
+          "value": {
+            "columnId": "u96AcqsMl4"
+          },
+          "name": {
+            "text": "Statistical forecast, ea",
+            "fontWeight": "normal",
+            "fontSize": 18
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderColor": "#333333",
+            "borderWidth": 1
+          },
+          "layout": {
+            "anchor": "middle"
+          }
+        },
+        {
+          "id": "tf-pTEwJCy",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "PYGDfQBq-i",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "u96AcqsMl4",
+              "formula": "Sum([FE - demand plan submission/Demand])",
+              "name": "Total new demand, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "OISF_1E-gf",
+              "formula": "[FE - demand plan submission/Month]"
+            },
+            {
+              "id": "KHz2xFRSk5",
+              "formula": "[FE - demand plan submission/#]"
+            },
+            {
+              "id": "_LhNvbozv8",
+              "formula": "[FE - demand plan submission/Edit]"
+            },
+            {
+              "id": "bAMQYzeCFN",
+              "formula": "[FE - demand plan submission/Demand]"
+            },
+            {
+              "id": "zOte8Y2m3N",
+              "formula": "[FE - demand plan submission/Base]"
+            },
+            {
+              "id": "tQKA8u7q-D",
+              "formula": "[FE - demand plan submission/Seasonality]"
+            },
+            {
+              "id": "z4LEePJ_Yp",
+              "formula": "[FE - demand plan submission/Growth]"
+            },
+            {
+              "id": "myoJMiXTXy",
+              "formula": "[FE - demand plan submission/Events effect]"
+            },
+            {
+              "id": "OqPgtH3Obu",
+              "formula": "[FE - demand plan submission/Comments]"
+            },
+            {
+              "id": "4fa4f206136eb7f67f492c34868ba635",
+              "formula": "[FE - demand plan submission/ai_impact_pct]"
+            },
+            {
+              "id": "26afd72a7efdf22a5c95742b76e96e5f",
+              "formula": "[FE - demand plan submission/ai_acitivty]"
+            }
+          ],
+          "value": {
+            "columnId": "u96AcqsMl4"
+          },
+          "name": {
+            "text": "Proposed demand, ea",
+            "fontWeight": "normal",
+            "fontSize": 18
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderColor": "#333333",
+            "borderWidth": 1
+          },
+          "layout": {
+            "anchor": "middle"
+          }
+        },
+        {
+          "id": "Q4NQrr6ApC",
+          "kind": "kpi-chart",
+          "source": {
+            "elementId": "PYGDfQBq-i",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "u96AcqsMl4",
+              "formula": "(Sum([FE - demand plan submission/Demand]) - Sum([FE - demand plan submission/forecast_base] + [FE - demand plan submission/forecast_season] + [FE - demand plan submission/forecast_growth])) / NullIf(Sum([FE - demand plan submission/forecast_base] + [FE - demand plan submission/forecast_season] + [FE - demand plan submission/forecast_growth]), 0)",
+              "name": "Total new demand, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.1%"
+              }
+            },
+            {
+              "id": "OISF_1E-gf",
+              "formula": "[FE - demand plan submission/Month]"
+            },
+            {
+              "id": "KHz2xFRSk5",
+              "formula": "[FE - demand plan submission/#]"
+            },
+            {
+              "id": "_LhNvbozv8",
+              "formula": "[FE - demand plan submission/Edit]"
+            },
+            {
+              "id": "bAMQYzeCFN",
+              "formula": "[FE - demand plan submission/Demand]"
+            },
+            {
+              "id": "zOte8Y2m3N",
+              "formula": "[FE - demand plan submission/Base]"
+            },
+            {
+              "id": "tQKA8u7q-D",
+              "formula": "[FE - demand plan submission/Seasonality]"
+            },
+            {
+              "id": "z4LEePJ_Yp",
+              "formula": "[FE - demand plan submission/Growth]"
+            },
+            {
+              "id": "myoJMiXTXy",
+              "formula": "[FE - demand plan submission/Events effect]"
+            },
+            {
+              "id": "OqPgtH3Obu",
+              "formula": "[FE - demand plan submission/Comments]"
+            },
+            {
+              "id": "4fa4f206136eb7f67f492c34868ba635",
+              "formula": "[FE - demand plan submission/ai_impact_pct]"
+            },
+            {
+              "id": "26afd72a7efdf22a5c95742b76e96e5f",
+              "formula": "[FE - demand plan submission/ai_acitivty]"
+            }
+          ],
+          "value": {
+            "columnId": "u96AcqsMl4"
+          },
+          "name": {
+            "text": "Δ vs statistical",
+            "fontWeight": "normal",
+            "fontSize": 18
+          },
+          "style": {
+            "backgroundColor": "#FFFFFF",
+            "borderColor": "#333333",
+            "borderWidth": 1
+          },
+          "layout": {
+            "anchor": "middle"
+          }
+        },
+        {
+          "id": "ropKQFA4Ft",
+          "kind": "container",
+          "style": {
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        {
+          "id": "iTkiB7Ftjb",
+          "kind": "text",
+          "body": "<p style=\"text-align: center\">Plan owned by {{Lookup([BE - plan names/created_by], [v.selected_plan_name], [BE - plan names/name_plan])}}, Last updated {{Lookup([BE - plan names/dt_updated], [v.selected_plan_name], [BE - plan names/name_plan]) | %m/%d/%Y %I:%M:%S %p}}. Status: {{Lookup([BE - plan names/status], [v.selected_plan_name], [BE - plan names/name_plan])}}</p>",
+          "verticalAlign": "middle"
+        }
+      ]
+    },
+    {
+      "id": "zpvg-RppU0",
+      "name": "Review",
+      "elements": [
+        {
+          "id": "ois3PRxRlO",
+          "kind": "container"
+        },
+        {
+          "kind": "control",
+          "controlId": "c.plan_status",
+          "id": "siptb9Gsvrcon",
+          "filters": [
+            {
+              "source": {
+                "kind": "table",
+                "elementId": "HgBZq-JB05"
+              },
+              "columnId": "9PePHnXipb"
+            }
+          ],
+          "controlType": "segmented",
+          "showClearLabel": true,
+          "clearLabel": "All",
+          "source": {
+            "kind": "source",
+            "source": {
+              "kind": "table",
+              "elementId": "HgBZq-JB05"
+            },
+            "columnId": "9PePHnXipb"
+          },
+          "value": null
+        },
+        {
+          "id": "HgBZq-JB05",
+          "kind": "table",
+          "source": {
+            "elementId": "CLym9qIamt",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "c2p0yMsFCg",
+              "formula": "\"https://cdn3.emoji.gg/emojis/408875-pencil.png\"",
+              "name": "ㅤㅤㅤㅤㅤㅤㅤ",
+              "style": {
+                "align": "left",
+                "width": 48
+              }
+            },
+            {
+              "id": "9PePHnXipb",
+              "formula": "[BE - plan names/status]",
+              "name": "Plan status",
+              "style": {
+                "align": "left",
+                "width": 106
+              }
+            },
+            {
+              "id": "kanGjGBkKw",
+              "formula": "[BE - plan names/name_plan]",
+              "name": "Demand plan name",
+              "style": {
+                "width": 249,
+                "textWrap": "clip"
+              }
+            },
+            {
+              "id": "lSyn2JK8qN",
+              "formula": "\"🔎\"",
+              "name": "Inspect",
+              "style": {
+                "align": "left",
+                "width": 75
+              }
+            },
+            {
+              "id": "MbfTj7XpRv",
+              "formula": "\"✘\"",
+              "name": "Drop",
+              "style": {
+                "align": "left",
+                "width": 66
+              }
+            },
+            {
+              "id": "pPlKdKv-zG",
+              "formula": "[BE - plan names/region]",
+              "name": "Region",
+              "style": {
+                "width": 106
+              }
+            },
+            {
+              "id": "egPovU5pUu",
+              "formula": "[BE - plan names/channel]",
+              "name": "Channel",
+              "style": {
+                "width": 106
+              }
+            },
+            {
+              "id": "SebfkB6jMR",
+              "formula": "[BE - plan names/brand]",
+              "name": "Brand",
+              "style": {
+                "width": 106
+              }
+            },
+            {
+              "id": "ox8jeOimDo",
+              "formula": "[BE - plan names/dt_created]",
+              "name": "Created at",
+              "style": {
+                "width": 156
+              }
+            },
+            {
+              "id": "szB1rtDtiM",
+              "formula": "[BE - plan names/dt_updated]",
+              "name": "Updated at",
+              "style": {
+                "width": 159
+              }
+            },
+            {
+              "id": "FXivHukGey",
+              "formula": "[BE - plan names/updated_by]",
+              "name": "Updated by",
+              "hidden": true
+            },
+            {
+              "id": "KR0a7huNaj",
+              "formula": "[BE - plan names/id_plan]",
+              "hidden": true
+            },
+            {
+              "id": "2df7f0b8aee9fe268c8fd9a838c30a7f",
+              "formula": "[BE - plan names/created_by]",
+              "name": "Created by",
+              "style": {
+                "width": 368
+              }
+            }
+          ],
+          "name": {
+            "visibility": "hidden"
+          },
+          "filters": [
+            {
+              "id": "p9W_KZk0eq",
+              "columnId": "kanGjGBkKw",
+              "kind": "list",
+              "mode": "exclude",
+              "values": [
+                "Default"
+              ]
+            }
+          ],
+          "order": [
+            "c2p0yMsFCg",
+            "9PePHnXipb",
+            "kanGjGBkKw",
+            "lSyn2JK8qN",
+            "MbfTj7XpRv",
+            "pPlKdKv-zG",
+            "egPovU5pUu",
+            "SebfkB6jMR",
+            "ox8jeOimDo",
+            "szB1rtDtiM",
+            "FXivHukGey",
+            "KR0a7huNaj",
+            "2df7f0b8aee9fe268c8fd9a838c30a7f"
+          ],
+          "visibleAsSource": false,
+          "sort": [
+            {
+              "columnId": "ox8jeOimDo",
+              "direction": "descending",
+              "nulls": "last"
+            }
+          ],
+          "style": {
+            "padding": "none"
+          },
+          "tableComponents": {
+            "summaryBar": "hidden"
+          },
+          "tableStyle": {
+            "preset": "presentation",
+            "cellSpacing": "medium",
+            "textStyles": {
+              "header": {
+                "fontWeight": "normal"
+              }
+            }
+          },
+          "actions": [
+            {
+              "trigger": "on-select",
+              "effects": [
+                {
+                  "effect": "set-control-value",
+                  "control": "v.selected_plan_id",
+                  "value": {
+                    "type": "column",
+                    "column": "KR0a7huNaj"
+                  }
+                },
+                {
+                  "effect": "set-control-value",
+                  "control": "v.selected_plan_name",
+                  "value": {
+                    "type": "column",
+                    "column": "kanGjGBkKw"
+                  }
+                },
+                {
+                  "effect": "open-overlay",
+                  "overlayId": "yF_HTjlAtU"
+                }
+              ]
+            },
+            {
+              "trigger": "on-select",
+              "effects": [
+                {
+                  "effect": "set-control-value",
+                  "control": "c.selected_plan_name",
+                  "value": {
+                    "type": "column",
+                    "column": "kanGjGBkKw"
+                  }
+                },
+                {
+                  "effect": "set-control-value",
+                  "control": "v.selected_plan_id",
+                  "value": {
+                    "type": "column",
+                    "column": "KR0a7huNaj"
+                  }
+                },
+                {
+                  "effect": "set-control-value",
+                  "control": "v.selected_plan_name",
+                  "value": {
+                    "type": "column",
+                    "column": "kanGjGBkKw"
+                  }
+                },
+                {
+                  "effect": "set-control-value",
+                  "control": "c.filter_region",
+                  "value": {
+                    "type": "column",
+                    "column": "pPlKdKv-zG"
+                  }
+                },
+                {
+                  "effect": "set-control-value",
+                  "control": "c.filter_channel",
+                  "value": {
+                    "type": "column",
+                    "column": "egPovU5pUu"
+                  }
+                },
+                {
+                  "effect": "set-control-value",
+                  "control": "c.filter_brand",
+                  "value": {
+                    "type": "column",
+                    "column": "SebfkB6jMR"
+                  }
+                }
+              ]
+            },
+            {
+              "trigger": "on-select",
+              "effects": [
+                {
+                  "effect": "open-overlay",
+                  "overlayId": "acjNkozfXr"
+                },
+                {
+                  "effect": "set-control-value",
+                  "control": "v.selected_plan_id",
+                  "value": {
+                    "type": "column",
+                    "column": "KR0a7huNaj"
+                  }
+                },
+                {
+                  "effect": "set-control-value",
+                  "control": "v.selected_plan_name",
+                  "value": {
+                    "type": "column",
+                    "column": "kanGjGBkKw"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "kXRhY6M3mh",
+          "kind": "container"
+        },
+        {
+          "id": "K8Z5c5BgY2",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "ejzvZijw4U",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "AdHDBXxIGq",
+              "formula": "DateTrunc(\"day\", [month_start])",
+              "name": "Month",
+              "format": {
+                "kind": "datetime",
+                "formatString": "%m/%d/%Y"
+              }
+            },
+            {
+              "id": "oqiqC5NBGH",
+              "formula": "Sum([volume_forecast])",
+              "name": "Statistical forecast, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "ItCgQJxClz",
+              "formula": "Sum([sales])",
+              "name": "Actual sales, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "vEFz8Inncj",
+              "formula": "Sum([volume_demand_plot])",
+              "name": "Proposed demand, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "6Jp5hPPkCO",
+              "formula": "Sum([volume_forecast])",
+              "name": "Forecast, ea"
+            },
+            {
+              "id": "DR9xZ7LtSl",
+              "formula": "Sum([sales])",
+              "name": "Sales, ea"
+            },
+            {
+              "id": "KCzBA7eJCD",
+              "formula": "[Sales, ea] - [Forecast, ea]",
+              "name": "Sales less demand, ea"
+            },
+            {
+              "id": "c62mlckske",
+              "formula": "[BE - plot visualisation/month_start]"
+            },
+            {
+              "id": "FifpQODGTD",
+              "formula": "[BE - plot visualisation/relative_month]"
+            },
+            {
+              "id": "aHd6ybZgC4",
+              "formula": "[BE - plot visualisation/region]"
+            },
+            {
+              "id": "RT4tNvNNX0",
+              "formula": "[BE - plot visualisation/channel]"
+            },
+            {
+              "id": "NVJCjfgvyw",
+              "formula": "[BE - plot visualisation/brand]"
+            },
+            {
+              "id": "MTH039POMe",
+              "formula": "[BE - plot visualisation/forecast_base]"
+            },
+            {
+              "id": "GtwPKBNE8i",
+              "formula": "[BE - plot visualisation/forecast_season]"
+            },
+            {
+              "id": "10HQqxH0B1",
+              "formula": "[BE - plot visualisation/forecast_growth]"
+            },
+            {
+              "id": "UIa1voGC0F",
+              "formula": "[BE - plot visualisation/volume_forecast]"
+            },
+            {
+              "id": "M9LwOXny3T",
+              "formula": "[BE - plot visualisation/sales]"
+            },
+            {
+              "id": "685acaf33664c3fc2c7470e648bbc599",
+              "formula": "[BE - plot visualisation/volume_demand]"
+            },
+            {
+              "id": "a19c331d591d1dcc3d9e7e5e962f7f9e",
+              "formula": "[BE - plot visualisation/volume_demand_plot]"
+            },
+            {
+              "id": "86cb2e98c1dbc66164ccacf42728b721",
+              "formula": "[BE - plot visualisation/demand_base]"
+            },
+            {
+              "id": "2f8defdee66c75bb86cd90ab4f9363d6",
+              "formula": "[BE - plot visualisation/demand_season]"
+            },
+            {
+              "id": "4a4191072fe405b3ad92c8a925bf05e2",
+              "formula": "[BE - plot visualisation/demand_growth]"
+            },
+            {
+              "id": "f3c9dc0087b3cde0ae14daabbeea1069",
+              "formula": "[BE - plot visualisation/demand_event]"
+            },
+            {
+              "id": "13e513ea996e52213d69896f7020fccf",
+              "formula": "[BE - plot visualisation/comments]"
+            },
+            {
+              "id": "4cb5810cdd5db18116befeb4db16c3e3",
+              "formula": "[BE - plot visualisation/demand_base_plot]"
+            },
+            {
+              "id": "6bbf54bda884db6047fbc9c11b7bf2de",
+              "formula": "[BE - plot visualisation/demand_season_plot]"
+            },
+            {
+              "id": "e041eda6016d6f20bf0cdf6413e9a6d4",
+              "formula": "[BE - plot visualisation/demand_growth_plot]"
+            },
+            {
+              "id": "e7be1dd51540e882eecb07ccf2a08ca2",
+              "formula": "[BE - plot visualisation/demand_events_plot]"
+            },
+            {
+              "id": "08b9dfaf0042b06a5b252126f8dbc91a",
+              "formula": "[BE - plot visualisation/comments_plot]"
+            },
+            {
+              "id": "7d0a58929ce269aab60d6c6573f41be0",
+              "formula": "[BE - plot visualisation/#]"
+            },
+            {
+              "id": "1e7e625789aa1a46e9b693b8a27cbc35",
+              "formula": "[BE - plot visualisation/Month]"
+            },
+            {
+              "id": "30781f2a974c114335d68f94be65e39e",
+              "formula": "[BE - plot visualisation/Edit]"
+            },
+            {
+              "id": "3bf685b2c62f6337a2d7cdfe58eb2fe2",
+              "formula": "[BE - plot visualisation/ai_impact_pct]"
+            },
+            {
+              "id": "6940583347a0df9a304b456fcdb28dec",
+              "formula": "[BE - plot visualisation/ai_acitivty]"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "oqiqC5NBGH",
+              "ItCgQJxClz",
+              "vEFz8Inncj"
+            ],
+            "format": {
+              "labels": {
+                "fontSize": 14
+              },
+              "marks": "grid",
+              "scale": {
+                "type": "linear",
+                "zero": true,
+                "hideZeroLine": true
+              }
+            }
+          },
+          "xAxis": {
+            "columnId": "AdHDBXxIGq",
+            "format": {
+              "labels": {
+                "labelAngle": 0,
+                "fontSize": 14
+              },
+              "marks": "tick",
+              "scale": {
+                "type": "time",
+                "zero": false,
+                "reverse": false
+              }
+            }
+          },
+          "dataLabel": {
+            "labels": "hidden"
+          },
+          "name": "Unit sales - actuals vs demand",
+          "legend": {
+            "position": "top-left",
+            "fontSize": 14
+          },
+          "style": {
+            "padding": "none"
+          },
+          "refMarks": [
+            {
+              "type": "band",
+              "axis": "axis",
+              "value": {
+                "type": "formula",
+                "formula": "DateTrunc(\"month\", Now())"
+              },
+              "line": {
+                "color": {
+                  "kind": "theme",
+                  "ref": "colors-fillSuccess"
+                }
+              },
+              "label": {
+                "visibility": "shown",
+                "text": "Forecast"
+              },
+              "caption": {
+                "position": "bottom-right",
+                "color": "#25344b"
+              },
+              "endValue": {
+                "type": "column",
+                "columnId": "AdHDBXxIGq",
+                "func": "max"
+              },
+              "fill": {
+                "color": "#d8e3e0"
+              }
+            }
+          ],
+          "lineAreaStyle": {
+            "interpolation": "monotone",
+            "missing": "hide",
+            "points": {
+              "visibility": "hidden"
+            }
+          }
+        },
+        {
+          "id": "P4gTo557GY",
+          "kind": "container"
+        },
+        {
+          "id": "HE68zqCSnc",
+          "kind": "line-chart",
+          "source": {
+            "elementId": "ejzvZijw4U",
+            "kind": "table"
+          },
+          "columns": [
+            {
+              "id": "AdHDBXxIGq",
+              "formula": "DateTrunc(\"day\", [month_start])",
+              "name": "Month",
+              "format": {
+                "kind": "datetime",
+                "formatString": "%m/%d/%Y"
+              }
+            },
+            {
+              "id": "vEFz8Inncj",
+              "formula": "Sum([volume_demand_plot])",
+              "name": "Proposed demand, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "AVfx0qb_WG",
+              "formula": "Sum([demand_base_plot])",
+              "name": "Base, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "4RUlIeTmw4",
+              "formula": "Sum([demand_season_plot])",
+              "name": "Seasonality, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "lt461w6Euu",
+              "formula": "Sum([demand_growth_plot])",
+              "name": "Growth, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "-9r0iPHuK7",
+              "formula": "Sum([demand_events_plot])",
+              "name": "Events, ea",
+              "format": {
+                "kind": "number",
+                "formatString": ",.2s",
+                "decimalSymbol": ".",
+                "digitGroupingSymbol": ",",
+                "digitGroupingSize": [
+                  3
+                ],
+                "currencySymbol": "$"
+              }
+            },
+            {
+              "id": "CNqQcLAald",
+              "formula": "[comments_plot]",
+              "name": "Comments"
+            },
+            {
+              "id": "c62mlckske",
+              "formula": "[BE - plot visualisation/month_start]"
+            },
+            {
+              "id": "FifpQODGTD",
+              "formula": "[BE - plot visualisation/relative_month]"
+            },
+            {
+              "id": "aHd6ybZgC4",
+              "formula": "[BE - plot visualisation/region]"
+            },
+            {
+              "id": "RT4tNvNNX0",
+              "formula": "[BE - plot visualisation/channel]"
+            },
+            {
+              "id": "NVJCjfgvyw",
+              "formula": "[BE - plot visualisation/brand]"
+            },
+            {
+              "id": "MTH039POMe",
+              "formula": "[BE - plot visualisation/forecast_base]"
+            },
+            {
+              "id": "GtwPKBNE8i",
+              "formula": "[BE - plot visualisation/forecast_season]"
+            },
+            {
+              "id": "10HQqxH0B1",
+              "formula": "[BE - plot visualisation/forecast_growth]"
+            },
+            {
+              "id": "UIa1voGC0F",
+              "formula": "[BE - plot visualisation/volume_forecast]"
+            },
+            {
+              "id": "M9LwOXny3T",
+              "formula": "[BE - plot visualisation/sales]"
+            },
+            {
+              "id": "685acaf33664c3fc2c7470e648bbc599",
+              "formula": "[BE - plot visualisation/volume_demand]"
+            },
+            {
+              "id": "a19c331d591d1dcc3d9e7e5e962f7f9e",
+              "formula": "[BE - plot visualisation/volume_demand_plot]"
+            },
+            {
+              "id": "86cb2e98c1dbc66164ccacf42728b721",
+              "formula": "[BE - plot visualisation/demand_base]"
+            },
+            {
+              "id": "2f8defdee66c75bb86cd90ab4f9363d6",
+              "formula": "[BE - plot visualisation/demand_season]"
+            },
+            {
+              "id": "4a4191072fe405b3ad92c8a925bf05e2",
+              "formula": "[BE - plot visualisation/demand_growth]"
+            },
+            {
+              "id": "f3c9dc0087b3cde0ae14daabbeea1069",
+              "formula": "[BE - plot visualisation/demand_event]"
+            },
+            {
+              "id": "13e513ea996e52213d69896f7020fccf",
+              "formula": "[BE - plot visualisation/comments]"
+            },
+            {
+              "id": "4cb5810cdd5db18116befeb4db16c3e3",
+              "formula": "[BE - plot visualisation/demand_base_plot]"
+            },
+            {
+              "id": "6bbf54bda884db6047fbc9c11b7bf2de",
+              "formula": "[BE - plot visualisation/demand_season_plot]"
+            },
+            {
+              "id": "e041eda6016d6f20bf0cdf6413e9a6d4",
+              "formula": "[BE - plot visualisation/demand_growth_plot]"
+            },
+            {
+              "id": "e7be1dd51540e882eecb07ccf2a08ca2",
+              "formula": "[BE - plot visualisation/demand_events_plot]"
+            },
+            {
+              "id": "08b9dfaf0042b06a5b252126f8dbc91a",
+              "formula": "[BE - plot visualisation/comments_plot]"
+            },
+            {
+              "id": "7d0a58929ce269aab60d6c6573f41be0",
+              "formula": "[BE - plot visualisation/#]"
+            },
+            {
+              "id": "1e7e625789aa1a46e9b693b8a27cbc35",
+              "formula": "[BE - plot visualisation/Month]"
+            },
+            {
+              "id": "30781f2a974c114335d68f94be65e39e",
+              "formula": "[BE - plot visualisation/Edit]"
+            },
+            {
+              "id": "3bf685b2c62f6337a2d7cdfe58eb2fe2",
+              "formula": "[BE - plot visualisation/ai_impact_pct]"
+            },
+            {
+              "id": "6940583347a0df9a304b456fcdb28dec",
+              "formula": "[BE - plot visualisation/ai_acitivty]"
+            }
+          ],
+          "yAxis": {
+            "columnIds": [
+              "vEFz8Inncj",
+              "AVfx0qb_WG",
+              "4RUlIeTmw4",
+              "lt461w6Euu",
+              "-9r0iPHuK7"
+            ],
+            "format": {
+              "labels": {
+                "fontSize": 14
+              },
+              "marks": "grid"
+            }
+          },
+          "xAxis": {
+            "columnId": "AdHDBXxIGq",
+            "format": {
+              "labels": {
+                "labelAngle": 0,
+                "fontSize": 14
+              },
+              "marks": "grid",
+              "scale": {
+                "type": "time",
+                "zero": false,
+                "reverse": false
+              }
+            }
+          },
+          "dataLabel": {
+            "labels": "hidden"
+          },
+          "filters": [
+            {
+              "id": "3p0Fw2O4eV",
+              "columnId": "FifpQODGTD",
+              "kind": "number-range",
+              "includeNulls": "when-no-value-is-selected"
+            }
+          ],
+          "name": "Proposed demand plan breakdown",
+          "legend": {
+            "position": "top-left",
+            "fontSize": 14
+          },
+          "style": {
+            "padding": "none"
+          },
+          "lineAreaStyle": {
+            "interpolation": "monotone",
+            "missing": "hide",
+            "line": {
+              "style": "dashed"
+            },
+            "points": {
+              "visibility": "hidden"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "sq132Bp5vd",
+      "name": "Backend",
+      "elements": [
+        {
+          "id": "ZXe_yk44Sz",
+          "kind": "text",
+          "body": "<span style=\"color: #333333\">**Input**</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "tu-ugSW6OV",
+          "kind": "table",
+          "source": {
+            "dataModelId": "57810cfe-98fd-44ab-b7f5-7bc2c8f79710",
+            "elementId": "NCDXtpzlWv",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "sn2vrBC_l-",
+              "formula": "[fct_supply_chain_planning/relative_month]"
+            },
+            {
+              "id": "s55_SWywX6",
+              "formula": "[fct_supply_chain_planning/month_start]"
+            },
+            {
+              "id": "0nfe5dxEtR",
+              "formula": "[fct_supply_chain_planning/region]"
+            },
+            {
+              "id": "Y9waT6oHZl",
+              "formula": "[fct_supply_chain_planning/channel]"
+            },
+            {
+              "id": "srQSdB0bTU",
+              "formula": "[fct_supply_chain_planning/brand]"
+            },
+            {
+              "id": "wkcRdLNIWv",
+              "formula": "[fct_supply_chain_planning/demand_base]",
+              "name": "forecast_base"
+            },
+            {
+              "id": "KNdodrli6p",
+              "formula": "[fct_supply_chain_planning/demand_season]",
+              "name": "forecast_season"
+            },
+            {
+              "id": "Bz7UdWSV4J",
+              "formula": "[fct_supply_chain_planning/demand_growth]",
+              "name": "forecast_growth"
+            },
+            {
+              "id": "T4oPDC8VDf",
+              "formula": "[fct_supply_chain_planning/demand_fcst]",
+              "name": "volume_forecast"
+            },
+            {
+              "id": "B9FHIwJvKR",
+              "formula": "[fct_supply_chain_planning/sales]"
+            }
+          ],
+          "name": "IT - fct - demand plan",
+          "folders": [
+            {
+              "id": "52_Rklc1LX",
+              "name": "dimensions",
+              "items": [
+                "sn2vrBC_l-",
+                "s55_SWywX6",
+                "0nfe5dxEtR",
+                "Y9waT6oHZl",
+                "srQSdB0bTU"
+              ]
+            },
+            {
+              "id": "3aOt5f76tJ",
+              "name": "metrics",
+              "items": [
+                "wkcRdLNIWv",
+                "KNdodrli6p",
+                "Bz7UdWSV4J",
+                "T4oPDC8VDf",
+                "B9FHIwJvKR"
+              ]
+            }
+          ],
+          "order": [
+            "52_Rklc1LX",
+            "3aOt5f76tJ"
+          ],
+          "visibleAsSource": false,
+          "sort": [
+            {
+              "columnId": "0nfe5dxEtR",
+              "direction": "ascending",
+              "nulls": "last"
+            },
+            {
+              "columnId": "Y9waT6oHZl",
+              "direction": "ascending",
+              "nulls": "last"
+            },
+            {
+              "columnId": "srQSdB0bTU",
+              "direction": "ascending",
+              "nulls": "last"
+            },
+            {
+              "columnId": "sn2vrBC_l-",
+              "direction": "ascending",
+              "nulls": "last"
+            }
+          ]
+        },
+        {
+          "id": "UEt4am1ixp",
+          "kind": "table",
+          "source": {
+            "dataModelId": "57810cfe-98fd-44ab-b7f5-7bc2c8f79710",
+            "elementId": "NCDXtpzlWv",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "EBmHE1JQAu",
+              "formula": "[fct_supply_chain_planning/relative_month]"
+            },
+            {
+              "id": "prjyrKGLeX",
+              "formula": "[fct_supply_chain_planning/month_start]"
+            },
+            {
+              "id": "5dtN9rMyfE",
+              "formula": "[fct_supply_chain_planning/region]"
+            },
+            {
+              "id": "l45671Q9IM",
+              "formula": "[fct_supply_chain_planning/channel]"
+            },
+            {
+              "id": "H_kRyGsik1",
+              "formula": "[fct_supply_chain_planning/brand]"
+            },
+            {
+              "id": "wwUbwjQmO-",
+              "formula": "[fct_supply_chain_planning/demand_base]"
+            },
+            {
+              "id": "Sx3_qARpkP",
+              "formula": "[fct_supply_chain_planning/demand_season]"
+            },
+            {
+              "id": "BNnC7_r6bZ",
+              "formula": "[fct_supply_chain_planning/demand_growth]"
+            },
+            {
+              "id": "Rz1NpalPz6",
+              "formula": "[fct_supply_chain_planning/demand_fcst]"
+            },
+            {
+              "id": "ZKQjpi5Z8z",
+              "formula": "[fct_supply_chain_planning/sales]"
+            },
+            {
+              "id": "RzpqKKW8Fw",
+              "formula": "[fct_supply_chain_planning/inv_open]"
+            },
+            {
+              "id": "1S3AfmFVPy",
+              "formula": "[fct_supply_chain_planning/consumption]"
+            },
+            {
+              "id": "k62SQq9Yy8",
+              "formula": "[fct_supply_chain_planning/supply]"
+            },
+            {
+              "id": "Sp9Tnie78w",
+              "formula": "[fct_supply_chain_planning/inv_close]"
+            }
+          ],
+          "name": "IT - fct - KPIs",
+          "filters": [
+            {
+              "id": "LFYv0C0MNv",
+              "columnId": "EBmHE1JQAu",
+              "kind": "number-range",
+              "includeNulls": "when-no-value-is-selected",
+              "max": -1
+            }
+          ],
+          "folders": [
+            {
+              "id": "52_Rklc1LX",
+              "name": "dimensions",
+              "items": [
+                "EBmHE1JQAu",
+                "prjyrKGLeX",
+                "5dtN9rMyfE",
+                "l45671Q9IM",
+                "H_kRyGsik1"
+              ]
+            },
+            {
+              "id": "3aOt5f76tJ",
+              "name": "metrics",
+              "items": [
+                "wwUbwjQmO-",
+                "Sx3_qARpkP",
+                "BNnC7_r6bZ",
+                "Rz1NpalPz6",
+                "ZKQjpi5Z8z",
+                "RzpqKKW8Fw",
+                "1S3AfmFVPy",
+                "k62SQq9Yy8",
+                "Sp9Tnie78w"
+              ]
+            }
+          ],
+          "order": [
+            "52_Rklc1LX",
+            "3aOt5f76tJ"
+          ],
+          "visibleAsSource": false
+        },
+        {
+          "id": "GUKRtwGwNg",
+          "kind": "table",
+          "source": {
+            "dataModelId": "57810cfe-98fd-44ab-b7f5-7bc2c8f79710",
+            "elementId": "NCDXtpzlWv",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "sn2vrBC_l-",
+              "formula": "[fct_supply_chain_planning/relative_month]"
+            },
+            {
+              "id": "WHXvzn-SZZ",
+              "formula": "DateTrunc(\"day\", [month_start_og])",
+              "name": "month_start"
+            },
+            {
+              "id": "s55_SWywX6",
+              "formula": "[fct_supply_chain_planning/month_start]",
+              "name": "month_start_og"
+            },
+            {
+              "id": "Y9waT6oHZl",
+              "formula": "[fct_supply_chain_planning/channel]"
+            },
+            {
+              "id": "0nfe5dxEtR",
+              "formula": "[fct_supply_chain_planning/region]"
+            },
+            {
+              "id": "srQSdB0bTU",
+              "formula": "[fct_supply_chain_planning/brand]"
+            },
+            {
+              "id": "wkcRdLNIWv",
+              "formula": "[fct_supply_chain_planning/demand_base]"
+            },
+            {
+              "id": "KNdodrli6p",
+              "formula": "[fct_supply_chain_planning/demand_season]"
+            },
+            {
+              "id": "Bz7UdWSV4J",
+              "formula": "[fct_supply_chain_planning/demand_growth]"
+            },
+            {
+              "id": "T4oPDC8VDf",
+              "formula": "[fct_supply_chain_planning/demand_fcst]"
+            },
+            {
+              "id": "B9FHIwJvKR",
+              "formula": "[fct_supply_chain_planning/sales]"
+            }
+          ],
+          "name": "IT - dim - dates",
+          "filters": [
+            {
+              "id": "2X6PoboAn9",
+              "columnId": "sn2vrBC_l-",
+              "kind": "number-range",
+              "includeNulls": "when-no-value-is-selected",
+              "max": 12
+            }
+          ],
+          "folders": [
+            {
+              "id": "52_Rklc1LX",
+              "name": "dimensions",
+              "items": [
+                "s55_SWywX6",
+                "Y9waT6oHZl",
+                "0nfe5dxEtR",
+                "srQSdB0bTU"
+              ]
+            },
+            {
+              "id": "3aOt5f76tJ",
+              "name": "metrics",
+              "items": [
+                "wkcRdLNIWv",
+                "KNdodrli6p",
+                "Bz7UdWSV4J",
+                "T4oPDC8VDf",
+                "B9FHIwJvKR"
+              ]
+            }
+          ],
+          "groupings": [
+            {
+              "id": "q54HzlYoTI",
+              "groupBy": [
+                "sn2vrBC_l-",
+                "WHXvzn-SZZ"
+              ]
+            }
+          ],
+          "order": [
+            "52_Rklc1LX",
+            "3aOt5f76tJ"
+          ],
+          "visibleAsSource": false,
+          "sort": [
+            {
+              "columnId": "Y9waT6oHZl",
+              "direction": "ascending",
+              "nulls": "last"
+            },
+            {
+              "columnId": "srQSdB0bTU",
+              "direction": "ascending",
+              "nulls": "last"
+            }
+          ],
+          "tableComponents": {
+            "collapsedColumns": "hidden",
+            "summaryBar": "hidden"
+          }
+        },
+        {
+          "id": "mU_R3_bQQX",
+          "kind": "table",
+          "source": {
+            "dataModelId": "57810cfe-98fd-44ab-b7f5-7bc2c8f79710",
+            "elementId": "NCDXtpzlWv",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "0nfe5dxEtR",
+              "formula": "[fct_supply_chain_planning/region]"
+            },
+            {
+              "id": "sn2vrBC_l-",
+              "formula": "[fct_supply_chain_planning/relative_month]"
+            },
+            {
+              "id": "s55_SWywX6",
+              "formula": "[fct_supply_chain_planning/month_start]"
+            },
+            {
+              "id": "Y9waT6oHZl",
+              "formula": "[fct_supply_chain_planning/channel]"
+            },
+            {
+              "id": "srQSdB0bTU",
+              "formula": "[fct_supply_chain_planning/brand]"
+            },
+            {
+              "id": "wkcRdLNIWv",
+              "formula": "[fct_supply_chain_planning/demand_base]"
+            },
+            {
+              "id": "KNdodrli6p",
+              "formula": "[fct_supply_chain_planning/demand_season]"
+            },
+            {
+              "id": "Bz7UdWSV4J",
+              "formula": "[fct_supply_chain_planning/demand_growth]"
+            },
+            {
+              "id": "T4oPDC8VDf",
+              "formula": "[fct_supply_chain_planning/demand_fcst]"
+            },
+            {
+              "id": "B9FHIwJvKR",
+              "formula": "[fct_supply_chain_planning/sales]"
+            }
+          ],
+          "name": "IT - dim - regions",
+          "folders": [
+            {
+              "id": "52_Rklc1LX",
+              "name": "dimensions",
+              "items": [
+                "sn2vrBC_l-",
+                "s55_SWywX6",
+                "Y9waT6oHZl",
+                "srQSdB0bTU"
+              ]
+            },
+            {
+              "id": "3aOt5f76tJ",
+              "name": "metrics",
+              "items": [
+                "wkcRdLNIWv",
+                "KNdodrli6p",
+                "Bz7UdWSV4J",
+                "T4oPDC8VDf",
+                "B9FHIwJvKR"
+              ]
+            }
+          ],
+          "groupings": [
+            {
+              "id": "ootgP_W1hV",
+              "groupBy": [
+                "0nfe5dxEtR"
+              ]
+            }
+          ],
+          "order": [
+            "52_Rklc1LX",
+            "3aOt5f76tJ"
+          ],
+          "visibleAsSource": false,
+          "sort": [
+            {
+              "columnId": "Y9waT6oHZl",
+              "direction": "ascending",
+              "nulls": "last"
+            },
+            {
+              "columnId": "srQSdB0bTU",
+              "direction": "ascending",
+              "nulls": "last"
+            },
+            {
+              "columnId": "sn2vrBC_l-",
+              "direction": "ascending",
+              "nulls": "last"
+            }
+          ],
+          "tableComponents": {
+            "collapsedColumns": "hidden",
+            "summaryBar": "hidden"
+          }
+        },
+        {
+          "id": "LFDPyRRNmO",
+          "kind": "table",
+          "source": {
+            "dataModelId": "57810cfe-98fd-44ab-b7f5-7bc2c8f79710",
+            "elementId": "NCDXtpzlWv",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "Y9waT6oHZl",
+              "formula": "[fct_supply_chain_planning/channel]"
+            },
+            {
+              "id": "sn2vrBC_l-",
+              "formula": "[fct_supply_chain_planning/relative_month]"
+            },
+            {
+              "id": "s55_SWywX6",
+              "formula": "[fct_supply_chain_planning/month_start]"
+            },
+            {
+              "id": "srQSdB0bTU",
+              "formula": "[fct_supply_chain_planning/brand]"
+            },
+            {
+              "id": "0nfe5dxEtR",
+              "formula": "[fct_supply_chain_planning/region]"
+            },
+            {
+              "id": "wkcRdLNIWv",
+              "formula": "[fct_supply_chain_planning/demand_base]"
+            },
+            {
+              "id": "KNdodrli6p",
+              "formula": "[fct_supply_chain_planning/demand_season]"
+            },
+            {
+              "id": "Bz7UdWSV4J",
+              "formula": "[fct_supply_chain_planning/demand_growth]"
+            },
+            {
+              "id": "T4oPDC8VDf",
+              "formula": "[fct_supply_chain_planning/demand_fcst]"
+            },
+            {
+              "id": "B9FHIwJvKR",
+              "formula": "[fct_supply_chain_planning/sales]"
+            }
+          ],
+          "name": "IT - dim - channels",
+          "folders": [
+            {
+              "id": "52_Rklc1LX",
+              "name": "dimensions",
+              "items": [
+                "sn2vrBC_l-",
+                "s55_SWywX6",
+                "srQSdB0bTU",
+                "0nfe5dxEtR"
+              ]
+            },
+            {
+              "id": "3aOt5f76tJ",
+              "name": "metrics",
+              "items": [
+                "wkcRdLNIWv",
+                "KNdodrli6p",
+                "Bz7UdWSV4J",
+                "T4oPDC8VDf",
+                "B9FHIwJvKR"
+              ]
+            }
+          ],
+          "groupings": [
+            {
+              "id": "ootgP_W1hV",
+              "groupBy": [
+                "Y9waT6oHZl"
+              ]
+            }
+          ],
+          "order": [
+            "52_Rklc1LX",
+            "3aOt5f76tJ"
+          ],
+          "visibleAsSource": false,
+          "sort": [
+            {
+              "columnId": "srQSdB0bTU",
+              "direction": "ascending",
+              "nulls": "last"
+            },
+            {
+              "columnId": "sn2vrBC_l-",
+              "direction": "ascending",
+              "nulls": "last"
+            }
+          ],
+          "tableComponents": {
+            "collapsedColumns": "hidden",
+            "summaryBar": "hidden"
+          }
+        },
+        {
+          "id": "prRZtI68k0",
+          "kind": "table",
+          "source": {
+            "dataModelId": "57810cfe-98fd-44ab-b7f5-7bc2c8f79710",
+            "elementId": "NCDXtpzlWv",
+            "kind": "data-model"
+          },
+          "columns": [
+            {
+              "id": "srQSdB0bTU",
+              "formula": "[fct_supply_chain_planning/brand]"
+            },
+            {
+              "id": "sn2vrBC_l-",
+              "formula": "[fct_supply_chain_planning/relative_month]"
+            },
+            {
+              "id": "s55_SWywX6",
+              "formula": "[fct_supply_chain_planning/month_start]"
+            },
+            {
+              "id": "0nfe5dxEtR",
+              "formula": "[fct_supply_chain_planning/region]"
+            },
+            {
+              "id": "Y9waT6oHZl",
+              "formula": "[fct_supply_chain_planning/channel]"
+            },
+            {
+              "id": "wkcRdLNIWv",
+              "formula": "[fct_supply_chain_planning/demand_base]"
+            },
+            {
+              "id": "KNdodrli6p",
+              "formula": "[fct_supply_chain_planning/demand_season]"
+            },
+            {
+              "id": "Bz7UdWSV4J",
+              "formula": "[fct_supply_chain_planning/demand_growth]"
+            },
+            {
+              "id": "T4oPDC8VDf",
+              "formula": "[fct_supply_chain_planning/demand_fcst]"
+            },
+            {
+              "id": "B9FHIwJvKR",
+              "formula": "[fct_supply_chain_planning/sales]"
+            }
+          ],
+          "name": "IT - dim - brands",
+          "folders": [
+            {
+              "id": "52_Rklc1LX",
+              "name": "dimensions",
+              "items": [
+                "sn2vrBC_l-",
+                "s55_SWywX6",
+                "0nfe5dxEtR",
+                "Y9waT6oHZl"
+              ]
+            },
+            {
+              "id": "3aOt5f76tJ",
+              "name": "metrics",
+              "items": [
+                "wkcRdLNIWv",
+                "KNdodrli6p",
+                "Bz7UdWSV4J",
+                "T4oPDC8VDf",
+                "B9FHIwJvKR"
+              ]
+            }
+          ],
+          "groupings": [
+            {
+              "id": "ootgP_W1hV",
+              "groupBy": [
+                "srQSdB0bTU"
+              ]
+            }
+          ],
+          "order": [
+            "52_Rklc1LX",
+            "3aOt5f76tJ"
+          ],
+          "visibleAsSource": false,
+          "sort": [
+            {
+              "columnId": "sn2vrBC_l-",
+              "direction": "ascending",
+              "nulls": "last"
+            }
+          ],
+          "tableComponents": {
+            "collapsedColumns": "hidden",
+            "summaryBar": "hidden"
+          }
+        },
+        {
+          "id": "JFZorcI_YL",
+          "kind": "text",
+          "body": "<span style=\"color: #333333\">**Variables**</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "IBVC-xgl43",
+          "kind": "container"
+        },
+        {
+          "kind": "control",
+          "controlId": "v.selected_plan_region",
+          "id": "437FFVP7Re",
+          "name": "v.selected_plan_region",
+          "case": "insensitive",
+          "controlType": "text",
+          "mode": "equals",
+          "value": "West",
+          "includeNulls": "when-no-value-is-selected",
+          "showOperators": false
+        },
+        {
+          "kind": "control",
+          "controlId": "v.selected_plan_channel",
+          "id": "dVwTNnv7qv",
+          "name": "v.selected_plan_channel",
+          "case": "insensitive",
+          "controlType": "text",
+          "mode": "equals",
+          "value": "Direct",
+          "includeNulls": "when-no-value-is-selected",
+          "showOperators": false
+        },
+        {
+          "kind": "control",
+          "controlId": "v.selected_plan_brand",
+          "id": "jnk56480TT",
+          "name": "v.selected_plan_brand",
+          "case": "insensitive",
+          "controlType": "text",
+          "mode": "equals",
+          "value": "Apple",
+          "includeNulls": "when-no-value-is-selected",
+          "showOperators": false
+        },
+        {
+          "kind": "control",
+          "controlId": "v.selected_plan_id",
+          "id": "Pl3LnVEZM6",
+          "name": "v.selected_plan_id",
+          "case": "insensitive",
+          "controlType": "text",
+          "mode": "equals",
+          "value": "4138304230453034443136363438334138463446343436383041373335423932",
+          "includeNulls": "when-no-value-is-selected",
+          "showOperators": false
+        },
+        {
+          "kind": "control",
+          "controlId": "v.selected_plan_name",
+          "id": "RO0zSfS5e4",
+          "name": "v.selected_plan_name",
+          "case": "insensitive",
+          "controlType": "text",
+          "mode": "equals",
+          "value": "26-06-01-15-34-Mid-Atlantic-Direct-Apple",
+          "includeNulls": "when-no-value-is-selected",
+          "showOperators": false
+        },
+        {
+          "kind": "control",
+          "controlId": "v.selected_month",
+          "id": "3-EttKSOEq",
+          "name": "v.selected_month",
+          "controlType": "date",
+          "mode": "=",
+          "value": "2026-01-01T08:00:00Z",
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "v.selected_relative_month",
+          "id": "aHjGx_mWSh",
+          "name": "v.selected_relative_month",
+          "controlType": "number",
+          "mode": "=",
+          "value": 2,
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "v.selected_demand_base",
+          "id": "5nYHwGMxlK",
+          "name": "v.selected_demand_base",
+          "controlType": "number",
+          "mode": "=",
+          "value": 348,
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "v.selected_demand_season",
+          "id": "JaA4jXF-Y2",
+          "name": "v.selected_demand_season",
+          "controlType": "number",
+          "mode": "=",
+          "value": -17,
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "kind": "control",
+          "controlId": "v.selected_demand_growth",
+          "id": "311tIqomON",
+          "name": "v.selected_demand_growth",
+          "controlType": "number",
+          "mode": "=",
+          "value": 0,
+          "includeNulls": "when-no-value-is-selected"
+        },
+        {
+          "id": "CRWvl9fRrO",
+          "kind": "container"
+        },
+        {
+          "kind": "control",
+          "controlId": "v.prompt_system",
+          "id": "czeXrbTl5a",
+          "name": "v.prompt_system",
+          "controlType": "text-area",
+          "value": "SYSTEM PROMPT\n\nWrite in sentence case especially for headers.  General overview instead of General Overview\nAvoid nested lists. Use headers # or subheaders ##\nUse numbered lists 1., 2., 3., do NOT use bullet points\nKeep your answers to the points and avoid consulting bullshit\nUse simple language: Write plainly with short sentences. Example: \"I need help with this issue.\"\nAvoid AI-giveaway phrases: Don't use clichés like \"dive into,\" \"unleash your potential,\" etc.\nAvoid: \"Let's dive into this game-changing solution.\"\nUse instead: \"Here's how it works.\"\nBe direct and concise: Get to the point; remove unnecessary words. Example: \"We should meet tomorrow.\"\nMaintain a natural tone: Write as you normally speak; it's okay to start sentences with \"and\" or \"but.\" Example: \"And that's why it matters.\"\nAvoid marketing language: Don't use hype or promotional words.\nAvoid: \"This revolutionary product will transform your life.\" Use instead: \"This product can help you.\"\nKeep it real: Be honest; don't force friendliness. Example: \"I don't think that's the best idea.\"\nSimplify grammar: Don't stress about perfect grammar; it's fine not to capitalize \"i\" if that's your style. Example: \"i guess we can try that.\"\nStay away from fluff: Avoid unnecessary adjectives and adverbs. Example: \"We finished the task.\"\nFocus on clarity: Make your message easy to understand. Example: \"Please send the file by Monday.\""
+        },
+        {
+          "kind": "control",
+          "controlId": "v.prompt_overview",
+          "id": "L-5GstqukA",
+          "name": "v.prompt_overview",
+          "controlType": "text-area",
+          "value": "OVERVIEW PROMPT\n\nYou are a demand planner specialist. You excel at finding activities given region, sales channel and brands on the internet. Your job is to provide context for the human demand planner so they know what is happening on the market. You have to give a potential overview of activities and their impact on demand plan (up/down + high-mid-low) broken down per month for the next 12 months (0-12). Total answer should be 13 rows. Consider all items that fall into the brand (e.g.: laptops, mobiles, accessories, etc.). Don't give me any prephrase or suggestions from you. Just give me the summary itself, nothing else. Use markdown. Present as a table relative_month (0, 1, 2), month (Jan, Feb, Mar), activity, direction (up-down), impact (low-mid-high). Use current date inside the prompt to determine relative month 0. Make sure you recognise year as well. Keep only one activity per month."
+        },
+        {
+          "kind": "control",
+          "controlId": "v.ai_answer",
+          "id": "8tF7SQ4Oqx",
+          "name": "v.ai_answer",
+          "controlType": "text-area",
+          "value": "| relative_month | month | activity | direction | impact |\n|----------------|-------|----------|-----------|---------|\n| 0 | May | Memorial Day weekend sales promotions | up | mid |\n| 1 | Jun | Back-to-school preparation season begins | up | low |\n| 2 | Jul | Summer gaming laptop demand peak | up | mid |\n| 3 | Aug | Back-to-school shopping surge | up | high |\n| 4 | Sep | New product launches and fall refresh cycle | up | high |\n| 5 | Oct | Holiday season inventory buildup | up | mid |\n| 6 | Nov | Black Friday and Cyber Monday promotions | up | high |\n| 7 | Dec | Holiday gift buying peak | up | high |\n| 8 | Jan | Post-holiday inventory clearance | down | mid |\n| 9 | Feb | Chinese New Year supply chain slowdown | down | low |\n| 10 | Mar | Spring refresh and tax refund spending | up | mid |\n| 11 | Apr | Business quarter-end procurement cycles | up | low |\n| 12 | May | Graduation season laptop purchases | up | mid |"
+        },
+        {
+          "id": "dpoGpBYkKy",
+          "kind": "container"
+        },
+        {
+          "id": "84IeDu0ePt",
+          "kind": "text",
+          "body": "<span style=\"color: #333333\">**Logic**</span>",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "CLym9qIamt",
+          "kind": "input-table",
+          "source": {
+            "kind": "empty",
+            "connectionId": "c7fa6e45-2e6b-4a96-a83e-3291f7d77f8e"
+          },
+          "inputMode": "view",
+          "name": "BE - plan names",
+          "sort": [
+            {
+              "columnId": "JWMNEQCU-6",
+              "direction": "ascending",
+              "nulls": "last"
+            }
+          ],
+          "columns": [
+            {
+              "id": "GRRDYSWU4Q",
+              "type": "text",
+              "name": "name_plan"
+            },
+            {
+              "id": "TTZKO3TJBW",
+              "type": "text",
+              "name": "region"
+            },
+            {
+              "id": "RRVU-C8IGH",
+              "type": "text",
+              "name": "channel"
+            },
+            {
+              "id": "TEW8YYBKVI",
+              "type": "text",
+              "name": "brand"
+            },
+            {
+              "id": "LUJCVVUZB9",
+              "type": "text",
+              "name": "status",
+              "values": [
+                "Draft",
+                "Submitted",
+                "Approved",
+                "Adjust",
+                "Rejected"
+              ],
+              "pills": "color-by-option"
+            },
+            {
+              "id": "ID",
+              "name": "id_plan"
+            },
+            {
+              "id": "CREATED_AT",
+              "name": "dt_created"
+            },
+            {
+              "id": "UPDATED_AT",
+              "name": "dt_updated"
+            },
+            {
+              "id": "CREATED_BY",
+              "name": "created_by"
+            },
+            {
+              "id": "UPDATED_BY",
+              "name": "updated_by"
+            }
+          ]
+        },
+        {
+          "id": "3YKeEU_r0J",
+          "kind": "table",
+          "source": {
+            "kind": "join",
+            "joins": [
+              {
+                "left": {
+                  "elementId": "GUKRtwGwNg",
+                  "kind": "table"
+                },
+                "right": {
+                  "elementId": "CLym9qIamt",
+                  "kind": "table"
+                },
+                "columns": [
+                  {
+                    "left": "1",
+                    "right": "1"
+                  }
+                ],
+                "joinType": "left-outer"
+              }
+            ],
+            "primarySource": {
+              "elementId": "GUKRtwGwNg",
+              "kind": "table"
+            }
+          },
+          "columns": [
+            {
+              "id": "mACMDMw-Ye",
+              "formula": "[BE - plan names/name_plan]"
+            },
+            {
+              "id": "rxJuX1mdwN",
+              "formula": "[BE - plan names/id_plan]"
+            },
+            {
+              "id": "Ih3h9YqB-f",
+              "formula": "[BE - plan names/status]"
+            },
+            {
+              "id": "pYkyYOgAQO",
+              "formula": "[IT - dim - dates/relative_month]"
+            },
+            {
+              "id": "NO9oUVTFkb",
+              "formula": "[BE - plan names/region]"
+            },
+            {
+              "id": "1CoveRyvd3",
+              "formula": "[BE - plan names/channel]"
+            },
+            {
+              "id": "J5jjzxaf-W",
+              "formula": "[BE - plan names/brand]"
+            },
+            {
+              "id": "KW6T7jDCm2",
+              "formula": "[IT - dim - dates/month_start]"
+            },
+            {
+              "id": "ZSG_-Apo4h",
+              "formula": "If([channel] = \"All\" and [brand] = \"All\" and [region] = \"All\", Lookup(Sum([IT - fct - demand plan/forecast_base]), [month_start], [IT - fct - demand plan/month_start]), Lookup(Sum([IT - fct - demand plan/forecast_base]), [channel], [IT - fct - demand plan/channel], [brand], [IT - fct - demand plan/brand], [region], [IT - fct - demand plan/region], [month_start], [IT - fct - demand plan/month_start]))",
+              "name": "forecast_base",
+              "format": {
+                "kind": "number",
+                "formatString": ",d"
+              }
+            },
+            {
+              "id": "WdSH8FC96t",
+              "formula": "If([channel] = \"All\" and [brand] = \"All\" and [region] = \"All\", Lookup(Sum([IT - fct - demand plan/forecast_growth]), [month_start], [IT - fct - demand plan/month_start]), Lookup(Sum([IT - fct - demand plan/forecast_growth]), [channel], [IT - fct - demand plan/channel], [brand], [IT - fct - demand plan/brand], [region], [IT - fct - demand plan/region], [month_start], [IT - fct - demand plan/month_start]))",
+              "name": "forecast_growth",
+              "format": {
+                "kind": "number",
+                "formatString": ",d"
+              }
+            },
+            {
+              "id": "4i1CsPNP6L",
+              "formula": "If([channel] = \"All\" and [brand] = \"All\" and [region] = \"All\", Lookup(Sum([IT - fct - demand plan/forecast_season]), [month_start], [IT - fct - demand plan/month_start]), Lookup(Sum([IT - fct - demand plan/forecast_season]), [channel], [IT - fct - demand plan/channel], [brand], [IT - fct - demand plan/brand], [region], [IT - fct - demand plan/region], [month_start], [IT - fct - demand plan/month_start]))",
+              "name": "forecast_season",
+              "format": {
+                "kind": "number",
+                "formatString": ",d"
+              }
+            },
+            {
+              "id": "jGrHbip3FC",
+              "formula": "If([channel] = \"All\" and [brand] = \"All\" and [region] = \"All\", Lookup(Sum([IT - fct - demand plan/sales]), [month_start], [IT - fct - demand plan/month_start]), Lookup(Sum([IT - fct - demand plan/sales]), [channel], [IT - fct - demand plan/channel], [brand], [IT - fct - demand plan/brand], [region], [IT - fct - demand plan/region], [month_start], [IT - fct - demand plan/month_start]))",
+              "name": "volume_sales",
+              "format": {
+                "kind": "number",
+                "formatString": ",d"
+              }
+            },
+            {
+              "id": "Zu4SazxE68",
+              "formula": "[BE - plan names/dt_created]"
+            },
+            {
+              "id": "urTk7ouPxG",
+              "formula": "[BE - plan names/dt_updated]"
+            },
+            {
+              "id": "BMsQjHa7-h",
+              "formula": "[BE - plan names/updated_by]"
+            },
+            {
+              "id": "8472131fd4a8441285ff8362cc13a4fb",
+              "formula": "[BE - plan names/created_by]"
+            }
+          ],
+          "name": "BE - crossjoin skeleton",
+          "filters": [
+            {
+              "id": "VFAW401YJL",
+              "columnId": "pYkyYOgAQO",
+              "kind": "number-range",
+              "includeNulls": "when-no-value-is-selected",
+              "min": 1
+            }
+          ],
+          "groupings": [
+            {
+              "id": "nRRI4pTm-D",
+              "groupBy": [
+                "mACMDMw-Ye",
+                "rxJuX1mdwN",
+                "Ih3h9YqB-f"
+              ]
+            }
+          ],
+          "order": [
+            "pYkyYOgAQO",
+            "NO9oUVTFkb",
+            "1CoveRyvd3",
+            "J5jjzxaf-W",
+            "KW6T7jDCm2",
+            "ZSG_-Apo4h",
+            "WdSH8FC96t",
+            "4i1CsPNP6L",
+            "jGrHbip3FC",
+            "Zu4SazxE68",
+            "urTk7ouPxG",
+            "BMsQjHa7-h",
+            "8472131fd4a8441285ff8362cc13a4fb"
+          ],
+          "visibleAsSource": false,
+          "sort": [
+            {
+              "columnId": "pYkyYOgAQO",
+              "direction": "ascending",
+              "nulls": "last"
+            }
+          ]
+        },
+        {
+          "id": "ejzvZijw4U",
+          "kind": "table",
+          "source": {
+            "kind": "join",
+            "joins": [
+              {
+                "left": {
+                  "elementId": "tu-ugSW6OV",
+                  "kind": "table"
+                },
+                "right": {
+                  "elementId": "PYGDfQBq-i",
+                  "kind": "table"
+                },
+                "columns": [
+                  {
+                    "left": "[relative_month]",
+                    "right": "[#]"
+                  },
+                  {
+                    "left": "[region]",
+                    "right": "[region]"
+                  },
+                  {
+                    "left": "[channel]",
+                    "right": "[channel]"
+                  },
+                  {
+                    "left": "[brand]",
+                    "right": "[brand]"
+                  }
+                ],
+                "joinType": "left-outer"
+              }
+            ],
+            "primarySource": {
+              "elementId": "tu-ugSW6OV",
+              "kind": "table"
+            }
+          },
+          "columns": [
+            {
+              "id": "lD05X4TBMQ",
+              "formula": "[IT - fct - demand plan/relative_month]"
+            },
+            {
+              "id": "434mHNRcQs",
+              "formula": "[IT - fct - demand plan/month_start]"
+            },
+            {
+              "id": "J1DRy7E6tb",
+              "formula": "[IT - fct - demand plan/region]"
+            },
+            {
+              "id": "CHPLd_Cu4s",
+              "formula": "[IT - fct - demand plan/channel]"
+            },
+            {
+              "id": "MtMvir8RFl",
+              "formula": "[IT - fct - demand plan/brand]"
+            },
+            {
+              "id": "uHdVmj0RK9",
+              "formula": "[IT - fct - demand plan/forecast_base]"
+            },
+            {
+              "id": "PElOH8Jjby",
+              "formula": "[IT - fct - demand plan/forecast_season]"
+            },
+            {
+              "id": "Ix2FM3e-yC",
+              "formula": "[IT - fct - demand plan/forecast_growth]"
+            },
+            {
+              "id": "g_LW7jzuye",
+              "formula": "[IT - fct - demand plan/volume_forecast]"
+            },
+            {
+              "id": "KmOH4ti9xg",
+              "formula": "[IT - fct - demand plan/sales]"
+            },
+            {
+              "id": "zwO_N2cBxc",
+              "formula": "[FE - demand plan submission/Demand]",
+              "name": "volume_demand"
+            },
+            {
+              "id": "spxyqdJ3tw",
+              "formula": "[FE - demand plan submission/Base]",
+              "name": "demand_base"
+            },
+            {
+              "id": "syybe-Y7dF",
+              "formula": "[FE - demand plan submission/Seasonality]",
+              "name": "demand_season"
+            },
+            {
+              "id": "tYdgooGU4_",
+              "formula": "[FE - demand plan submission/Growth]",
+              "name": "demand_growth"
+            },
+            {
+              "id": "oXP01qJLdX",
+              "formula": "[FE - demand plan submission/Events effect]",
+              "name": "demand_event"
+            },
+            {
+              "id": "cRHCY_ghKX",
+              "formula": "[FE - demand plan submission/Comments]",
+              "name": "comments"
+            },
+            {
+              "id": "N9t1-AElyX",
+              "formula": "If((IsNull([c.filter_region]) or IsNull([c.filter_brand]) or IsNull([c.filter_channel])) and [relative_month] > -1, [forecast_base], [demand_base])",
+              "name": "demand_base_plot"
+            },
+            {
+              "id": "vMszXD8aVQ",
+              "formula": "If((IsNull([c.filter_region]) or IsNull([c.filter_brand]) or IsNull([c.filter_channel])) and [relative_month] > -1, [forecast_season], [demand_season])",
+              "name": "demand_season_plot"
+            },
+            {
+              "id": "qrUMcmiSzT",
+              "formula": "If((IsNull([c.filter_region]) or IsNull([c.filter_brand]) or IsNull([c.filter_channel])) and [relative_month] > -1, [forecast_growth], [demand_growth])",
+              "name": "demand_growth_plot"
+            },
+            {
+              "id": "yUBwt0Yc7B",
+              "formula": "If((IsNull([c.filter_region]) or IsNull([c.filter_brand]) or IsNull([c.filter_channel])) and [relative_month] > -1, Null, [demand_event])",
+              "name": "demand_events_plot"
+            },
+            {
+              "id": "yd3PcvmnnW",
+              "formula": "If((IsNull([c.filter_region]) or IsNull([c.filter_brand]) or IsNull([c.filter_channel])) and [relative_month] > -1, [volume_forecast], [volume_demand])",
+              "name": "volume_demand_plot"
+            },
+            {
+              "id": "UxHbFzAIPZ",
+              "formula": "If((IsNull([c.filter_region]) or IsNull([c.filter_brand]) or IsNull([c.filter_channel])) and [relative_month] > -1, Null, [comments])",
+              "name": "comments_plot"
+            },
+            {
+              "id": "jciyYFI6JU",
+              "formula": "[FE - demand plan submission/#]"
+            },
+            {
+              "id": "C9YsouGig9",
+              "formula": "[FE - demand plan submission/Month]"
+            },
+            {
+              "id": "de797ba9df852ebc494fd62eb20da9d6",
+              "formula": "[FE - demand plan submission/Edit]"
+            },
+            {
+              "id": "1f4d65a1dd6f2b97b1c16d7b02370507",
+              "formula": "[FE - demand plan submission/ai_impact_pct]"
+            },
+            {
+              "id": "25a544b181272a6c6bc5723dccee7c7c",
+              "formula": "[FE - demand plan submission/ai_acitivty]"
+            }
+          ],
+          "name": "BE - plot visualisation",
+          "folders": [
+            {
+              "id": "52_Rklc1LX",
+              "name": "dimensions",
+              "items": [
+                "lD05X4TBMQ",
+                "434mHNRcQs",
+                "J1DRy7E6tb",
+                "CHPLd_Cu4s",
+                "MtMvir8RFl"
+              ]
+            },
+            {
+              "id": "3aOt5f76tJ",
+              "name": "metrics",
+              "items": [
+                "uHdVmj0RK9",
+                "PElOH8Jjby",
+                "Ix2FM3e-yC",
+                "g_LW7jzuye",
+                "KmOH4ti9xg",
+                "zwO_N2cBxc"
+              ]
+            },
+            {
+              "id": "YhYjbY3LoC",
+              "name": "demand",
+              "items": [
+                "spxyqdJ3tw",
+                "syybe-Y7dF",
+                "tYdgooGU4_",
+                "oXP01qJLdX",
+                "cRHCY_ghKX"
+              ]
+            },
+            {
+              "id": "kuohvvMTkn",
+              "name": "plot",
+              "items": [
+                "N9t1-AElyX",
+                "vMszXD8aVQ",
+                "qrUMcmiSzT",
+                "yUBwt0Yc7B",
+                "yd3PcvmnnW",
+                "UxHbFzAIPZ"
+              ]
+            }
+          ],
+          "order": [
+            "52_Rklc1LX",
+            "3aOt5f76tJ",
+            "YhYjbY3LoC",
+            "kuohvvMTkn",
+            "jciyYFI6JU",
+            "C9YsouGig9",
+            "de797ba9df852ebc494fd62eb20da9d6",
+            "1f4d65a1dd6f2b97b1c16d7b02370507",
+            "25a544b181272a6c6bc5723dccee7c7c"
+          ],
+          "visibleAsSource": false,
+          "sort": [
+            {
+              "columnId": "lD05X4TBMQ",
+              "direction": "ascending",
+              "nulls": "last"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "themeName": "4010ceab-fe21-4d96-87b8-3b67c7593138",
+  "themeOverrides": {
+    "colors": {
+      "text": "#0a0a0a",
+      "highlight": "#0099ff",
+      "surface": "#8c8c8c",
+      "success": "#46a758",
+      "warning": "#ee8a2b",
+      "danger": "#d94021",
+      "darkMode": "hidden"
+    },
+    "colorOverrides": {
+      "backgroundCanvas": "#f7f7f7"
+    },
+    "borderRadius": "round",
+    "pageWidth": "full"
+  },
+  "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"MkOiw-rNEx\">\n  <GridContainer elementId=\"d9K4g04pFJ\" type=\"grid\" gridColumn=\"1 / 11\" gridRow=\"1 / 30\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"6tiom6Ek1r\" gridColumn=\"1 / 7\" gridRow=\"1 / 3\"/>\n    <LayoutElement elementId=\"BhV9PvY57_\" gridColumn=\"7 / 11\" gridRow=\"1 / 3\"/>\n    <LayoutElement elementId=\"-WbuuUL-UEcon\" gridColumn=\"11 / 13\" gridRow=\"1 / 3\"/>\n    <LayoutElement elementId=\"t_C7l51sUr\" gridColumn=\"1 / 13\" gridRow=\"3 / 23\"/>\n    <LayoutElement elementId=\"1BCZ6qbvma\" gridColumn=\"1 / 7\" gridRow=\"24 / 30\"/>\n    <LayoutElement elementId=\"bJAV1XP6ZE\" gridColumn=\"7 / 13\" gridRow=\"24 / 30\"/>\n  </GridContainer>\n  <GridContainer elementId=\"S7-V5sM_RT\" type=\"grid\" gridColumn=\"11 / 25\" gridRow=\"1 / 30\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"Tt2NIbgNgY\" gridColumn=\"1 / 12\" gridRow=\"1 / 2\"/>\n    <LayoutElement elementId=\"PYGDfQBq-i\" gridColumn=\"1 / 25\" gridRow=\"2 / 23\"/>\n    <LayoutElement elementId=\"svWWyEq6H5\" gridColumn=\"1 / 9\" gridRow=\"24 / 30\"/>\n    <LayoutElement elementId=\"tf-pTEwJCy\" gridColumn=\"9 / 17\" gridRow=\"24 / 30\"/>\n    <LayoutElement elementId=\"Q4NQrr6ApC\" gridColumn=\"17 / 25\" gridRow=\"24 / 30\"/>\n  </GridContainer>\n  <GridContainer elementId=\"ropKQFA4Ft\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"30 / 32\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"iTkiB7Ftjb\" gridColumn=\"4 / 21\" gridRow=\"1 / 3\"/>\n  </GridContainer>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"Ho-ReMjhP-\"/>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"zpvg-RppU0\">\n  <GridContainer elementId=\"ois3PRxRlO\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 17\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"siptb9Gsvrcon\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n    <LayoutElement elementId=\"HgBZq-JB05\" gridColumn=\"1 / 25\" gridRow=\"3 / 17\"/>\n  </GridContainer>\n  <GridContainer elementId=\"kXRhY6M3mh\" type=\"grid\" gridColumn=\"1 / 13\" gridRow=\"17 / 33\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"K8Z5c5BgY2\" gridColumn=\"1 / 13\" gridRow=\"1 / 17\"/>\n  </GridContainer>\n  <GridContainer elementId=\"P4gTo557GY\" type=\"grid\" gridColumn=\"13 / 25\" gridRow=\"17 / 33\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"HE68zqCSnc\" gridColumn=\"1 / 25\" gridRow=\"1 / 17\"/>\n  </GridContainer>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"sq132Bp5vd\">\n  <LayoutElement elementId=\"ZXe_yk44Sz\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <LayoutElement elementId=\"tu-ugSW6OV\" gridColumn=\"1 / 15\" gridRow=\"3 / 11\"/>\n  <LayoutElement elementId=\"UEt4am1ixp\" gridColumn=\"15 / 25\" gridRow=\"3 / 11\"/>\n  <LayoutElement elementId=\"GUKRtwGwNg\" gridColumn=\"1 / 7\" gridRow=\"11 / 18\"/>\n  <LayoutElement elementId=\"mU_R3_bQQX\" gridColumn=\"7 / 13\" gridRow=\"11 / 18\"/>\n  <LayoutElement elementId=\"LFDPyRRNmO\" gridColumn=\"13 / 19\" gridRow=\"11 / 18\"/>\n  <LayoutElement elementId=\"prRZtI68k0\" gridColumn=\"19 / 25\" gridRow=\"11 / 18\"/>\n  <LayoutElement elementId=\"JFZorcI_YL\" gridColumn=\"1 / 25\" gridRow=\"18 / 20\"/>\n  <GridContainer elementId=\"IBVC-xgl43\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"20 / 26\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"437FFVP7Re\" gridColumn=\"1 / 6\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"dVwTNnv7qv\" gridColumn=\"6 / 11\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"jnk56480TT\" gridColumn=\"11 / 15\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"Pl3LnVEZM6\" gridColumn=\"15 / 20\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"RO0zSfS5e4\" gridColumn=\"20 / 25\" gridRow=\"1 / 4\"/>\n    <LayoutElement elementId=\"3-EttKSOEq\" gridColumn=\"1 / 6\" gridRow=\"4 / 7\"/>\n    <LayoutElement elementId=\"aHjGx_mWSh\" gridColumn=\"6 / 11\" gridRow=\"4 / 7\"/>\n    <LayoutElement elementId=\"5nYHwGMxlK\" gridColumn=\"11 / 15\" gridRow=\"4 / 7\"/>\n    <LayoutElement elementId=\"JaA4jXF-Y2\" gridColumn=\"15 / 20\" gridRow=\"4 / 7\"/>\n    <LayoutElement elementId=\"311tIqomON\" gridColumn=\"20 / 25\" gridRow=\"4 / 7\"/>\n  </GridContainer>\n  <GridContainer elementId=\"CRWvl9fRrO\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"26 / 39\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <LayoutElement elementId=\"czeXrbTl5a\" gridColumn=\"1 / 8\" gridRow=\"1 / 14\"/>\n    <LayoutElement elementId=\"L-5GstqukA\" gridColumn=\"8 / 17\" gridRow=\"1 / 14\"/>\n    <LayoutElement elementId=\"8tF7SQ4Oqx\" gridColumn=\"17 / 25\" gridRow=\"1 / 14\"/>\n  </GridContainer>\n  <GridContainer elementId=\"dpoGpBYkKy\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"39 / 54\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\"/>\n  <LayoutElement elementId=\"84IeDu0ePt\" gridColumn=\"1 / 25\" gridRow=\"54 / 56\"/>\n  <LayoutElement elementId=\"CLym9qIamt\" gridColumn=\"1 / 25\" gridRow=\"56 / 79\"/>\n  <LayoutElement elementId=\"3YKeEU_r0J\" gridColumn=\"1 / 25\" gridRow=\"79 / 90\"/>\n  <LayoutElement elementId=\"ejzvZijw4U\" gridColumn=\"1 / 25\" gridRow=\"90 / 103\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"ONPf8ap63Z\"/>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"4ChAPxc6-m\"/>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"acjNkozfXr\"/>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"yF_HTjlAtU\"/>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"jC4TK1rN2K\"/>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"I7ZW0jQXt8\"/>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"2BvEu9EgLP\"/>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"UxU2nWOrCz\"/>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"T4YjhacuI-\"/>\n"
+}
