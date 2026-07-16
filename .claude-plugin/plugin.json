@@ -1,7 +1,7 @@
 {
   "name": "millersigma",
-  "version": "0.1.0",
-  "description": "Chris Miller's Sigma Computing skill collection — workbook/data-model authoring conventions, branded dashboard format, embed portals, and plugin development. Skills are auto-discovered from ./skills.",
+  "version": "0.2.0",
+  "description": "Chris Miller's Sigma Computing skill collection — workbook/data-model authoring conventions, workbook styling, branded dashboard format, embed portals, and plugin development. Skills are auto-discovered from ./skills.",
   "author": {
     "name": "Chris Miller",
     "email": "cmiller@sigmacomputing.com"
