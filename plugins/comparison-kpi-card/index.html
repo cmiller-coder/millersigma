@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Comparison KPI Card — Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  :root{ --accent:#0046BE; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:Inter,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:transparent;overflow:hidden}
+  #card{
+    height:100%;width:100%;border-radius:18px;padding:20px 22px;color:#fff;position:relative;overflow:hidden;
+    display:flex;flex-direction:column;justify-content:space-between;
+    background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 78%, #000) 0%, var(--accent) 55%, color-mix(in srgb, var(--accent) 70%, #fff) 100%);
+  }
+  #title{font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.95;text-align:center}
+  #row{display:flex;justify-content:space-around;align-items:flex-end;gap:12px;margin-top:6px}
+  .cell{text-align:center}
+  .lbl{font-size:12px;font-weight:500;opacity:.85;margin-bottom:4px}
+  .val{font-size:34px;font-weight:800;line-height:1}
+  .val.prior{font-size:26px;font-weight:700;opacity:.9}
+  #delta{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:3px 9px;border-radius:999px;margin-top:8px;background:rgba(255,255,255,.16)}
+  #delta.up{color:#c9ffd8} #delta.down{color:#ffd2d2}
+  svg{width:100%;height:56px;display:block;overflow:visible}
+  #foot{display:flex;justify-content:space-between;align-items:center}
+  #badge{font-size:10px;opacity:.6;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div id="card">
+  <div id="title">Metric</div>
+  <div>
+    <div id="row">
+      <div class="cell"><div class="lbl" id="lblCur">Current Period</div><div class="val" id="cur">—</div></div>
+      <div class="cell" id="priorCell"><div class="lbl" id="lblPri">Prior Period</div><div class="val prior" id="pri">—</div></div>
+    </div>
+    <div style="text-align:center"><span id="delta"></span></div>
+  </div>
+  <div>
+    <svg id="spark" viewBox="0 0 300 56" preserveAspectRatio="none"><polyline id="sparkline" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div id="foot"><span id="badge">Comparison KPI · Sigma plugin</span></div>
+  </div>
+</div>
+<script>
+(function(){
+  var client = (window.sigmaComputing && window.sigmaComputing.plugin && window.sigmaComputing.plugin.client) || null;
+
+  var cfgDefs = [
+    { name:'source',   type:'element' },
+    { name:'dimension',type:'column', source:'source', allowMultiple:false, allowedTypes:['datetime','date','number','integer','text'], label:'Trend order (date/x)' },
+    { name:'measure',  type:'column', source:'source', allowMultiple:false, allowedTypes:['number','integer'], label:'Measure' },
+    { name:'title',    type:'text',   label:'Card title', defaultValue:'Revenue' },
+    { name:'format',   type:'dropdown', values:['currency','number','percent'], defaultValue:'currency', label:'Value format' },
+    { name:'comparison', type:'dropdown', values:['Recent vs prior (halves)','Last vs first point','None'], defaultValue:'Recent vs prior (halves)', label:'Comparison' },
+    { name:'accent',   type:'color',  label:'Accent color', defaultValue:'#0046BE' }
+  ];
+  if (client) client.config.configureEditorPanel(cfgDefs);
+
+  function fmt(v, kind){
+    if (v==null || isNaN(v)) return '—';
+    if (kind==='percent') return (v*100).toFixed(1)+'%';
+    if (kind==='currency'){
+      var a=Math.abs(v);
+      if(a>=1e9) return '$'+(v/1e9).toFixed(2)+'B';
+      if(a>=1e6) return '$'+(v/1e6).toFixed(1)+'M';
+      if(a>=1e3) return '$'+(v/1e3).toFixed(1)+'K';
+      return '$'+v.toFixed(0);
+    }
+    var a2=Math.abs(v);
+    if(a2>=1e6) return (v/1e6).toFixed(1)+'M';
+    if(a2>=1e3) return (v/1e3).toFixed(1)+'K';
+    return v.toLocaleString(undefined,{maximumFractionDigits:0});
+  }
+
+  function synth(){ // fallback series so the card renders standalone
+    var out=[], base=120, t=0;
+    for(var i=0;i<24;i++){ t+=0.5; base += (Math.sin(t)*14) + (Math.random()*20-6) + 3; out.push(Math.max(20,base)); }
+    return out;
+  }
+
+  function sparkPoints(series){
+    var n=series.length; if(n<2) return '';
+    var mn=Math.min.apply(null,series), mx=Math.max.apply(null,series), rng=(mx-mn)||1;
+    return series.map(function(v,i){ var x=(i/(n-1))*300; var y=52-((v-mn)/rng)*48; return x.toFixed(1)+','+y.toFixed(1); }).join(' ');
+  }
+
+  function render(cfg, series){
+    var accent = (cfg&&cfg.accent) || '#0046BE';
+    document.documentElement.style.setProperty('--accent', accent);
+    document.getElementById('title').textContent = (cfg&&cfg.title) || 'Metric';
+    var kind = (cfg&&cfg.format) || 'currency';
+    var comp = (cfg&&cfg.comparison) || 'Recent vs prior (halves)';
+
+    var cur, pri=null;
+    if (comp==='None'){ cur = series.reduce(function(a,b){return a+b;},0); }
+    else if (comp==='Last vs first point'){ cur=series[series.length-1]; pri=series[0]; }
+    else { var h=Math.floor(series.length/2); var recent=series.slice(h), prior=series.slice(0,h);
+           cur=recent.reduce(function(a,b){return a+b;},0); pri=prior.reduce(function(a,b){return a+b;},0); }
+
+    document.getElementById('cur').textContent = fmt(cur, kind);
+    var pc = document.getElementById('priorCell'), del=document.getElementById('delta');
+    if (pri==null){ pc.style.display='none'; del.style.display='none'; }
+    else {
+      pc.style.display='block';
+      document.getElementById('pri').textContent = fmt(pri, kind);
+      var d = pri? (cur-pri)/Math.abs(pri) : 0;
+      del.style.display='inline-flex';
+      del.className = d>=0?'up':'down';
+      del.textContent = (d>=0?'▲ ':'▼ ') + (Math.abs(d)*100).toFixed(1)+'% vs prior';
+    }
+    document.getElementById('sparkline').setAttribute('points', sparkPoints(series));
+  }
+
+  var state={cfg:{}, data:null, dataCols:null, unsub:null};
+  function recompute(){
+    var cfg=state.cfg||{};
+    var series=null;
+    if (state.data && cfg.measure && state.data[cfg.measure]){
+      var raw=state.data[cfg.measure].map(Number).filter(function(x){return !isNaN(x);});
+      // if a dimension is set, keep given order; else use as-is
+      if (raw.length) series=raw;
+    }
+    render(cfg, (series&&series.length>1)?series:synth());
+  }
+
+  if (client){
+    client.config.subscribe(function(config){
+      state.cfg=config||{};
+      if (state.unsub){ state.unsub(); state.unsub=null; }
+      if (config && config.source){
+        state.unsub = client.elements.subscribeToElementData(config.source, function(data){ state.data=data; recompute(); });
+      }
+      recompute();
+    });
+  } else {
+    // standalone preview (opened directly, not embedded in Sigma)
+    render({title:'Revenue', format:'currency', accent:'#0046BE', comparison:'Recent vs prior (halves)'}, synth());
+  }
+})();
+</script>
+</body>
+</html>

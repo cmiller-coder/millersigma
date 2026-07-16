@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Performance Rings — Apple Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Inter,Segoe UI,Roboto,Arial,sans-serif;background:#000;color:#f5f5f7;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;align-items:center;justify-content:center;gap:26px;padding:16px}
+  #ringsWrap{position:relative;height:100%;max-height:260px;aspect-ratio:1;display:flex;align-items:center}
+  svg{height:100%;width:100%}
+  #center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  #center .big{font-size:30px;font-weight:800;letter-spacing:-.02em}
+  #center .cap{font-size:11px;font-weight:600;color:#a1a1a6;text-transform:uppercase;letter-spacing:.08em}
+  #legend{display:flex;flex-direction:column;gap:16px;min-width:150px}
+  .leg{display:flex;align-items:center;gap:10px}
+  .dot{width:12px;height:12px;border-radius:50%;flex:none}
+  .leg .lbl{font-size:12px;color:#a1a1a6;font-weight:600}
+  .leg .pv{font-size:19px;font-weight:800;line-height:1}
+  .leg .sub{font-size:11px;color:#86868b}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="ringsWrap">
+    <svg viewBox="0 0 200 200">
+      <g id="rings" transform="rotate(-90 100 100)" fill="none" stroke-linecap="round">
+        <circle cx="100" cy="100" r="78" stroke="#2a0d16" stroke-width="15"/>
+        <circle id="r1" cx="100" cy="100" r="78" stroke="#FA114F" stroke-width="15"/>
+        <circle cx="100" cy="100" r="58" stroke="#193b0a" stroke-width="15"/>
+        <circle id="r2" cx="100" cy="100" r="58" stroke="#A6F236" stroke-width="15"/>
+        <circle cx="100" cy="100" r="38" stroke="#08363a" stroke-width="15"/>
+        <circle id="r3" cx="100" cy="100" r="38" stroke="#22E0E8" stroke-width="15"/>
+      </g>
+    </svg>
+    <div id="center"><div class="big" id="cBig">—</div><div class="cap" id="cCap">to target</div></div>
+  </div>
+  <div id="legend">
+    <div class="leg"><span class="dot" style="background:#FA114F"></span><div><div class="lbl" id="l1">Revenue</div><div class="pv" id="p1">—</div><div class="sub" id="s1"></div></div></div>
+    <div class="leg"><span class="dot" style="background:#A6F236"></span><div><div class="lbl" id="l2">Margin</div><div class="pv" id="p2">—</div><div class="sub" id="s2"></div></div></div>
+    <div class="leg"><span class="dot" style="background:#22E0E8"></span><div><div class="lbl" id="l3">Units</div><div class="pv" id="p3">—</div><div class="sub" id="s3"></div></div></div>
+  </div>
+</div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var C=[78,58,38].map(function(r){return 2*Math.PI*r;}); // circumferences
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'r1label',type:'text',label:'Ring 1 label',defaultValue:'Revenue'},
+    {name:'r1value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Ring 1 value'},
+    {name:'r1target',type:'text',label:'Ring 1 target'},
+    {name:'r1fmt',type:'dropdown',values:['currency','number'],defaultValue:'currency',label:'Ring 1 format'},
+    {name:'r2label',type:'text',label:'Ring 2 label',defaultValue:'Margin'},
+    {name:'r2value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Ring 2 value'},
+    {name:'r2target',type:'text',label:'Ring 2 target'},
+    {name:'r2fmt',type:'dropdown',values:['currency','number'],defaultValue:'currency',label:'Ring 2 format'},
+    {name:'r3label',type:'text',label:'Ring 3 label',defaultValue:'Units'},
+    {name:'r3value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Ring 3 value'},
+    {name:'r3target',type:'text',label:'Ring 3 target'},
+    {name:'r3fmt',type:'dropdown',values:['currency','number'],defaultValue:'number',label:'Ring 3 format'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  function fmt(v,k){ if(v==null||isNaN(v))return '—'; var a=Math.abs(v);
+    if(k==='currency'){ if(a>=1e9)return '$'+(v/1e9).toFixed(2)+'B'; if(a>=1e6)return '$'+(v/1e6).toFixed(1)+'M'; if(a>=1e3)return '$'+(v/1e3).toFixed(0)+'K'; return '$'+v.toFixed(0);}
+    if(a>=1e6)return (v/1e6).toFixed(1)+'M'; if(a>=1e3)return (v/1e3).toFixed(0)+'K'; return Math.round(v).toLocaleString(); }
+  function sum(a){return (a||[]).map(Number).filter(function(x){return !isNaN(x);}).reduce(function(x,y){return x+y;},0);}
+
+  var curFrac=[0,0,0];
+  function setRing(i,frac){ var f=Math.min(1.999,Math.max(0,frac));
+    var el=document.getElementById('r'+(i+1));
+    el.setAttribute('stroke-dasharray', C[i]);
+    el.setAttribute('stroke-dashoffset', C[i]*(1-Math.min(1,f)));
+  }
+  function animate(target){ var start=curFrac.slice(),t0=null;
+    function step(ts){ if(!t0)t0=ts; var p=Math.min(1,(ts-t0)/800),e=1-Math.pow(1-p,3);
+      for(var i=0;i<3;i++) setRing(i,start[i]+(target[i]-start[i])*e);
+      if(p<1)requestAnimationFrame(step); else curFrac=target; }
+    requestAnimationFrame(step);
+  }
+  function render(cfg,vals,tgts,fmts,labels){
+    var fr=[0,1,2].map(function(i){return (tgts[i]&&tgts[i]>0)?vals[i]/tgts[i]:0;});
+    for(var i=0;i<3;i++){
+      document.getElementById('l'+(i+1)).textContent=labels[i];
+      document.getElementById('p'+(i+1)).textContent=(fr[i]*100).toFixed(0)+'%';
+      document.getElementById('s'+(i+1)).textContent=fmt(vals[i],fmts[i])+' / '+fmt(tgts[i],fmts[i]);
+    }
+    var avg=(fr[0]+fr[1]+fr[2])/3;
+    document.getElementById('cBig').textContent=(avg*100).toFixed(0)+'%';
+    animate(fr);
+  }
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){var c=st.cfg||{};
+    function val(colKey,tKey){ var v = (st.data&&c[colKey]&&st.data[c[colKey]])? sum(st.data[c[colKey]]) : null; var t=parseFloat(c[tKey]); return [v,t]; }
+    if(st.data && (c.r1value||c.r2value||c.r3value)){
+      var a=val('r1value','r1target'),b=val('r2value','r2target'),d=val('r3value','r3target');
+      var vals=[a[0]||0,b[0]||0,d[0]||0];
+      var tgts=[a[1]||(vals[0]*1.15),b[1]||(vals[1]*1.15),d[1]||(vals[2]*1.15)];
+      render(c,vals,tgts,[c.r1fmt||'currency',c.r2fmt||'currency',c.r3fmt||'number'],
+             [c.r1label||'Revenue',c.r2label||'Margin',c.r3label||'Units']); return;
+    }
+    render({},[82e6,34e6,410000],[100e6,50e6,450000],['currency','currency','number'],['Revenue','Margin','Units']);
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();}); }
+    recompute(); });
+  } else { recompute(); }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Pace-to-Target Pour — Budweiser Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:Inter,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#1a1a1a;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:14px 10px}
+  #ttl{font-size:15px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#C8102E;text-align:center}
+  #mid{flex:1;display:flex;align-items:center;justify-content:center;gap:18px;width:100%}
+  #glassWrap{position:relative;height:100%;max-height:230px;display:flex;align-items:center}
+  svg{height:100%}
+  #pct{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:30px;font-weight:900;color:#2a1400;text-shadow:0 1px 2px rgba(255,255,255,.5)}
+  #stats{display:flex;flex-direction:column;gap:12px}
+  .stat .k{font-size:11px;font-weight:600;color:#7a6a55;text-transform:uppercase;letter-spacing:.05em}
+  .stat .v{font-size:22px;font-weight:800}
+  #status{font-size:13px;font-weight:800;padding:4px 12px;border-radius:999px;display:inline-block}
+  .ok{background:#e6f7ec;color:#1b8a4b} .warn{background:#fff2d9;color:#b8860b} .bad{background:#fdeaea;color:#c0271f}
+  #foot{font-size:10px;color:#b5a58f;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="ttl">Pace to Target</div>
+  <div id="mid">
+    <div id="glassWrap">
+      <svg id="glass" viewBox="0 0 150 260" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="beer" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFC531"/><stop offset="1" stop-color="#E89600"/>
+          </linearGradient>
+          <clipPath id="cup"><path d="M30 18 H120 L108 238 H42 Z"/></clipPath>
+        </defs>
+        <!-- glass back -->
+        <path d="M30 18 H120 L108 238 H42 Z" fill="#eef3f7" opacity="0.55"/>
+        <!-- beer + foam (clipped) -->
+        <g clip-path="url(#cup)">
+          <rect id="beerRect" x="20" y="240" width="120" height="0" fill="url(#beer)"/>
+          <g id="foam">
+            <rect id="foamRect" x="20" width="120" height="20" rx="8" fill="#fffdf5"/>
+            <circle cx="45" r="6" fill="#fffdf5" id="b1"/><circle cx="75" r="8" fill="#fff" id="b2"/><circle cx="103" r="6" fill="#fffdf5" id="b3"/>
+          </g>
+        </g>
+        <!-- target line at rim -->
+        <line x1="26" y1="24" x2="124" y2="24" stroke="#C8102E" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="126" y="20" font-size="9" fill="#C8102E" font-weight="700">TARGET</text>
+        <!-- glass outline -->
+        <path d="M30 18 H120 L108 238 H42 Z" fill="none" stroke="#cfd8e0" stroke-width="3"/>
+      </svg>
+      <div id="pct">—</div>
+    </div>
+    <div id="stats">
+      <div class="stat"><div class="k" id="kCur">Current</div><div class="v" id="vCur">—</div></div>
+      <div class="stat"><div class="k">Target</div><div class="v" id="vTgt">—</div></div>
+      <div><span id="status" class="warn">—</span></div>
+    </div>
+  </div>
+  <div id="foot">Pace-to-Target Pour · Sigma plugin</div>
+</div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var cfgDefs=[
+    {name:'source',type:'element'},
+    {name:'value',type:'column',source:'source',allowMultiple:false,allowedTypes:['number','integer'],label:'Current value'},
+    {name:'target',type:'column',source:'source',allowMultiple:false,allowedTypes:['number','integer'],label:'Target (optional)'},
+    {name:'targetStatic',type:'text',label:'Target if no column (number)',defaultValue:''},
+    {name:'title',type:'text',label:'Title',defaultValue:'Volume — Pace to Target'},
+    {name:'format',type:'dropdown',values:['number','currency'],defaultValue:'number',label:'Value format'}
+  ];
+  if(client) client.config.configureEditorPanel(cfgDefs);
+
+  function fmt(v,k){ if(v==null||isNaN(v))return '—';
+    var a=Math.abs(v);
+    if(k==='currency'){ if(a>=1e9)return '$'+(v/1e9).toFixed(2)+'B'; if(a>=1e6)return '$'+(v/1e6).toFixed(1)+'M'; if(a>=1e3)return '$'+(v/1e3).toFixed(0)+'K'; return '$'+v.toFixed(0);}
+    if(a>=1e6)return (v/1e6).toFixed(1)+'M'; if(a>=1e3)return (v/1e3).toFixed(0)+'K'; return Math.round(v).toLocaleString();
+  }
+  var TOP=22,BOT=236, cur=0; // beer area y-range inside glass
+  function draw(frac){
+    frac=Math.max(0,frac);
+    var vis=Math.min(1,frac);
+    var h=(BOT-TOP)*vis, y=BOT-h;
+    document.getElementById('beerRect').setAttribute('y',y);
+    document.getElementById('beerRect').setAttribute('height',h);
+    var foamY=y-10;
+    document.getElementById('foamRect').setAttribute('y',foamY);
+    document.getElementById('b1').setAttribute('cy',foamY+2);
+    document.getElementById('b2').setAttribute('cy',foamY);
+    document.getElementById('b3').setAttribute('cy',foamY+3);
+  }
+  function animateTo(frac){ var start=cur,t0=null;
+    function step(ts){ if(!t0)t0=ts; var p=Math.min(1,(ts-t0)/700); var e=1-Math.pow(1-p,3);
+      draw(start+(frac-start)*e); if(p<1)requestAnimationFrame(step); else cur=frac; }
+    requestAnimationFrame(step);
+  }
+  function render(cfg,curVal,tgtVal){
+    document.getElementById('ttl').textContent=(cfg&&cfg.title)||'Pace to Target';
+    var k=(cfg&&cfg.format)||'number';
+    document.getElementById('vCur').textContent=fmt(curVal,k);
+    document.getElementById('vTgt').textContent=fmt(tgtVal,k);
+    var frac=(tgtVal&&tgtVal>0)?curVal/tgtVal:0;
+    document.getElementById('pct').textContent=(frac*100).toFixed(0)+'%';
+    var s=document.getElementById('status');
+    if(frac>=1){s.className='ok';s.textContent='🎯 Goal hit';}
+    else if(frac>=0.85){s.className='warn';s.textContent='On pace';}
+    else {s.className='bad';s.textContent='Behind pace';}
+    animateTo(frac);
+  }
+  function sum(arr){return (arr||[]).map(Number).filter(function(x){return !isNaN(x);}).reduce(function(a,b){return a+b;},0);}
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){var c=st.cfg||{};
+    if(st.data&&c.value&&st.data[c.value]){
+      var cur=sum(st.data[c.value]);
+      var tgt = (c.target&&st.data[c.target])? sum(st.data[c.target]) : (parseFloat(c.targetStatic)||0);
+      if(!tgt) tgt=cur*1.15; // sensible default so the glass isn't full
+      render(c,cur,tgt); return;
+    }
+    render(c, 782000, 1000000); // synthetic standalone preview
+  }
+  if(client){
+    client.config.subscribe(function(config){ st.cfg=config||{};
+      if(st.unsub){st.unsub();st.unsub=null;}
+      if(config&&config.source){ st.unsub=client.elements.subscribeToElementData(config.source,function(d){st.data=d;recompute();}); }
+      recompute();
+    });
+  } else { render({title:'Volume — Pace to Target',format:'number'},782000,1000000); }
+})();
+</script>
+</body>
+</html>
