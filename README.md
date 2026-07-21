@@ -1,6 +1,6 @@
 # millersigma
 
-A Claude Code **plugin** bundling Chris Miller's Sigma Computing skills — one
+A Claude Code **plugin** bundling Connor Miller's Sigma Computing skills — one
 home for everything that helps Claude build Sigma workbooks, dashboards, embed
 portals, and plugins. Install it once and every skill below becomes available
 in any project.
@@ -10,9 +10,10 @@ in any project.
 | Skill | What it does | Dependencies |
 |---|---|---|
 | **sigma-company-dashboard** | End-to-end: given a company, reshape sample data via custom SQL → themed workbook (gradient KPI cards, live CallText AI summary, charts) → a bespoke hosted domain plugin. Built from Best Buy/Budweiser/Apple/NVIDIA. Ships a verified current-API cheatsheet + a working generator & plugin example. | Uses `scripts/`, staging API, a hosting CLI (Netlify). |
+| **sigma-input-table-app** | Interactive counterpart to the dashboard skill — build a Sigma **data app** from code: input tables + buttons + action sequences + modals (scenario modelers, forecasting/planning, write-back, submit→approve). Encodes the verified beta workbook-spec shapes (input tables, cross-joins, linked input tables, modal pages, button effects) + the hard limits/workarounds + a full working generator. | Staging API (beta `create-workbook-spec`). |
 | **sigma-workbook-conventions** | Authoring/editing/reviewing Sigma workbook & data-model JSON specs — input resolution, naming, layout, control catalog, ID semantics, and the POST-time gotchas. The flagship skill. | Uses `scripts/` (see [Working with the scripts](#working-with-the-scripts)); pairs with the upstream `sigma-api` / `sigma-data-models` skills. |
 | **sigma-workbook-styling** | The visual-craft layer — containers as design blocks, images/logos, buttons & actions, and color/spacing/typography to make a workbook look *designed*, not just correct. Honest about what round-trips via spec vs what needs UI finishing. | Pairs with `sigma-workbook-conventions` (mechanics) and `branded-dashboard-format` (brand). |
-| **branded-dashboard-format** | The house dashboard format (header/filter-bar → KPI row → trend → detail pivot) + the adMarketplace brand kit. | Prereq: `sigma-workbook-conventions`. |
+| **branded-dashboard-format** | The house dashboard format (header/filter-bar → KPI row → trend → detail pivot) + a fill-in brand-kit template. | Prereq: `sigma-workbook-conventions`. |
 | **sigma-embed-portal** | Scrape a prospect's site, build a branded Sigma embed portal, deploy via Netlify. Self-contained. | — |
 | **sigma-plugin-development** | Full reference for building Sigma plugins with the `@sigmacomputing/plugin` SDK — editor panel, element data, variables, actions, hosting. | — |
 | **sigma-plugin-patterns** | Architectural recipes for plugins (JSON settings pattern, etc.). | Pairs with `sigma-plugin-development`. |
@@ -88,6 +89,31 @@ millersigma/
 ├── docs/                   # conventions, iteration playbook, skill-authoring guide
 └── README.md
 ```
+
+## Exemplars & the verified build recipe
+
+Every branded workbook here is built by a **Python generator that emits `spec.json`**,
+POSTed to `POST /v2/workbooks/spec` (beta), then verified by **data-exporting each
+element** (`/v2/workbooks/{id}/export` → poll `/v2/query/{qid}/download`) to confirm no
+`Invalid Query` and sane numbers — since the composed pixels can't be seen headlessly.
+
+**Known-good exemplar generators** (copy these; don't start from scratch):
+
+| Exemplar | Shows |
+|---|---|
+| `skills/sigma-company-dashboard/examples/build_marketing_control_center.py` | Full command center: gradient **date-axis KPI cards**, live CallText AI insight, **segmented filter buttons wired via control-driven `Switch`/`DateTrunc` formulas** (dynamic date grain + color-by), stacked bar w/ labels, pivot heatmap, an **animated Sankey plugin**, + a 2nd Scenario Modeler page. |
+| `skills/sigma-input-table-app/examples/sales_forecasting_reference.spec.yaml` | **⭐ Gold-standard scenario modeler** — GET-back of the real "Sigma Apps – Sales Forecasting" app. The quality bar: rich forecast grid (`Var`/delta, `SumIf` period roll-ups), scenario list w/ system columns + **Submit→Approve lifecycle**, `Lookup`-joined linked input tables, modal workflow with guard modals, onboarding + Summary KPI page. Clone its shapes; build from scratch (don't re-POST a GET-back). |
+| `skills/sigma-input-table-app/examples/build_scenario_modeler_min.py` | Minimal verified scenario modeler. |
+| `skills/sigma-company-dashboard/examples/build_template.py` | Read-only dashboard template. |
+
+**Defaults these encode** (learned the hard way — see each SKILL.md + the
+`sigma-code-rep-interactivity` agent-memory cheatsheet):
+- **Delta/variance always present** in modelers; **KPIs are comparative gradient cards**, not plain numbers.
+- **Format with `$.3~s` (auto K/M/B); never hard-code `/1e9` "billions"** — it desyncs the AI summary from the KPI cards.
+- **Light theme + dark accents** (a dark theme makes input tables & dropdowns white-on-white).
+- **Real logo** via `scripts/fetch_logo.py <domain>` (recolor white for dark headers); **hero** via Gemini (`~/Desktop/millersigma/gemini.key`) or a bespoke SVG; **never let an image model draw the logo**.
+- **Toggles work via control-driven formulas**, not button actions.
+- **Plugins** live in `plugins/` (served from an always-on `localhost:8080` launchd agent; register with a **top-level `url`** at create time). Match the plugin to the industry (Sankey, wellbore, chiplet-explorer, choropleth) — don't reuse one shape everywhere.
 
 ## Adding new skills
 

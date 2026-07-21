@@ -1,9 +1,9 @@
 {
   "name": "millersigma",
   "version": "0.6.0",
-  "description": "Chris Miller's Sigma Computing skill collection — end-to-end company dashboard builder (data model + themed workbook + CallText AI summary + hosted domain plugin), workbook conventions, styling, branded dashboard format, embed portals, and plugin development. Skills auto-discovered from ./skills; hosted plugin sources in ./plugins.",
+  "description": "Connor Miller's Sigma Computing skill collection — end-to-end company dashboard builder (data model + themed workbook + CallText AI summary + hosted domain plugin), workbook conventions, styling, branded dashboard format, embed portals, and plugin development. Skills auto-discovered from ./skills; hosted plugin sources in ./plugins.",
   "author": {
-    "name": "Chris Miller",
+    "name": "Connor Miller",
     "email": "cmiller@sigmacomputing.com"
   },
   "homepage": "https://github.com/cmiller-coder/millersigma",
