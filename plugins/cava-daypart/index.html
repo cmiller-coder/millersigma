@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Day-part Revenue Heatmap — CAVA Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#3a231c;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#C64A2E}
+  #meta{font-size:11px;color:#8a6f64}
+  #meta b{color:#3a231c}
+  #grid{flex:1;display:grid;gap:3px;min-height:0}
+  .lbl{font-size:10px;color:#8a6f64;display:flex;align-items:center}
+  .hlbl{font-size:9px;color:#8a6f64;display:flex;align-items:flex-end;justify-content:center}
+  .cell{border-radius:3px;min-height:6px;transition:transform .08s;cursor:default}
+  .cell:hover{transform:scale(1.35);z-index:5;outline:1.5px solid #3a231c;border-radius:2px}
+  .peak{box-shadow:0 0 0 1.5px #3a231c}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#8a6f64}
+  #bar{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#FBEFE6,#F2A98C,#E5674A,#B21E1E)}
+  #tip{position:fixed;pointer-events:none;background:#3a231c;border:1px solid #7a4a38;border-radius:8px;padding:8px 10px;font-size:11px;color:#fbeee6;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip b{color:#F2A98C}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Day-part revenue</div><div id="meta">peak <b id="peak">—</b> · weekly <b id="tot">—</b></div></div>
+  <div id="grid"></div>
+  <div id="legend"><span>slow</span><div id="bar"></div><span>peak</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'day',type:'column',source:'source',label:'Day of week'},
+    {name:'hour',type:'column',source:'source',allowedTypes:['number','integer'],label:'Hour (0-23)'},
+    {name:'value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Revenue'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hx(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  function heat(t){ // 0..1 cream -> coral -> deep red
+    t=Math.max(0,Math.min(1,t));
+    var s=[[251,239,230],[242,169,140],[229,103,74],[178,30,30]];
+    var seg=t*3,i=Math.min(2,Math.floor(seg)),f=seg-i;
+    return '#'+hx(lerp(s[i][0],s[i+1][0],f))+hx(lerp(s[i][1],s[i+1][1],f))+hx(lerp(s[i][2],s[i+1][2],f)); }
+  function fmt(v){ v=Math.round(v); if(v>=1e6)return '$'+(v/1e6).toFixed(1)+'M'; if(v>=1e3)return '$'+(v/1e3).toFixed(0)+'k'; return '$'+v; }
+  var tip=document.getElementById('tip');
+  function draw(m){
+    var grid=document.getElementById('grid'); grid.innerHTML='';
+    grid.style.gridTemplateColumns='34px repeat(24,1fr)';
+    grid.style.gridTemplateRows='repeat(7,1fr) 12px';
+    var max=0,tot=0,pk={v:-1,d:0,h:0};
+    for(var d=0;d<7;d++)for(var h=0;h<24;h++){var v=m[d][h]||0; if(v>max)max=v; tot+=v; if(v>pk.v){pk={v:v,d:d,h:h};}}
+    max=max||1;
+    for(var d=0;d<7;d++){
+      var lab=document.createElement('div'); lab.className='lbl'; lab.textContent=DAYS[d]; grid.appendChild(lab);
+      for(var h=0;h<24;h++){ (function(d,h){
+        var v=m[d][h]||0, c=document.createElement('div');
+        c.className='cell'+(d===pk.d&&h===pk.h?' peak':'');
+        c.style.background= v>0 ? heat(v/max) : '#F3ECE6';
+        c.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+          var hr=(h%12===0?12:h%12)+(h<12?'a':'p');
+          tip.innerHTML='<b>'+DAYS[d]+' '+hr+'</b><br>Revenue '+fmt(v); });
+        c.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+        grid.appendChild(c);
+      })(d,h); }
+    }
+    // hour axis row
+    var sp=document.createElement('div'); grid.appendChild(sp);
+    for(var h=0;h<24;h++){ var hl=document.createElement('div'); hl.className='hlbl'; hl.textContent=(h%6===0)?((h%12===0?12:h%12)+(h<12?'a':'p')):''; grid.appendChild(hl); }
+    var hr=(pk.h%12===0?12:pk.h%12)+(pk.h<12?'a':'p');
+    document.getElementById('peak').textContent=DAYS[pk.d]+' '+hr;
+    document.getElementById('tot').textContent=fmt(tot);
+  }
+  function synth(){
+    var m=[]; for(var d=0;d<7;d++){m[d]=[]; for(var h=0;h<24;h++){
+      var lunch=Math.exp(-Math.pow((h-12.5)/1.6,2)), dinner=0.95*Math.exp(-Math.pow((h-18.5)/1.9,2));
+      var open=(h>=10&&h<=22)?1:0, dow=(d>=5)?1.3:(d===4?1.12:1.0);
+      m[d][h]=open*dow*130000*(lunch+dinner+0.08);
+    }} return m;
+  }
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{},d=st.data;
+    if(d&&c.value&&d[c.value]){
+      var day=d[c.day]||[],hour=d[c.hour]||[],val=d[c.value]||[];
+      var m=[]; for(var i=0;i<7;i++){m[i]=[]; for(var j=0;j<24;j++)m[i][j]=0;}
+      var any=false;
+      for(var i=0;i<val.length;i++){ var di=DAYS.indexOf(String(day[i])); var h=Math.round(Number(hour[i])); var v=Number(val[i])||0;
+        if(di>=0&&h>=0&&h<24){ m[di][h]=v; if(v>0)any=true; } }
+      if(any){ draw(m); return; } }
+    draw(synth());
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(dd){ st.data=dd; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+})();
+</script>
+</body>
+</html>
