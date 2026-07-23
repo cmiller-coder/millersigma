@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Project Portfolio Gantt — Zachry Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#20262c;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 14px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#C8102E}
+  #meta{font-size:11px;color:#7c8792}
+  #meta b{color:#20262c}
+  #chart{flex:1;position:relative;overflow-y:auto;overflow-x:hidden}
+  #axis{position:sticky;top:0;height:18px;z-index:3;background:rgba(255,255,255,.8)}
+  .tick{position:absolute;top:0;height:100%;border-left:1px solid #e3e7ec;font-size:9px;color:#9aa4ad;padding-left:4px;line-height:18px;white-space:nowrap}
+  .row{position:relative;height:26px;display:flex;align-items:center}
+  .row:nth-child(even){background:#f5f7f9}
+  .lbl{width:168px;flex:0 0 168px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px;padding-right:8px}
+  .dot{width:8px;height:8px;border-radius:2px;flex:0 0 8px}
+  .track{position:relative;flex:1;height:100%}
+  .bar{position:absolute;top:6px;height:14px;border-radius:4px;overflow:hidden;cursor:default;min-width:3px}
+  .fill{position:absolute;top:0;left:0;height:100%}
+  .pct{position:absolute;right:5px;top:0;height:100%;display:flex;align-items:center;font-size:8.5px;font-weight:700;color:#20262c}
+  #today{position:absolute;top:0;width:2px;background:#C8102E;z-index:4;pointer-events:none}
+  #legend{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:#6b747d;align-items:center}
+  #legend .li{display:flex;align-items:center;gap:5px}
+  #tip{position:fixed;pointer-events:none;background:#20262c;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#F2A900}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Project portfolio</div><div id="meta"><b id="cnt">0</b> active projects · <b id="val">—</b> contract value · <span id="win">—</span></div></div>
+  <div id="chart"><div id="axis"></div><div id="today"></div><div id="rows"></div></div>
+  <div id="legend"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var PALETTE=['#C8102E','#3A4551','#F2A900','#0E7C7B','#2E6FB0','#6B4E9E','#9A1B2F','#5F6B7A'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'project',type:'column',source:'source',label:'Project'},
+    {name:'division',type:'column',source:'source',label:'Division'},
+    {name:'start',type:'column',source:'source',label:'Start date'},
+    {name:'end',type:'column',source:'source',label:'End date'},
+    {name:'percent',type:'column',source:'source',allowedTypes:['number','integer'],label:'% complete'},
+    {name:'value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Contract value'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  var LBL=168, tip=document.getElementById('tip');
+  var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function toT(v){ if(v==null) return NaN; if(typeof v==='number') return v>1e11?v:v; var p=Date.parse(v); return isNaN(p)?NaN:p; }
+  function fmtD(t){ var d=new Date(t); return MON[d.getMonth()]+" '"+String(d.getFullYear()).slice(2); }
+  function fmt$(n){ if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B'; if(n>=1e6)return '$'+(n/1e6).toFixed(0)+'M'; if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'K'; return '$'+Math.round(n); }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];}); }
+  function axisW(){ var c=document.getElementById('chart'); return (c?c.clientWidth:700)-LBL; }
+  function draw(items){
+    var rows=document.getElementById('rows'), axis=document.getElementById('axis'), today=document.getElementById('today');
+    rows.innerHTML=''; axis.innerHTML='';
+    if(!items.length){ today.style.display='none'; return; }
+    var mn=Infinity,mx=-Infinity,tot=0;
+    items.forEach(function(it){ if(it.s<mn)mn=it.s; if(it.e>mx)mx=it.e; tot+=it.val||0; });
+    if(!isFinite(mn)||!isFinite(mx)||mx<=mn){ mx=mn+1; }
+    var span=mx-mn, pad=span*0.02; mn-=pad; mx+=pad; span=mx-mn;
+    var dmap={},divs=[]; items.forEach(function(it){ if(dmap[it.div]==null){ dmap[it.div]=PALETTE[divs.length%PALETTE.length]; divs.push(it.div);} });
+    var d0=new Date(mn); d0.setDate(1); d0.setMonth(Math.floor(d0.getMonth()/3)*3); d0.setHours(0,0,0,0);
+    for(var t=d0.getTime(); t<=mx; ){ var dd=new Date(t); var pct=((t-mn)/span); if(pct>=0&&pct<=1){ var el=document.createElement('div'); el.className='tick'; el.style.left=(LBL+pct*axisW())+'px'; el.textContent=MON[dd.getMonth()]+" '"+String(dd.getFullYear()).slice(2); axis.appendChild(el);} dd.setMonth(dd.getMonth()+3); t=dd.getTime(); }
+    var now=Date.now(); if(now>mn&&now<mx){ today.style.display='block'; today.style.left=(LBL+((now-mn)/span)*axisW())+'px'; } else today.style.display='none';
+    items.sort(function(a,b){ if(a.div<b.div)return -1; if(a.div>b.div)return 1; return a.s-b.s; });
+    items.forEach(function(it){
+      var row=document.createElement('div'); row.className='row'; var col=dmap[it.div];
+      var lbl=document.createElement('div'); lbl.className='lbl'; lbl.innerHTML='<span class="dot" style="background:'+col+'"></span>'+esc(it.name);
+      var track=document.createElement('div'); track.className='track';
+      var bar=document.createElement('div'); bar.className='bar';
+      var l=(it.s-mn)/span, w=(it.e-it.s)/span;
+      bar.style.left=(l*100)+'%'; bar.style.width=Math.max(0.5,w*100)+'%'; bar.style.background=hexA(col,0.28);
+      var fill=document.createElement('div'); fill.className='fill'; fill.style.width=Math.max(0,Math.min(100,it.pct))+'%'; fill.style.background=col;
+      var pct=document.createElement('div'); pct.className='pct'; pct.textContent=Math.round(it.pct)+'%';
+      bar.appendChild(fill); bar.appendChild(pct);
+      bar.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+        tip.innerHTML='<b>'+esc(it.name)+'</b><br>'+esc(it.div)+'<br>'+fmtD(it.s)+' → '+fmtD(it.e)+'<br>'+Math.round(it.pct)+'% complete · '+fmt$(it.val||0); });
+      bar.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+      track.appendChild(bar); row.appendChild(lbl); row.appendChild(track); rows.appendChild(row);
+    });
+    document.getElementById('cnt').textContent=items.length;
+    document.getElementById('val').textContent=fmt$(tot);
+    document.getElementById('win').textContent=fmtD(mn)+' – '+fmtD(mx);
+    var lg=document.getElementById('legend'); lg.innerHTML='';
+    divs.forEach(function(d){ var li=document.createElement('div'); li.className='li'; li.innerHTML='<span class="dot" style="background:'+dmap[d]+'"></span>'+esc(d); lg.appendChild(li); });
+  }
+  function hexA(h,a){ var n=parseInt(h.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+  function synth(){
+    var names=['SH 130 Segment 6','SAWS Water Recycle','CPS Energy Retrofit','I-35 NEX Central','Port SA Rail Spur','Vista Ridge Pipeline','Frost Tower Fitout','Calaveras Unit 4','Loop 1604 Expansion','JBSA Runway','Medina Dam Rehab','Comal WWTP','Austin Transit Line','Eagle Ford Facility','Toyota Plant Expand','Brooks Solar Farm'];
+    var divs=['Highways & Bridges','Water / Wastewater','Industrial & Power','Rail & Transit','Aviation','Site / Civil'];
+    var base=new Date(2024,0,1).getTime(), DAY=864e5, out=[];
+    for(var i=0;i<names.length;i++){ var st=base+((i*47)%420)*DAY; var dur=(180+((i*97)%620))*DAY;
+      out.push({name:names[i],div:divs[i%divs.length],s:st,e:st+dur,pct:8+((i*53)%88),val:20000000+((i*8371349)%380000000)}); }
+    return out;
+  }
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{};
+    if(st.data&&c.project&&st.data[c.project]){
+      var nm=st.data[c.project]||[], dv=(c.division&&st.data[c.division])||[], s=(c.start&&st.data[c.start])||[], e=(c.end&&st.data[c.end])||[], p=(c.percent&&st.data[c.percent])||[], v=(c.value&&st.data[c.value])||[];
+      var items=nm.map(function(n,i){ return {name:n!=null?String(n):('Project '+i),div:dv[i]!=null?String(dv[i]):'—',s:toT(s[i]),e:toT(e[i]),pct:Number(p[i])||0,val:Number(v[i])||0}; })
+        .filter(function(it){ return !isNaN(it.s)&&!isNaN(it.e); });
+      if(items.length){ draw(items); return; }
+    }
+    draw(synth());
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ st.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+  window.addEventListener('resize',function(){ recompute(); });
+})();
+</script>
+</body>
+</html>

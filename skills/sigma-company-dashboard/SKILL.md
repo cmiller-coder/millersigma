@@ -56,10 +56,19 @@ python3 scripts/fetch_logo.py <domain> --out logo.png     # e.g. acme.com
 ```
 It scrapes the homepage for the header/footer logo (prefers `.svg`, then @2x
 raster), falling back to apple-touch-icon / og:image; prints/embeds a data URI.
-Embed it as an `image` element. If the logo is dark-on-transparent and your
-masthead is dark, drop it on a **white rounded container ("chip")** so it reads.
-If the fetch misses (some sites block/structure oddly), fall back to a clean
-typographic wordmark — never ship a crude approximation as "the logo."
+Embed it as an `image` element — and **actually wire it into `logo_uri`; don't fetch it
+then leave a hand-drawn placeholder** (a fake logo gets called out instantly).
+**To put it white on a dark/gradient header, set `fill="#FFFFFF"` on EVERY `<path>`/
+`<polygon>` (and replace existing `fill=`/`fill:` in styles) — NOT just the `<svg>` root.**
+Browsers honor root-fill inheritance so it looks white in preview, but **Sigma's renderer
+ignores root fill → the logo draws BLACK on the header = invisible** (the "you forgot the logo"
+bug). If fetch_logo grabs a decorative asset (e.g. DoorDash), scrape the nav or use
+worldvectorlogo. Never ship a crude hand-drawn approximation as "the logo."
+
+**Current header standard:** a clean **brand-color gradient band** (baked SVG background) +
+the real white logo (left) + a centered white title/subtitle (baked-white SVG image, since a
+native `text` over the gradient renders dark) + a subtle radial glow. NOT a flat light wordmark,
+and NOT a photographic hero (both were rejected).
 
 **Hero image:** generate a photorealistic, on-industry BACKGROUND with Gemini
 (`gemini-2.5-flash-image`, key in `.env`) — prompt hard for "NO text, NO logos,
@@ -69,8 +78,17 @@ a company's logo — it garbles trademarks every time.** Scene from Gemini, logo
 from `fetch_logo.py`.
 
 ## KPI, formatting & control defaults (bake these in)
-- **Gradient KPI cards, comparative.** Composite cards on ONE consistent brand gradient
-  (white text): a big value + Current/Prior (or Δ-vs-prior) + a **date-axis trend line**.
+- **Gradient KPI cards MUST be comparative — do not regress this.** Each card's kpi-chart carries
+  a **value column AND a comparison column**: `columns:[{value},{prior}]`, `value.color:"#FFFFFF"`,
+  `comparisonColumn:{columnId:<prior>}`, `comparison:{display:"delta",colorGood,colorBad}`. That renders
+  the Current value big + a **Δ-vs-prior badge** (the comparative metric). Show the Prior value big
+  beside it in a second kpi-chart (Current | Prior side-by-side), plus a sparkline. Dropping the
+  comparison column = a KPI with no comparative metric (a regression users notice immediately).
+- **Titles are NATIVE, never SVG images.** Put the metric title in the kpi-chart's own
+  `name:{text,color:"#FFFFFF",fontSize}` — the KPI `name` color IS honored (renders white on the
+  gradient). Do NOT bake KPI titles/labels as `data:image/svg+xml` images. (SVG-image text is only
+  for a banner title sitting over a gradient header, where there's no native-titled element.)
+- Also give cards a **date-axis trend line** (sparkline).
   For "a line chart with the dates," show the x-axis (labels are shown by default; only
   `xAxis.format.labels:"hidden"` hides them) — but **give the date column an explicit
   `format:{"kind":"datetime","formatString":"%b %Y"}`** or the axis renders raw timestamps
@@ -121,12 +139,12 @@ this: `source:{connectionId, statement:<SQL>, kind:"sql"}`, columns reference
 - Theme lives in top-level `themeOverrides` (`colors.highlight`, `colorOverrides`,
   `categoricalScheme`, `fonts`). Set `categoricalScheme[0]="#FFFFFF"` so in-card
   sparklines are white on gradient cards.
-- **Text color is THEME-driven, not per-element.** A text element's `style.color`
-  and the KPI `name` are IGNORED — they render in `themeOverrides.colors.text`.
-  So: use a **LIGHT canvas + dark accent cards**, and for any white text on a dark
-  surface use a **data-URI SVG image** (KPI titles/labels) or make the container
-  light. A colored callout (AI box) = a **light-tint container** with default dark
-  text — NEVER a dark box (its text disappears).
+- **Standalone `text` elements are theme-dark; a kpi-chart's `name` is NOT.** A `text`
+  element's `style.color` is ignored (renders `themeOverrides.colors.text`), so a colored
+  callout / AI box must be a **light-tint container** with default dark text — never a dark box.
+  BUT a **kpi-chart `name:{color}` IS honored** — use it for white KPI titles on gradient cards
+  (verified). Only a banner title over a gradient HEADER (no native-titled element there) needs a
+  baked-white SVG image. Use a **LIGHT canvas + dark/gradient accent cards + header**.
 - **A fully-dark canvas breaks Sigma's control dropdowns** (white popup + light
   theme-text = invisible). Keep the canvas light; make hero/KPI-cards/plugin
   panels the dark accents.
@@ -182,5 +200,9 @@ examples in `plugins/` (flight-timeline Gantt, territory choropleth, claims funn
 
 ## Files
 - `reference/api-cheatsheet.md` — verified element shapes + every gotcha. READ FIRST.
-- `examples/build_cava.py` — the canonical full generator (2 pages, comparative gradient KPIs with native titles, AI insight, bar + drill fields, bespoke plugin, side-by-side pivots, two agents).
-- `plugins/cava-daypart/` — the matching bespoke day-part-heatmap plugin (register via `POST /v2/plugins`).
+- `examples/build_company_command_center.py` — **THE canonical current-standard generator** (clone this).
+  Gradient header + real white logo + **comparative native-title KPI cards (Current + Δ + Prior + sparkline)**
+  + AI insight + Color-By/filters + bar + bespoke plugin full-width + side-by-side pivots + a scenario-modeler
+  page with two agents (one with an insert-rows tool). Worked example = DoorDash; swap the marked pieces.
+- `examples/build_cava.py` — earlier full generator (still valid; predates the gradient-header/native-title standard).
+- `plugins/` — bespoke plugin examples (cava-daypart heatmap, etc.). Register via `scripts/register_plugin.py`.

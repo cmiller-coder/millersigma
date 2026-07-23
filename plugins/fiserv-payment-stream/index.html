@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Payment-Mix Stream — Fiserv Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#1D1D1D;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px 8px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#FF6200}
+  #meta{font-size:11px;color:#8a8f94}
+  #meta b{color:#1D1D1D}
+  #stage{flex:1;position:relative;overflow:hidden}
+  svg{width:100%;height:100%;display:block}
+  .band{transition:opacity .12s}
+  .ax{font-size:10px;font-weight:600;fill:#9aa0a6}
+  #legend{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:10.5px;color:#4a5560;align-items:center;justify-content:center}
+  #legend .li{display:flex;align-items:center;gap:5px;cursor:default}
+  .dot{width:10px;height:10px;border-radius:3px;flex:0 0 10px}
+  #tip{position:fixed;pointer-events:none;background:#1D1D1D;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#FFB27A}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Payment volume mix</div><div id="meta"><b id="tot">—</b> latest month · <b id="rng">—</b></div></div>
+  <div id="stage"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div id="legend"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var NS='http://www.w3.org/2000/svg', tip=document.getElementById('tip');
+  var PALETTE=['#FF6200','#FFA24B','#C24A00','#2E6FB0','#0E7C7B','#6B4E9E','#B0407A','#5F6B7A'];
+  var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'time',type:'column',source:'source',label:'Month'},
+    {name:'series',type:'column',source:'source',label:'Payment method'},
+    {name:'value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Volume'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  function fmt$(n){ if(n>=1e12)return '$'+(n/1e12).toFixed(2)+'T'; if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B'; if(n>=1e6)return '$'+(n/1e6).toFixed(0)+'M'; if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'K'; return '$'+Math.round(n); }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];}); }
+  function toT(v){ if(v==null)return NaN; if(typeof v==='number')return v; var p=Date.parse(v); return isNaN(p)?NaN:p; }
+  function el(t,a){ var e=document.createElementNS(NS,t); for(var k in a)e.setAttribute(k,a[k]); return e; }
+  function segs(pts){ // Catmull-Rom -> cubic bezier through pts
+    var out='';
+    for(var i=0;i<pts.length-1;i++){
+      var p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+      out+=' C'+(p1[0]+(p2[0]-p0[0])/6).toFixed(1)+','+(p1[1]+(p2[1]-p0[1])/6).toFixed(1)+' '
+             +(p2[0]-(p3[0]-p1[0])/6).toFixed(1)+','+(p2[1]-(p3[1]-p1[1])/6).toFixed(1)+' '
+             +p2[0].toFixed(1)+','+p2[1].toFixed(1);
+    }
+    return out;
+  }
+  function draw(months,series,mat){ // mat[s][i]
+    var svg=document.getElementById('svg'); while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var st=document.getElementById('stage'), W=st.clientWidth||900, H=st.clientHeight||300;
+    var mL=6,mR=6,mT=8,mB=20, plotW=W-mL-mR, plotH=H-mT-mB;
+    var n=months.length, ns=series.length;
+    if(n<2||ns<1) return;
+    var totals=series.map(function(_,s){ var t=0; for(var i=0;i<n;i++)t+=mat[s][i]; return t; });
+    // inside-out order (largest centered)
+    var byDesc=series.map(function(_,s){return s;}).sort(function(a,b){return totals[b]-totals[a];});
+    var top=0,bot=0,tops=[],bots=[];
+    byDesc.forEach(function(s){ if(top<bot){tops.push(s);top+=totals[s];}else{bots.push(s);bot+=totals[s];} });
+    var order=bots.reverse().concat(tops);
+    // per-month total -> silhouette baseline; scale by max total
+    var maxT=0; for(var i=0;i<n;i++){ var tt=0; for(var s=0;s<ns;s++)tt+=mat[s][i]; if(tt>maxT)maxT=tt; }
+    var sy=plotH/(maxT*1.06);
+    function X(i){ return mL + (i/(n-1))*plotW; }
+    function Y(v){ return mT + plotH/2 - v*sy; }
+    // cumulative lowers per series in stack order
+    var lower={}; // lower[s][i]
+    order.forEach(function(s){ lower[s]=[]; });
+    for(i=0;i<n;i++){ var tt=0; for(s=0;s<ns;s++)tt+=mat[s][i]; var cum=-tt/2;
+      order.forEach(function(s){ lower[s][i]=cum; cum+=mat[s][i]; }); }
+    // clip for left->right reveal
+    var clip=el('clipPath',{id:'rev'}); var crect=el('rect',{x:0,y:0,width:0,height:H}); clip.appendChild(crect); svg.appendChild(clip);
+    var g=el('g',{'clip-path':'url(#rev)'}); svg.appendChild(g);
+    var bands=[];
+    order.forEach(function(s,k){
+      var upPts=[],loPts=[];
+      for(var i=0;i<n;i++){ upPts.push([X(i),Y(lower[s][i]+mat[s][i])]); loPts.push([X(i),Y(lower[s][i])]); }
+      var loRev=loPts.slice().reverse();
+      var d='M'+upPts[0][0].toFixed(1)+','+upPts[0][1].toFixed(1)+segs(upPts)+' L'+loRev[0][0].toFixed(1)+','+loRev[0][1].toFixed(1)+segs(loRev)+' Z';
+      var col=PALETTE[s%PALETTE.length];
+      var p=el('path',{d:d,fill:col,'fill-opacity':0.9,stroke:'#fff','stroke-width':0.8}); p.classList.add('band'); p.dataset.s=s;
+      (function(si){ p.addEventListener('mousemove',function(e){
+          var i=Math.round(((e.clientX-svg.getBoundingClientRect().left-mL)/plotW)*(n-1)); i=Math.max(0,Math.min(n-1,i));
+          tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+          tip.innerHTML='<b>'+esc(series[si])+'</b><br>'+mlabel(months[i])+'<br>'+fmt$(mat[si][i])+' · '+(mat[si][i]/colTotal(i)*100).toFixed(0)+'% of mix';
+          bands.forEach(function(b){ b.setAttribute('fill-opacity', +b.dataset.s===si?0.98:0.28); });
+        });
+        p.addEventListener('mouseleave',function(){ tip.style.opacity=0; bands.forEach(function(b){b.setAttribute('fill-opacity',0.9);}); });
+      })(s);
+      g.appendChild(p); bands.push(p);
+    });
+    function colTotal(i){ var t=0; for(var s=0;s<ns;s++)t+=mat[s][i]; return t; }
+    // x-axis month labels (~6)
+    var axg=el('g',{}); svg.appendChild(axg);
+    var stepL=Math.max(1,Math.floor(n/6));
+    for(i=0;i<n;i+=stepL){ var t=el('text',{x:X(i).toFixed(1),y:H-6,'text-anchor':'middle'}); t.setAttribute('class','ax'); t.textContent=mlabel(months[i]); axg.appendChild(t); }
+    // meta
+    document.getElementById('tot').textContent=fmt$(colTotal(n-1));
+    document.getElementById('rng').textContent=mlabel(months[0])+' – '+mlabel(months[n-1]);
+    var lg=document.getElementById('legend'); lg.innerHTML='';
+    series.forEach(function(nm,s){ var li=document.createElement('div'); li.className='li'; li.innerHTML='<span class="dot" style="background:'+PALETTE[s%PALETTE.length]+'"></span>'+esc(nm); lg.appendChild(li); });
+    // animate reveal
+    var start=null, DUR=850;
+    function step(ts){ if(start==null)start=ts; var p=Math.min(1,(ts-start)/DUR); crect.setAttribute('width',(mL+p*plotW).toFixed(1)); if(p<1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  }
+  function mlabel(m){ var d=new Date(m); if(isNaN(d)) return String(m); return MON[d.getMonth()]+" '"+String(d.getFullYear()).slice(2); }
+  function synth(){
+    var methods=['Card credit','Debit','ACH','Digital wallet','Real-time (RTP/FedNow)','BNPL'];
+    var base=[100,80,52,30,10,8], grow=[-0.5,0.2,0.7,2.3,3.1,1.9];
+    var months=[],mat=methods.map(function(){return [];});
+    var now=new Date(); now.setDate(1);
+    for(var i=0;i<24;i++){ var d=new Date(now.getFullYear(),now.getMonth()-(23-i),1); months.push(d.getTime());
+      methods.forEach(function(_,s){ mat[s].push(Math.max(2,(base[s]+grow[s]*i+6*Math.sin(i*0.9+s)))*1e9); }); }
+    return {months:months,series:methods,mat:mat};
+  }
+  var stt={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=stt.cfg||{};
+    if(stt.data&&c.time&&c.series&&c.value&&stt.data[c.time]){
+      var ts=stt.data[c.time]||[], ss=stt.data[c.series]||[], vs=stt.data[c.value]||[];
+      var mset={}, sset={}, mlist=[], slist=[];
+      for(var i=0;i<ts.length;i++){ var mk=toT(ts[i]); if(isNaN(mk))continue; if(mset[mk]==null){mset[mk]=mlist.length;mlist.push(mk);} var sk=String(ss[i]); if(sset[sk]==null){sset[sk]=slist.length;slist.push(sk);} }
+      mlist.sort(function(a,b){return a-b;}); var mi={}; mlist.forEach(function(m,ix){mi[m]=ix;});
+      var mat=slist.map(function(){return mlist.map(function(){return 0;});});
+      for(i=0;i<ts.length;i++){ var mk2=toT(ts[i]); if(isNaN(mk2))continue; mat[sset[String(ss[i])]][mi[mk2]]+=Number(vs[i])||0; }
+      if(mlist.length>1&&slist.length){ draw(mlist,slist,mat); return; }
+    }
+    var s=synth(); draw(s.months,s.series,s.mat);
+  }
+  if(client){ client.config.subscribe(function(cfg){ stt.cfg=cfg||{};
+    if(stt.unsub){stt.unsub();stt.unsub=null;}
+    if(cfg&&cfg.source){ stt.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ stt.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+  window.addEventListener('resize',function(){ recompute(); });
+  // redraw whenever the panel gets/changes its real size (Sigma sizes the iframe after load)
+  if(window.ResizeObserver){ var ro=new ResizeObserver(function(){ recompute(); }); ro.observe(document.getElementById('stage')); }
+})();
+</script>
+</body>
+</html>
