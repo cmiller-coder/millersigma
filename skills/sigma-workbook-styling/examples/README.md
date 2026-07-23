@@ -1,21 +1,17 @@
 # Styled workbook examples
 
-Real GET-back specs of beautiful Sigma workbooks, used as clone-and-modify
-sources by `sigma-workbook-styling`. These are immutable references — clone the
-blocks you need; don't edit in place.
+Clone-and-modify reference specs of a polished Sigma workbook, used by
+`sigma-workbook-styling`. Treat as immutable references — clone the blocks you
+need; don't edit in place.
 
 | File | Why it's here |
 |---|---|
-| `marketing-control-center.json` | Gradient KPI card row, AI insight banner, control cluster, a repeated container ("Repeater Base"), CDN + data-URI SVG images. |
-| `cold-provisions.json` | Richest example — 135 containers, repeated cards and list rows, column-bound images, dividers, styled tables. Best repeater source. |
-| `demand-planning.json` | Leaner, input-table-driven layout with themed containers and KPIs. |
+| `branded-company-dashboard.json` | A full end-to-end branded dashboard spec: a hero masthead container (data-URI image), a gradient KPI-card row (each card a composite of title image + current/prior KPIs + a white in-card sparkline), a tinted CallText AI-insight box, a color-by-category bar chart, a filter cluster, an embedded plugin element, and a detail table. Shows the layout XML, `themeOverrides`, and the load-bearing color rules in one place. |
 
-All three are from the `demeng` workspace (org `752dac5c-…`), pulled via:
-
-```bash
-scripts/api/publish-workbook.sh get-spec <workbookId> | jq . \
-  > skills/sigma-workbook-styling/examples/<name>.json
-```
+The connection and folder IDs in the spec are placeholders
+(`REPLACE_WITH_YOUR_CONNECTION_ID`, `REPLACE_WITH_YOUR_FOLDER_ID`) — swap in your
+own before POSTing. Generate it from the `sigma-company-dashboard` generator
+(`skills/sigma-company-dashboard/examples/build_cava.py`).
 
 Add new beautiful specs here as you build them — especially any using **buttons**
 (open link / set control / open Sigma doc), since that shape isn't yet captured.

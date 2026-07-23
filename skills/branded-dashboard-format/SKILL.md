@@ -1,14 +1,14 @@
 ---
 name: branded-dashboard-format
 description: >
-  Use when building a Sigma workbook that should follow our standard "house"
+  Use when building a Sigma workbook that should follow a standard "house"
   dashboard format (header/filter-bar → KPI row → trend chart → detail pivot,
-  two-tier sourcing, metrics in the semantic layer) AND/OR apply the
-  adMarketplace brand (Geist font, indigo→purple palette, logo). Trigger
-  phrases: "use the standard dashboard format", "make it look like our other
-  dashboards", "brand this for adMarketplace / AMP", "match the AMP look".
-  Encodes the recurring page composition + the adMarketplace brand kit.
-  Prerequisites: sigma-api, sigma-data-models, sigma-workbook-conventions.
+  two-tier sourcing, metrics in the semantic layer) AND/OR apply a company brand
+  kit (font, color palette, logo) so the workbook reads as a native product
+  surface for that company. Trigger phrases: "use the standard dashboard format",
+  "make it look like our other dashboards", "brand this for <company>", "match
+  the <company> look". Encodes the recurring page composition + a fill-in brand-kit
+  template. Prerequisites: sigma-api, sigma-data-models, sigma-workbook-conventions.
   Does NOT restate spec mechanics (defer to sigma-workbook-conventions) and is
   not a domain/metric pattern (those are per-domain skills).
 user-invocable: true
@@ -18,15 +18,18 @@ user-invocable: true
 
 Two things, one skill:
 
-1. **The format** — the page composition that recurs across our dashboards and
-   that stakeholders consistently like. Generic; applies to any Sigma workbook.
-2. **The adMarketplace brand kit** — the colors, fonts, and logo to apply so a
-   workbook reads as a native adMarketplace product surface.
+1. **The format** — the page composition that recurs across polished dashboards
+   and that stakeholders consistently like. Generic; applies to any Sigma workbook.
+2. **A brand kit** — the colors, fonts, and logo to apply so a workbook reads as
+   a native product surface for a given company. This skill gives you a *template*
+   (`reference/brand-kit.md`) you fill in per company; pair it with the
+   `sigma-embed-portal` scrape recipe to pull a real brand's tokens.
 
 This skill is the "house style." It does **not** re-teach spec mechanics
 (KPI/pivot/control field shapes, layout XML, the `nullif` division rule, etc.) —
 those live in `sigma-workbook-conventions`. It adds the *composition* and the
-*brand* on top.
+*brand* on top. For the full end-to-end company build (data reshape → theme →
+plugin), see `sigma-company-dashboard`.
 
 ## The format in one screen
 
@@ -64,47 +67,38 @@ Non-negotiables that make it *this* format (full checklist in
   *every* metric as a value column, grand totals on. This is the table people
   actually pull from — bias toward more metrics, not fewer.
 
-## The brand kit in one screen
+## The brand kit (a fillable slot)
 
-Full tokens + how to apply them in `reference/brand-kit.md`.
+`reference/brand-kit.md` is a **template** — a blank token table (primary accent,
+deep/hover, ink, secondary, soft fills, page bg, muted text, font, categorical
+series order, logo) plus the brand-agnostic guidance on *how* each token lands in
+Sigma. To brand a workbook:
 
-| Role | Token |
-|------|-------|
-| Primary accent (indigo-blue) | `#3b45ff` |
-| Primary deep / hover | `#002eda`, `#101c89` |
-| Darkest — headings/axis text | `#00022e` |
-| Secondary accent (purple) | `#7f56d9`, `#6941c6` |
-| Soft blue — card/zebra fills | `#deedff`, `#f1f5ff` |
-| Page background | `#ffffff` / `#f8f8f8` |
-| Muted text | `#758696` |
-| Font (primary / secondary / mono) | **Geist** / Poppins / Geist Mono |
-| Categorical series order | `#3b45ff → #7f56d9 → #002eda → #00022e → #758696` |
-| Logo | `assets/admarketplace-logo.svg` |
-
-Signature move: the **blue→purple gradient** (`#3b45ff → #7f56d9`). Use it for a
-single hero/accent moment, not everywhere.
+1. Gather the company's tokens — scrape their site (see `sigma-embed-portal` for
+   the recipe) or use their brand guide. Fill in the token table.
+2. Pick a **signature move** (e.g. a single two-color gradient used once, for a
+   hero/accent moment — not everywhere).
 
 **How it lands in Sigma:** the global font + color palette is a **workbook Theme**
 set once in the UI (Sigma's theme isn't fully represented in the code spec — see
-`reference/brand-kit.md`). The spec-level brand choices you DO control: the
-header logo (a dedicated **`image` element** with a `url` — NOT a markdown image,
-which `text` elements don't render), chart `color` encodings using the palette
-order above, and the bold markdown title. Set the Theme once, then every element
-inherits it.
+`reference/brand-kit.md`). The spec-level brand choices you DO control: the header
+logo (a dedicated **`image` element** with a `url` — NOT a markdown image, which
+`text` elements don't render), chart `color` encodings using the palette order,
+and the bold markdown title. Set the Theme once, then every element inherits it.
 
 ## Workflow
 
-1. Build the workbook per `reference/format.md` (clone `examples/` and adapt).
-2. Apply brand color encodings + the logo/title in-spec per `reference/brand-kit.md`.
-3. POST, then in the UI apply the **adMarketplace** workbook Theme (font Geist,
-   palette per the table). Verify in the UI — theme/font are UI-side.
+1. Build the workbook per `reference/format.md` (clone an example spec and adapt).
+2. Fill in `reference/brand-kit.md` with the target company's tokens, then apply
+   brand color encodings + the logo/title in-spec.
+3. POST, then in the UI apply the workbook Theme (font + palette). Verify in the
+   UI — theme/font are UI-side.
 
 ## Reference & examples
 
 - `reference/format.md` — the canonical page + element checklist (the format).
-- `reference/brand-kit.md` — adMarketplace tokens + exactly how to apply each in
-  Sigma (Theme settings vs. spec encodings), with the logo snippet.
-- `assets/admarketplace-logo.svg` — the wordmark.
-- `examples/amp-edm-product-funnel-spec.json` — a real GET-back that embodies the
-  format on adMarketplace data (the "Product Performance (EDM)" workbook). Clone
-  and adapt; treat as immutable reference.
+- `reference/brand-kit.md` — the brand-kit **template** + exactly how to apply each
+  token in Sigma (Theme settings vs. spec encodings), with the logo snippet.
+- For a concrete, self-contained branded spec to clone, see
+  `../sigma-workbook-styling/examples/branded-company-dashboard.json` and the
+  generator in `../sigma-company-dashboard/examples/build_cava.py`.

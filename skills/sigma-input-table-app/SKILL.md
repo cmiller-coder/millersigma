@@ -59,10 +59,11 @@ These are the things that were repeatedly *missing* on first builds. Include the
    (`backgroundCanvas #fff`, dark `text`); apply dark only to the hero/toolbar/gradient
    KPI cards, with baked light-text images on those.
 
-## Aesthetics — match the Sales Forecasting reference (the look, not just the mechanics)
+## Aesthetics — restrained, light, element-level (the look, not just the mechanics)
 
-The gold-standard `sales_forecasting_reference.spec.yaml` is deliberately **restrained and
-clean** — the polish is ELEMENT-level styling + composition, NOT a heavy custom theme. Copy this:
+The reference scenario modeler (`../sigma-company-dashboard/examples/build_cava.py`, page 2) is
+deliberately **restrained and clean** — light surfaces, polish via ELEMENT-level styling +
+composition, NOT a heavy custom theme. Copy this:
 
 - **Barely-there theme.** `themeOverrides` is just `{"pageWidth":"large"}` — otherwise Sigma's
   default LIGHT theme and default font. Do NOT drown it in a custom dark theme; a clean light
@@ -221,6 +222,17 @@ that references the control by controlId; it recomputes reactively:
   `columns` (value + a baseline measure), `comparison:{display:"delta",colorGood,colorBad,fontSize}`,
   and `comparisonColumn:{columnId:<baseline colId>}` renders the clean ▲/▼ auto-delta — **no date
   column needed** (a date column is only for *period* comparison). This is the reference app's KPI look.
+- **`Max()`/`Min()` are AGGREGATES — for row-level use `Greatest`/`Least`.** `Max(0,x)` or `Min(a,b)`
+  → `"Max expected 1 argument, got 2"`, which then cascades as `"Reference to errored column"` through
+  every downstream formula (one bad column breaks the chain). Element-wise max/min of values is
+  **`Greatest(a,b,…)` / `Least(a,b,…)`** — e.g. clamp on-hand `Greatest(0, base+net)`, cap a transfer
+  `Least(qty, available)`. (`MaxIf`/`SumIf` conditional aggregates are fine.)
+- **conditionalFormat `value` type must match the TARGET COLUMN's type.** A numeric column (pivot OR
+  table) wants a NUMBER: `{condition:"<",value:7}` / `{condition:"Between",low:7,high:45}` /
+  `{condition:">",value:45}`. ⚠ If the target column is currently ERRORED (references a broken formula),
+  the API can't infer numeric and rejects the number demanding a STRING (`value:"7"`) — a red herring:
+  fix the broken column, keep the number. `condition` enum: `"<" | ">" | "=" | "Between" | "IsNotNull" | "formula"`.
+  Use these for a 3-band status heatmap (red `<7` / green `Between` / amber `>` a threshold).
 - **Dashed prior-year KPI line** needs a **`combo-chart`** (line-chart only has a global
   `lineAreaStyle`): `yAxis.columnIds:[{columnId,type:"line"}]` + `seriesLineAreaStyle:{"<col>":{line:{style:"dashed",width}}}`.
 - **`refresh-element` effect shape is unverified — omit it** (derived tables recompute on reload).
@@ -245,13 +257,11 @@ that references the control by controlId; it recomputes reactively:
 
 ## Exemplars
 
-**⭐ GOLD STANDARD — study & clone shapes from this real, polished app:**
-`examples/sales_forecasting_reference.spec.yaml` — a GET-back of "Sigma Apps – Sales
-Forecasting" (a Sigma sample app on staging), the canonical scenario-modeling app and the quality bar.
-It's a full **workflow app**, not just a grid. Clone its shapes but **build your own from
-scratch** (never re-POST a GET-back — it won't round-trip; e.g. its `update-rows` effects are
-UI-built and update-rows is UI-only, not reliable via code — use append-only + derive latest).
-What to lift:
+**⭐ REFERENCE — study & clone shapes from the current build:**
+`../sigma-company-dashboard/examples/build_cava.py` (page 2, the Scenario Modeler) — the canonical
+scenario-modeling app and the quality bar. Build your own from scratch (never re-POST a GET-back —
+`update-rows` is UI-only, not reliable via code — use append-only + derive latest).
+What a full **workflow app** (not just a grid) includes:
 - **Rich forecast input table** ("Target & Forecast"): editable Target + Stat Forecast; computed
   `Actuals` (Lookup to the warehouse table), an `Actuals/Forecast = If(IsNull([Stat Forecast]),
   "Actuals","Forecast")` classifier, **`Var = Coalesce([Actuals],[Stat Forecast]) − [Target]`**
@@ -268,11 +278,12 @@ What to lift:
 - **Onboarding / white-label** (a Customization input table: Company, Logo + Get-Started button)
   and a polished **Summary** page with comparative KPI cards + a trend line.
 
-**Build-from-code generators (reproducible starting points):**
-- `examples/build_scenario_modeler_min.py` — minimal verified modeler (foundation + comparative
-  gradient KPIs + Baseline-vs-Forecast bar + Δ + Create modal).
-- `examples/build_scenario_app.py` — earlier reference generator.
+**Build-from-code generator (reproducible starting point):**
+- `../sigma-company-dashboard/examples/build_cava.py` — the canonical 2-page build; **page 2 is the
+  full scenario modeler**: base×scenarios cross-join → linked input table (pulled baseline keys +
+  editable drivers + computed projection cols) → derived NORMAL table → comparative gradient KPIs,
+  Create→Submit→Approve lifecycle, and a Scenario Copilot agent with an `insert-rows` tool.
 
-**Quality bar = the Sales Forecasting reference.** A bare "3 KPIs + a bar + an input table" is
+**Quality bar = the `build_cava.py` scenario modeler.** A bare "3 KPIs + a bar + an input table" is
 NOT enough — include delta/variance columns, `SumIf` period roll-ups, the create→submit(→approve)
 modal workflow, and a Summary KPI view.

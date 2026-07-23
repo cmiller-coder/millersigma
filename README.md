@@ -97,23 +97,23 @@ POSTed to `POST /v2/workbooks/spec` (beta), then verified by **data-exporting ea
 element** (`/v2/workbooks/{id}/export` → poll `/v2/query/{qid}/download`) to confirm no
 `Invalid Query` and sane numbers — since the composed pixels can't be seen headlessly.
 
-**Known-good exemplar generators** (copy these; don't start from scratch):
+**Canonical exemplar — copy this, it's the current standard:**
 
 | Exemplar | Shows |
 |---|---|
-| `skills/sigma-company-dashboard/examples/build_marketing_control_center.py` | Full command center: gradient **date-axis KPI cards**, live CallText AI insight, **segmented filter buttons wired via control-driven `Switch`/`DateTrunc` formulas** (dynamic date grain + color-by), stacked bar w/ labels, pivot heatmap, an **animated Sankey plugin**, + a 2nd Scenario Modeler page. |
-| `skills/sigma-input-table-app/examples/sales_forecasting_reference.spec.yaml` | **⭐ Gold-standard scenario modeler** — GET-back of the real "Sigma Apps – Sales Forecasting" app. The quality bar: rich forecast grid (`Var`/delta, `SumIf` period roll-ups), scenario list w/ system columns + **Submit→Approve lifecycle**, `Lookup`-joined linked input tables, modal workflow with guard modals, onboarding + Summary KPI page. Clone its shapes; build from scratch (don't re-POST a GET-back). |
-| `skills/sigma-input-table-app/examples/build_scenario_modeler_min.py` | Minimal verified scenario modeler. |
-| `skills/sigma-company-dashboard/examples/build_template.py` | Read-only dashboard template. |
+| `skills/sigma-company-dashboard/examples/build_cava.py` | **THE reference build.** Two pages (command center + scenario modeler) on light surfaces: comparative **gradient KPI cards with native, colorable titles** (no SVG-title hacks), a CallText AI insight, control-driven `Switch`/`DateTrunc` filters, a stacked bar w/ drill fields, **side-by-side pivots**, a **bespoke data-bound plugin in a container below the bar**, and **two agents** (a read-only analyst + a Scenario Copilot with an insert-rows tool). Clone it; swap brand + reshape SQL + AI prompt + plugin. |
+| `plugins/cava-daypart/` | The matching **bespoke plugin** — a 7×24 day-part heatmap (`@sigmacomputing/plugin` SDK, synthetic fallback). Register via `POST /v2/plugins` → `pluginId`, host it, embed bound to a synthetic operational source. |
 
 **Defaults these encode** (learned the hard way — see each SKILL.md + the
 `sigma-code-rep-interactivity` agent-memory cheatsheet):
-- **Delta/variance always present** in modelers; **KPIs are comparative gradient cards**, not plain numbers.
+- **KPIs are comparative gradient cards** with a delta vs a baseline/prior — never plain numbers. Same card format on every page.
+- **Titles are NATIVE** — a `text` element or, on a dark/gradient surface, the host element's own title (`kpi-chart` `name` with a `color`). **Never bake title text into an SVG** (it clips and can't reflow); native `text` on a light surface is dark/high-contrast by default.
 - **Format with `$.3~s` (auto K/M/B); never hard-code `/1e9` "billions"** — it desyncs the AI summary from the KPI cards.
-- **Light theme + dark accents** (a dark theme makes input tables & dropdowns white-on-white).
-- **Real logo** via `scripts/fetch_logo.py <domain>` (recolor white for dark headers); **hero** via Gemini (`~/Desktop/millersigma/gemini.key`) or a bespoke SVG; **never let an image model draw the logo**.
+- **Light surfaces** everywhere (a dark theme makes input tables & dropdowns white-on-white, and forces the banned SVG-title hack).
+- **Real logo** via `scripts/fetch_logo.py <domain>`; fall back to a clean typographic wordmark — never let an image model draw the logo.
 - **Toggles work via control-driven formulas**, not button actions.
-- **Plugins** live in `plugins/` (served from an always-on `localhost:8080` launchd agent; register with a **top-level `url`** at create time). Match the plugin to the industry (Sankey, wellbore, chiplet-explorer, choropleth) — don't reuse one shape everywhere.
+- **Two agents** — a read-only analyst, and a scenario copilot with an `insert-rows` tool (its target input table needs "Editable in published version" in the UI).
+- **A bespoke plugin every build**, matched to the industry. Register via `POST /v2/plugins` → `pluginId`; host on the always-on `localhost:8080` agent. **Fixed placement:** wrapped in a card container, in the left column **directly below the bar chart**, agent beside the bar only, pivots below.
 
 ## Adding new skills
 

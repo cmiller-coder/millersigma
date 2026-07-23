@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Sigma Computing skills for Claude Code — workbooks, dashboards, embeds, and plugins.",
-    "version": "0.7.0"
+    "version": "0.8.0"
   },
   "plugins": [
     {

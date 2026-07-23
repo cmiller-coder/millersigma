@@ -28,8 +28,8 @@ entirely from code. Proven across multiple retail, CPG, and tech companies.
 4. **Wire it up** — place the plugin element in the spec once it has a `pluginId`.
 
 Build the workbook with a **Python generator that emits `spec.json`**, then
-`POST` it with curl. See `examples/build_template.py` (a full working generator)
-and `examples/plugin-heatmap.html` (a full working plugin). Read
+`POST` it with curl. See `examples/build_cava.py` (the canonical full generator)
+and `plugins/cava-daypart/` (the matching bespoke plugin). Read
 `reference/api-cheatsheet.md` before authoring — it has every verified shape and
 gotcha. **Clone shapes from a recent GET-back spec, never from memory or old docs.**
 
@@ -167,5 +167,5 @@ examples in `plugins/` (flight-timeline Gantt, territory choropleth, claims funn
 
 ## Files
 - `reference/api-cheatsheet.md` — verified element shapes + every gotcha. READ FIRST.
-- `examples/build_template.py` — full generator (theme, KPI cards, AI summary, bar, plugin panel, table).
-- `examples/plugin-heatmap.html` — full hosted-plugin example.
+- `examples/build_cava.py` — the canonical full generator (2 pages, comparative gradient KPIs with native titles, AI insight, bar + drill fields, bespoke plugin, side-by-side pivots, two agents).
+- `plugins/cava-daypart/` — the matching bespoke day-part-heatmap plugin (register via `POST /v2/plugins`).
