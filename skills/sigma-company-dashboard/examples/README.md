@@ -13,3 +13,12 @@
   day-part heatmap (`@sigmacomputing/plugin` SDK, synthetic fallback). Register via
   `POST /v2/plugins` → `pluginId`, host it, and embed it bound to a synthetic
   operational source (see the generator).
+
+## Quick-start alternatives (also restored)
+
+- **build_template.py** — a lighter starter generator (emits `spec.json`; `CONN` from
+  `SIGMA_CONNECTION_ID`, folder as argv). Its plugin panel points at a **ready-hosted**
+  plugin so you don't have to host anything — register the live URL and embed.
+- **plugin-heatmap.html** — that ready-hosted plugin (GPU utilization heatmap), live at
+  `https://scintillating-madeleine-4aceba.netlify.app`. Register its URL (`scripts/register_plugin.py`)
+  → `pluginId` → embed. Zero hosting; works from any org.

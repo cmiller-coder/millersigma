@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GPU Cluster Utilization — NVIDIA Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#e8ffe0;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:14px 16px;gap:10px}
+  #top{display:flex;justify-content:space-between;align-items:baseline}
+  #ttl{font-size:14px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#a3e635}
+  #avg{font-size:12px;color:#9aa79a}
+  #avg b{color:#fff;font-size:15px}
+  #grid{flex:1;display:grid;gap:3px;grid-auto-rows:1fr;align-content:stretch}
+  .cell{border-radius:3px;position:relative;transition:transform .08s;cursor:default;min-height:8px}
+  .cell:hover{transform:scale(1.35);z-index:5;outline:1px solid #fff}
+  .cell.hot{box-shadow:0 0 0 1.5px #ff3b30, 0 0 6px #ff3b30}
+  #legend{display:flex;align-items:center;gap:8px;font-size:10px;color:#9aa79a}
+  #bar{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#0f2417,#2f6b1e,#76B900,#a3e635)}
+  #tip{position:fixed;pointer-events:none;background:#0a140a;border:1px solid #2c3d24;border-radius:8px;padding:8px 10px;font-size:11px;color:#e8ffe0;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+  #tip b{color:#a3e635}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">GPU Cluster Utilization</div><div id="avg">Fleet avg <b id="avgV">—</b> · <span id="cnt">0</span> nodes · <span id="hot" style="color:#ff6b60">0 hot</span></div></div>
+  <div id="grid"></div>
+  <div id="legend"><span>idle</span><div id="bar"></div><span>saturated</span><span style="margin-left:8px;color:#ff6b60">▨ over-temp</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'node',type:'column',source:'source',label:'Node ID'},
+    {name:'util',type:'column',source:'source',allowedTypes:['number','integer'],label:'Utilization %'},
+    {name:'temp',type:'column',source:'source',allowedTypes:['number','integer'],label:'Temp (°C)'},
+    {name:'model',type:'column',source:'source',label:'GPU model'},
+    {name:'hotAt',type:'text',label:'Over-temp threshold °C',defaultValue:'80'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hex(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  function utilColor(u){ // 0..100 -> dark green to bright NVIDIA green
+    var t=Math.max(0,Math.min(1,u/100));
+    // stops: #0f2417 -> #2f6b1e -> #76B900 -> #a3e635
+    var s=[[15,36,23],[47,107,30],[118,185,0],[163,230,53]];
+    var seg=t*3, i=Math.min(2,Math.floor(seg)), f=seg-i;
+    var r=lerp(s[i][0],s[i+1][0],f),g=lerp(s[i][1],s[i+1][1],f),b=lerp(s[i][2],s[i+1][2],f);
+    return '#'+hex(r)+hex(g)+hex(b);
+  }
+  var tip=document.getElementById('tip');
+  function draw(nodes){
+    var grid=document.getElementById('grid'); grid.innerHTML='';
+    var n=nodes.length||1; var cols=Math.ceil(Math.sqrt(n*2.2)); // wide-ish
+    grid.style.gridTemplateColumns='repeat('+cols+',1fr)';
+    var sum=0,hot=0;
+    nodes.forEach(function(nd){
+      sum+=nd.util; var isHot=nd.temp>=nd.hotAt; if(isHot)hot++;
+      var c=document.createElement('div'); c.className='cell'+(isHot?' hot':'');
+      c.style.background=utilColor(nd.util);
+      c.addEventListener('mousemove',function(e){
+        tip.innerHTML='<b>'+nd.node+'</b> · '+nd.model+'<br>Util '+nd.util.toFixed(0)+'% · '+nd.temp.toFixed(0)+'°C'+(nd.power?(' · '+nd.power.toFixed(0)+'W'):'');
+        tip.style.opacity=1; tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY+12)+'px';
+      });
+      c.addEventListener('mouseleave',function(){tip.style.opacity=0;});
+      grid.appendChild(c);
+    });
+    document.getElementById('avgV').textContent=(sum/n).toFixed(0)+'%';
+    document.getElementById('cnt').textContent=n;
+    document.getElementById('hot').textContent=hot+' hot';
+  }
+  function synth(){var out=[];for(var i=0;i<240;i++){var u=30+65*Math.abs(Math.sin(i*0.9));var t=45+40*Math.abs(Math.sin(i*1.3));
+    out.push({node:'DC-'+('00'+i).slice(-3),model:['H100','H200','B200','GB200','A100'][i%5],util:u,temp:t,power:300+400*Math.abs(Math.sin(i*0.7)),hotAt:80});}return out;}
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){var c=st.cfg||{};var hotAt=parseFloat(c.hotAt)||80;
+    if(st.data&&c.util&&st.data[c.util]){
+      var util=st.data[c.util]||[],node=(c.node&&st.data[c.node])||[],temp=(c.temp&&st.data[c.temp])||[],model=(c.model&&st.data[c.model])||[];
+      var nodes=util.map(function(u,i){return {node:node[i]!=null?String(node[i]):('#'+i),model:model[i]!=null?String(model[i]):'GPU',util:Number(u)||0,temp:Number(temp[i])||0,power:0,hotAt:hotAt};});
+      if(nodes.length){draw(nodes);return;}
+    }
+    draw(synth());
+  }
+  if(client){client.config.subscribe(function(cfg){st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();});}
+    recompute();});
+  }else{recompute();}
+})();
+</script>
+</body>
+</html>

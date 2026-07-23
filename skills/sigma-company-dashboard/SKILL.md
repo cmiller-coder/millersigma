@@ -27,7 +27,11 @@ entirely from code. Proven across multiple retail, CPG, and tech companies.
    would want (NOT a KPI reskin). Build it single-file (`@sigmacomputing/plugin`
    SDK — see `plugins/cava-daypart/`), then **host + register it in YOUR org**
    (a plugin is never auto-built by a workbook; it must exist in the org first):
-   - **Host**: simplest is local — `python3 -m http.server 8080` inside `plugins/`,
+   - **Fastest (no hosting — makes "name a company → it builds" work instantly):** a
+     ready-hosted example plugin is live at `https://scintillating-madeleine-4aceba.netlify.app`
+     (source `examples/plugin-heatmap.html`). Just register THAT url and embed it — no local
+     server, works from any org. Build + host your own only when you want a bespoke one.
+   - **Host your own**: simplest is local — `python3 -m http.server 8080` inside `plugins/`,
      giving `http://localhost:8080/<folder>/` (Sigma allows the http-localhost iframe
      on your own machine). Or deploy to any static host (Netlify).
    - **Register** (one-time, per org): `python3 scripts/register_plugin.py <BASE_URL>
