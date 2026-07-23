@@ -24,8 +24,19 @@ entirely from code. Proven across multiple retail, CPG, and tech companies.
 2. **Themed workbook** — company theme (colors, logo, hero), gradient KPI cards,
    a **CallText AI summary**, charts, laid out cleanly. POST via the spec API.
 3. **Domain plugin** — a bespoke, *operational* visual a person at that company
-   would want (NOT a KPI reskin). Build single-file, host on Netlify, register.
-4. **Wire it up** — place the plugin element in the spec once it has a `pluginId`.
+   would want (NOT a KPI reskin). Build it single-file (`@sigmacomputing/plugin`
+   SDK — see `plugins/cava-daypart/`), then **host + register it in YOUR org**
+   (a plugin is never auto-built by a workbook; it must exist in the org first):
+   - **Host**: simplest is local — `python3 -m http.server 8080` inside `plugins/`,
+     giving `http://localhost:8080/<folder>/` (Sigma allows the http-localhost iframe
+     on your own machine). Or deploy to any static host (Netlify).
+   - **Register** (one-time, per org): `python3 scripts/register_plugin.py <BASE_URL>
+     <TOKEN> "<name>" "<hosted-url>"` → prints a `pluginId`. (403 → your role can't
+     register plugins; an org admin must.) `export DAYPART_PLUGIN_ID=<pluginId>`.
+4. **Wire it up** — embed `{kind:"plugin", pluginId, config:{source:{kind:"element",
+   elementId}, <var>:"<columnId>"}}` with **your** `pluginId` (the example reads it
+   from `DAYPART_PLUGIN_ID`). Bindings are **bare columnId strings**; keys match the
+   plugin's `configureEditorPanel` variable names. Bind it to a dedicated data element.
 
 Build the workbook with a **Python generator that emits `spec.json`**, then
 `POST` it with curl. See `examples/build_cava.py` (the canonical full generator)

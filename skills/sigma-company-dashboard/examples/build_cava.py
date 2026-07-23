@@ -5,9 +5,13 @@
 # Pattern: light surfaces; gradient KPI cards with NATIVE (colorable) titles; comparative deltas;
 #   two agents (read-only + insert-rows tool); bespoke day-part plugin in a container BELOW the bar;
 #   agent beside the bar only; full-width toolbar buttons; side-by-side pivots below the plugin.
-import json,sys,base64,urllib.request,urllib.error,xml.dom.minidom as _MD
+import json,sys,os,base64,urllib.request,urllib.error,xml.dom.minidom as _MD
 BASE,TOKEN,CONN,FOLDER=sys.argv[1:5]
-AICONN="SNOWFLAKE.CORTEX.COMPLETE"; DAYPART_PLUGIN="a4e04bd7-3ddb-414b-b528-07d43ea52c5a"
+AICONN="SNOWFLAKE.CORTEX.COMPLETE"
+# Register cava-daypart in YOUR org first (scripts/register_plugin.py) and export its id:
+#   export DAYPART_PLUGIN_ID=<pluginId>
+# The id below is org-specific and will NOT resolve outside its origin — replace it.
+DAYPART_PLUGIN=os.environ.get("DAYPART_PLUGIN_ID","REPLACE_WITH_YOUR_PLUGIN_ID")
 H={"Authorization":"Bearer "+TOKEN,"Content-Type":"application/json"}
 def b64(s): return base64.b64encode(s.encode()).decode()
 CUR={"kind":"number","formatString":"$.3~s","currencySymbol":"$","decimalSymbol":".","digitGroupingSymbol":",","digitGroupingSize":[3]}
