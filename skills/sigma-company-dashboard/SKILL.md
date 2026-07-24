@@ -1,16 +1,21 @@
 ---
 name: sigma-company-dashboard
 description: >-
-  Build a complete, on-brand Sigma dashboard for a company end-to-end via the
-  workbooks-as-code API (POST /v2/workbooks/spec) — reshape sample data with
-  custom SQL, apply the company's theme/logo/hero, composite gradient KPI cards,
-  a LIVE CallText AI summary, charts, and a bespoke domain-specific plugin
-  (built + hosted on Netlify). Use whenever someone wants to spin up a branded
-  Sigma workbook / POV / demo for a NAMED company ("make a Sigma dashboard for
-  [company] / a prospect", "build me a Sigma plugin", "reshape sample data
-  into a new industry"), or reproduce this multi-step flow. Encodes the VERIFIED
-  current-API element shapes and the many masked-error gotchas so you never
-  relearn them — always clone shapes from a recent GET-back, not from stale docs.
+  START HERE — the FLAGSHIP end-to-end builder for a branded Sigma workbook /
+  dashboard / POV / demo for a NAMED company or prospect, via the workbooks-as-code
+  API (POST /v2/workbooks/spec). ONE skill does the whole thing: reshape sample data
+  with custom SQL into the company's domain, fetch their REAL logo, a brand-gradient
+  header, COMPARATIVE gradient KPI cards, a LIVE CallText AI insight, charts + filters,
+  a bespoke domain-specific plugin (hosted on localhost + registered), and a
+  scenario-modeler page with agents. USE THIS SKILL — not the building-block skills
+  (branded-dashboard-format, sigma-workbook-styling, sigma-workbook-conventions,
+  sigma-input-table-app); it composes them for you — whenever anyone wants to "build /
+  make / spin up a Sigma dashboard / workbook / POV / demo for [company or prospect]",
+  a "branded dashboard for [company]", "reshape sample data into [industry]", or a
+  personalized Sigma demo. Driving a company build from the building blocks instead
+  yields a generic dashboard with no fetched logo and no bespoke plugin — use this.
+  Encodes the VERIFIED current-API element shapes + masked-error gotchas; always clone
+  shapes from a recent GET-back, not from stale docs.
 ---
 
 # Sigma Company Dashboard — end-to-end builder

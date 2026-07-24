@@ -5,11 +5,25 @@ home for everything that helps Claude build Sigma workbooks, dashboards, embed
 portals, and plugins. Install it once and every skill below becomes available
 in any project.
 
+## Which skill do I use? (START HERE)
+
+**Building a branded Sigma dashboard / POV / demo for a company? → use `sigma-company-dashboard`. That one. Nothing else.**
+
+It's the flagship, end-to-end builder and it *composes* the others for you (layout, styling, conventions, write-back). Everything else is a building block or a different deliverable:
+
+- ⭐ **`sigma-company-dashboard`** — full branded company workbook: real fetched logo, comparative KPI cards, live AI insight, a **bespoke plugin**, and a scenario-modeler page. **This is the front door.**
+- `sigma-input-table-app` — a standalone data app / scenario modeler / forecasting / write-back tool (only when *that* is the whole ask).
+- `branded-dashboard-format`, `sigma-workbook-styling`, `sigma-workbook-conventions` — building blocks the flagship uses; call directly only for a specific sub-task.
+- `sigma-plugin-development`, `sigma-plugin-patterns` — for building a plugin itself.
+- `sigma-embed-portal` — a Netlify embed site. `sigma-use-cases` — a use-case slide deck. `sigma-app-design` — a design doc/PRD.
+
+> ⚠️ **Common mistake:** driving a company build from `branded-dashboard-format` + the building blocks (naming them in your prompt). That produces a *generic* dashboard — no fetched logo, no bespoke plugin. Just say: **"Use `sigma-company-dashboard` to build a Sigma workbook for [Company]."**
+
 ## Skills
 
 | Skill | What it does | Dependencies |
 |---|---|---|
-| **sigma-company-dashboard** | End-to-end: given a company, reshape sample data via custom SQL → themed workbook (gradient KPI cards, live CallText AI summary, charts) → a bespoke hosted domain plugin. Built from Best Buy/Budweiser/Apple/NVIDIA. Ships a verified current-API cheatsheet + a working generator & plugin example. | Uses `scripts/`, staging API, a hosting CLI (Netlify). |
+| ⭐ **sigma-company-dashboard** | **START HERE.** End-to-end: given a company, reshape sample data via custom SQL → brand-gradient header + **real fetched logo** → **comparative** gradient KPI cards → live CallText AI insight, charts, filters → a **bespoke domain plugin** (localhost-hosted + registered) → a scenario-modeler page with agents. Worked examples: JPMC, DoorDash, Fiserv, Zachry. Ships the verified current-API cheatsheet + canonical generator (`build_company_command_center.py`). | Uses `scripts/`, staging API, local plugin host. |
 | **sigma-input-table-app** | Interactive counterpart to the dashboard skill — build a Sigma **data app** from code: input tables + buttons + action sequences + modals (scenario modelers, forecasting/planning, write-back, submit→approve). Encodes the verified beta workbook-spec shapes (input tables, cross-joins, linked input tables, modal pages, button effects) + the hard limits/workarounds + a full working generator. | Staging API (beta `create-workbook-spec`). |
 | **sigma-workbook-conventions** | Authoring/editing/reviewing Sigma workbook & data-model JSON specs — input resolution, naming, layout, control catalog, ID semantics, and the POST-time gotchas. The flagship skill. | Uses `scripts/` (see [Working with the scripts](#working-with-the-scripts)); pairs with the upstream `sigma-api` / `sigma-data-models` skills. |
 | **sigma-workbook-styling** | The visual-craft layer — containers as design blocks, images/logos, buttons & actions, and color/spacing/typography to make a workbook look *designed*, not just correct. Honest about what round-trips via spec vs what needs UI finishing. | Pairs with `sigma-workbook-conventions` (mechanics) and `branded-dashboard-format` (brand). |

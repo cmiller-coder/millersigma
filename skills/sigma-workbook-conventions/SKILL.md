@@ -1,12 +1,12 @@
 ---
 name: sigma-workbook-conventions
 description: >-
-  Use when authoring, editing, or reviewing any Sigma workbook/data-model spec
-  in this repo. Encodes project conventions on element naming, page/folder
-  layout, ID semantics on create-vs-update, secret handling, and common
-  pitfalls when generating Sigma JSON specs. Pair with sigma-data-models for
-  field-level reference, and with a domain-specific workbook-pattern skill
-  when one is available for the dashboard type being built.
+  BUILDING BLOCK — spec mechanics/conventions, composed by **sigma-company-dashboard**.
+  For a full branded company dashboard / POV / demo, use **sigma-company-dashboard** (it
+  applies these conventions for you). Use this DIRECTLY when authoring, editing, or
+  reviewing a raw Sigma workbook/data-model spec's mechanics — element naming, page/folder
+  layout, ID semantics on create-vs-update, secret handling, and common pitfalls when
+  generating Sigma JSON. Pair with sigma-data-models for field-level reference.
 ---
 
 # Sigma Workbook Conventions

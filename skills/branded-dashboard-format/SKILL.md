@@ -1,16 +1,14 @@
 ---
 name: branded-dashboard-format
 description: >
-  Use when building a Sigma workbook that should follow a standard "house"
-  dashboard format (header/filter-bar → KPI row → trend chart → detail pivot,
-  two-tier sourcing, metrics in the semantic layer) AND/OR apply a company brand
-  kit (font, color palette, logo) so the workbook reads as a native product
-  surface for that company. Trigger phrases: "use the standard dashboard format",
-  "make it look like our other dashboards", "brand this for <company>", "match
-  the <company> look". Encodes the recurring page composition + a fill-in brand-kit
-  template. Prerequisites: sigma-api, sigma-data-models, sigma-workbook-conventions.
-  Does NOT restate spec mechanics (defer to sigma-workbook-conventions) and is
-  not a domain/metric pattern (those are per-domain skills).
+  BUILDING BLOCK — composed by **sigma-company-dashboard**. For a full branded company
+  dashboard / POV / demo, use **sigma-company-dashboard**; do NOT drive a company build
+  from this skill (it yields a generic dashboard with no fetched logo and no bespoke
+  plugin). Use this DIRECTLY only when you specifically need the standard "house"
+  dashboard layout as a standalone reference — header/filter-bar → KPI row → trend chart
+  → detail pivot, two-tier sourcing, metrics in the semantic layer — or a fill-in brand
+  kit. Encodes the recurring page composition + brand-kit template. Defers spec mechanics
+  to sigma-workbook-conventions.
 user-invocable: true
 ---
 

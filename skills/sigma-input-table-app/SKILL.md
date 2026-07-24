@@ -1,12 +1,13 @@
 ---
 name: sigma-input-table-app
 description: >-
-  Build interactive Sigma "data apps" from code (workbooks-as-code, beta
+  BUILDING BLOCK for interactive Sigma "data apps" from code (workbooks-as-code, beta
   POST /v2/workbooks/spec) — scenario modelers, revenue/demand FORECASTING,
   budgeting/planning, write-back tools, and ADJUSTMENT + change-log apps (users
-  edit values via a modal, every change logged). The interactive counterpart to
-  sigma-company-dashboard. Use whenever someone wants users to CREATE scenarios,
-  ENTER/adjust forecasts, model on top of a baseline, or "update values via a
+  edit values via a modal, every change logged). For a full branded company dashboard /
+  POV (which already includes a scenario-modeler page), use **sigma-company-dashboard**.
+  Use this DIRECTLY when the deliverable is specifically a standalone data app — users
+  CREATE scenarios, ENTER/adjust forecasts, model on a baseline, or "update values via a
   modal / add an adjuster / build a planning app". Encodes the VERIFIED input-table,
   linked-input-table, modal, button-action, and control-driven-formula shapes plus
   the hard limits and the non-negotiable DEFAULTS (delta/variance columns,

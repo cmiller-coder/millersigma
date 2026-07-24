@@ -1,11 +1,11 @@
 ---
 name: sigma-plugin-patterns
 description: >-
-  Proven architectural patterns and practical recipes for Sigma Computing
-  plugins — the JSON settings pattern for rich configuration beyond the
-  editor panel, and other reusable flows for state, config, and interaction.
-  Use alongside sigma-plugin-development when structuring how a plugin
-  stores settings or orchestrates workbook interactions.
+  REFERENCE — proven architectural patterns/recipes for Sigma Computing plugins (the JSON
+  settings pattern for rich configuration beyond the editor panel, and reusable flows for
+  state, config, and interaction). A building block behind **sigma-company-dashboard**'s
+  bespoke plugins; use DIRECTLY alongside sigma-plugin-development only when structuring a
+  plugin itself — not for a dashboard.
 ---
 
 # Sigma Plugin Common Patterns & Flows

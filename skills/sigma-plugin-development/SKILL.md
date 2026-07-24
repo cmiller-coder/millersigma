@@ -1,12 +1,12 @@
 ---
 name: sigma-plugin-development
 description: >-
-  Comprehensive reference for building Sigma Computing plugins with the
-  @sigmacomputing/plugin SDK — editor-panel configuration, reading element
-  data, control variables, action triggers/effects, environment/style/
-  lifecycle, and hosting. Use when building, configuring, or debugging a
-  custom Sigma plugin in any framework (React, Vue, Svelte, vanilla JS).
-  Pair with sigma-plugin-patterns for higher-level architectural recipes.
+  REFERENCE for building a Sigma Computing plugin with the @sigmacomputing/plugin SDK —
+  editor-panel configuration, reading element data, control variables, action
+  triggers/effects, environment/style/lifecycle, and hosting. The flagship
+  **sigma-company-dashboard** uses this when it creates a bespoke plugin — invoke this
+  DIRECTLY only when building, configuring, or debugging a plugin itself (React, Vue,
+  Svelte, vanilla JS), not for a dashboard. Pair with sigma-plugin-patterns for recipes.
 ---
 
 # Sigma Plugin Development
