@@ -920,3 +920,11 @@ columns[columnId] = {
 - **Use `allowedTypes` on columns** — restrict column selection to appropriate types (e.g., `['number', 'integer']` for numeric-only fields)
 - **The plugin runs in an iframe** — standard web security restrictions apply; the plugin cannot access the parent Sigma page directly
 - **Subscriptions return unsubscribe functions** — in vanilla JS plugins, always clean up subscriptions when the source changes
+- **Any hand-rolled canvas/SVG visual that measures its own container (`clientWidth`/`clientHeight`, `getBoundingClientRect`) MUST attach a `ResizeObserver` and redraw on fire — never draw once on load and stop.** Sigma sizes the iframe/panel *after* your script's first paint, so a load-time-only measurement routinely draws at a stale size: half-width charts, or — for multi-item layouts (gauge clusters, card grids, anything that wraps to a new row) — clipped/ghost/overlapping elements where a row's true width wasn't known yet. This is the single most common "wonky plugin" bug in a freshly-authored custom visual. Minimal fix:
+  ```javascript
+  function draw() { /* read clientWidth/clientHeight fresh, then render */ }
+  draw();
+  if (window.ResizeObserver) new ResizeObserver(draw).observe(document.getElementById('stage'));
+  window.addEventListener('resize', draw);
+  ```
+  Re-render fully on each fire (don't try to patch in place) — layout containers, item counts, and positions can all change between fires.

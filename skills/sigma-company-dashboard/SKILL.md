@@ -167,7 +167,14 @@ The connection name + model must be valid for the org (confirm the exact strings
 ## Plugin (domain-specific, hosted, embedded LIVE)
 Single-file `index.html`, vanilla JS + `<script src="https://unpkg.com/@sigmacomputing/plugin">`,
 `client.config.configureEditorPanel([...])`, subscribe to element data, render;
-**always include a synthetic fallback** so it previews standalone. Host on Netlify
+**always include a synthetic fallback** so it previews standalone.
+**Always attach a `ResizeObserver` on the render container and redraw on fire** (don't just
+draw once on load) — Sigma sizes the panel AFTER your script's first paint, so a load-time-only
+measurement (`clientWidth`/`clientHeight`) draws at a stale size: half-width charts, or for any
+multi-item layout (gauge clusters, card grids, anything that can wrap to a new row) clipped/
+ghost/overlapping elements. This is the #1 cause of a "wonky" freshly-authored plugin — see
+`sigma-plugin-development`'s Tips section for the snippet. Preview the plugin standalone at a
+couple of viewport widths before wiring it into the workbook. Host on Netlify
 (authed CLI): `netlify api createSite --data '{"name":"<unique>","account_slug":"<slug>"}'`
 → `netlify deploy --prod --dir <folder> --site <id>` (ALWAYS pass an explicit
 `--site`; empty deploys to the wrong linked site).
