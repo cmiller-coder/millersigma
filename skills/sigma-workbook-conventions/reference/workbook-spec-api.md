@@ -85,8 +85,9 @@ iterations searching for a field that doesn't exist.
 | `PUT`  | `/v2/workbooks/{workbookId}/spec` | Full-spec update; no partials. |
 | `DELETE` | _unknown_ | **Open issue:** both `DELETE /v2/workbooks/{id}` and `DELETE /v2/files/{id}` return 404 against staging for workbooks the same token just CREATEd. Until the right endpoint is found, test workbooks accumulate and need manual UI cleanup. Discover via Sigma docs / network tab on a UI delete. |
 
-`folderId` is the **internal UUID** (e.g. `eb548e3b-...`), NOT the urlId
-(`7a3Q0z79Bx1H42pxjd0qWn`). Look up via `GET /v2/files/{urlId}` — both are returned.
+`folderId` is the **internal UUID** (e.g. `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`),
+NOT the urlId (a short base62 string like `AbC123...`). Look up via
+`GET /v2/files/{urlId}` — both are returned.
 
 ## Element source kinds
 
@@ -128,14 +129,35 @@ Per Sigma's official workbooks-as-code limitations
 following are **explicitly out of scope** and will be rejected with
 `Invalid kind`:
 
-- **Maps** — all variants: `geography`, point maps, region maps. There is no
-  workable kind value for spatial visualization in the spec today. If a
-  geo view is the right answer for the analysis, build it in the UI; do not
-  burn iterations probing kind names.
-- Box plot, waterfall, sankey, funnel, gauge.
-- Python elements, input tables, buttons, embeds, plugins, page breaks,
-  value lists, repeated containers, tabbed containers, modals, popovers,
-  navigation elements, forms, single-row containers, action sequences.
+⚠️ **`Invalid kind: "<x>"` is a MASKED error** — it fires for an unknown kind AND
+for a *known* kind with a wrong/incomplete shape. A failed POST therefore does NOT
+prove a kind is unsupported (a gibberish "control" giving the same message proves
+nothing). Always cross-check the OFFICIAL supported-elements list:
+<https://help.sigmacomputing.com/docs/manage-workbooks-as-code> (re-checked 2026-07-20).
+
+**Supported per that doc:** all tables, pivot tables, **input tables + linked input
+tables**, all controls, charts incl. **point / region / geography maps**, containers,
+text, image, divider, **embed**, **plugin**. Earlier versions of THIS file wrongly
+listed maps, plugins, and input tables as unsupported — they are supported. Get exact
+shapes from a GET-back of a workbook that already uses them (or the OpenAPI
+`/workbookspec` schema); don't infer the shape from `Invalid kind` failures.
+
+**ALSO SUPPORTED (corrected 2026-07-24 — an earlier version of this file wrongly
+listed these as rejected too): buttons, modals (as `type:"modal"` pages), and
+`tabbed-container`.** All three are real, code-representable, and verified end-to-end
+in production builds (see `sigma-input-table-app` for buttons/modals; `sigma-company-
+dashboard` and `sigma-cohort-builder-app` for tabbed-container's exact `<Tab>` XML
+shape + gotchas). The earlier "rejected" conclusion came from a false-positive test
+(a substring-match bug, not an actual API rejection) — don't trust a stale claim like
+this over a fresh live POST/GET-back test.
+
+**Still not supported (rejected):** action sequences (as a reusable named object —
+inline the effects directly instead), popovers, navigation elements (a literal nav-bar
+piece — page-jump `navigate`/`select-tab` action effects are ALSO unconfirmed, use
+`open-url _self` to a page URL or model views as modal overlays / separate pages
+instead), forms, page breaks, value lists, repeated containers, single-row
+containers, Python elements. Also box plot, waterfall, sankey, funnel, gauge. Build
+these in the UI.
 
 When the user asks for one of these viz types, surface the gap during the
 plan step and propose a substitute that IS supported (e.g. swap map →

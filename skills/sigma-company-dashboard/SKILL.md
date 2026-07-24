@@ -6,10 +6,11 @@ description: >-
   API (POST /v2/workbooks/spec). ONE skill does the whole thing: reshape sample data
   with custom SQL into the company's domain, fetch their REAL logo, a brand-gradient
   header, COMPARATIVE gradient KPI cards, a LIVE CallText AI insight, charts + filters,
-  a bespoke domain-specific plugin (hosted on localhost + registered), and a
-  scenario-modeler page with agents. USE THIS SKILL — not the building-block skills
+  a bespoke domain-specific plugin (hosted on localhost + registered), and a second
+  interactive page — a scenario modeler OR a cohort/segmentation builder, whichever
+  fits the prospect (this skill asks). USE THIS SKILL — not the building-block skills
   (branded-dashboard-format, sigma-workbook-styling, sigma-workbook-conventions,
-  sigma-input-table-app); it composes them for you — whenever anyone wants to "build /
+  sigma-input-table-app, sigma-cohort-builder-app); it composes them for you — whenever anyone wants to "build /
   make / spin up a Sigma dashboard / workbook / POV / demo for [company or prospect]",
   a "branded dashboard for [company]", "reshape sample data into [industry]", or a
   personalized Sigma demo. Driving a company build from the building blocks instead
@@ -122,9 +123,17 @@ from `fetch_logo.py`.
   `Switch([ColorBy],…)`. Give each segmented control a default `value`.
 - **Stacked bar + labels:** `color:{by:"category",column,scheme:[…]}` + `stacking:"stacked"` +
   `dataLabel:{labels:"shown",anchor:"middle",fontSize}` (singular `dataLabel`).
-- **Interactive counterpart:** for scenario modelers / forecast entry / adjust-via-modal /
-  change-log data apps, use the **`sigma-input-table-app`** skill (it carries the verified
-  input-table, modal, and delta/variance defaults).
+- **Interactive counterpart — ASK which pattern fits, don't default to one:** before
+  building page 2, ask the user which of two interactive patterns the prospect needs
+  (some are genuinely ambiguous — e.g. a retailer could plausibly want either):
+  - **`sigma-input-table-app`** — scenario modelers / forecast entry / adjust-via-modal /
+    change-log data apps: PROJECT A NUMBER forward under adjustable drivers. Fits finance,
+    manufacturing, insurance, supply chain, energy.
+  - **`sigma-cohort-builder-app`** — an agent-driven population SEGMENTATION tool: filter
+    a population of individual records (customers/patients/employees/students/members)
+    down to a named, saveable cohort. Fits marketing, healthcare, HR, education, SaaS.
+  "Both" is a valid answer too (one page each, on top of the same dashboard page 1).
+  Whichever is chosen still gets the SAME brand theming/logo/header conventions as page 1.
 
 ## Data reshape pattern (Snowflake)
 Map a sample column onto domain labels deterministically:
@@ -201,6 +210,31 @@ that localhost while the server runs (not shareable — for dev/personal demos, 
 teammates); Sigma is HTTPS loading an HTTP-localhost iframe, which browsers permit as
 a secure-context exception (blank panel ⇒ check that first). Keep verified plugin
 examples in `plugins/` (flight-timeline Gantt, territory choropleth, claims funnel).
+
+## Command-center layout — left column is a TABBED CONTAINER (current standard)
+The left content column (bar/trend chart, the bespoke plugin, and the pivot detail
+tables) now goes in ONE `tabbed-container` — NOT stacked vertically. Typical 3 tabs:
+"Cost Trend" / "<Plugin concept>" / "Detail Tables" (the two pivots side-by-side in
+the last tab). The agent rail sits beside it (unchanged), spanning the SAME full row
+range as the tabbed container so both reach the same height. Verified shape:
+```json
+{"id":"tc","kind":"tabbed-container","tabs":[{"name":"Cost Trend"},{"name":"Plugin"},{"name":"Detail Tables"}],"tabBar":{"alignment":"start"}}
+```
+```xml
+<TabbedContainer elementId="tc" type="tabbed-container" gridColumn="1 / 18" gridRow="20 / 60">
+  <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto"><LayoutElement elementId="bar" gridColumn="1 / 25" gridRow="1 / 22"/></Tab>
+  <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto"><LayoutElement elementId="plugin" gridColumn="1 / 25" gridRow="1 / 22"/></Tab>
+  <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto"><LayoutElement elementId="heat" gridColumn="1 / 13" gridRow="1 / 22"/><LayoutElement elementId="book" gridColumn="13 / 25" gridRow="1 / 22"/></Tab>
+</TabbedContainer>
+```
+`tabs[]` in the JSON element are LABELS ONLY, matched by POSITION to the `<Tab>`
+children in the layout XML (no name attribute on `<Tab>`). **⚠ Never nest a
+`<GridContainer>` inside a `<Tab>`** — verified to scramble render order (elements can
+render out of declared order with large gaps, even though POST/PUT accepts it,
+masked). Each tab here only needs bare `<LayoutElement>` children (a chart, a plugin,
+or two side-by-side tables), so this risk never comes up on this page. See
+`sigma-cohort-builder-app`'s SKILL.md for the full tabbed-container gotcha list
+(padding, control default-values, grouped-table sort) if you need a tab elsewhere too.
 
 ## Workflow rules
 - **Ask before building the plugin** — propose 2–4 domain concepts and let the user pick.
