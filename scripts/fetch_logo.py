@@ -8,17 +8,27 @@ Usage:
     python3 fetch_logo.py exxonmobil.com --out logo.png  # -> saves the raw asset
     python3 fetch_logo.py exxonmobil.com --datauri-file logo.txt
 
-Strategy (best → fallback), all from the company's own site:
+Strategy (best → fallback):
   1. Header/footer <img> or inline <svg> whose src/class/alt says "logo"
-     (prefer .svg, then @2x/high-res raster).
-  2. <link rel="apple-touch-icon"> (high-res square mark).
-  3. og:image.
-Returns nothing usable -> exit 2 (caller should fall back to a wordmark).
+     (prefer .svg, then @2x/high-res raster), from the company's own site.
+  2. <link rel="apple-touch-icon"> (high-res square mark), from the company's own site.
+  3. og:image, from the company's own site.
+  4. Wikipedia's own API (opensearch -> pageimages) for the company's article lead
+     image — some corporate sites (verified: amazon.com) return an empty 202
+     "Accepted" body to any non-browser request, so steps 1-3 have nothing to parse
+     no matter how they're worded. Wikipedia's lead/infobox image for a company
+     article is very often its official logo, and the API path (not HTML scraping)
+     is far more reliable than guessing at markup. Still a REAL, official brand
+     asset — public-domain-in-the-US trademark files on Commons, not a redraw.
+Returns nothing usable -> exit 2 (caller should fall back to a wordmark, but should
+say so explicitly rather than silently drawing one — see the "don't hand-draw" rule
+in sigma-company-dashboard/SKILL.md).
 
 Only use for a legitimate POV/demo for that company — this pulls the
-company's own brand asset to represent them, standard sales practice.
+company's own brand asset (or its public-domain-in-the-US Wikipedia/Commons
+counterpart) to represent them, standard sales practice.
 """
-import sys, re, base64, urllib.request, urllib.parse
+import sys, re, json, base64, urllib.request, urllib.parse
 
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
 
@@ -64,6 +74,52 @@ def find_logo_url(html, base):
     cands.sort(key=score, reverse=True)
     return urllib.parse.urljoin(base, cands[0][0])
 
+def _wiki_api(params):
+    return json.loads(get("https://en.wikipedia.org/w/api.php?" + params)[0].decode("utf-8", "ignore"))
+
+def wikipedia_logo(domain):
+    """Fallback when the company's own site returns nothing parseable (e.g. an
+    anti-bot 202/empty-body response on every homepage variant -- verified for
+    amazon.com). Resolve a Wikipedia article, read its INFOBOX `logo =` field
+    from the raw wikitext (NOT the `pageimages` API -- that picks whatever image
+    the API's heuristic likes, which for a company article is very often a HQ
+    building photo or an exec headshot, not the logo -- verified: "Amazon
+    (company)"'s pageimage is a tower photo), then resolve that filename to a
+    direct Commons URL via the imageinfo API. API-driven throughout, not HTML
+    scraping, so it doesn't depend on guessing markup."""
+    domain_only = domain.replace("https://", "").replace("http://", "").split("/")[0]
+    stripped = re.sub(r"\.(com|org|net|io|co|healthcare|inc)$", "", domain_only, flags=re.I).replace("-", " ").replace("_", " ")
+    candidates = [domain_only, stripped + " company", stripped]
+    tried_titles = []
+    try:
+        for guess in candidates:
+            hits = _wiki_api("action=opensearch&search=" + urllib.parse.quote(guess) + "&limit=1&namespace=0&format=json")[1]
+            if hits and hits[0] not in tried_titles:
+                tried_titles.append(hits[0])
+        for title in tried_titles:
+            data = _wiki_api("action=query&prop=revisions&rvprop=content&rvslots=main&format=json&titles=" + urllib.parse.quote(title))
+            pages = data.get("query", {}).get("pages", {})
+            page = next(iter(pages.values()), {})
+            revs = page.get("revisions")
+            if not revs: continue
+            content = revs[0]["slots"]["main"]["*"]
+            m = re.search(r"\|\s*logo\s*=\s*\[\[File:([^|\]]+)", content, re.I)
+            if not m: continue
+            fname = m.group(1).strip()
+            info = _wiki_api("action=query&titles=" + urllib.parse.quote("File:" + fname) + "&prop=imageinfo&iiprop=url&format=json")
+            fpages = info.get("query", {}).get("pages", {})
+            fpage = next(iter(fpages.values()), {})
+            imgurl = (fpage.get("imageinfo") or [{}])[0].get("url")
+            if not imgurl: continue
+            img, ct2, _ = get(imgurl)
+            mime = "image/svg+xml" if imgurl.lower().endswith(".svg") else \
+                   ("image/png" if "png" in ct2 or imgurl.lower().endswith(".png") else
+                    "image/jpeg" if "jpeg" in ct2 or imgurl.lower().endswith((".jpg", ".jpeg")) else ct2 or "image/png")
+            return img, mime, imgurl + f" (via Wikipedia infobox on '{title}', {domain} itself returned nothing)"
+    except Exception:
+        pass
+    return None
+
 def fetch(domain):
     for hp in homepages(domain):
         try:
@@ -83,7 +139,7 @@ def fetch(domain):
                ("image/png" if "png" in ct2 or logo_url.lower().endswith(".png") else
                 "image/jpeg" if "jpeg" in ct2 or logo_url.lower().endswith((".jpg", ".jpeg")) else ct2 or "image/png")
         return data, mime, logo_url
-    return None
+    return wikipedia_logo(domain)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

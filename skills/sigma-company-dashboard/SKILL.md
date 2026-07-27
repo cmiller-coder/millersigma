@@ -55,13 +55,28 @@ and `plugins/cava-daypart/` (the matching bespoke plugin). Read
 gotcha. **Clone shapes from a recent GET-back spec, never from memory or old docs.**
 
 ## Logo & hero (reusable — don't Google, don't hand-draw)
-Get the prospect's **real logo** automatically from their own site (their public
-brand asset, for a legitimate POV built for that company):
+**⚠ You MUST actually run this script and wire its output into `logo_uri`.** Do NOT
+write your own SVG wordmark/text-as-logo "as a best try" — that has shipped as a bug
+before (a session skipped this step entirely and hardcoded a hand-built font
+approximation into `logo_uri`, even though this file explicitly forbids it). If you
+find yourself typing a company's name into an SVG `<text>` element as their "logo,"
+stop — call `fetch_logo.py` first, every time, no exceptions.
+
+Get the prospect's **real logo** automatically:
 ```
 python3 scripts/fetch_logo.py <domain> --out logo.png     # e.g. acme.com
 ```
-It scrapes the homepage for the header/footer logo (prefers `.svg`, then @2x
-raster), falling back to apple-touch-icon / og:image; prints/embeds a data URI.
+Strategy (verified 2026-07-27, Amazon): (1) scrape the company's OWN site's header/
+footer logo (prefers `.svg`, then @2x raster), falling back to apple-touch-icon /
+og:image; (2) if the site returns nothing parseable at all — some corporate sites
+(confirmed: amazon.com) return an empty `202 Accepted` body to every homepage variant,
+an anti-bot measure, not a script bug — fall back to **Wikipedia's own API**: resolve
+the company's article, read its infobox `logo =` field from the raw wikitext (NOT the
+`pageimages` API, which picks whatever image its own heuristic likes — for a company
+article that's often a HQ building photo or exec headshot, not the logo), then resolve
+that filename to a direct Commons URL. Still a REAL, official brand asset (public-
+domain-in-the-US trademark file), never a redraw. Prints/embeds a data URI either way.
+
 Embed it as an `image` element — and **actually wire it into `logo_uri`; don't fetch it
 then leave a hand-drawn placeholder** (a fake logo gets called out instantly).
 **To put it white on a dark/gradient header, set `fill="#FFFFFF"` on EVERY `<path>`/
