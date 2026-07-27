@@ -49,10 +49,13 @@ entirely from code. Proven across multiple retail, CPG, and tech companies.
    plugin's `configureEditorPanel` variable names. Bind it to a dedicated data element.
 
 Build the workbook with a **Python generator that emits `spec.json`**, then
-`POST` it with curl. See `examples/build_cava.py` (the canonical full generator)
-and `plugins/cava-daypart/` (the matching bespoke plugin). Read
-`reference/api-cheatsheet.md` before authoring — it has every verified shape and
-gotcha. **Clone shapes from a recent GET-back spec, never from memory or old docs.**
+`POST` it with curl. See `examples/build_company_command_center.py` — **THE
+canonical current-standard generator, clone THIS one** (not `build_cava.py`, which
+predates several current conventions incl. the tabbed left-column layout — it's kept
+for reference but is not the clone target) — and `plugins/cava-daypart/` for a
+matching bespoke plugin example. Read `reference/api-cheatsheet.md` before
+authoring — it has every verified shape and gotcha. **Clone shapes from a recent
+GET-back spec, never from memory or old docs.**
 
 ## Logo & hero (reusable — don't Google, don't hand-draw)
 **⚠ You MUST actually run this script and wire its output into `logo_uri`.** Do NOT
