@@ -4,9 +4,11 @@ Clone and swap the marked pieces for any prospect.
 
 PRODUCES 2 pages: (1) Command Center - brand-gradient header + REAL white company logo +
 4 COMPARATIVE KPI cards (Current value + native Delta-vs-Prior + Prior value + sparkline),
-AI insight (CallText), Color-By/filter bar, a metric bar chart, a BESPOKE registered plugin
-full-width, two side-by-side pivots + an agent rail. (2) Scenario Modeler - linked input-table
-drivers -> projected KPIs + create/submit/approve, a second agent with an insert-rows tool.
+AI insight (CallText), Color-By/filter bar, then a TABBED CONTAINER in the left column
+(trend chart / bespoke plugin / detail-table pivots as 3 tabs, current standard -- see
+SKILL.md "Command-center layout") with the agent rail beside it spanning the same full
+height. (2) Scenario Modeler - linked input-table drivers -> projected KPIs +
+create/submit/approve, a second agent with an insert-rows tool.
 
 RE-SKIN (swap only these): brand palette (RED/DARK/ORANGE, KG gradients, HDRBG); logo via
 scripts/fetch_logo.py then recolor WHITE by filling every <path>/<polygon> (NOT the <svg> root,
@@ -166,9 +168,14 @@ sbar={"id":"sbar","kind":"bar-chart","source":{"elementId":"tbl","kind":"table"}
             {"id":"sb-cat","formula":f"[{MF}/Category]","name":"Category"},{"id":"sb-sub","formula":f"[{MF}/Subcategory]","name":"Subcategory"},{"id":"sb-reg","formula":f"[{MF}/Region]","name":"Region"}],
  "xAxis":{"columnId":"sbm"},"yAxis":{"columnIds":["sbv"]},"color":{"by":"category","column":"sbc","scheme":["#EB1700","#B3122E","#F0872E","#C0453A","#5B2340","#8A8F94","#2E6FB0","#0E7C7B"]},"stacking":"stacked",
  "dataLabel":{"labels":"hidden"},"legend":{"visibility":"visible"},"name":{"text":"Gross order value by period & category","fontWeight":"bold","fontSize":15,"color":INK},"style":dict(CARD)}
-clock_c={"id":"c-clock","kind":"container","style":dict(CARD)}
 clock_hd={"id":"clock-hd","kind":"text","body":"**Order demand by hour of day (daypart)**","verticalAlign":"middle","style":{"color":INK}}
 clock_el={"id":"clockviz","kind":"plugin","pluginId":CLOCK,"config":{"source":{"kind":"element","elementId":"demand"},"hour":"dm-hour","value":"dm-orders"}}
+# Current standard (2026-07): the left column (trend chart / plugin / detail tables)
+# is a TABBED CONTAINER, not stacked -- see sigma-company-dashboard/SKILL.md
+# "Command-center layout" section. NO wrapping GridContainer around the plugin
+# inside its Tab (verified to scramble render order) -- the plugin + its header
+# text are both bare LayoutElement children instead.
+tc_cc={"id":"tc-cc","kind":"tabbed-container","tabs":[{"name":"GOV Trend"},{"name":"Demand Clock"},{"name":"Detail Tables"}],"tabBar":{"alignment":"start"}}
 heat={"id":"heat","kind":"pivot-table","source":{"elementId":"tbl","kind":"table"},
  "columns":[{"id":"hm","formula":f"[{MF}/Category]","name":"Category"},{"id":"hp","formula":f"[{MF}/Region]","name":"Region"},{"id":"hv","formula":f"Sum([{MF}/GOV])","name":"GOV","format":CUR}],
  "rowsBy":[{"id":"hm"}],"columnsBy":[{"id":"hp"}],"values":["hv"],
@@ -207,8 +214,8 @@ def rail(n,with_agent,rows,agent_id):
     return [c,ric,hdr,inner],lay
 h1e,h1l=header("1","Marketplace Command Center","GOV, revenue, orders & take rate across categories")
 def page1(with_agent):
-    re,rl=rail(1,with_agent,"20 / 41","ag-copilot")
-    elems=[tbl,demand]+h1e+kpis+[ai_box,ai_ic,ai_hd,ai_sum,filt_c,grain,colorby,ctrl_cat,sbar,clock_c,clock_hd,clock_el,heat,book]+re
+    re,rl=rail(1,with_agent,"20 / 74","ag-copilot")
+    elems=[tbl,demand]+h1e+kpis+[ai_box,ai_ic,ai_hd,ai_sum,filt_c,grain,colorby,ctrl_cat,tc_cc,sbar,clock_hd,clock_el,heat,book]+re
     lay=f"""<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg">
 {h1l}
 {chr(10).join(kpilay)}
@@ -216,10 +223,19 @@ def page1(with_agent):
   <GridContainer elementId="c-filters" type="grid" gridColumn="1 / 25" gridRow="17 / 20" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <LayoutElement elementId="ctrl-grain" gridColumn="1 / 9" gridRow="1 / 4"/><LayoutElement elementId="ctrl-colorby" gridColumn="9 / 17" gridRow="1 / 4"/><LayoutElement elementId="ctrl-catf" gridColumn="17 / 25" gridRow="1 / 4"/>
   </GridContainer>
-  <LayoutElement elementId="sbar" gridColumn="1 / 18" gridRow="20 / 40"/>
-  <GridContainer elementId="c-clock" type="grid" gridColumn="1 / 25" gridRow="42 / 74" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto"><LayoutElement elementId="clock-hd" gridColumn="1 / 25" gridRow="1 / 2"/><LayoutElement elementId="clockviz" gridColumn="1 / 25" gridRow="2 / 32"/></GridContainer>
-  <LayoutElement elementId="heat" gridColumn="1 / 13" gridRow="76 / 92"/>
-  <LayoutElement elementId="book" gridColumn="13 / 25" gridRow="76 / 92"/>
+  <TabbedContainer elementId="tc-cc" type="tabbed-container" gridColumn="1 / 18" gridRow="20 / 74">
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <LayoutElement elementId="sbar" gridColumn="1 / 25" gridRow="1 / 22"/>
+    </Tab>
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <LayoutElement elementId="clock-hd" gridColumn="1 / 25" gridRow="1 / 2"/>
+      <LayoutElement elementId="clockviz" gridColumn="1 / 25" gridRow="2 / 22"/>
+    </Tab>
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <LayoutElement elementId="heat" gridColumn="1 / 13" gridRow="1 / 22"/>
+      <LayoutElement elementId="book" gridColumn="13 / 25" gridRow="1 / 22"/>
+    </Tab>
+  </TabbedContainer>
 {rl}
 </Page>"""
     return elems,lay
