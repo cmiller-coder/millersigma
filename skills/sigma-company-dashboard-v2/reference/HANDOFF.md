@@ -1081,3 +1081,77 @@ inside a contaminated session:
   has not built before, and read the number off that run — not off this
   session.
 
+---
+
+## 21. The real per-surface cost table — first build vs. every build after
+
+Section 20 measured one cold build. This section decomposes it by asking the
+question Connor actually needed answered for the SE talk: **if someone only
+wants one or two surfaces, what does each combination cost — not as an
+abstraction, but as the number they'll actually see?**
+
+Four more isolated cold subagents were run, each with zero prior context, each
+building a DIFFERENT surface combination for Marriott — but with the config
+held constant (already written and validated from section 20), to isolate the
+marginal cost of surface choice on its own:
+
+| combination | cost (config reused) | wall clock | defects found |
+|---|---|---|---|
+| Command center only | $3.45 | 105s | 0 |
+| + Financial modeling | $3.27 | 209s | 0 |
+| + Cohort builder | $3.53 | 139s | 0 |
+| All three surfaces | $3.42 | 252s | 0 |
+
+Flat, ~$3.30-3.55 regardless of combination. That looked like the whole
+answer — until it became clear WHY it's flat: every defect had already been
+found and fixed in section 20's original run. This isolates **reuse cost**,
+not first-time cost, and those are very different numbers.
+
+### Why the first build doesn't get cheaper by dropping a surface
+
+Of the 7 real defects section 20's cold build found and fixed, mapped to the
+page each one lives on:
+
+| defect | page | scope |
+|---|---|---|
+| copilot greeting reads base table name ("loan book") | command center | shared |
+| AI insight says literal "risk rate" | command center | shared |
+| ranked table + map labeled "Net revenue"/"Sector" | command center | shared |
+| baseball-card modal labeled "Balances ($B)" | command center | shared |
+| marker strip unreadable (white-on-white) | command center | shared |
+| Color-by option says "Balance type" | command center | shared |
+| cohort copilot says "Describe the rooms you want" | cohort builder | cohort-only |
+
+**Six of seven live on the command-center page, which is present in every
+combination.** The financial modeler introduced zero new defects. Only one
+defect was cohort-specific. So the honest first-build table, allocating
+section 20's measured $18.78 QA/fix cost proportionally across the 7 defects
+by the page each depends on:
+
+| combination | **first build (new config)** | **every build after (config reused)** |
+|---|---|---|
+| Command center only | **~$27** | $3.45 |
+| + Financial modeling | **~$27** | $3.27 |
+| + Cohort builder | **~$30** | $3.53 |
+| All three surfaces | **~$30** (measured exactly) | $3.42 |
+
+### The one sentence for the slide
+
+**The first company costs ~$27-30 no matter which surfaces you pick, because
+the bugs live in shared code, not in the surface you chose. Every company
+after that — or every additional surface added later — costs about $3.50,
+flat.** Dropping the financial modeler saves nothing; dropping the cohort
+builder saves about $2.70. The real lever on cost is not "how many surfaces,"
+it's "has this exact config been through a QA pass before."
+
+### Caveat on precision
+
+The first-build-per-surface figures (~$27 / ~$30) are a proportional
+allocation of one measured total, not five independently measured cold builds
+of brand-new companies. Getting exact numbers would mean running the
+experiment section 20 ran, from scratch, once per surface combination — four
+more never-before-seen companies, each risking its own domain-specific bugs
+unrelated to surface count, which would muddy rather than sharpen the
+comparison. The allocation above is defensible because it is anchored to which
+PAGE each already-found defect lives on, not to a guess.
+
