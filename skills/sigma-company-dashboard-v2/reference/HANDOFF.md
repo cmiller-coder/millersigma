@@ -250,7 +250,9 @@ Do **not** ask for products, colours, metrics or KPI names. Inferring those is
 the entire value of the skill.
 
 Then:
-1. `python3 ~/Desktop/millersigma/scripts/fetch_logo.py <domain> --out x.svg`
+1. `python3 ~/Desktop/millersigma/scripts/fetch_logo.py <domain> --datauri-file x.txt`
+   (use `--datauri-file`, not `--out` — `--out` writes raw binary and the
+   builder does `f.read_text().strip()` on the asset, so raw bytes corrupt it)
    → recolour white by filling the **class fills / paths**, never the `<svg>`
    root (root fill renders BLACK in Sigma). If the mark is a single-colour
    raster, recolour opaque pixels and keep alpha. **Sample the palette from the
