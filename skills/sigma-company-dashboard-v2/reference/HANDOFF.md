@@ -1155,3 +1155,40 @@ unrelated to surface count, which would muddy rather than sharpen the
 comparison. The allocation above is defensible because it is anchored to which
 PAGE each already-found defect lives on, not to a guess.
 
+---
+
+## 22. Complete pricing table — every piece, measured cold
+
+Section 21 corrected the per-surface allocation but left the PDF report
+unmeasured (every prior report build happened inside a contaminated
+long-running session). One more isolated cold subagent closed that gap,
+reusing Delta's already-validated `STATEMENTS` config the same way section 21
+reused Marriott's workbook config.
+
+| piece | cost | wall clock | tool calls | fixes needed |
+|---|---|---|---|---|
+| Command center only | $3.45 | 105s | 5 | 0 |
+| Command + financial modeling | $3.27 | 209s | 7 | 0 |
+| Command + cohort builder | $3.53 | 139s | 8 | 0 |
+| All three workbook surfaces | $3.42 | 252s | 8 | 0 |
+| Pixel-perfect PDF report | $3.33 | 43s | 5 | 0 |
+
+**Every piece lands in the same $3.27-3.53 band, including the report, which is
+a fully separate script (`build_statement.py`) not gated by `SURFACES` at
+all.** To get "workbook + report," add the two costs; they are independent
+builds, not a nested combination.
+
+### The one sentence for the slide
+
+**Cost is not a function of what you ask for — one surface, three surfaces, or
+the PDF all cost about the same $3.30-3.55, once the company's config exists
+and has been through one QA pass. It is a function of whether this exact
+company has been built before.** First time, any company: ~$27-30, almost
+entirely one-time cost of finding bugs that live in shared code (and are then
+fixed for every company going forward, not just that one). Every time after:
+flat, ~$3.30-3.55 per piece, independent of which piece.
+
+This is the complete, defensible answer to "what will it cost me" for an SE
+audience: the floor is ~$3.50 per piece forever; the only variable is whether
+today's build is the first one to expose a new shared-code bug.
+
