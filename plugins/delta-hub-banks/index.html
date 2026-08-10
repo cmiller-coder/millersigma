@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ATL Connection Banks — Delta Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;
+       background:transparent;color:#003D79;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:10px 14px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#E31837}
+  #meta{font-size:11px;color:#6B7C93}
+  #meta b{color:#003D79}
+  #stage{flex:1;min-height:0;position:relative}
+  svg{width:100%;height:100%;display:block}
+  .bar{cursor:default}
+  .bar:hover{opacity:.78}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:14px;font-size:10px;color:#6B7C93}
+  .sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+  #tip{position:fixed;pointer-events:none;background:#00224A;border:1px solid #2E6DB4;
+       border-radius:8px;padding:8px 10px;font-size:11px;color:#EAF2FB;opacity:0;
+       transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip b{color:#8FC0F0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl">ATL connection banks</div>
+    <div id="meta">peak bank <b id="peak">—</b> · daily flights <b id="tot">—</b></div>
+  </div>
+  <div id="stage"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div id="legend">
+    <span><i class="sw" style="background:#003D79"></i>arrivals</span>
+    <span><i class="sw" style="background:#E31837"></i>departures</span>
+    <span style="color:#98002E">the wave pattern is the hub — arrivals land, then the push</span>
+  </div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'hour',type:'column',source:'source',allowedTypes:['number','integer'],label:'Hour of day'},
+    {name:'direction',type:'column',source:'source',label:'Arrival / Departure'},
+    {name:'flights',type:'column',source:'source',allowedTypes:['number','integer'],label:'Flights'},
+    {name:'seats',type:'column',source:'source',allowedTypes:['number','integer'],label:'Seats'},
+    {name:'connections',type:'column',source:'source',allowedTypes:['number','integer'],label:'Connections'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var NS='http://www.w3.org/2000/svg';
+  function el(n,a){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
+  function num(v){return (Math.round(Number(v)||0)).toLocaleString();}
+  function hr(h){ h=Number(h)||0; var s=h%12===0?12:h%12; return s+(h<12?'a':'p'); }
+
+  var tip=document.getElementById('tip');
+  function bind(node,html){
+    node.addEventListener('mousemove',function(e){
+      tip.innerHTML=html; tip.style.opacity=1;
+      tip.style.left=Math.min(window.innerWidth-tip.offsetWidth-10,e.clientX+14)+'px';
+      tip.style.top=Math.max(8,e.clientY-tip.offsetHeight-12)+'px';
+    });
+    node.addEventListener('mouseleave',function(){tip.style.opacity=0;});
+  }
+
+  // Arrivals plot UP from the axis, departures DOWN. At a connecting hub the two
+  // interleave into visible waves -- that shape IS the bank structure.
+  function draw(rows){
+    var svg=document.getElementById('svg');
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    var st=document.getElementById('stage');
+    var W=Math.max(320,st.clientWidth), H=Math.max(160,st.clientHeight);
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+
+    var arr=new Array(24).fill(0), dep=new Array(24).fill(0);
+    var arrC=new Array(24).fill(0), depC=new Array(24).fill(0);
+    var arrS=new Array(24).fill(0), depS=new Array(24).fill(0);
+    rows.forEach(function(r){
+      var h=Math.max(0,Math.min(23,Math.round(r.hour)));
+      if(/^a/i.test(r.dir)){arr[h]+=r.flights;arrC[h]+=r.conn;arrS[h]+=r.seats;}
+      else {dep[h]+=r.flights;depC[h]+=r.conn;depS[h]+=r.seats;}
+    });
+
+    var maxV=1, tot=0, peak={v:-1,h:0};
+    for(var i=0;i<24;i++){
+      maxV=Math.max(maxV,arr[i],dep[i]);
+      tot+=arr[i]+dep[i];
+      var band=arr[i]+dep[i];
+      if(band>peak.v){peak.v=band;peak.h=i;}
+    }
+    document.getElementById('peak').textContent=hr(peak.h)+' ('+num(peak.v)+' flights)';
+    document.getElementById('tot').textContent=num(tot);
+
+    var padL=30, padR=8, padT=10, padB=22;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var mid=padT+plotH/2;
+    var bw=plotW/24, gap=Math.min(3,bw*0.16);
+
+    // midline + hour ticks
+    svg.appendChild(el('line',{x1:padL,y1:mid,x2:W-padR,y2:mid,
+                              stroke:'#C9D6E6','stroke-width':1}));
+    for(var h=0;h<24;h+=3){
+      var tx=padL+h*bw+bw/2;
+      var t=el('text',{x:tx,y:H-6,'text-anchor':'middle','font-size':10,fill:'#6B7C93'});
+      t.textContent=hr(h); svg.appendChild(t);
+    }
+    var la=el('text',{x:4,y:padT+10,'font-size':10,fill:'#003D79'}); la.textContent='arr';
+    svg.appendChild(la);
+    var ld=el('text',{x:4,y:H-padB-2,'font-size':10,fill:'#E31837'}); ld.textContent='dep';
+    svg.appendChild(ld);
+
+    for(var h=0;h<24;h++){
+      var x=padL+h*bw+gap/2, w=Math.max(1,bw-gap);
+      // arrivals up
+      if(arr[h]>0){
+        var ha=(arr[h]/maxV)*(plotH/2-4);
+        var ra=el('rect',{x:x,y:mid-ha,width:w,height:ha,rx:2,fill:'#003D79',class:'bar'});
+        svg.appendChild(ra);
+        bind(ra,'<b>'+hr(h)+' arrivals</b><br>'+num(arr[h])+' flights · '+num(arrS[h])+
+                ' seats<br>'+num(arrC[h])+' connections');
+      }
+      // departures down
+      if(dep[h]>0){
+        var hd=(dep[h]/maxV)*(plotH/2-4);
+        var rd=el('rect',{x:x,y:mid,width:w,height:hd,rx:2,fill:'#E31837',class:'bar'});
+        svg.appendChild(rd);
+        bind(rd,'<b>'+hr(h)+' departures</b><br>'+num(dep[h])+' flights · '+num(depS[h])+
+                ' seats<br>'+num(depC[h])+' connections');
+      }
+    }
+
+    // mark the peak bank
+    var px=padL+peak.h*bw+bw/2;
+    svg.appendChild(el('line',{x1:px,y1:padT,x2:px,y2:H-padB,stroke:'#98002E',
+                              'stroke-width':1,'stroke-dasharray':'3 3'}));
+  }
+
+  function synth(){
+    var arr=[0,0,0,0,0,6,34,52,28,44,61,33,48,66,37,51,69,41,55,72,38,24,11,3];
+    var dep=[0,0,0,0,2,18,58,31,49,67,35,52,70,39,54,73,42,58,76,44,29,14,5,1];
+    var out=[];
+    for(var h=0;h<24;h++){
+      out.push({hour:h,dir:'Arrival',flights:arr[h],seats:arr[h]*148,conn:Math.round(arr[h]*11.4)});
+      out.push({hour:h,dir:'Departure',flights:dep[h],seats:dep[h]*148,conn:Math.round(dep[h]*9.8)});
+    }
+    return out;
+  }
+
+  var S={cfg:{},data:null,unsub:null};
+  function recompute(){
+    var c=S.cfg||{},d=S.data,rows=null;
+    if(d&&c.hour&&d[c.hour]){
+      var hh=d[c.hour]||[],dd=d[c.direction]||[],ff=d[c.flights]||[],
+          ss=d[c.seats]||[],cc=d[c.connections]||[];
+      rows=[];
+      for(var i=0;i<hh.length;i++){
+        rows.push({hour:Number(hh[i])||0,dir:String(dd[i]||''),
+                   flights:Number(ff[i])||0,seats:Number(ss[i])||0,
+                   conn:Number(cc[i])||0});
+      }
+      if(!rows.length||!rows.some(function(r){return r.flights>0;})) rows=null;
+    }
+    draw(rows||synth());
+  }
+
+  if(client){
+    client.config.subscribe(function(cfg){
+      S.cfg=cfg||{};
+      if(S.unsub){S.unsub();S.unsub=null;}
+      if(cfg&&cfg.source){
+        S.unsub=client.elements.subscribeToElementData(cfg.source,function(dd){S.data=dd;recompute();});
+      }
+      recompute();
+    });
+  } else { recompute(); }
+
+  // ResizeObserver, not window resize — Sigma resizes the element, not the page.
+  // No animation loop, so headless PNG export can reach idle.
+  if(window.ResizeObserver){
+    new ResizeObserver(function(){recompute();}).observe(document.getElementById('stage'));
+  }
+})();
+</script>
+</body>
+</html>

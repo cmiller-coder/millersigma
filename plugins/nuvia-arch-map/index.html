@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Arch Placement Map — Nuvia Dental Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;
+       background:transparent;color:#00346D;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:10px 14px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#1E6FBF}
+  #meta{font-size:11px;color:#6B819B}
+  #meta b{color:#00346D}
+  #stage{flex:1;min-height:0;position:relative}
+  svg{width:100%;height:100%;display:block}
+  .seg{cursor:default;transition:opacity .12s}
+  .seg:hover{opacity:.82}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:7px;font-size:10px;color:#6B819B}
+  #bar{height:7px;flex:1;border-radius:4px;
+       background:linear-gradient(90deg,#D14343,#E1A32D,#2E9E7B)}
+  #tip{position:fixed;pointer-events:none;background:#00214A;border:1px solid #1E6FBF;
+       border-radius:8px;padding:8px 10px;font-size:11px;color:#EAF2FB;opacity:0;
+       transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip b{color:#7FB2E0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl">Arch placement map</div>
+    <div id="meta">arches <b id="units">—</b> · production <b id="tot">—</b></div>
+  </div>
+  <div id="stage"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div id="legend"><span>behind plan</span><div id="bar"></div><span>ahead of plan</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+
+  // Same four bound fields the other hero plugins use, so the generator's
+  // hero branch needs no change: product, balance, members, goal.
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'product',type:'column',source:'source',label:'Treatment line'},
+    {name:'balance',type:'column',source:'source',allowedTypes:['number','integer'],label:'Case production'},
+    {name:'members',type:'column',source:'source',allowedTypes:['number','integer'],label:'Arches placed'},
+    {name:'goal',type:'column',source:'source',allowedTypes:['number','integer'],label:'Goal attainment'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var SVGNS='http://www.w3.org/2000/svg';
+  function el(n,a){var e=document.createElementNS(SVGNS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hx(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  // red -> amber -> green on goal attainment
+  function grade(t){
+    t=Math.max(0,Math.min(1,t));
+    var s=[[209,67,67],[225,163,45],[46,158,123]];
+    var seg=t*2,i=Math.min(1,Math.floor(seg)),f=seg-i;
+    return '#'+hx(lerp(s[i][0],s[i+1][0],f))+hx(lerp(s[i][1],s[i+1][1],f))+hx(lerp(s[i][2],s[i+1][2],f));
+  }
+  function money(v){
+    v=Number(v)||0;
+    if(v>=1000) return '$'+(v/1000).toFixed(1)+'B';
+    if(v>=1) return '$'+v.toFixed(0)+'M';
+    return '$'+(v*1000).toFixed(0)+'k';
+  }
+  function num(v){return (Math.round(Number(v)||0)).toLocaleString();}
+
+  var tip=document.getElementById('tip');
+  function bind(node,html){
+    node.addEventListener('mousemove',function(e){
+      tip.innerHTML=html; tip.style.opacity=1;
+      tip.style.left=Math.min(window.innerWidth-tip.offsetWidth-10,e.clientX+14)+'px';
+      tip.style.top=Math.max(8,e.clientY-tip.offsetHeight-12)+'px';
+    });
+    node.addEventListener('mouseleave',function(){tip.style.opacity=0;});
+  }
+
+  // A dental arch drawn as an annulus. Each treatment line is one arc segment;
+  // segment ANGLE is share of arches placed, RADIAL THICKNESS is case
+  // production, and FILL is goal attainment. Upper arch = the arch sweep,
+  // mirrored below as the lower arch so it reads as a mouth, not a donut.
+  function arc(cx,cy,r0,r1,a0,a1){
+    function pt(r,a){return [cx+r*Math.cos(a), cy+r*Math.sin(a)];}
+    var p0=pt(r1,a0),p1=pt(r1,a1),p2=pt(r0,a1),p3=pt(r0,a0);
+    var big=(a1-a0)>Math.PI?1:0;
+    return 'M'+p0[0].toFixed(2)+' '+p0[1].toFixed(2)+
+           'A'+r1+' '+r1+' 0 '+big+' 1 '+p1[0].toFixed(2)+' '+p1[1].toFixed(2)+
+           'L'+p2[0].toFixed(2)+' '+p2[1].toFixed(2)+
+           'A'+r0+' '+r0+' 0 '+big+' 0 '+p3[0].toFixed(2)+' '+p3[1].toFixed(2)+'Z';
+  }
+
+  function draw(rows){
+    var svg=document.getElementById('svg');
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    var st=document.getElementById('stage');
+    var W=Math.max(320,st.clientWidth), H=Math.max(180,st.clientHeight);
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+
+    var totU=0,totB=0,maxB=0;
+    rows.forEach(function(r){totU+=r.units;totB+=r.bal;maxB=Math.max(maxB,r.bal);});
+    if(!totU){totU=1;}
+    document.getElementById('units').textContent=num(totU);
+    document.getElementById('tot').textContent=money(totB);
+
+    var cx=W/2, gap=H*0.055;
+    var cyU=H/2-gap, cyL=H/2+gap;
+    var rOut=Math.min(W*0.30, (H/2-gap)*0.94);
+    var rIn=rOut*0.46;
+    if(rOut<=rIn+6){rIn=rOut*0.5;}
+
+    // upper arch above the midline, lower arch below, each its own sweep
+    [{cy:cyU,s:Math.PI*1.06,e:Math.PI*1.94,up:true},
+     {cy:cyL,s:Math.PI*0.06,e:Math.PI*0.94,up:false}].forEach(function(A){
+      var a=A.s, span=A.e-A.s;
+      rows.forEach(function(r,i){
+        var frac=r.units/totU;
+        var a0=a, a1=a+span*frac; a=a1;
+        var th=rIn+ (rOut-rIn) * (maxB? Math.max(.28, r.bal/maxB):.6);
+        // Each arch draws in its own angle space. SVG y grows downward, so
+        // 1.06pi..1.94pi sweeps through straight-up (the upper arch) and
+        // 0.06pi..0.94pi sweeps through straight-down (the lower).
+        var p=el('path',{d:arc(cx,A.cy,rIn,th,a0,a1),
+                         fill:grade((r.goal-0.9)/0.2),
+                         stroke:'#FFFFFF','stroke-width':2, class:'seg'});
+        svg.appendChild(p);
+        bind(p,'<b>'+r.name+'</b><br>'+num(r.units)+' arches · '+money(r.bal)+
+               '<br>goal '+(r.goal*100).toFixed(1)+'%');
+      });
+    });
+
+    // centre plate: the network number
+    svg.appendChild(el('circle',{cx:cx,cy:H/2,r:Math.max(26,rIn*0.72),fill:'#FFFFFF',
+                                stroke:'#DCE4EE','stroke-width':1}));
+    var t1=el('text',{x:cx,y:H/2-2,'text-anchor':'middle','font-size':Math.max(13,rIn*0.34),
+                      'font-weight':'700',fill:'#00346D'});
+    t1.textContent=num(totU); svg.appendChild(t1);
+    var t2=el('text',{x:cx,y:H/2+Math.max(12,rIn*0.30),'text-anchor':'middle',
+                      'font-size':Math.max(8,rIn*0.19),fill:'#6B819B'});
+    t2.textContent='arches'; svg.appendChild(t2);
+
+    // right-hand key, only when there's room for it
+    if(W>620){
+      var ly=Math.max(14,H/2-rows.length*11);
+      rows.forEach(function(r,i){
+        var y=ly+i*22;
+        svg.appendChild(el('rect',{x:W-186,y:y-8,width:10,height:10,rx:2,
+                                   fill:grade((r.goal-0.9)/0.2)}));
+        var tx=el('text',{x:W-170,y:y+1,'font-size':11,fill:'#00346D'});
+        tx.textContent=r.name.length>22?r.name.slice(0,21)+'…':r.name;
+        svg.appendChild(tx);
+      });
+    }
+  }
+
+  function synth(){
+    return [{name:'Full arch — dual',units:5300,bal:96,goal:1.043},
+            {name:'Full arch — single',units:2360,bal:52,goal:1.012},
+            {name:'Zirconia premium',units:980,bal:21,goal:0.946},
+            {name:'Single & multi-tooth',units:3400,bal:12,goal:0.982},
+            {name:'Bone graft & sinus lift',units:2100,bal:8,goal:1.021},
+            {name:'Restorative & maintenance',units:5800,bal:4,goal:1.068}];
+  }
+
+  var S={cfg:{},data:null,unsub:null};
+  function recompute(){
+    var c=S.cfg||{},d=S.data,rows=null;
+    if(d&&c.product&&d[c.product]){
+      var nm=d[c.product]||[],ba=d[c.balance]||[],un=d[c.members]||[],go=d[c.goal]||[];
+      rows=[];
+      for(var i=0;i<nm.length;i++){
+        rows.push({name:String(nm[i]),bal:Number(ba[i])||0,
+                   units:Number(un[i])||0,goal:Number(go[i])||1});
+      }
+      if(!rows.length||!rows.some(function(r){return r.units>0;})) rows=null;
+    }
+    draw(rows||synth());
+  }
+
+  if(client){
+    client.config.subscribe(function(cfg){
+      S.cfg=cfg||{};
+      if(S.unsub){S.unsub();S.unsub=null;}
+      if(cfg&&cfg.source){
+        S.unsub=client.elements.subscribeToElementData(cfg.source,function(dd){S.data=dd;recompute();});
+      }
+      recompute();
+    });
+  } else { recompute(); }
+
+  // ResizeObserver, not a resize listener — the element is resized by Sigma's
+  // layout, not the window. No animation loop, so headless PNG export can
+  // reach idle and complete.
+  if(window.ResizeObserver){
+    new ResizeObserver(function(){recompute();}).observe(document.getElementById('stage'));
+  }
+})();
+</script>
+</body>
+</html>
