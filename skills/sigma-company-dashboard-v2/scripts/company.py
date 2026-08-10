@@ -1622,3 +1622,205 @@ POP["marriott"] = {"bases": (1200, 2800, 5600, 11000), "rev_rate": 0.09,
 PLUGINS["marriott"] = {"hero": None, "hero_label": None, "ticker": None}
 
 COMPANIES["marriott"] = MARRIOTT
+
+
+# ---------------------------------------------------------------------------
+NVIDIA = {
+    "key": "nvidia",
+    "name": "NVIDIA",
+    "title": "Platform & Data Center Command Center",
+    "domain": "accelerated computing",
+    # the page-1 copilot reads the base table's NAME for its greeting
+    "base_table": "Platform Shipments",
+    "unit_noun": "developer",
+    "volume_noun": "shipments",
+    "logo_domain": "nvidia.com",
+    # navy/black sampled as a deep neutral to carry the header; the wordmark's
+    # own colour is black-on-white, so the header instead keys off NVIDIA's
+    # signature eye-mark green (#76B900, sampled directly from the Wikimedia
+    # Commons NVIDIA_logo.svg path fill) as the brand accent throughout.
+    # navy is `TEXT_DARK` for the ENTIRE workbook (brand.py: TEXT_DARK =
+    # pal["navy"]) as well as the header gradient's midtone -- not primarily
+    # a chart colour, even though it also happens to land in the
+    # categorical-scheme's 3rd slot (here: Gaming). Three earlier passes on
+    # this build tried to lighten navy specifically so that slot's chart
+    # legend swatch would look less like black -- but every existing company
+    # (sofi #0B2740, boa #012169, elevance #1B365D, mcd #27251F, abry
+    # #0E2A47, nuvia #00346D, delta #003D79, marriott #3D1119) keeps navy at
+    # HLS lightness 0.14-0.24, i.e. dark-as-text, and each one has this exact
+    # same dark-swatch cosmetic on whichever category alphabetically lands in
+    # slot 3. This is shared, standing generator behaviour, not a
+    # company-specific defect -- so reverted to a dark, readable navy
+    # in-band with every other company, matching the standing rule not to
+    # patch around shared-code behaviour from a single company's config.
+    "palette": {
+        "navy": "#0B2412", "navy_deep": "#06140A",
+        "primary": "#76B900", "secondary": "#4A8A00",
+        "accent": "#9AE000", "mint": "#00C4A7",
+    },
+    "products": [
+        # name, order, balance_type, bal_base, yield(gross margin), funding
+        # (cost of revenue), fee_base (MONTHLY $MM), provision(supply-risk
+        # reserve rate), delinq(allocation-risk rate), opex_ratio, growth,
+        # units_base, phase, tagline, rate_label, goal_pct, status
+        #
+        # IMPORTANT: the generator's "Net Revenue" is a SPREAD --
+        # bal_base*(yield_rate - funding_rate) + fee_base*12 -- exactly the
+        # trap documented in HANDOFF section 8 for Delta ("the column called
+        # 'Net Revenue' is income - cost + fees, i.e. a SPREAD"). The first
+        # pass here set funding_rate to a separate cost-of-revenue rate
+        # (yield=margin, funding=1-margin), which made the spread compute as
+        # margin MINUS (1-margin) -- roughly half the real gross margin, and
+        # went NEGATIVE for OEM & Other where cost-of-revenue rate (0.70)
+        # exceeded margin (0.30). Fixed by setting funding_rate=0 (same
+        # pattern as SoFi Money, a fee-only/no-funding-cost line) so
+        # yield_rate alone IS the spread, and it equals the segment's real
+        # gross margin directly. bal_base is calibrated so
+        # bal_base*yield_rate + fee_base*12 reconciles to each segment's real
+        # FY2025 revenue.
+        #
+        # units_base is scaled at the generator's own headline-KPI scale, not
+        # a literal unit count: the KPI reads the largest single
+        # (product x state) row as max(units_base) * max(state_share) * 1.157
+        # (empirical constant, see HANDOFF section 20). Gaming ships the most
+        # discrete boards by far, so it carries the max and is calibrated to
+        # land the "GPUs shipped (M)" headline around ~45-50M; the other
+        # lines are scaled down from it in proportion to their real relative
+        # unit volumes (Data Center ships far fewer, much more expensive
+        # boards; Automotive/ProViz/OEM fewer still).
+        # bal_base is back-solved (not the naive segment-revenue/margin figure)
+        # to account for the loan_book.sql mechanics: the KPI card sums
+        # SumIf(Net Revenue, "Current Period") across months 12-23 AND across
+        # every FOOTPRINTS state, where each month's balance is
+        # bal_base*state_share*(1+growth/12)^month_index*seasonal. Growth
+        # compounding alone inflates the 12-23 month window ~1.01x-1.36x
+        # above the month-0 base depending on each segment's annual_growth,
+        # and the ~15-state FOOTPRINTS share_sum (~0.876 here) scales it back
+        # down again -- so the naive bal_base = revenue/margin figure
+        # overshoots real revenue once rendered. Solved numerically against
+        # the actual query shape instead of guessed.
+        ("Data Center", 1, "Compute", 127376, .7800, 0.0, 640.0, .0040, .028,
+         .140, .142, 24, 0.0, "Hopper, Blackwell, NVLink, networking",
+         "Gross margin", 1.086, "Ahead"),
+        ("Gaming", 2, "Compute", 19424, .6000, 0.0, 55.0, .0060, .046,
+         .180, .038, 267, 1.1, "GeForce RTX desktop & laptop GPUs",
+         "Gross margin", .958, "On plan"),
+        ("Professional Visualization", 3, "Compute", 2927, .6500, 0.0, 9.0, .0035, .020,
+         .160, .052, 12, 2.2, "RTX workstation & Omniverse",
+         "Gross margin", 1.024, "Ahead"),
+        ("Automotive & Robotics", 4, "Compute", 2515, .5500, 0.0, 4.0, .0050, .034,
+         .190, .210, 4, 0.6, "DRIVE, Jetson, physical AI",
+         "Gross margin", .912, "Behind"),
+        ("OEM & Other", 5, "Compute", 1085, .3000, 0.0, 1.0, .0020, .015,
+         .120, .010, 6, 1.7, "Legacy & channel",
+         "Gross margin", .968, "On plan"),
+    ],
+    "subs": {
+        "Data Center": [("Hopper", .420, -60, 9.4, "Behind"),
+                        ("Blackwell", .380, 180, 24.8, "Ahead"),
+                        ("Networking (NVLink/InfiniBand)", .140, 40, 12.2, "Ahead"),
+                        ("DGX Cloud & software", .060, 90, 18.6, "Ahead")],
+        "Gaming": [("GeForce RTX desktop", .560, -15, 4.2, "On plan"),
+                  ("GeForce RTX laptop", .310, 10, 5.8, "Ahead"),
+                  ("Gaming consoles & other", .130, -25, -1.4, "Behind")],
+        "Professional Visualization": [("RTX workstation GPUs", .680, 5, 6.4, "On plan"),
+                                       ("Omniverse & software", .320, 45, 14.2, "Ahead")],
+        "Automotive & Robotics": [("DRIVE platform", .560, -40, -3.2, "Behind"),
+                                  ("Jetson & robotics", .440, 60, 8.6, "Ahead")],
+        "OEM & Other": [("Legacy GPUs", .620, -20, -4.8, "Behind"),
+                        ("Channel & other", .380, 15, 2.1, "On plan")],
+    },
+    "alerts": [
+        ("critical", "Blackwell allocation shortfall",
+         "Hyperscaler demand outstrips CoWoS packaging capacity; 14 top accounts "
+         "under-allocated against committed forecast", "24m ago",
+         "Supply Chain", 14, "accounts under-allocated"),
+        ("critical", "HBM3e cost spike",
+         "High-bandwidth memory input cost up 340 bps against the quarter's "
+         "standard-cost assumption", "51m ago", "Procurement", 340,
+         "bps over plan"),
+        ("warning", "Export control exposure",
+         "Compliance flagged 6 data-center SKUs pending re-classification for "
+         "restricted-region shipment", "2h ago", "Trade Compliance", 6,
+         "SKUs under review"),
+        ("warning", "Foundry lead-time drift",
+         "Advanced-node wafer lead times extended 3 weeks against the capacity "
+         "plan", "5h ago", "Manufacturing", 3, "weeks extended"),
+        ("info", "Developer ecosystem growth",
+         "CUDA developer registrations up 22% year over year, led by robotics "
+         "and agentic-AI toolkits", "1d ago", "Developer Relations", 22,
+         "pct YoY growth"),
+    ],
+    "agent": ("You are an analyst covering NVIDIA's Data Center, Gaming, "
+              "Professional Visualization and Automotive & Robotics segments, "
+              "gross margin trends and supply allocation risk. Answer with "
+              "numbers from the workbook."),
+}
+
+# US states weighted toward NVIDIA's own design, HQ and hyperscaler-adjacent
+# footprint -- Santa Clara plus the major hyperscaler build-out states.
+FOOTPRINTS["nvidia"] = [("CA", .152), ("TX", .118), ("VA", .096), ("WA", .078),
+                        ("GA", .064), ("OH", .058), ("AZ", .052), ("IL", .046),
+                        ("OR", .042), ("NY", .038), ("NC", .034), ("IN", .030),
+                        ("CO", .026), ("UT", .022), ("MA", .020)]
+
+LABELS["nvidia"] = {
+    "personas": ["Executive", "Supply Chain"],
+    "modeler_page": "Capacity Planning",
+    "cohort_page": "Customer Segments",
+    "modeler_title": "Wafer & Packaging Capacity Scenario Modeler",
+    "shock_label": "HBM / wafer cost shock (bps)",
+    "kpi_revenue": "Revenue ($M)",
+    "kpi_margin": "Gross profit ($M)",
+    "kpi_volume": "Shipment volume ($M)",
+    "kpi_units": "GPUs shipped (M)",
+    "driver_nim": "Gross margin",
+    "driver_risk": "Allocation shortfall rate",
+    "driver_cost": "Cost of revenue rate",
+    "driver_eff": "Opex ratio",
+    "seg_product": "Segment",
+    "seg_credit": "Customer tier",
+    "seg_type": "Compute type",
+    "seg_dd": "Direct hyperscaler account",
+    "seg_engage": "Order cadence",
+    "seg_held": "Platforms adopted",
+    "cohort_name": "Segment name",
+    "kpi_cohort_size": "Accounts in segment",
+    "kpi_cohort_vol": "Annual spend",
+    "kpi_cohort_rev": "Spend per account",
+    "kpi_cohort_risk": "Avg allocation risk",
+    "col_volume": "Baseline shipment volume",
+    "col_growth": "Shipment growth %",
+    "col_yield": "Gross margin Δ bps",
+    "col_cost": "Cost of revenue Δ bps",
+}
+
+SEGMENTS["nvidia"] = {"Near Prime": "Emerging", "Prime": "Growth",
+                      "Super Prime": "Enterprise", "Exceptional": "Hyperscale",
+                      "Daily": "Active", "Weekly": "Recurring",
+                      "Monthly": "Occasional", "Dormant": "Lapsed"}
+
+VOCAB["nvidia"] = {
+    "econ": "Each platform earns a gross margin against its cost of revenue "
+            "(wafer, packaging and memory input costs); the spread between "
+            "them is the gross profit the segment contributes before opex.",
+    "metrics": "revenue, gross profit, shipment volume and allocation "
+               "shortfall risk",
+    "bands": "Customer tiers: Emerging, Growth, Enterprise, Hyperscale. Order "
+             "cadence: Active, Recurring, Occasional, Lapsed.",
+    "cohort_report": "accounts in the segment, annual spend and average "
+                     "allocation risk",
+}
+
+# Per-unit economics for the cohort page, in DOLLARS. A hyperscale account's
+# annual platform spend is nothing like a retail-banking balance, so this must
+# override the default or the cohort KPIs read as nonsense.
+POP["nvidia"] = {"bases": (85000, 420000, 2100000, 9800000), "rev_rate": 0.78,
+                 "fee_per_product": 640000}
+
+# Plugin-free for this build -- no bespoke plugin authored this session, and
+# no obvious public index (unlike Treasury yields or commodity indices) to
+# stream as a ticker without a metaphor stretch.
+PLUGINS["nvidia"] = {"hero": None, "hero_label": None, "ticker": None}
+
+COMPANIES["nvidia"] = NVIDIA

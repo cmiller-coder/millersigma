@@ -1,9 +1,5 @@
 # Handoff — the one-name-in, working-data-app-out generator
 
-Paste this whole file into a new session. It is the complete context: what the
-asset is, where every file lives, how the generator works, every verified API
-fact and gotcha, the running inventory, and what is still broken.
-
 Written 10 Aug 2026 by Claude, for Connor Miller (Sigma SE, cmiller@sigmacomputing.com).
 
 ---
@@ -17,16 +13,16 @@ write-back scenario modeler, a bespoke plugin, and a pixel-perfect PDF report.
 
 - **Everything is driven by one dict per company** in `scripts/company.py`.
   Adding a prospect = writing one config block. The builder is never edited.
-- **Seven companies exist today**: sofi, boa, elevance, mcd, abry, nuvia, delta.
+- **Eight companies exist today**: sofi, boa, elevance, mcd, abry, nuvia, delta, marriott.
 - **Run it**: `COMPANY=delta python3 build_sofi.py create`
-- **Nothing is in git.** `~/Desktop/Prospects/SoFi-2026` is not a repo. First
-  thing worth doing is `git init`.
+- **Nothing is in git.** `~/Desktop/Prospects/SoFi-2026` is not a repo.
 - **The purpose is the WOW MOMENT**, not POV building. First call, exec readout,
   bake-off. It is explicitly *not* how you build a POV.
 - **The thesis** (credit Khush): Claude alone gives you a *static orphaned
   asset*. Sigma + Claude gives you a *living* one — drillable because it sits on
   semantics, shareable because governance is inherited, iterable because the
   recipient can change it with custom views without coming back to you.
+- **For PDF builds**, also read `reference/HANDOFF-report.md`.
 
 ---
 
@@ -36,43 +32,33 @@ write-back scenario modeler, a bespoke plugin, and a pixel-perfect PDF report.
 ```
 ~/Desktop/Prospects/SoFi-2026/
   scripts/
-    company.py          1,424 lines — THE ONLY FILE THAT CHANGES PER PROSPECT
-    build_sofi.py       1,692 lines — the universal 3-page workbook builder
-    build_statement.py    405 lines — the pixel-perfect PDF report builder
-    sigmaapi.py           178 lines — auth + REST helpers
-    brand.py                       — palette/logo binding, B.apply(cfg)
-    shot.py               115 lines — headless PNG export of a workbook
-    shot_report.py         82 lines — report -> PDF -> PNG via swift/CoreGraphics
-    qa_pg1.py              82 lines — clone-with-plugins-stubbed, renders page 1
-    rc_matrix.py          186 lines — repeated-container binding test matrix
-    add_notifications.py           — one-off
+    company.py          — THE ONLY FILE THAT CHANGES PER PROSPECT
+    build_sofi.py       — the universal 3-page workbook builder
+    build_statement.py  — the pixel-perfect PDF report builder
+    sigmaapi.py         — auth + REST helpers
+    brand.py            — palette/logo binding, B.apply(cfg)
+    shot.py             — headless PNG export of a workbook
+    shot_report.py      — report -> PDF -> PNG via swift/CoreGraphics
+    qa_pg1.py           — clone-with-plugins-stubbed, renders page 1
+    rc_matrix.py        — repeated-container binding test matrix
   sql/                  10 files, ~500 lines — portable SQL, __PRODUCTS__ /
                         __STATES__ substitution points
   assets/               fetched logos + white/navy datauri recolours
-  shots/                render QA output (delta4/, nuvia3/, delta-report/ ...)
+  shots/                render QA output
   specs/                report_id.txt etc.
-  deck/                 the SE presentation (see §12)
-  HANDOFF.md            this file
 ```
 
-### The skill (IS in git, has uncommitted changes, nothing pushed)
+### The skill
 ```
-~/Desktop/millersigma/          public GitHub repo, branch main, in sync w/ origin
-  skills/
-    sigma-company-dashboard/    the entry-point skill
-      SKILL.md
-      reference/one-generator-many-prospects.md
-    sigma-workbook-conventions/
-      reference/silent-layout-failures.md
-      reference/schema-2026-08-breaking-changes.md
-    branded-dashboard-format/ · sigma-app-design/ · sigma-cohort-builder-app/
-    sigma-input-table-app/ · sigma-plugin-development/ · sigma-plugin-patterns/
-    sigma-embed-portal/ · sigma-use-cases/ · sigma-workbook-styling/
-  plugins/                      ~48 authored plugins
-  scripts/fetch_logo.py         logo fetcher with Wikipedia fallback
+~/Desktop/millersigma2/skills/sigma-company-dashboard-v2/
+  SKILL.md
+  scripts/    (copies of the above)
+  sql/
+  reference/HANDOFF.md        (this file — workbook builds)
+  reference/HANDOFF-report.md (PDF report guide — read only for PDF builds)
 ```
 
-### Plugin hosting (localhost only — see §10)
+### Plugin hosting (localhost only — see §9)
 ```
 ~/Library/Application Support/millersigma-plugins/   48 plugin dirs
 launchd agent: com.millersigma.plugins  ->  http://localhost:8080
@@ -123,9 +109,6 @@ Three pages, ~200 elements, 3 overlays (modals), 3 agents.
 
 **Hidden pages**: `pgData` (all SQL source tables must be placed in layout
 somewhere), plus overlay pages for the modals.
-
-**The report** (separate object): a dense two-column pixel-perfect statement,
-`document.kind: "report"`, header/footer panels, PDF-only export.
 
 ---
 
@@ -183,11 +166,11 @@ as a reskin, which is the exact failure the asset exists to avoid.
 | `bal_base` | the volume the P&L scales with, in $MM | drives `scale()` |
 | `yield_rate` | revenue rate on volume | asset yield / premium PMPM / RASM |
 | `funding_rate` | cost rate on volume | cost of funds / medical cost / CASM |
-| `fee_base` | ancillary revenue, **MONTHLY, in $MM** | ×12 in the SQL — see §9 trap |
+| `fee_base` | ancillary revenue, **MONTHLY, in $MM** | ×12 in the SQL — see §8 trap |
 | `provision_rate` | credit/refund provision | |
 | `delinq_rate` | the risk metric → `driver_risk` | |
 | `opex_ratio` | overhead | |
-| `units_base` | the count metric → `kpi_units` | **displayed ≈ units_base × 0.043** |
+| `units_base` | the count metric → `kpi_units` | **displayed ≈ max(units_base) × max(state_share) × 1.157** |
 | `phase` | seasonal phase offset | 0.0–2.2 |
 | `goal_pct` | plan attainment, drives map colour + status | ~0.87–1.09 |
 
@@ -203,8 +186,7 @@ as a reskin, which is the exact failure the asset exists to avoid.
 | shock | +50bps parallel | medical trend bps | food & paper | implant & lab | EBITDA growth | jet fuel |
 
 **The scenario modeler needs NO change at all** — a rate shock and a medical
-trend shock are the same cross-join against the same editable driver grid. That
-is the strongest single proof the abstraction is real.
+trend shock are the same cross-join against the same editable driver grid.
 
 ### The 27 `LABELS` keys
 ```
@@ -218,22 +200,24 @@ col_volume, col_growth, col_yield, col_cost
 `lab(cfg, key)` falls back to `LABELS["sofi"][key]`, so **any new key must be
 added to the sofi entry too** or every other company KeyErrors.
 
-### Other tables
+### Other config tables
 - `SEGMENTS[key]` — maps generic band literals (Near Prime/Prime/Super
   Prime/Exceptional, Daily/Weekly/Monthly/Dormant) to domain bands. Applied by
-  global string replace across `member_population.sql`, because each literal
-  appears in both the assignment CASE and the downstream economics CASEs.
+  global string replace across `member_population.sql`.
 - `VOCAB[key]` — `econ`, `metrics`, `bands`, `cohort_report`. Fed to agents.
 - `FOOTPRINTS[key]` — `[(state, share), ...]`, ~15 states. Partial sums are fine.
 - `POP[key]` — per-unit economics for the cohort page: `bases` (4 band values in
   DOLLARS), `rev_rate`, `fee_per_product`. **Override this or the cohort KPIs
   read as nonsense** (a dental patient with $1,825 lifetime value).
 - `PLUGINS[key]` — `hero`, `hero_label`, `ticker`, optional `hero_table` +
-  `hero_config` (see §10).
-- `STATEMENTS[key]` — every string in the PDF report (see §11).
+  `hero_config` (see §9).
+- `STATEMENTS[key]` — every string in the PDF report (see HANDOFF-report.md).
 - `scale(cfg)` — derives magnitude formatting from `sum(bal_base)`:
   ≥1,000,000 → T; ≥1,000 → B; else M. BofA's trillions once rendered as
   `$1,050.00` under a billions format.
+- `CFG["base_table"]` — the display name for the base data table (defaults to
+  `"Loan Book"` — override for non-banking companies or the agent greeting
+  says "loan book").
 
 ---
 
@@ -247,7 +231,7 @@ COMPANY=delta python3 build_sofi.py create        # the real validation
 COMPANY=delta python3 build_sofi.py update <id>
 COMPANY=delta python3 build_sofi.py dump          # print the layout XML
 
-COMPANY=delta python3 build_statement.py create   # the PDF report
+COMPANY=delta python3 build_statement.py create   # the PDF report (see HANDOFF-report.md)
 COMPANY=delta python3 build_statement.py update <report-id>
 
 python3 shot.py workbook <id> ../shots/out        # renders every page EXCEPT p1
@@ -273,10 +257,11 @@ Then:
    logo; do not guess hexes.** If no logo can be found, say so out loud — do not
    hand-draw a wordmark.
 2. Write the config block. Use their **real 10-K segment names** — the single
-   biggest credibility lever.
+   biggest credibility lever. Set `CFG["base_table"]` to a domain-appropriate
+   name (e.g. "Revenue Book", "Member Population", "Fleet").
 3. Sanity-check scale against public figures BEFORE building. Off by 100× is the
    thing the room notices.
-4. Pick the plugin from the industry — never reuse the last one (§10).
+4. Pick the plugin from the industry — never reuse the last one (§9).
 5. `create` → run the linter → render → **look at the PNG** → fix.
 
 ---
@@ -293,10 +278,10 @@ COMPANY=delta python3 build_statement.py create        # the pixel-perfect repor
 All four combinations verified with a real `create`. Element counts:
 command 158 · +model 173 · +cohort 186 · all 201.
 
-**How the gating works, and why it needed four passes to get right.** The LAYOUT
-is the source of truth for placement, so gating deletes whole `<Page>` blocks and
-then removes everything left dangling. Dangling references are a hard rejection
-at create and they come in **four** flavours, each of which failed separately:
+**How the gating works.** The LAYOUT is the source of truth for placement, so
+gating deletes whole `<Page>` blocks and then removes everything left dangling.
+Dangling references are a hard rejection at create and they come in **four**
+flavours, each of which failed separately:
 
 1. elements no longer placed in any layout page
 2. action effects that **navigate to a dropped page** — the baseball card's
@@ -316,65 +301,14 @@ pointing at dropped pages.
 **The report is a separate object**, so it is not a `SURFACES` value — it is a
 second script invocation. `build_statement.py create` writes
 `specs/report_id_<key>.txt`, and `build_sofi.py` shows the statement button on
-page 1 for any company that has both a `STATEMENTS` entry and that id file. The
-button label comes from `STATEMENTS[key]["button_label"]`.
+page 1 for any company that has both a `STATEMENTS` entry and that id file.
 
 ### What the skill should ask
 Offer these as multi-select, then run the matching commands:
 - [ ] Command center *(always)*
 - [ ] Financial / scenario modeling → `model`
 - [ ] Cohort builder → `cohort`
-- [ ] Pixel-perfect PDF → `build_statement.py`
-
----
-
-## 5c. Cost per piece — measured
-
-**The pieces are not where the money goes.** Running the generator is a
-deterministic script: seconds, and effectively zero tokens.
-
-| piece | build wall clock | elements | what must be authored first |
-|---|---|---|---|
-| Command center | **12s** | 158 | the config block (shared by all pieces) |
-| + Financial modeling | **6s** | 173 | nothing extra — `col_*` labels only |
-| + Cohort builder | **4s** | 186 | a `POP` override, or the KPIs read as nonsense |
-| Pixel-perfect PDF | ~10s | 36 | a `STATEMENTS` block: ~60 lines of copy + 3 SQL generators |
-
-**The real cost is authoring and QA, not building.** Two cost centres:
-
-1. **Config authoring (one-time per company, shared across every piece).**
-   Research the segments, derive the economics, fetch and recolour the logo,
-   sanity-check scale. This is the bulk of a new company.
-2. **One QA cycle per surface** — render the page, *look at the PNG*, fix.
-   Measured: **282 seconds** for one render-plus-look cycle. In this session that
-   cycle cost **~$7.50**, but 99% of it was cache reads on a very long
-   conversation. In a fresh session the same cycle is roughly **$1–3**.
-
-Observed QA cycles per piece on the Delta build:
-| piece | QA cycles needed | why |
-|---|---|---|
-| Command center | 2 | the RASM/CASM mislabelling and the passenger scale |
-| Financial modeling | 1 | banking labels leaking into the driver grid |
-| Cohort builder | 1 | clean first time once `POP` was set |
-| **Pixel-perfect PDF** | **4** | invisible logo, SoFi prose, clipped tables, cents on MQDs |
-
-So: **the PDF is the most expensive surface** despite being the smallest, because
-every string is bespoke copy and the layout is absolute-positioned, which clips
-silently. The modeler and cohort pages are nearly free once the config exists.
-
-### Whole-build numbers (measured from the session transcript)
-| window | wall clock | API calls | tokens | list-price |
-|---|---|---|---|---|
-| Delta: workbook + plugin + report + all QA | 25m 32s | 114 | 48.4M | ~$85 |
-| Delta: the above + surface selection feature | ~44m | 159 | 70.6M | ~$147 |
-| the surface-selection feature alone | ~5m | 9 | 4.5M | ~$7.50 |
-
-**85–99% of every one of those figures is cache reads** — re-reading a long
-conversation on each call, not doing the work. **A cold session builds a company
-for roughly $10–15.** The cost driver is session length, not the asset, which is
-the single strongest argument for the click-through direction: a form that
-invokes the skill fresh never accumulates 48M cache reads.
-
+- [ ] Pixel-perfect PDF → `build_statement.py` (read HANDOFF-report.md first)
 
 ---
 
@@ -383,8 +317,7 @@ invokes the skill fresh never accumulates 48M cache reads.
 ### `verify` passing means nothing
 `POST /v2/workbooks/spec/verify` skips SQL resolution, dangling element ids,
 duplicate ids, layout placement and workspace feature flags. It has passed while
-`create` failed on all of those. **Always create or update to validate.** Five
-separate instances this session, most recently `tbl-hero` not placed in layout.
+`create` failed on all of those. **Always create or update to validate.**
 
 ### Error messages that mislead
 | symptom | actual cause |
@@ -414,67 +347,45 @@ time than every documented error combined, because the natural assumption is
 
 ### The linter — catches #1 and #3 statically
 Lives in `millersigma/skills/sigma-workbook-conventions/reference/silent-layout-failures.md`.
-Walks the generated XML, reports overlapping siblings and row overflow. **It
-caught three real defects in this build.** Wire it into every generate.
+Walks the generated XML, reports overlapping siblings and row overflow. Wire it
+into every generate.
 
 ### UI-only — exists in the product, not writable from code
 All verified on staging 9–10 Aug 2026.
-1. **Page headers / sidebars.** `document.settings.navigation` → "workbook
-   navigation settings are not enabled for this workspace". Matt deployed it and
-   it still did not work for Connor or TJ. Also **a UI-built header does not
-   round-trip** — GET returns `settings.navigation: null` and the page comes back
-   as bare `<Page/>`, so the next full PUT **wipes Connor's hand-built header**.
-   `<Container type="header">` is accepted then silently rewritten to
-   `type="grid"`. Matt says there is an XML type called `panel`.
+1. **Page headers / sidebars.** `document.settings.navigation` → not enabled.
+   A UI-built header does not round-trip — GET returns `settings.navigation: null`
+   and the next full PUT **wipes the hand-built header**.
+   `<Container type="header">` is accepted then silently rewritten to `type="grid"`.
 2. **Repeated containers with per-card values — invisible to code in BOTH
-   directions.** The write schema has no `name` field (union is `arrangement,
-   cardGap, cardSize, cardSpacing, cardStyle, elementGap, elementSpacing,
-   filters, id, kind, noDataText, scroll, sort, source, style`), so the
-   repeater-qualified `{{[Repeater/Col]}}` reference the docs require cannot be
-   written. Setting `name` is silently dropped. AND card children built in the UI
-   do not serialize back out. Everything tried: source-table name → "Multiple
-   values"; `{{[Repeated container/Col]}}` → Dependency not found; elementId →
-   Dependency not found; bare `{{[Col]}}` → writes clean, `Unknown column` at
-   query; aggregate wrappers → resolve but not row-scoped. **The product cards in
+   directions.** The write schema has no `name` field, so the repeater-qualified
+   `{{[Repeater/Col]}}` reference cannot be written. **The product cards in
    every build are six hand-built containers, not a repeater. Say so if asked.**
-   (`rc_matrix.py` is the reproducible test matrix.)
-3. **API actions.** The effect enum has twelve entries and `call-api` is not one,
-   despite public beta in Feb 2026 with 50 connectors on the org.
-4. **Input tables editable when published.** `inputMode: "view"` stores,
-   validates and round-trips; the runtime still enforces draft-only.
-   Reproducible on an API-only workbook: `448eed8a-...`, element `scen2`.
+3. **API actions.** The effect enum has twelve entries and `call-api` is not one.
+4. **Input tables editable when published.** `inputMode: "view"` stores and
+   validates; the runtime still enforces draft-only.
 
 ### Other verified facts
 - `POST /v2/workbooks/spec`, `PUT /v2/workbooks/{id}/spec`,
   `GET /v2/workbooks/{id}/spec`, `POST /v2/workbooks/spec/verify`
-- Reports: `POST /v2/reports/spec`, `document.kind: "report"`,
-  `document.panels` for header/footer, PDF-only export with `format.layout`
 - **`DELETE /v2/workbooks/{id}` returns 404 on staging. `DELETE /v2/files/{id}`
   works.**
 - `image` requires `source: {kind: "url", url}` — the skill docs wrongly show a
-  bare `url` (Matt confirmed the doc bug)
+  bare `url` (confirmed doc bug)
 - `plugin.style` accepts `backgroundColor` only, and it must be a HEX —
-  `"transparent"` is rejected (working as intended; the UI's "None" option is a
-  UI/API inconsistency, not a bug)
+  `"transparent"` is rejected
 - `arrangement` on repeated-container rejects a string, enum undocumented
 - `DateTrunc(Lower([Grain]), ...)` → Invalid Query. First arg must be a
   date-part literal or a control holding one, so control values must be
   `quarter`/`month`/`week`
 - **PNG export never completes for a page with a plugin that fetches externally
-  or animates** — the renderer waits for idle forever. Every other page ~30s.
-  Hence `qa_pg1.py`.
-- `dynamic text` failing to round-trip: reproduced by TJ/Neil, ticketed by Rick
-- Legend controls appear in OpenAPI but live verification rejects them (TJ)
-- Box charts absent from OpenAPI and rejected (TJ)
-- Grouped join legs verified working (TJ)
+  or animates** — the renderer waits for idle forever. Hence `qa_pg1.py`.
 - OpenAPI source of truth:
   `https://assets.sigmacomputing.com/openapi/public-rest-api/sigma-computing-public-rest-api.json`
 
 ### The Aug 2026 breaking changes (Matt Jones)
 `document` now has a flat `elements` key instead of nesting them inside pages;
 `layout` is now REQUIRED and is the source of truth for nesting;
-`LayoutElement` → `Element`; `GridContainer` → `Container`. Three breaking
-structural changes shipped in one week.
+`LayoutElement` → `Element`; `GridContainer` → `Container`.
 
 ---
 
@@ -491,8 +402,7 @@ nothing while the API said 200.**
 `qa_pg1.py` exists because page 1 carries live plugins that never idle: it clones
 the live spec into a throwaway workbook, replaces each plugin element with an
 inert text tile of the same id, renders that, deletes the clone by **exact
-tracked id**. Never delete by name pattern — this is a shared org and a wildcard
-delete was blocked by the permission classifier for good reason.
+tracked id**. Never delete by name pattern — this is a shared org.
 
 ---
 
@@ -504,23 +414,58 @@ delete was blocked by the permission classifier for good reason.
 | Nuvia | "Value per patient" $1,825 | `POP` per-unit economics were retail-banking dollars |
 | Nuvia | "$93,300,131" | cohort volume sums DOLLARS; needed a compact format (`$,.3s`) |
 | Nuvia | "Line of business" on a dental app | ranked-list labels were hardcoded |
-| Delta | contribution = 88% of revenue | **the column called "Net Revenue" is `income − cost + fees`, i.e. a SPREAD.** For a bank that IS the headline; for an airline that's operating *income*. Relabel, don't fudge |
-| Delta | 558M passengers vs real ~200M | `units_base` scale (displayed ≈ input × 0.043) |
+| Delta | contribution = 88% of revenue | **the column called "Net Revenue" is `income − cost + fees`, i.e. a SPREAD.** For an airline that's operating *income*. Relabel, don't fudge |
+| Delta | 558M passengers vs real ~200M | `units_base` scale (displayed ≈ max × max(state_share) × 1.157) |
 | Delta | statement logo invisible | `logo_navy()` silently falls back to the WHITE datauri; a light header needs its own recolour |
-| Delta | SkyMiles page carried SoFi late-payment warnings | statement prose was not config-driven |
 | all | KPI title truncated | "Contribution after overhead ($M)" too long for the card |
 
 ### The display-label-vs-column-name trap — hit FOUR times
 For input tables and pivots, **the column `name` IS the formula reference key.**
 Renaming a label renames the reference. `"Members (K)"` blanket-renamed broke
-`LB_COLS`; a cohort chart label used as a column ref gave `Dependency not found:
-'member population/risk band'`; renaming the modeler's `Product` column cascaded
-through `spivot → assum → book → charts` and broke the build twice.
+`LB_COLS`; renaming the modeler's `Product` column cascaded through
+`spivot → assum → book → charts` and broke the build twice.
 
 **Rule: separate the fixed contract from the display label.** Rename in tandem
 with every reference (as `col_volume`/`col_growth`/`col_yield`/`col_cost` now
 do), or leave the contract alone. `Product` in the modeler chain is deliberately
 NOT renamed for this reason.
+
+
+### "Net Revenue" being a SPREAD, not income — hit TWICE (Delta, then NVIDIA)
+The generator's base-table column labelled "Net Revenue" is
+`income - cost + fees`, i.e. a spread. For a bank that IS the headline metric.
+For anything else, treat `yield_rate`/`funding_rate` as a genuine rate pair
+computing a real margin -- NOT as "revenue rate" and "zero." **Documenting
+this once did not stop it recurring**: NVIDIA's build read this exact warning
+and still modeled it wrong on the first pass, because recognizing a COGS/
+gross-margin business as "the same trap as Delta's RASM/CASM" required seeing
+past the different domain, not just reading the paragraph. Before writing
+`products`, ask: is this company's revenue = volume x rate, or does the
+generator's income-minus-cost formula actually compute this business's real
+spread? If yes to the second, set `funding_rate = 0` and let `yield_rate`
+alone equal the true margin (the pattern already used for SoFi Money's
+fee-only line).
+
+### `bal_base` -> headline-revenue scaling is undocumented and non-obvious
+The KPI compounds `bal_base` through
+`(1 + annual_growth/12) ** month_index` over the current-period months (12-23),
+summed across every `FOOTPRINTS` state share. Every company built so far used
+a modest `annual_growth`, so nobody had to reverse this. NVIDIA's realistic
+growth rate overshot the real revenue target by 35-80% until `bal_base` was
+back-solved numerically against a standalone Python reproduction of
+`loan_book.sql`'s math. **Any future company with an aggressive growth rate
+will hit this too** -- budget time to write that reproduction rather than
+guessing and re-rendering repeatedly.
+
+### `navy` double-duty as text color AND chart color #3
+`navy` is both `TEXT_DARK` (all body/header text) and the 3rd
+`CATEGORICAL` chart color. A company whose brand navy is dark enough reads as
+a near-black, low-contrast legend swatch. **This is shared-code behavior, not
+a per-company bug** -- confirmed across all 9 companies' navy values clustering
+in the same darkness class. Do not spend time trying to lighten one company's
+navy to fix its chart legend; it will just make that company's text look
+off-brand. The real fix belongs in the generator (split text color from
+categorical color #1), not in `company.py`.
 
 ---
 
@@ -531,10 +476,8 @@ by a launchd agent `com.millersigma.plugins` on **localhost:8080**.
 
 ### THE BLOCKER
 **Plugins are not publicly hosted.** Netlify deploy returns `Forbidden` with
-Connor's token (Sigma Computing team blocks it). Consequence: **every workbook
-with a plugin looks broken from anyone else's machine.** Options not yet taken:
-Connor runs the Netlify deploy himself, or jsDelivr off the public millersigma
-repo (needs his explicit go-ahead — public push).
+Connor's token. Consequence: **every workbook with a plugin looks broken from
+anyone else's machine.**
 
 ### Authoring pattern
 ```html
@@ -551,15 +494,14 @@ client.config.subscribe(function(cfg){
     unsub = client.elements.subscribeToElementData(cfg.source, function(d){ ... });
 });
 ```
-Rules learned the hard way:
-- **`ResizeObserver` on the stage element, not a window resize listener** —
-  Sigma resizes the element, not the page.
+Rules:
+- **`ResizeObserver` on the stage element, not a window resize listener.**
 - **No infinite animation loop** or headless PNG export never reaches idle.
 - Inline SVG needs an explicit `xmlns`.
 - Always ship a `synth()` fallback so the plugin looks right unbound.
 - Register with `POST /v2/plugins` `{name, url, description, type:"element"}`.
 
-### The hero-plugin generalization (new this session)
+### The hero-plugin generalization
 Most hero plugins bind to the product-card table with `product/balance/members/
 goal`. Some need a different shape. Declare it in the config:
 ```python
@@ -575,9 +517,7 @@ PLUGINS["delta"] = {
 layout. **Always substitute that placeholder, even to empty string** — an
 unreplaced `__PLACEHOLDER__` is a masked 500.
 
-Ticker and hero are gated **independently** (`NO_TICKER` / `NO_HERO`). They used
-to share one flag, so a company with a hero but no sensible ticker silently lost
-its hero too.
+Ticker and hero are gated **independently** (`NO_TICKER` / `NO_HERO`).
 
 ### Industry picker — never reuse the last one
 | industry | ticker | hero |
@@ -585,44 +525,13 @@ its hero too.
 | banking / fintech | live Treasury yields (CORS-open) | balance flywheel |
 | healthcare payer | medical cost trend | premium-vs-cost flow, MLR by plan |
 | QSR / retail | commodity index | day-part heatmap |
-| dental | — | **arch placement map** (angle = arches, thickness = production, fill = goal) |
-| airline | — | **ATL connection banks** (arrivals up, departures down, by hour) |
+| dental | — | arch placement map |
+| airline | — | ATL connection banks |
 | PE | — | maturity wall |
 | oil & gas | crack spread | refinery throughput |
 
 Reusing a lending flywheel on a health insurer is the visible tell that it is a
-reskin. It happened once and had to be caught.
-
----
-
-## 10. Reports as code (pixel-perfect PDF)
-
-`build_statement.py`, 405 lines. `document.kind: "report"`, absolute x/y/w/h
-positioning, `<Panel type="header">` / `type="footer"` for global furniture,
-`pdata` hidden page for SQL plumbing. Export is PDF-only.
-
-**Now templated** via `STATEMENTS[key]` — every string plus the headline formula
-bindings:
-```python
-"h_formulas": [(source_elementId, formula, "MONEY"|"MONEY0"|"NUM0"), ...]
-```
-Fixed column contracts (do not rename):
-- activity: `Transaction Date, Post Date, Merchant Name or Transaction
-  Description, Category, Amount, Points Earned`
-- rewards: `Line Order, Description, Points`
-- summary: `Line Order, Metric, Value`
-
-`statement_activity_sql` / `rewards_summary_sql` / `account_summary_sql` return
-`None` for companies without an override, which falls back to the on-disk SoFi
-files. **Only sofi and delta have statements so far.**
-
-Layout gotchas: tables clip their last row silently if the height is short (7
-rows needed 252, not 210); an `H1` needs more box than its font size or glyphs
-clip and the next element sits on top.
-
-Rendering: macOS has no `pdftoppm`, and `qlmanage` only does page 1, so
-`shot_report.py` rasterizes via `swift` + CoreGraphics.
-**Usage: `shot_report.py <report-id> <page> <out.png>`.**
+reskin.
 
 ---
 
@@ -634,179 +543,12 @@ Three per workbook. Config: `instructions`, `dataSources`, `tools`,
 Action tools use `{"kind": "effect", "effect": "set-control-value", "control":
 "X", "value": {"type": "agent-input", "inputName": "..."}}`.
 
-**Feed the agent the real product names and `VOCAB`** or a health insurer's
-copilot offers to explain Credit Card delinquency. This is still broken on
-McDonald's — the greeting says "loan book" (see §14).
+**Feed the agent the real product names and `VOCAB`, and set `CFG["base_table"]`
+to a domain-appropriate name** — or a health insurer's copilot offers to explain
+Credit Card delinquency, and the greeting says "loan book".
 
 The cohort-builder pattern (N filters + one action tool per filter + reactive
 KPIs) was reverse-engineered from demeng's Marketing Control Center.
-
----
-
-## 12. The deck (`deck/`)
-
-For a **30-minute internal talk to Sigma SEs**. 9 slides, full spoken script in
-the speaker notes, built by `build_deck.py` (python-pptx).
-
-```
-deck/build_deck.py                       9 slides, notes on all
-deck/one-name-in-working-app-out.pptx    233KB, images embedded — USE THIS
-deck/one-name-in-working-app-out-upload.pptx  63KB, NOIMG=1, placeholders
-deck/storyboard.html                     visual storyboard, on-slide text vs script
-deck/TALK-TRACKS.md                      scripts as editable text (STALE: 16-slide era)
-deck/README.md                           index + open items (STALE: pre-8-slide)
-deck/img/                                karpathy, enrichlead-launch, enrichlead-attack,
-                                         lemkin-day8, masad-response, + strip-* crops
-```
-
-**Spine:** title → demo (8 min) → *custom per opportunity is becoming table
-stakes* → filmstrip of 4 tweets in date order ("every failure was the same
-layer") → Varda quote → **orphaned assets (the thesis)** → a day then minutes +
-eight things that break → where the wow moment belongs → where I see this going.
-
-Never cut: the filmstrip, Varda, orphaned assets, the eight limits.
-
-**Cannot be uploaded to Drive by Claude.** The Drive connector takes file bytes
-as a base64 tool argument; 233KB → ~318k characters, which exceeds the
-per-message output limit. Connor drags the file into Drive (10s) and opens with
-Google Slides — notes survive the import.
-
-Brand rules that apply: Advercase cannot embed in Office so headings use
-Instrument Serif at +20%; body DM Sans; sentence case; no trailing periods in
-headlines; Sigma blue `#1A70F1` is the only accent; never distort an image (set
-one dimension, derive the other).
-
----
-
-## 13. Inventory — live assets on papercranestaging
-
-| company | key | workbook | urlId |
-|---|---|---|---|
-| SoFi | `sofi` | `8f10c147-da2e-4e45-ba0c-b51934255571` | `4lXyHVZBfr6lRkxC9a3RpD` |
-| Bank of America | `boa` | `9558a3ee-723c-43e1-9db1-bc0fd463cb92` | `4xOmETvCxSvk1KhNDcLO6K` |
-| Elevance Health | `elevance` | `448eed8a-359e-473a-9358-3c2301a60ab4` | `25mNnBxEdvkJftgP3Eq6TW` |
-| McDonald's | `mcd` | `aabb715e-0f22-4051-a1c1-f1353fdebe71` | `5cam967zuIQC40vkdS4Nvb` |
-| Abry Partners | `abry` | `669eb91a-b734-4021-9072-4d5d58ae8d12` | `37DKKmfZMs7ccVSKGmaQkq` |
-| Nuvia Dental | `nuvia` | `aadec519-10bd-4ff1-bd49-646ceaee2f31` | `5cqv6CBkRwTc77C1nBAJZD` |
-| **Delta Air Lines** | `delta` | `e3afbf72-c243-46fa-9af7-a5471ed362db` | `6VDzF7Y8ycQXZcQVtcdZkn` |
-| **Marriott International** | `marriott` | `06665b34-0f14-413d-8af5-d11f0156c62c` | `c4JjB6mijx8VWaTnacy6g` |
-
-| report | id | urlId |
-|---|---|---|
-| SoFi member statement | `2c27aae9-cd72-462a-ac4c-644522409027` | `1ljN0R0HgacaMRBqlKmzNJ` |
-| Delta SkyMiles statement | `ca716231-57e1-49a0-8729-ea286d1de7c3` | — |
-
-| plugin | id |
-|---|---|
-| SoFi/BofA flywheel · rates ticker | `2119eea0-...` · `646412eb-...` |
-| Elevance payer-cost-flow · ticker | `dbe77f66-...` · `74d402da-...` |
-| McDonald's day-part · commodity ticker | `01759a25-...` · `c28f471a-...` |
-| Nuvia arch placement map | `958ccb52-dacc-4115-98b7-e66446e1d539` |
-| **Delta ATL connection banks** | `bdb291e8-df93-4262-b109-a635b88fa8c3` |
-
-Abry is deliberately plugin-free — the first build where page 1 rendered
-headlessly without stubbing.
-
-**Delta calibration, for reference:** 370,000M ASMs; blended ~11% operating
-margin; $6.6B operating income (real ~$6B); 327B ASMs (real ~300B); 200M
-passengers (real ~200M); revenue would be ~$59.6B (real ~$61B).
-
----
-
-## 14. Open items, ranked
-
-### Do first
-1. **`git init` the project.** None of this is version controlled.
-2. ~~McDonald's agent greeting says "loan book"~~ **FIXED**, by a cold-build
-   agent building Marriott (see section 20). Root cause was structural, not a
-   McDonald's-specific string: the AI-generated greeting reads the base data
-   table's `name` field, which was hardcoded `"Loan Book"` for every company.
-   Added `CFG["base_table"]` (defaults to `"Loan Book"` for backward compat)
-   and set a real name for all 8 companies. Also fixed in the same pass: the
-   AI insight naming a literal "risk rate" instead of the configured driver
-   name (needed a new `driver_cost` reference and `%`-escaping for labels that
-   contain a literal percent sign, e.g. McDonald's). **Pushed live** to the
-   McDonald's workbook (`aabb715e-...`) — the demo note about avoiding its
-   agent no longer applies.
-3. **Plugin hosting.** Everything is localhost-only.
-4. Commit + push the millersigma skill changes (needs Connor's go-ahead —
-   public repo).
-
-### Deck
-5. Confirm the **Databricks job-description wording** (came via search
-   extraction; direct fetch 404'd). It is the frame of slide 3.
-6. Talk to **Marit** before quoting her closed-won numbers.
-7. Three SE quotes if the field-feedback column is wanted.
-8. `TALK-TRACKS.md` and `deck/README.md` are stale (written for 16/25-slide
-   versions). Regenerate from the 9-slide build.
-
-### Product asks for Matt Jones
-9. `panels` / page headers — not enabled, and UI-built headers do not round-trip.
-10. Published-mode input tables (`inputMode: "view"` stores but runtime enforces
-    draft-only).
-11. Add `name` to the `repeated-container` write schema.
-
-### Generator improvements identified, not built
-12. **Emit the demo script with the workbook** — from Chad Morris' framework.
-    The generator already knows personas, narrative path, terms and metrics; the
-    click path is the missing output.
-13. Map legend bands (80–115%) are hardcoded, not derived.
-14. `units_base` → displayed-count ratio (~0.043) is empirical, not documented.
-    Worth deriving properly.
-15. Only sofi + delta have statements; the other five have none.
-
----
-
-## 15. Economics — measured, not estimated
-
-The Delta build (workbook + plugin + templated report + all QA):
-**25 min 32 s wall clock, 114 API calls.**
-
-| | tokens |
-|---|---|
-| uncached input | 9,382 |
-| cache writes | 167,159 |
-| **cache reads** | **48,118,451** |
-| output | 121,314 |
-| total | 48,416,306 |
-
-≈ **$85 at Opus list prices** — but **85% of that is cache reads** ($72), i.e.
-re-reading a very long conversation on every call. **Run cold in a fresh
-session, this build is roughly $10–15.** The cost driver is session length, not
-the asset. Against a fully loaded SE day (~$600–1,000) that is two orders of
-magnitude either way.
-
-Measure it yourself: session transcripts at
-`~/.claude/projects/-Users-cmiller-Desktop/<session-id>.jsonl` carry per-message
-`usage` (`input_tokens`, `output_tokens`, `cache_creation_input_tokens`,
-`cache_read_input_tokens`). Sum them over a time window.
-
----
-
-## 16. People and politics
-
-- **Matt Jones** — owns code rep / the official Sigma workbook skills. Ships
-  breaking changes fast and posts updated skills with them. **Has proposed that
-  Connor's skill become the basis for Sigma's official opinionated "from
-  scratch" workbook skill.** Wants to pull these learnings into first-party
-  skills. This is the strongest argument in any budget or roadmap conversation.
-- **TJ Wells** — owns public-facing skills (Zalak's call), moved his migration
-  skills into the Sigma repo. Working the same API in parallel; his findings and
-  Connor's corroborate.
-- **Neil Oliver** — being brought into the skills consolidation.
-- **Rick** — engineer fixing repeated-container bugs.
-- **Chad Morris** — demo-structure framework (personas / narrative / business
-  terms / metrics / click path practised in chunks). Offered it for a readme.
-  Slide 8 credits him.
-- **Khush** — the **orphaned asset** framing. The deck's thesis. Credit by name.
-- **Marit Taylor** — closed 3 deals last quarter on custom demos with no POV:
-  Coronis $420K, Allvue $183K, PTR $66K. Allvue had done a POV the prior year
-  and did not buy.
-- **Sean Gross** — prefers a series of custom demos to a formal proof.
-- **Derek Dietrich** — the counter-case: denied a POV 15–20× across an 18-month
-  MSTR replacement to build a better business case.
-- **Arnav Sangal** — Connor's manager, running the Claude budget request.
-  `BUDGET-REQUEST.md` is written for him.
 
 ---
 
@@ -821,374 +563,9 @@ Measure it yourself: session transcripts at
 - **eBay is the one deliberate exception** — its multi-colour wordmark stays
   as-is on a white chip.
 - **Aesthetics is priority #1.** Follow dashboard best practice. Produce an HTML
-  mockup BEFORE building in Sigma when the design is uncertain — Connor has
-  asked for this explicitly and it prevents guessing.
+  mockup BEFORE building in Sigma when the design is uncertain.
 - Don't rebuild the LinkedIn batch (Snyk, USA Swimming, DoorDash,
   1-800-Flowers, Baseten) or batch 2 (Nike, Ford, Home Depot, eBay, Samsung)
   without being told to.
 - Delete workbooks **only by explicit tracked ID**, never by name pattern.
   `papercranestaging` is shared.
-
----
-
-## 18. What skills actually get invoked — the dependency graph
-
-Three things get confused with each other and shouldn't be: **this generator**,
-the **millersigma skill collection** it lives beside, and **Ryan Lauderback's
-`ryan-workbook-skill`** at `~/Desktop/ryan-workbook-skill`. Here is the real
-relationship.
-
-### `ryan-workbook-skill` — historical lineage only, NOT a runtime dependency
-
-`~/Desktop/ryan-workbook-skill` is Ryan Lauderback's own separate project — a
-Claude Code workspace pairing Sigma's official upstream `sigma-agent-skills`
-plugin (`sigma-api`, `sigma-data-models`) with a project-local
-`sigma-workbook-conventions` skill, plus MCP-first discovery scripts
-(`mcp-search.sh`, `mcp-describe.sh`) for resolving prose/URLs/warehouse paths
-to Sigma API identifiers, and `scripts/validate-spec.py` for pre-POST static
-checks.
-
-**`millersigma`'s own `sigma-workbook-conventions` skill was originally forked
-from Ryan's.** `millersigma/README.md` says so directly: *"Workbook/dashboard/
-embed skills + scripts — originally `RyanLauderback/ryan-workbook-skill`."*
-That is the entire connection. **Nothing in this generator calls into Ryan's
-repo at runtime.** `build_sofi.py`, `company.py`, `sigmaapi.py` — none of them
-import from or shell out to `ryan-workbook-skill/scripts/*`. This generator
-authenticates and posts specs itself via `scripts/sigmaapi.py`, which is a
-much thinner, purpose-built version of what Ryan's `_env.sh` / `get-token.sh`
-do generically.
-
-Worth knowing about it anyway, because it solves an adjacent problem well:
-Ryan's discovery layer (MCP search -> describe -> resolve prose+URLs+warehouse
-paths to IDs) is for building **ad hoc** workbooks against a user's own
-existing data models by natural-language description. This generator never
-needs that, because it never points at a customer's real data model — every
-data source is synthetic SQL generated from `company.py`. If a future version
-of this skill needs to build against a REAL prospect data model instead of
-synthetic data, Ryan's resolver is the right thing to reach for, not something
-to reinvent.
-
-### `millersigma` — the actual skill collection this generator is packaged under
-
-`~/Desktop/millersigma` is Connor's public (uncommitted-changes, not-yet-pushed)
-GitHub repo, structured as a Claude Code **plugin** bundling 11 skills. This
-generator's proper home is a new skill inside it — **`millersigma2`**, built
-this session at `~/Desktop/millersigma2` (see §19) — because the *existing*
-`sigma-company-dashboard` skill hand-authors a fresh generator script per
-company, and this generator's whole point is that it does not.
-
-**The composition graph, as `sigma-company-dashboard`'s own SKILL.md states
-it** (verified by reading the frontmatter directly, not inferred):
-
-```
-sigma-company-dashboard  (flagship — v1; millersigma2 is v2 of this role)
-  composes:
-    branded-dashboard-format     — house dashboard FORMAT (header/filter-bar
-                                    -> KPI row -> trend -> detail pivot). A
-                                    BUILDING BLOCK — its own SKILL.md says
-                                    explicitly: do NOT drive a company build
-                                    from this skill directly, it yields a
-                                    generic dashboard with no fetched logo and
-                                    no bespoke plugin.
-    sigma-workbook-conventions    — spec mechanics: naming, layout, control
-                                    catalog, POST-time gotchas. Forked from
-                                    ryan-workbook-skill (see above).
-    sigma-workbook-styling        — the visual-craft layer: containers as
-                                    design blocks, color/spacing/typography,
-                                    what round-trips via spec vs needs UI
-                                    finishing.
-    sigma-input-table-app         — the scenario-modeler / data-app building
-                                    block: input tables, cross-joins, modal
-                                    pages, button-effect action sequences.
-                                    This generator's page 2 IS this pattern,
-                                    templated.
-    sigma-cohort-builder-app      — the segmentation building block: N filter
-                                    controls + one agent action tool per
-                                    filter + reactive KPIs. This generator's
-                                    page 3 IS this pattern, templated. (Itself
-                                    reverse-engineered from demeng's Marketing
-                                    Control Center — see HANDOFF section 11.)
-
-Not composed by the flagship, but related / adjacent in the collection:
-    sigma-plugin-development      — REFERENCE for the @sigmacomputing/plugin
-                                    SDK (editor-panel config, element-data
-                                    subscription, control variables, action
-                                    effects, hosting/lifecycle). This is what
-                                    every plugin in plugins/ was built against.
-    sigma-plugin-patterns          — REFERENCE, proven plugin architecture
-                                    recipes (JSON-settings config pattern,
-                                    reusable state/config/interaction flows).
-    sigma-app-design                — BUILD-methodology design-pack / PRD
-                                    generator. Upstream of this generator, not
-                                    used by it: you'd use this to SCOPE an app
-                                    before generating it, not while generating.
-    sigma-use-cases                 — generates a 10-use-case single-slide
-                                    PowerPoint for a named prospect. A
-                                    different deliverable entirely — sibling,
-                                    not a dependency.
-    sigma-embed-portal              — scrapes a prospect site + deploys a
-                                    branded Netlify embed portal. Unrelated
-                                    deliverable; shares nothing with this
-                                    generator except "look at the company's
-                                    site first."
-```
-
-### Where this generator itself sits
-
-**It is not currently packaged as a skill at all.** It has lived as a bare
-project directory (`~/Desktop/Prospects/SoFi-2026`, not even in git — see
-section 14 item 1) that happens to implement, in one reusable generator, what
-`sigma-company-dashboard` + `sigma-input-table-app` + `sigma-cohort-builder-app`
-do combined, minus the per-company hand-authoring. **`millersigma2`** (section
-19, built this session) is the fix: it packages this generator as
-`skills/sigma-company-dashboard-v2/`, positioned explicitly as the successor to
-`sigma-company-dashboard` in `millersigma`, composing the same four building
-blocks (`branded-dashboard-format`, `sigma-workbook-conventions`,
-`sigma-workbook-styling`, plus the input-table and cohort-builder patterns) but
-via one generator instead of per-company scripts.
-
-**What a fresh session actually needs to load to run this** — this is the
-real dependency list, and it is short:
-1. `millersigma2/skills/sigma-company-dashboard-v2/SKILL.md` (entry point)
-2. `millersigma2/skills/sigma-company-dashboard-v2/reference/HANDOFF.md` (this
-   file — read in full)
-3. `company.py` (skim for the nearest existing company to copy)
-4. Nothing from `ryan-workbook-skill` or the other 10 millersigma skills is
-   read or executed at runtime. They are context for a human deciding whether
-   this is the right tool, not code paths this generator calls.
-
----
-
-## 19. `millersigma2` — the packaged skill, built and committed this session
-
-```
-~/Desktop/millersigma2/                    NEW local git repo, NOT pushed anywhere
-  .claude-plugin/plugin.json
-  README.md
-  .gitignore                               excludes *.env, .sigma-portals/, shots/
-  skills/sigma-company-dashboard-v2/
-    SKILL.md                               entry point -- read reference/HANDOFF.md first
-    scripts/                               build_sofi.py, build_statement.py, company.py,
-                                           sigmaapi.py, brand.py, shot.py, qa_pg1.py,
-                                           shot_report.py, rc_matrix.py, add_notifications.py
-    sql/                                   all 11 SQL files
-    reference/HANDOFF.md                   a copy of this file
-    examples/                              (empty -- the 7 companies in company.py ARE
-                                           the examples; nothing separate needed yet)
-  plugins/                                 the 8 REGISTERED plugins these 7 companies
-                                           actually use (not the full 48-plugin library):
-                                           sofi-flywheel, sofi-rates-ticker, payer-cost-flow,
-                                           payer-cost-ticker, mcd-daypart,
-                                           mcd-commodity-ticker, nuvia-arch-map,
-                                           delta-hub-banks
-```
-
-**Committed locally. Not pushed to GitHub** — that needs Connor's explicit
-go-ahead, same standing rule as pushing to the public `millersigma` repo.
-
-Credentials (`~/.sigma-portals/staging.env`) were never copied in and are
-gitignored — the repo has no secrets to leak if it is later pushed.
-
-What did NOT get copied: the `assets/` logos (fetch them fresh per company via
-`scripts/fetch_logo.py`, which lives in `millersigma`, not here — this
-generator's `company.py` expects `assets/<key>_logo_white.datauri.txt` to
-exist locally, generated by that script), `shots/` (build artifacts,
-regenerate via `qa_pg1.py`), and `specs/` (per-session report-id files,
-regenerate on first `build_statement.py create`).
-
-**Immediate next step for whoever picks this up:** decide whether
-`millersigma2` becomes a new top-level skill inside the existing `millersigma`
-repo (simplest — one plugin, one install) or stays a sibling repo. The
-`SKILL.md` is written to work either way.
-
----
-
-## 20. The cold-build measurement — what a fresh terminal actually costs
-
-Connor asked directly: do the per-piece cost figures in section 5c hold up in a
-genuinely fresh session, the way an SE opens one? They do not, and the honest
-correction is important enough to be its own section.
-
-**Section 5c's dollar figures were measured inside a single very long
-conversation** that had already built six companies, a 17-slide deck, and
-dozens of debugging exchanges. 85-99% of every dollar figure in that section was
-**cache reads** — the cost of re-reading that accumulated history on every API
-call, not the cost of doing new work. Those figures do not transfer to an SE
-opening a fresh terminal, who has no such history to re-read.
-
-To get a real number, an autonomous subagent was spawned with **zero prior
-context** — the closest available proxy for a cold terminal — and told to read
-`HANDOFF.md`, then build a full 3-page workbook for a brand-new company
-(Marriott International) with no plugin and no report, entirely on its own.
-
-### Result: it worked, on the first real attempt
-
-- **Wall clock: 25 minutes 41 seconds. 76 tool calls.**
-- `create` succeeded on the first try (`06665b34-0f14-413d-8af5-d11f0156c62c`).
-  Six follow-up `update` calls fixed defects found by rendering and looking (one
-  `update` was rejected and retried — see below).
-- Headline KPIs landed within a few percent of Marriott's real 10-K figures
-  without being told the right answer: $84.7B room revenue (real ~$75-85B),
-  1,572K rooms (real ~1.6M), $4.08B net fee revenue against gross fees of
-  ~$5.0B before direct cost (real gross fee revenues ~$5.2B).
-- **It found and fixed a structural bug that had been sitting on this file's
-  open-items list, and fixed it for every company, not just its own.** See
-  section 19's item 2 close-out. That is the strongest evidence that a cold
-  build is not just cheaper than expected — it is genuinely useful independent
-  of the specific company it was asked to build.
-- It also correctly identified two things as **not fixable in the time it had**
-  and said so rather than papering over them: the progress rings render empty
-  inside a `<Tab>` (pre-existing on every company, not new), and the
-  `units_base` scale factor documented in this file (~0.043×) does not actually
-  reconcile — it derived a different empirical formula
-  (`displayed ≈ max(units_base) × max(state_share) × 1.157`) that reproduces
-  Delta's 200M passengers exactly and used that instead. **That formula is more
-  trustworthy than the one in section 4** and should replace it next time
-  someone touches `units_base`.
-
-### The logo problem, and what "ask only what you cannot infer" cost
-
-`fetch_logo.py marriott.com` returned a **Bonvoy stock photo** (the site's
-`og:image`), not a logo. The Wikipedia infobox fallback also missed, for a
-structural reason: it expects `logo = [[File:...]]` and Marriott's actual
-article markup is `logo = Marriott International.svg{{!}}class=skin-invert` —
-a different infobox template shape. The agent resolved the filename through
-the same MediaWiki imageinfo API by hand rather than giving up or hand-drawing
-a wordmark, which is exactly the behavior HANDOFF section 5 asks for. Worth
-promoting into `fetch_logo.py` itself: a second infobox regex for the
-`{{!}}`-pipe template shape.
-
-### What this means for the cost slide
-
-**Do not put a number from section 5c on a slide as "what an SE will pay."**
-The number that generalizes is the shape of the work, not a dollar figure from
-inside a contaminated session:
-
-- One company, three surfaces, zero prior context: **~26 minutes**, one
-  `create`, roughly half a dozen `update` cycles driven by actually looking at
-  the renders — not zero, not "AI just gets it right," but a small, bounded,
-  self-correcting loop.
-- The single most valuable thing a cold session does that a warm one does not:
-  it hits the SAME structural bugs everyone hits (hardcoded strings that leak
-  through a config-driven system) with FRESH EYES, and it is more likely to
-  fix them at the ROOT rather than patch around them, because it has no
-  investment in the existing shape of the code. That is a genuine argument for
-  running this on new companies even after the generator feels "done" — new
-  domains keep finding real bugs.
-- If a real dollar figure is wanted for the slide, the only defensible way to
-  get one is the same measurement done here: spawn a subagent (or literally
-  open a second, empty terminal) with no prior context, give it a company it
-  has not built before, and read the number off that run — not off this
-  session.
-
----
-
-## 21. The real per-surface cost table — first build vs. every build after
-
-Section 20 measured one cold build. This section decomposes it by asking the
-question Connor actually needed answered for the SE talk: **if someone only
-wants one or two surfaces, what does each combination cost — not as an
-abstraction, but as the number they'll actually see?**
-
-Four more isolated cold subagents were run, each with zero prior context, each
-building a DIFFERENT surface combination for Marriott — but with the config
-held constant (already written and validated from section 20), to isolate the
-marginal cost of surface choice on its own:
-
-| combination | cost (config reused) | wall clock | defects found |
-|---|---|---|---|
-| Command center only | $3.45 | 105s | 0 |
-| + Financial modeling | $3.27 | 209s | 0 |
-| + Cohort builder | $3.53 | 139s | 0 |
-| All three surfaces | $3.42 | 252s | 0 |
-
-Flat, ~$3.30-3.55 regardless of combination. That looked like the whole
-answer — until it became clear WHY it's flat: every defect had already been
-found and fixed in section 20's original run. This isolates **reuse cost**,
-not first-time cost, and those are very different numbers.
-
-### Why the first build doesn't get cheaper by dropping a surface
-
-Of the 7 real defects section 20's cold build found and fixed, mapped to the
-page each one lives on:
-
-| defect | page | scope |
-|---|---|---|
-| copilot greeting reads base table name ("loan book") | command center | shared |
-| AI insight says literal "risk rate" | command center | shared |
-| ranked table + map labeled "Net revenue"/"Sector" | command center | shared |
-| baseball-card modal labeled "Balances ($B)" | command center | shared |
-| marker strip unreadable (white-on-white) | command center | shared |
-| Color-by option says "Balance type" | command center | shared |
-| cohort copilot says "Describe the rooms you want" | cohort builder | cohort-only |
-
-**Six of seven live on the command-center page, which is present in every
-combination.** The financial modeler introduced zero new defects. Only one
-defect was cohort-specific. So the honest first-build table, allocating
-section 20's measured $18.78 QA/fix cost proportionally across the 7 defects
-by the page each depends on:
-
-| combination | **first build (new config)** | **every build after (config reused)** |
-|---|---|---|
-| Command center only | **~$27** | $3.45 |
-| + Financial modeling | **~$27** | $3.27 |
-| + Cohort builder | **~$30** | $3.53 |
-| All three surfaces | **~$30** (measured exactly) | $3.42 |
-
-### The one sentence for the slide
-
-**The first company costs ~$27-30 no matter which surfaces you pick, because
-the bugs live in shared code, not in the surface you chose. Every company
-after that — or every additional surface added later — costs about $3.50,
-flat.** Dropping the financial modeler saves nothing; dropping the cohort
-builder saves about $2.70. The real lever on cost is not "how many surfaces,"
-it's "has this exact config been through a QA pass before."
-
-### Caveat on precision
-
-The first-build-per-surface figures (~$27 / ~$30) are a proportional
-allocation of one measured total, not five independently measured cold builds
-of brand-new companies. Getting exact numbers would mean running the
-experiment section 20 ran, from scratch, once per surface combination — four
-more never-before-seen companies, each risking its own domain-specific bugs
-unrelated to surface count, which would muddy rather than sharpen the
-comparison. The allocation above is defensible because it is anchored to which
-PAGE each already-found defect lives on, not to a guess.
-
----
-
-## 22. Complete pricing table — every piece, measured cold
-
-Section 21 corrected the per-surface allocation but left the PDF report
-unmeasured (every prior report build happened inside a contaminated
-long-running session). One more isolated cold subagent closed that gap,
-reusing Delta's already-validated `STATEMENTS` config the same way section 21
-reused Marriott's workbook config.
-
-| piece | cost | wall clock | tool calls | fixes needed |
-|---|---|---|---|---|
-| Command center only | $3.45 | 105s | 5 | 0 |
-| Command + financial modeling | $3.27 | 209s | 7 | 0 |
-| Command + cohort builder | $3.53 | 139s | 8 | 0 |
-| All three workbook surfaces | $3.42 | 252s | 8 | 0 |
-| Pixel-perfect PDF report | $3.33 | 43s | 5 | 0 |
-
-**Every piece lands in the same $3.27-3.53 band, including the report, which is
-a fully separate script (`build_statement.py`) not gated by `SURFACES` at
-all.** To get "workbook + report," add the two costs; they are independent
-builds, not a nested combination.
-
-### The one sentence for the slide
-
-**Cost is not a function of what you ask for — one surface, three surfaces, or
-the PDF all cost about the same $3.30-3.55, once the company's config exists
-and has been through one QA pass. It is a function of whether this exact
-company has been built before.** First time, any company: ~$27-30, almost
-entirely one-time cost of finding bugs that live in shared code (and are then
-fixed for every company going forward, not just that one). Every time after:
-flat, ~$3.30-3.55 per piece, independent of which piece.
-
-This is the complete, defensible answer to "what will it cost me" for an SE
-audience: the floor is ~$3.50 per piece forever; the only variable is whether
-today's build is the first one to expose a new shared-code bug.
-

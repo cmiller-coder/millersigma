@@ -8,15 +8,10 @@ description: >-
   drives EVERYTHING — the builder scripts (scripts/build_sofi.py,
   scripts/build_statement.py) are never edited per prospect. Supports building
   only a subset of surfaces (SURFACES=command / command,model / command,cohort
-  / command,model,cohort env var). Proven across seven companies spanning
-  fintech, banking, healthcare payer, QSR, private equity, dental and airline.
-  Composes the same building blocks as sigma-company-dashboard v1
-  (branded-dashboard-format, sigma-workbook-conventions, sigma-workbook-styling,
-  sigma-input-table-app, sigma-cohort-builder-app) but replaces its hand-authored
-  per-prospect scripts with ONE reusable generator plus a config file. Use this
-  — not v1 — for any new "build a Sigma dashboard/workbook/POV/demo for
-  [company]" request. Read reference/HANDOFF.md FIRST, in full, before writing
-  any code.
+  / command,model,cohort env var). Proven across nine companies spanning
+  fintech, banking, healthcare payer, QSR, private equity, dental, airline,
+  hospitality and semiconductors. Use this — not v1 — for any new "build a Sigma
+  dashboard/workbook/POV/demo for [company]" request.
 ---
 
 # Sigma Company Dashboard v2 — one config, whole app
@@ -28,12 +23,23 @@ block plus two builder scripts that never change.
 
 ## Read this first
 
-**`reference/HANDOFF.md`** is the complete guide — architecture, every
-verified API fact and gotcha, the config field reference, the cross-industry
-mapping table, plugin authoring rules, cost economics, and the full inventory
-of what's been built. It is long on purpose. Read it in full before touching
-any script; skimming it is how the four-times-repeated display-label trap
-(§8) gets hit a fifth time.
+**`reference/HANDOFF.md`** is the complete build guide — architecture, verified
+API facts and gotchas, the config field reference, the cross-industry mapping
+table, and plugin rules. Read it before writing any code; skimming it is how
+the display-label trap gets hit a fifth time.
+
+**For PDF builds only**, also read **`reference/HANDOFF-report.md`** — it has
+the `STATEMENTS` config shape, fixed column contracts, and layout gotchas
+specific to the report.
+
+**For what's already built, what it costs, and how this skill relates to
+the rest of the collection**, read **`reference/HANDOFF-status.md`** — not
+needed to build a company, but read it before quoting a cost number or
+claiming a company hasn't been built yet.
+
+**Do not read `scripts/build_sofi.py` or `scripts/build_statement.py`** unless
+you are debugging or modifying the builder itself. Those scripts are never
+edited per prospect — reading them for a new company is wasted tokens.
 
 ## The one thing to internalize
 
@@ -42,9 +48,6 @@ any script; skimming it is how the four-times-repeated display-label trap
 report) are universal builders. If you find yourself editing either builder
 script to make a new company work, stop — the fix almost always belongs in
 `company.py` as a new config key, not as a per-company branch in the builder.
-(The one exception this session: the hero-plugin binding and the surface
-gating genuinely needed builder changes, because they're capabilities, not
-company facts. See HANDOFF §5b, §9.)
 
 ## Quick start
 
@@ -56,35 +59,22 @@ SURFACES=command COMPANY=<key> python3 build_sofi.py create   # command center o
 COMPANY=<key> python3 build_statement.py create      # the pixel-perfect PDF, if configured
 ```
 
-Existing companies: `sofi, boa, elevance, mcd, abry, nuvia, delta` — read their
-blocks in `scripts/company.py` before writing a new one; copy the nearest
-analog rather than starting blank.
+Existing companies: `sofi, boa, elevance, mcd, abry, nuvia, delta, marriott, nvidia` —
+skim the nearest-industry block in `scripts/company.py` before writing a new
+one; copy it rather than starting blank.
 
 ## Adding a company
 
 Ask the user only what cannot be inferred (surfaces wanted, demo vs prospect
-org, whether a bespoke plugin is in scope for this call — it only renders from
-the machine hosting `plugins/`). Do not ask for products, colors, or metric
-names — deriving those from the company's real public segment reporting is
-the entire value of this skill. Full workflow in HANDOFF.md §5.
-
-## What this composes (and what it replaces)
-
-Same building-block skills as v1's `sigma-company-dashboard`:
-`branded-dashboard-format`, `sigma-workbook-conventions`,
-`sigma-workbook-styling`, `sigma-input-table-app`, `sigma-cohort-builder-app`.
-What's different is that v1 hand-authors a fresh generator script per company;
-v2 has ONE generator and a config file, so a new company is an edit to
-`company.py`, not a new Python file. See HANDOFF.md §17 for the standing
-conventions this inherited from v1 and from Ryan Lauderback's
-`ryan-workbook-skill` (the unrelated project `sigma-workbook-conventions` was
-originally forked from — no runtime dependency, historical lineage only).
+org, whether a bespoke plugin is in scope — it only renders from the machine
+hosting `plugins/`). Do not ask for products, colors, or metric names —
+deriving those from the company's real public segment reporting is the entire
+value of this skill. Full workflow in HANDOFF.md §5.
 
 ## Plugins
 
-`plugins/` holds the 8 bespoke plugins this generator's seven companies
-actually reference (not the full 48-plugin millersigma library). They must be
-served from a local HTTP host for their `pluginId` to resolve — see
-HANDOFF.md §10 for hosting and the registration workflow. **They only render
-from whichever machine is hosting them**; this is the biggest open gap, not a
-per-plugin issue.
+`plugins/` holds the 8 bespoke plugins these companies actually reference (not
+the full 48-plugin millersigma library). They must be served from a local HTTP
+host for their `pluginId` to resolve — see HANDOFF.md §9 for hosting and the
+registration workflow. **They only render from whichever machine is hosting
+them.**
