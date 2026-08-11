@@ -71,7 +71,14 @@ Ask the user only what cannot be inferred — and ask all four of these, not
 just the first three (a cold run has skipped the fourth before):
 1. **Which surfaces?** command center only / + modeler / + cohort builder
 2. **Demo org or prospect org?**
-3. **Bespoke plugin?** (it only renders from the machine hosting `plugins/`)
+3. **Bespoke plugin?** — default to yes and design a NEW one for this
+   company's actual industry (HANDOFF.md §9's "never reuse the last one"
+   table). Don't wire up whichever plugin is already sitting in `plugins/`
+   just because it exists — a reused flywheel/ticker on the wrong industry is
+   the single most visible "this is a reskin" tell. Registered plugins now
+   host on jsDelivr off the public repo (see §9), so this renders for anyone,
+   not just the machine that built it — that blocker is gone for new plugins
+   registered this way.
 4. **Pixel-perfect PDF report too?** — this is a separate script
    (`build_statement.py`) and, for a brand-new company, a whole new
    `STATEMENTS` config block to author (copy Delta's or SoFi's — the only two
@@ -85,8 +92,13 @@ HANDOFF-report.md.
 
 ## Plugins
 
-`plugins/` holds the 8 bespoke plugins these companies actually reference (not
-the full 48-plugin millersigma library). They must be served from a local HTTP
-host for their `pluginId` to resolve — see HANDOFF.md §9 for hosting and the
-registration workflow. **They only render from whichever machine is hosting
-them.**
+`plugins/` holds the bespoke plugins these companies actually reference (not
+the full 48-plugin millersigma library). **Register new ones on jsDelivr off
+this public repo** (`cdn.jsdelivr.net/gh/cmiller-coder/millersigma@main/plugins/<folder>/index.html`)
+— that renders for anyone, permanently, no local server. The older
+localhost:8080-hosted plugins still work only from the machine running that
+server; migrate one to jsDelivr the first time a company needs it. See
+HANDOFF.md §9 for the full registration workflow and the one confirmed API
+constraint: **there is no update endpoint for an already-registered plugin**
+— changing its URL means a new `pluginId` and re-pushing every workbook that
+referenced the old one.

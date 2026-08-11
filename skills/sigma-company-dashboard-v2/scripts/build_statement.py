@@ -29,6 +29,7 @@ ST_ = lambda k: CO.statement(CFG, k)
 
 SQL = pathlib.Path(__file__).resolve().parent.parent / "sql"
 SPECS = pathlib.Path(__file__).resolve().parent.parent / "specs"
+SPECS.mkdir(parents=True, exist_ok=True)
 
 PAGE_W, PAGE_H = 816, 1056        # US Letter portrait @ 96dpi
 MARGIN = 30
@@ -102,26 +103,37 @@ add({"id": "src-as", "kind": "table", "name": AS_,
 
 # -------------------------------------------------------------- page furniture
 
+# Header columns are laid out left-to-right from computed positions, not
+# hardcoded offsets -- fixed offsets (previously +230/+470/+630) silently
+# drift out of sync with column widths and overflow the page on the right.
+H_GAP = 12
+H_COL_W = [190, 230, 150, 150]   # logo, manage-url, member-service, period
+assert MARGIN + sum(H_COL_W) + H_GAP * (len(H_COL_W) - 1) <= PAGE_W - MARGIN, \
+    "header columns overflow the page margin"
+h_col_x = [MARGIN]
+for w in H_COL_W[:-1]:
+    h_col_x.append(h_col_x[-1] + w + H_GAP)
+
 add({"id": "h-logo", "kind": "image",
      "source": {"kind": "url", "url": B.logo_navy()},
      "style": {"fit": "contain", "align": "start", "backgroundColor": "transparent",
                "padding": "none"}},
-    "global-header", MARGIN, 20, 190, 38)
+    "global-header", h_col_x[0], 20, H_COL_W[0], 38)
 
 add(txt("h-manage",
         "**Manage your account online at:**  \n" + ST_("manage_url"),
         B.TEXT_DARK),
-    "global-header", MARGIN + 230, 16, 230, 54)
+    "global-header", h_col_x[1], 16, H_COL_W[1], 54)
 
 add(txt("h-service",
         "**%s:**  \n%s" % (ST_("service_label"), ST_("service_phone")),
         B.TEXT_DARK),
-    "global-header", MARGIN + 470, 16, 165, 54)
+    "global-header", h_col_x[2], 16, H_COL_W[2], 54)
 
 add(txt("h-period",
         "**Statement period**  \n" + ST_("period"),
         B.TEXT_MUTED),
-    "global-header", MARGIN + 630, 16, 160, 58)
+    "global-header", h_col_x[3], 16, H_COL_W[3], 58)
 
 add({"id": "h-rule", "kind": "divider", "style": {"color": B.SOFI_BRIGHT}},
     "global-header", MARGIN, 86, CW, 2)

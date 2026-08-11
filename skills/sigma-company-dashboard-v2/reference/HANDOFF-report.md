@@ -60,6 +60,24 @@ Fixed column contracts — **do not rename these**:
   element overlaps
 - `logo_navy()` silently falls back to the WHITE datauri; if the report header is
   light-coloured, generate a separate navy recolour for the logo
+- **Never hand the header/footer columns fixed magic-number x-offsets** (e.g.
+  `MARGIN + 630`). They silently drift out of sync with column widths the
+  moment either is edited — this shipped for a while with the last header
+  column overlapping its neighbor by 5px and overflowing the page's right
+  margin by 34px (4px past the physical page edge), which reads as "content
+  looks off-center / cramped on the right" in a render, not as an API error.
+  `build_statement.py`'s header now computes `h_col_x` from a `H_COL_W` list
+  plus a fixed `H_GAP`, with an `assert` that the row fits inside
+  `PAGE_W - MARGIN`. Do the same for any new fixed-width row you add — never
+  place a column at a literal `MARGIN + <number>`.
+- **The report UI's own "Page Layout &gt; Margins" field is a different thing
+  entirely** — it's a print-safety border around the whole page, not a lever
+  on individual element positions. Every element in the spec is absolutely
+  positioned (`x`/`y`/`width`/`height`), so this UI field cannot move, resize,
+  or de-overlap a column — it can only pad the outside of the finished page.
+  Don't mistake "I nudged the margin slider and it looked better" for a fix;
+  if columns are overlapping or overflowing, the bug is in the element
+  `x`/`width` math in `build_statement.py`, not in this UI setting.
 
 ---
 

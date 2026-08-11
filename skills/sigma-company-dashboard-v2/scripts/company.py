@@ -138,17 +138,17 @@ COMPANIES = {"sofi": SOFI, "boa": BOA}
 # The hero plugin does NOT template -- a balance flywheel is a lending metaphor.
 # Each industry declares its own, and its own section heading.
 PLUGINS = {
-    "sofi": {"hero": "2119eea0-d740-4ad5-8307-09e452392bb3",
+    "sofi": {"hero": "55a04ab4-562a-4f14-b8f9-4901742b1fd8",
              "hero_label": "BALANCE FLYWHEEL",
-             "ticker": "646412eb-228a-4bb0-850b-9d251c07c404"},
-    "boa": {"hero": "2119eea0-d740-4ad5-8307-09e452392bb3",
+             "ticker": "27050329-90c1-4b79-b32e-08aaa48f7c56"},
+    "boa": {"hero": "55a04ab4-562a-4f14-b8f9-4901742b1fd8",
             "hero_label": "BALANCE SHEET FLYWHEEL",
-            "ticker": "646412eb-228a-4bb0-850b-9d251c07c404"},
-    "elevance": {"hero": "dbe77f66-13ed-4e06-9a8f-c1863e667752",
+            "ticker": "27050329-90c1-4b79-b32e-08aaa48f7c56"},
+    "elevance": {"hero": "6311bbc6-e144-4845-8a4c-819a62cf27ab",
                  "hero_label": "PREMIUM & MEDICAL COST FLOW",
                  # a payer has no reason to watch the Treasury curve; this strip
                  # carries medical, Rx and specialty trend instead
-                 "ticker": "74d402da-0196-40f6-84c1-720f951aeced"},
+                 "ticker": "2f50c42d-06be-4cd2-ad95-245442623287"},
 }
 
 
@@ -780,9 +780,9 @@ VOCAB["mcd"] = {
 # A Treasury curve on a burger chain is nonsense, and a "balance flywheel" is a
 # lending metaphor. Day-part sales and a food-and-paper commodity basket are what
 # a QSR operator actually watches.
-PLUGINS["mcd"] = {"hero": "01759a25-daad-4e6c-9370-61ef7560d0d3",
+PLUGINS["mcd"] = {"hero": "ff626565-e857-4921-b01d-a39f570dec44",
                   "hero_label": "DAY-PART SALES HEATMAP",
-                  "ticker": "c28f471a-18c3-4495-a560-62999379a451"}
+                  "ticker": "2e4dd24a-7be2-4bcb-aaf8-8f7ebe88088e"}
 
 COMPANIES["mcd"] = MCD
 
@@ -1066,7 +1066,7 @@ VOCAB["nuvia"] = {
     "cohort_report": "segment size, case value and average no-show risk",
 }
 
-PLUGINS["nuvia"] = {"hero": "958ccb52-dacc-4115-98b7-e66446e1d539",
+PLUGINS["nuvia"] = {"hero": "ae7bf513-6314-4f17-a798-a6cb15cc6d8c",
                     "hero_label": "ARCH PLACEMENT MAP",
                     "ticker": None}
 
@@ -1217,7 +1217,7 @@ POP["delta"] = {"bases": (2400, 6800, 15400, 31000), "rev_rate": 0.19,
                 "fee_per_product": 210}
 
 PLUGINS["delta"] = {
-    "hero": "bdb291e8-df93-4262-b109-a635b88fa8c3",
+    "hero": "786a148f-7d2b-45f3-a0aa-65af5960c841",
     "hero_label": "ATL CONNECTION BANKS",
     "ticker": None,
     # The hero plugin needs hour-of-day data, not the product cards, so it
@@ -1399,7 +1399,7 @@ _DL_MILES = [
 
 _DL_MEDALLION = [
     (1, "Current Medallion tier", "Platinum"),
-    (2, "Medallion Qualification Dollars (MQDs)", "20,495 of 28,000"),
+    (2, "MQDs earned", "20,495 of 28,000"),
     (3, "MQDs to Diamond Medallion", "7,505"),
     (4, "Rollover MQDs from prior year", "2,140"),
     (5, "Choice Benefits selected", "2 of 2"),
@@ -1625,6 +1625,224 @@ COMPANIES["marriott"] = MARRIOTT
 
 
 # ---------------------------------------------------------------------------
+# Activision Blizzard — interactive entertainment, FY2022 full-year.
+# Three reporting segments from the 10-K: Activision (Call of Duty-led premium
+# + live ops), Blizzard (Warcraft/Overwatch subscription + digital), King
+# (Candy Crush mobile IAP). Acquired by Microsoft in Oct 2023; this build
+# uses the last full standalone fiscal year.
+#
+# Mapping into the template:
+#   product       -> reporting segment
+#   volume        -> net revenues ($MM) — the P&L line the segment is judged on
+#   yield         -> effective net revenue rate on gross bookings (~0.86-0.91)
+#                    i.e. after platform/channel fees and deferred-revenue haircut
+#   funding_rate  -> cost rate: platform fees + royalties + server COGS as % of
+#                    net revenues. Gaming COGS are platform pass-through (30% for
+#                    console/mobile storefronts) PLUS hosting/bandwidth; the rate
+#                    is calculated against segment NET revenues.
+#   fee_base      -> ancillary/licensing revenue beyond game sales, MONTHLY $MM.
+#                    Advertising, hardware accessories, content licensing.
+#   provision     -> refund and chargeback provision rate
+#   delinq_rate   -> content underperformance / games-below-plan rate
+#   opex_ratio    -> R&D + SG&A overhead as fraction of segment net revenues.
+#                    Gaming is R&D-heavy (esp. Blizzard); 0.40-0.65 range.
+#   units_base    -> MAUs in thousands. Activision ~100M, Blizzard ~35M, King ~238M.
+#   shock         -> in-game net revenue trend shock
+#
+# FY2022 10-K calibration:
+#   Activision: net revenues $2,313M, net bookings $2,282M, MAUs ~100M
+#   Blizzard:   net revenues $1,632M, net bookings $1,537M, MAUs ~35M
+#   King:       net revenues $2,688M, net bookings $2,630M, MAUs ~238M
+#   Total segment net revenues: ~$6,633M (per-segment, ex Distribution)
+# ---------------------------------------------------------------------------
+
+BLIZZARD = {
+    "key": "blizzard",
+    "name": "Activision Blizzard",
+    "title": "Franchise Performance & Live Operations Command Center",
+    "domain": "interactive entertainment",
+    "unit_noun": "player",
+    "volume_noun": "net revenues",
+    "logo_domain": "activisionblizzard.com",
+    "base_table": "Revenue Book",
+    # Palette sampled from the Activision Blizzard corporate site:
+    # navy from the dark header; primary from the electric-blue accent on the
+    # Activision brand; secondary from the Blizzard cobalt; King orange-gold
+    # as the warm accent. mint stays teal for the positive-trend indicator.
+    "palette": {
+        "navy": "#0A0E1A", "navy_deep": "#05070F",
+        "primary": "#1DA1F2", "secondary": "#148ECF",
+        "accent": "#F5A623", "mint": "#00C4A7",
+    },
+    "products": [
+        # name, order, balance_type, bal_base, yield, funding, fee_base,
+        # provision, delinq, opex_ratio, growth, units_base, phase, tagline,
+        # rate_label, goal_pct, status
+        #
+        # Activision segment: ~$2,313M FY2022 net revenues.
+        # Platform fees (console/PC storefronts) ~28% of gross; net revenue rate
+        # against gross bookings ~0.88. COGS (royalties + online hosting) ~22%
+        # of net revenues. fee_base = licensing/advertising MONTHLY $MM: ~$4M/mo.
+        # MAUs ~100M -> units_base 100000 (thousands).
+        # Activision grew YoY on Warzone + MW2 launch; ~+3.5% net revenues vs FY21.
+        ("Activision", 1, "Premium + live ops", 2313, .8800, .2200, 4.0, .0120, .0580,
+         .4200, .035, 100000, 0.0,
+         "Call of Duty franchise, live service",
+         "Net bookings yield", .982, "On plan"),
+
+        # Blizzard segment: ~$1,632M FY2022 net revenues.
+        # Subscription-heavy (WoW) + digital sales (Diablo Immortal launched Jun 2022).
+        # Net revenue yield vs gross bookings ~0.87 (subscription deferred).
+        # COGS include server/hosting for WoW classic + live + Overwatch 2 relaunch;
+        # higher cost ratio ~26% from heavy server load on OW2 F2P migration.
+        # fee_base = BlizzCon licensing + esports broadcast MONTHLY $MM: ~$3M/mo.
+        # MAUs ~35M (Overwatch 2 F2P relaunch Nov 2022 boosted back end of year).
+        # Blizzard was slightly behind plan; OW2 launch disruption.
+        ("Blizzard", 2, "Subscription + digital", 1632, .8700, .2600, 3.0, .0100, .0760,
+         .5800, -.018, 35000, 1.1,
+         "World of Warcraft, Overwatch, Diablo",
+         "Net bookings yield", .912, "Behind"),
+
+        # King segment: ~$2,688M FY2022 net revenues.
+        # Mobile-only; platform fees higher (~30% Apple/Google cut) but volume huge.
+        # Net revenue yield vs gross bookings ~0.89.
+        # COGS ~23% (server + UA amortised COGS). fee_base = in-app advertising
+        # revenue MONTHLY $MM: King has meaningful ad revenue ~$9-10M/mo.
+        # MAUs ~238M across Candy Crush franchise (Saga, Soda, Friends, All-Stars).
+        # King grew ~+3% in FY2022 driven by Candy Crush Saga resilience.
+        ("King", 3, "Mobile IAP", 2688, .8900, .2300, 9.5, .0090, .0420,
+         .3800, .032, 238000, 2.2,
+         "Candy Crush franchise, mobile-first",
+         "Net bookings yield", 1.024, "Ahead"),
+    ],
+    "alerts": [
+        ("critical", "Call of Duty live-ops event underperforming",
+         "Season 02 battle pass attach rate 31% below the 48% plan assumption",
+         "22m ago", "Franchise Ops — Activision", 1700, "bps below plan"),
+        ("critical", "Overwatch 2 server capacity",
+         "1,840 concurrent peak sessions breached the provisioned cap; "
+         "latency SLA missed across EU and NA",
+         "1h ago", "Platform Reliability", 1840, "sessions over capacity"),
+        ("warning", "Candy Crush day-7 retention drift",
+         "New-install day-7 retention down 2.8pp month over month across Saga",
+         "3h ago", "King Growth — UA", 280, "bps retention decline"),
+        ("warning", "Microsoft deal regulatory timeline",
+         "FTC second request extends closing estimate; 38 licensing deals in "
+         "flight pending close certainty",
+         "4h ago", "Corp Dev", 38, "deals pending close"),
+        ("info", "Diablo Immortal in-app revenue milestone",
+         "Mobile segment crossed $150M cumulative in-app revenue in under 12 months",
+         "6h ago", "Blizzard Mobile", 150, "$M cumulative IAP"),
+    ],
+    "agent": ("You are an analyst covering Activision Blizzard's three reporting "
+              "segments: Activision (Call of Duty + live ops), Blizzard (WoW, "
+              "Overwatch, Diablo) and King (Candy Crush mobile). "
+              "Answer with numbers from the Revenue Book."),
+}
+
+BLIZZARD["subs"] = {
+    "Activision": [
+        ("Call of Duty: Modern Warfare II", .582, 20, 4.8, "Ahead"),
+        ("Warzone & Call of Duty: Mobile", .298, -15, 1.2, "On plan"),
+        ("Crash, Spyro & other", .120, -40, -2.6, "Behind"),
+    ],
+    "Blizzard": [
+        ("World of Warcraft", .481, -25, -3.4, "Behind"),
+        ("Overwatch 2", .314, 80, 8.6, "Ahead"),
+        ("Diablo Immortal", .205, 140, 22.1, "Ahead"),
+    ],
+    "King": [
+        ("Candy Crush Saga", .642, 10, 2.4, "Ahead"),
+        ("Candy Crush Soda Saga", .218, -20, 0.8, "On plan"),
+        ("Other King titles", .140, -35, -1.4, "Behind"),
+    ],
+}
+
+FOOTPRINTS["blizzard"] = [
+    ("CA", .182), ("TX", .094), ("WA", .088), ("NY", .072), ("FL", .064),
+    ("IL", .048), ("MA", .041), ("GA", .036), ("CO", .034), ("OR", .030),
+    ("PA", .028), ("AZ", .026), ("NC", .024), ("VA", .022), ("OH", .020),
+]
+
+LABELS["blizzard"] = {
+    "personas": ["Executive", "Franchise Analytics"],
+    "modeler_page": "Live Ops Planning",
+    "cohort_page": "Player Segments",
+    "modeler_title": "Franchise Revenue & Live-Ops Scenario Modeler",
+    "shock_label": "In-game net revenue trend shock (bps)",
+    "kpi_revenue": "Net revenues ($M)",
+    "kpi_margin": "Segment operating income ($M)",
+    "kpi_volume": "Net revenues ($M)",
+    "kpi_units": "MAUs (K)",
+    "driver_nim": "Net bookings yield",
+    "driver_risk": "Franchises below plan",
+    "driver_cost": "Platform fee + COGS rate",
+    "driver_eff": "R&D + SG&A overhead ratio",
+    "col_volume": "Baseline net revenues",
+    "col_growth": "Revenue growth %",
+    "col_yield": "Bookings yield Δ bps",
+    "col_cost": "Platform cost Δ bps",
+    "seg_product": "Franchise segment",
+    "seg_credit": "Monetisation tier",
+    "seg_dd": "Live-ops participant",
+    "seg_engage": "Play frequency",
+    "seg_held": "Franchises played",
+    "cohort_name": "Cohort name",
+    "kpi_cohort_size": "Players in cohort",
+    "kpi_cohort_vol": "Cohort net revenues",
+    "kpi_cohort_rev": "Revenue per player",
+    "kpi_cohort_risk": "Avg churn risk",
+    # the Balance Type colour-by dimension
+    "seg_type": "Revenue model",
+}
+
+SEGMENTS["blizzard"] = {
+    # credit/engagement band translations
+    "Near Prime": "F2P", "Prime": "Casual payer",
+    "Super Prime": "Recurring payer", "Exceptional": "Whale",
+    "Daily": "Daily", "Weekly": "Weekly",
+    "Monthly": "Monthly", "Dormant": "Churned",
+    # product name translations — member_population.sql has 6 SoFi product names
+    # hardcoded; map them to the three Blizzard reporting segments so the cohort
+    # "Franchise segment" control shows real names, not lending products.
+    # Resulting distribution: Activision ~43%, Blizzard ~28%, King ~29%.
+    "Personal Loans": "Activision",       # 31% of rows -> Activision
+    "Credit Card": "Activision",          # 12% of rows -> Activision
+    "SoFi Money": "King",                 # 22% of rows -> King
+    "Home Loans": "King",                 # 7%  of rows -> King
+    "Student Refinancing": "Blizzard",    # 13% of rows -> Blizzard
+    "SoFi Invest": "Blizzard",            # 15% of rows -> Blizzard
+}
+
+VOCAB["blizzard"] = {
+    "econ": ("Activision and Blizzard segments sell premium games and live-ops "
+             "content; net revenues differ from net bookings because of deferred "
+             "recognition on multi-element arrangements. King earns purely from "
+             "mobile in-app purchases and advertising. The effective spread is "
+             "net revenues less platform fees (up to 30% for iOS/Android) and "
+             "hosting/server COGS."),
+    "metrics": ("net revenues, net bookings, segment operating income and "
+                "monthly active users"),
+    "bands": ("Monetisation tiers: F2P (free-to-play, no spend), Casual payer "
+              "(under $10/mo), Recurring payer ($10-50/mo), Whale (over $50/mo). "
+              "Play frequency: Daily, Weekly, Monthly, Churned."),
+    "cohort_report": "cohort size, net revenues per player and average churn risk",
+}
+
+# Per-player economics in DOLLARS.
+# A Casual payer spends ~$5/mo ($60/yr); Recurring ~$25/mo ($300/yr);
+# Whale ~$120/mo ($1,440/yr). Lifetime value is capped by churn, so the
+# band bases are annual revenue, not lifetime balance.
+POP["blizzard"] = {"bases": (0, 60, 300, 1440), "rev_rate": 1.00,
+                   "fee_per_product": 18}
+
+# No bespoke plugin on this build per the task spec.
+PLUGINS["blizzard"] = {"hero": None, "hero_label": None, "ticker": None}
+
+COMPANIES["blizzard"] = BLIZZARD
+
+
+# ---------------------------------------------------------------------------
 NVIDIA = {
     "key": "nvidia",
     "name": "NVIDIA",
@@ -1824,3 +2042,258 @@ POP["nvidia"] = {"bases": (85000, 420000, 2100000, 9800000), "rev_rate": 0.78,
 PLUGINS["nvidia"] = {"hero": None, "hero_label": None, "ticker": None}
 
 COMPANIES["nvidia"] = NVIDIA
+
+
+# ---------------------------------------------------------------------------
+# Alnylam Pharmaceuticals -- RNAi/siRNA therapeutics, FY2025 full-year. The
+# first biotech/pharma build for this generator, so the mapping is worth
+# spelling out (this is NOT a lending template with new labels):
+#
+#   products      -> real franchise / product lines from the 10-K:
+#                    TTR Franchise (AMVUTTRA, ONPATTRO), Rare Disease
+#                    Franchise (GIVLAARI, OXLUMO), plus a 5th administrative
+#                    line for collaboration & royalty revenue (Roche,
+#                    Regeneron, Novartis LEQVIO royalty) -- fee-only, no
+#                    product volume of its own, same shape as Elevance's
+#                    "ASO Self-funded" line.
+#   bal_base      -> patients-on-therapy-weighted net product revenue base,
+#                    $MM (back-solved, see note below -- NOT literally
+#                    revenue/margin)
+#   yield_rate    -> gross margin on net product revenue. RNAi biologics run
+#                    materially higher gross margin than a bank's asset
+#                    yield or an airline's RASM -- 80-86% here, matching
+#                    Alnylam's real COGS profile (COGS ~14-20% of net
+#                    product revenue).
+#   funding_rate  -> set to 0 for every product. This is the exact trap
+#                    documented in HANDOFF section 8 (Delta's RASM/CASM,
+#                    then NVIDIA's gross-margin business): the generator's
+#                    "Net Revenue" column is a SPREAD
+#                    (income - cost + fees), not a revenue line. A biotech's
+#                    real economics ARE that spread -- funding_rate=0 lets
+#                    yield_rate alone equal the true gross margin, the same
+#                    pattern already used for SoFi Money and every NVIDIA
+#                    segment.
+#   fee_base      -> MONTHLY $MM (x12 in the SQL -- the Nuvia trap). Used for
+#                    Collaborations & Royalties, which has no bal_base/yield
+#                    of its own; its entire revenue is fee_base x 12.
+#   provision_rate -> set near 0; there is no credit/refund provision
+#                    analogous to a bank's -- rare-disease payer contracts
+#                    carry negligible bad debt relative to list price.
+#   delinq_rate   -> repurposed as a "patient discontinuation / non-adherence
+#                    rate" -- the risk metric that actually matters for a
+#                    chronic-therapy rare-disease franchise.
+#   opex_ratio    -> R&D + SG&A load against gross profit (Alnylam's R&D and
+#                    SG&A together run close to net product revenue as the
+#                    company approaches durable profitability).
+#   units_base    -> patients on therapy, at the generator's own KPI scale
+#                    (see note below) -- NOT US population, NOT a mass-market
+#                    unit count. This is an ultra-rare-disease population.
+#
+# bal_base back-solve: the KPI compounds bal_base through
+# (1+annual_growth/12)**month_index over months 12-23, summed across every
+# FOOTPRINTS state share (share_sum ~0.924 here), which inflates or deflates
+# the naive bal_base = revenue/margin figure. Solved numerically against a
+# standalone reproduction of loan_book.sql's math (script discarded after
+# use); the four product bal_base values below render within +0.55%/-3.21%
+# of the real FY2025 net product revenue figures, and total revenue across
+# all five lines (incl. Collaborations & Royalties) renders within -0.55% of
+# the real $3,713.9M FY2025 total revenue.
+#
+# AMVUTTRA's real FY2025 YoY growth was +138%, off an unusual pent-up-demand
+# base the year of its ATTR-CM approval -- not a sustainable forward run
+# rate. annual_growth=.85 here instead approximates the growth implied by
+# FY2026 guidance (TTR franchise net product revenue of $4,400-4,700M against
+# a 2025 AMVUTTRA+ONPATTRO base of ~$2,486.6M is roughly +77-89% blended,
+# and ONPATTRO is declining, so AMVUTTRA alone must grow faster than the
+# blended franchise number).
+# ---------------------------------------------------------------------------
+
+ALNYLAM = {
+    "key": "alnylam",
+    "name": "Alnylam Pharmaceuticals",
+    "title": "Franchise & Patient Access Command Center",
+    "domain": "RNAi therapeutics",
+    "unit_noun": "patient",
+    "volume_noun": "net product revenue",
+    "logo_domain": "alnylam.com",
+    "base_table": "Patient Therapy Ledger",
+    # navy + primary sampled directly from Alnylam's own logo.svg (the
+    # double-helix mark): #0F9BD7 is the helix's cyan-blue arc, #1A3967 is
+    # the helix tail + wordmark navy, #ACD5F1 is the small accent dot.
+    "palette": {
+        "navy": "#1A3967", "navy_deep": "#0C1B33",
+        "primary": "#0F9BD7", "secondary": "#1774B0",
+        "accent": "#4DC0EA", "mint": "#00B3A4",
+    },
+    "products": [
+        # name, order, balance_type, bal_base, yield(gross margin), funding,
+        # fee_base (MONTHLY $MM), provision, delinq(discontinuation rate),
+        # opex_ratio, growth, units_base, phase, tagline, rate_label,
+        # goal_pct, status
+        ("AMVUTTRA", 1, "TTR Franchise", 851.6, .8600, 0.0, 0.0, .0025, .048,
+         .560, .85, 46.84, 0.0,
+         "Vutrisiran for hATTR polyneuropathy and ATTR cardiomyopathy",
+         "Gross margin", 1.086, "Ahead"),
+        ("ONPATTRO", 2, "TTR Franchise", 361.2, .8000, 0.0, 0.0, .0030, .092,
+         .520, -.30, 3.51, 1.1,
+         "Patisiran, the first-generation TTR therapy, being cannibalised by AMVUTTRA",
+         "Gross margin", .694, "Behind"),
+        ("GIVLAARI", 3, "Rare Disease Franchise", 299.5, .8300, 0.0, 0.0, .0022, .038,
+         .480, .21, 24.59, 2.2,
+         "Givosiran for acute hepatic porphyria",
+         "Gross margin", 1.041, "Ahead"),
+        ("OXLUMO", 4, "Rare Disease Franchise", 199.8, .8300, 0.0, 0.0, .0020, .034,
+         .480, .15, 8.78, 0.6,
+         "Lumasiran for primary hyperoxaluria type 1",
+         "Gross margin", 1.024, "Ahead"),
+        # Fee-only administrative line -- same shape as Elevance's ASO
+        # Self-funded: bal_base/yield/funding are 0, all revenue is
+        # fee_base x 12. No patient population of its own (units_base=0).
+        ("Collaborations & Royalties", 5, "Administrative", 0.0, 0.0, 0.0, 65.60,
+         0.0, .0, .180, .10, 0.0, 1.7,
+         "Roche and Regeneron collaboration revenue plus the Novartis LEQVIO royalty",
+         "Royalty rate", .968, "On plan"),
+    ],
+    "subs": {
+        "AMVUTTRA": [("hATTR polyneuropathy", .420, -25, 6.8, "Ahead"),
+                     ("ATTR cardiomyopathy", .580, 210, 42.4, "Ahead")],
+        "ONPATTRO": [("Continuing therapy", .680, -40, -18.2, "Behind"),
+                     ("New starts", .320, -90, -52.6, "Behind")],
+        "GIVLAARI": [("US", .580, 15, 8.4, "Ahead"),
+                     ("Ex-US", .420, -10, 4.1, "On plan")],
+        "OXLUMO": [("US", .540, 20, 6.2, "Ahead"),
+                   ("Ex-US", .460, -15, 3.8, "On plan")],
+        "Collaborations & Royalties": [("Novartis LEQVIO royalty", .239, 40, 9.0, "Ahead"),
+                                       ("Roche collaboration", .543, 130, 23.0, "Ahead"),
+                                       ("Regeneron collaboration", .157, -180, -6.2, "Behind"),
+                                       ("Other collaborations", .061, 260, 44.5, "Ahead")],
+    },
+    "alerts": [
+        ("critical", "AMVUTTRA cardiomyopathy demand outstripping supply plan",
+         "Fill-finish capacity running 12% behind the ATTR-CM launch ramp forecast",
+         "38m ago", "Supply Chain", 12, "pct behind ramp plan"),
+        ("critical", "ONPATTRO conversion accelerating",
+         "212 patients switched from ONPATTRO to AMVUTTRA this month, ahead of the "
+         "cannibalisation model", "1h ago", "Commercial Analytics", 212,
+         "patients converted"),
+        ("warning", "GIVLAARI prior-authorization delays",
+         "184 payer prior-auth requests past the 10-business-day standard in AHP "
+         "referral centers", "3h ago", "Patient Access", 184, "auths past SLA"),
+        ("warning", "OXLUMO newborn-screening referrals lagging",
+         "PH1 genetic-testing referrals from 6 pediatric nephrology centers down "
+         "9% quarter over quarter", "5h ago", "Medical Affairs", 9,
+         "pct QoQ decline"),
+        ("info", "Roche collaboration milestone recognized",
+         "A $45M development milestone was recognized this quarter under the "
+         "Roche collaboration agreement", "1d ago", "Business Development", 45,
+         "$M milestone recognized"),
+    ],
+    "agent": ("You are an analyst covering Alnylam Pharmaceuticals' TTR and "
+              "Rare Disease franchises -- AMVUTTRA, ONPATTRO, GIVLAARI, "
+              "OXLUMO -- plus collaboration and royalty revenue from Roche, "
+              "Regeneron and the Novartis LEQVIO royalty. Answer with numbers "
+              "from the Patient Therapy Ledger."),
+}
+
+# US states weighted toward rare-disease referral and treatment-center
+# concentration -- HQ (MA) plus the major academic medical center states
+# where ATTR amyloidosis, AHP and PH1 patients are actually diagnosed and
+# infused/dosed.
+FOOTPRINTS["alnylam"] = [
+    ("MA", .148), ("CA", .132), ("NY", .108), ("TX", .072), ("PA", .066),
+    ("OH", .058), ("IL", .052), ("NC", .046), ("FL", .044), ("MI", .038),
+    ("MN", .036), ("CO", .034), ("WA", .032), ("GA", .030), ("VA", .028),
+]
+
+LABELS["alnylam"] = {
+    "personas": ["Executive", "Medical Affairs"],
+    "modeler_page": "Commercial Planning",
+    "cohort_page": "Patient Population",
+    "modeler_title": "Gross-to-Net & Manufacturing Cost Scenario Modeler",
+    "shock_label": "Gross-to-net rebate shock (bps)",
+    "kpi_revenue": "Net product revenue ($M)",
+    "kpi_margin": "Gross profit ($M)",
+    "kpi_volume": "Net product revenue ($M)",
+    "kpi_units": "Patients on therapy (K)",
+    "driver_nim": "Gross margin",
+    "driver_risk": "Discontinuation rate",
+    "driver_cost": "Cost of goods rate",
+    "driver_eff": "R&D + SG&A ratio",
+    "seg_product": "Franchise / product",
+    "seg_credit": "Therapy tenure",
+    "seg_dd": "Site-of-care infusion",
+    "seg_engage": "Dosing adherence",
+    "seg_held": "Indications treated",
+    "seg_type": "Franchise",
+    "cohort_name": "Population name",
+    "kpi_cohort_size": "Patients in population",
+    "kpi_cohort_vol": "Annual therapy spend",
+    "kpi_cohort_rev": "Revenue per patient",
+    "kpi_cohort_risk": "Avg discontinuation risk",
+    "col_volume": "Baseline net product revenue",
+    "col_growth": "Revenue growth %",
+    "col_yield": "Gross margin Δ bps",
+    "col_cost": "Cost of goods Δ bps",
+}
+
+SEGMENTS["alnylam"] = {
+    # tenure/adherence band translations
+    "Near Prime": "New start", "Prime": "Established",
+    "Super Prime": "Long-term adherent", "Exceptional": "Legacy (10yr+)",
+    "Daily": "On-schedule", "Weekly": "Recently dosed",
+    "Monthly": "Due for dose", "Dormant": "Discontinued",
+    # product-name translations -- member_population.sql hardcodes 6 SoFi
+    # product names; Alnylam has 5 real lines, so AMVUTTRA (the dominant,
+    # fastest-growing franchise) legitimately covers two of the six slots,
+    # the same pattern used for Blizzard's Activision segment.
+    # Resulting distribution: AMVUTTRA ~53%, GIVLAARI ~12%, ONPATTRO ~13%,
+    # OXLUMO ~7%, Collaborations & Royalties ~15%.
+    "Personal Loans": "AMVUTTRA",              # 31% of rows -> AMVUTTRA
+    "SoFi Money": "AMVUTTRA",                  # 22% of rows -> AMVUTTRA
+    "Student Refinancing": "ONPATTRO",         # 13% of rows -> ONPATTRO
+    "Credit Card": "GIVLAARI",                 # 12% of rows -> GIVLAARI
+    "Home Loans": "OXLUMO",                    # 7%  of rows -> OXLUMO
+    "SoFi Invest": "Collaborations & Royalties",  # 15% of rows -> Collab & Royalties
+}
+
+VOCAB["alnylam"] = {
+    "econ": ("Each product earns a gross margin against its cost of goods "
+             "sold -- manufacturing, drug substance and drug product costs "
+             "for the RNAi therapy itself; the spread between net product "
+             "revenue and COGS is the gross profit the franchise contributes "
+             "before R&D and SG&A. Collaborations & Royalties carries no "
+             "product cost of its own -- it is fee revenue recognized under "
+             "the Roche and Regeneron collaboration agreements and the "
+             "Novartis LEQVIO royalty."),
+    "metrics": ("net product revenue, gross profit, patients on therapy and "
+                "the discontinuation rate"),
+    "bands": ("Therapy tenure: New start, Established, Long-term adherent, "
+              "Legacy (10yr+). Dosing adherence: On-schedule, Recently dosed, "
+              "Due for dose, Discontinued."),
+    "cohort_report": ("population size, annual therapy spend and average "
+                      "discontinuation risk"),
+}
+
+# Per-patient economics for the cohort page, in DOLLARS. These are chronic,
+# ultra-high-cost specialty RNAi therapies -- annual list price runs
+# ~$450K-$575K per patient per year (GIVLAARI, AMVUTTRA), nothing like a
+# retail-banking balance. bases are lifetime therapy spend at increasing
+# tenure (New start ~1yr, Established ~3yr, Long-term adherent ~6yr, Legacy
+# ~10yr) and MUST override the default or the cohort KPIs read as nonsense
+# (the Nuvia "$1,825 lifetime value" mistake).
+POP["alnylam"] = {"bases": (480000, 1440000, 2880000, 4800000), "rev_rate": 0.84,
+                  "fee_per_product": 465000}
+
+# Bespoke plugin: an animated RNAi/siRNA gene-silencing pathway visual. mRNA
+# strands travel from each product node inward to a central RISC hub and are
+# "silenced" -- the actual RNAi mechanism, not decoration. Node size = net
+# product revenue (tbl-pc "Balances $B" / p3); pulse rate keys off plan
+# attainment (tbl-pc "Goal Pct" / p7) as a growth-like signal. Registered via
+# POST /v2/plugins from ~/Library/Application Support/millersigma-plugins/
+# alnylam-rnai-pathway/, served by the existing com.millersigma.plugins
+# launchd agent on localhost:8080 -- no new hosting step required.
+PLUGINS["alnylam"] = {"hero": "8c93a664-6c23-4f05-9672-8b5dec130ee6",
+                      "hero_label": "RNAi SILENCING PATHWAY", "ticker": None,
+                      "hero_config": {"product": "p0", "revenue": "p3", "pulse": "p7"}}
+
+COMPANIES["alnylam"] = ALNYLAM

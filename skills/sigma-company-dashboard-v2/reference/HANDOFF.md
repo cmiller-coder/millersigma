@@ -473,13 +473,43 @@ categorical color #1), not in `company.py`.
 
 ## 9. Plugins
 
-48 authored, served from `~/Library/Application Support/millersigma-plugins/`
-by a launchd agent `com.millersigma.plugins` on **localhost:8080**.
+48 authored total; served two ways depending on age.
 
-### THE BLOCKER
-**Plugins are not publicly hosted.** Netlify deploy returns `Forbidden` with
-Connor's token. Consequence: **every workbook with a plugin looks broken from
-anyone else's machine.**
+### Hosting — FIXED for every plugin v2's companies actually use
+The old blocker ("plugins are localhost:8080-only, every workbook with a
+plugin looks broken from anyone else's machine") is **resolved for the 10
+plugins v2 companies reference** (sofi-flywheel, sofi-rates-ticker,
+payer-cost-flow, payer-cost-ticker, mcd-daypart, mcd-commodity-ticker,
+nuvia-arch-map, delta-hub-banks, alnylam-rnai-pathway, nvidia-gpu-heatmap).
+They are now registered against **jsDelivr URLs off the public `millersigma`
+repo**:
+```
+https://cdn.jsdelivr.net/gh/cmiller-coder/millersigma@main/plugins/<folder>/index.html
+```
+No local server, no launchd agent, works from any machine, permanently — the
+repo is already public, this just makes the plugin files reachable by URL.
+**Every new plugin should register this way by default** — see the updated
+registration line below. The Sigma Plugins API has **no update/PATCH
+endpoint** (confirmed empirically, 404), so an already-registered `pluginId`
+can never be repointed to a new URL in place — a hosting-URL change always
+means registering a *new* `pluginId` and updating every `company.py`
+reference to it (`PLUGINS[key]["hero"/"ticker"]`), then re-pushing every
+already-built workbook with `build_sofi.py update <id>` so the live spec picks
+up the new id. Verify the swap landed by `GET`-ing the live workbook's spec
+and checking the plugin element's `pluginId` directly — a successful `update`
+response does not by itself prove the new id is what's actually bound.
+
+The remaining 38 plugins (not used by any v2 company) are still
+localhost:8080-only, served by the launchd agent
+`com.millersigma.plugins` from `~/Library/Application Support/millersigma-plugins/`.
+Migrate one to jsDelivr the same way, on demand, the first time a v2 company
+needs it.
+
+**Known gap:** `nvidia-gpu-heatmap` is registered on jsDelivr but **not wired
+into `PLUGINS["nvidia"]`** — it needs a bespoke `hero_table` SQL source (node
+id / utilization % / temp / GPU model), the same pattern as Delta's
+`hub_banks.sql`, which doesn't exist yet. Don't wire the `pluginId` in without
+also building that table, or the plugin will render with no data.
 
 ### Authoring pattern
 ```html
@@ -501,7 +531,12 @@ Rules:
 - **No infinite animation loop** or headless PNG export never reaches idle.
 - Inline SVG needs an explicit `xmlns`.
 - Always ship a `synth()` fallback so the plugin looks right unbound.
-- Register with `POST /v2/plugins` `{name, url, description, type:"element"}`.
+- **Register with `POST /v2/plugins` using the jsDelivr URL**, not localhost:
+  `{name, url: "https://cdn.jsdelivr.net/gh/cmiller-coder/millersigma@main/plugins/<folder>/index.html", description, type:"element"}`.
+  The file must already be pushed to `main` on the public repo before you
+  register it — jsDelivr serves whatever's on `main` right now, with its own
+  CDN cache (~12hr) on top, so a same-day edit-and-re-register cycle may still
+  serve the stale file for a while.
 
 ### The hero-plugin generalization
 Most hero plugins bind to the product-card table with `product/balance/members/
