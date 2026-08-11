@@ -100,44 +100,47 @@ elements = [
     # 2. Linked input table — the editable demand-plan grid (verified pattern:
     #    ../reference/scenario-modeler-pattern.md §4). inputMode "view" so
     #    it's editable once PUBLISHED, not just in the draft editor.
-    # ⚠ Element id has a stray "2": once a linked input table's columns have
-    # materialized with a type (e.g. inferred as "text" while its upstream
-    # source was erroring), a later PUT that fixes the upstream and would
-    # change that column's real type to "number" is rejected — "type change
-    # is not supported... Drop and re-add the column to change its type."
-    # Give the WHOLE input-table element a fresh id (forcing a real
-    # drop-and-recreate) rather than trying to patch types in place. A
-    # from-scratch build wouldn't hit this; it only bites when iterating on
-    # a spec that's already been PUT once with a bug upstream.
+    # ⚠ Element id has a stray "3" (bumped twice): once a linked input
+    # table's columns have materialized with a type (e.g. inferred as "text"
+    # while its upstream source was erroring), a later PUT that fixes the
+    # upstream and would change that column's real type to "number" is
+    # rejected — "type change is not supported... Drop and re-add the column
+    # to change its type." Give the WHOLE input-table element a fresh id
+    # (forcing a real drop-and-recreate) rather than trying to patch types in
+    # place. A from-scratch build wouldn't hit this; it only bites when
+    # iterating on a spec that's already been PUT once with a bug upstream —
+    # or when a stale open browser tab overwrites your fix with an old
+    # snapshot (see ../reference/recreating-existing-apps.md) and you have to
+    # redo the fix, bumping the id again.
     {
-        "id": "assum2",
+        "id": "assum3",
         "kind": "input-table",
         "source": {"kind": "linked", "from": "srcTbl"},
         "inputMode": "view",
         "name": "Assumptions",
         "columns": [
-            {"id": "ia-relmonth2", "key": "c_relmonth"},
-            {"id": "ia-month2", "key": "c_month"},
-            {"id": "ia-fcst2", "key": "c_fcst"},
-            {"id": "ia-sales2", "key": "c_sales"},
-            {"id": "ia-season2", "type": "number", "name": "Season Adj %"},
-            {"id": "ia-growth2", "type": "number", "name": "Growth Adj %"},
-            {"id": "ia-events2", "type": "number", "name": "Events Bump"},
+            {"id": "ia-relmonth3", "key": "c_relmonth"},
+            {"id": "ia-month3", "key": "c_month"},
+            {"id": "ia-fcst3", "key": "c_fcst"},
+            {"id": "ia-sales3", "key": "c_sales"},
+            {"id": "ia-season3", "type": "number", "name": "Season Adj %"},
+            {"id": "ia-growth3", "type": "number", "name": "Growth Adj %"},
+            {"id": "ia-events3", "type": "number", "name": "Events Bump"},
             {
-                "id": "ia-adj2",
+                "id": "ia-adj3",
                 "formula": "[StatForecast] * (1 + Coalesce([Season Adj %], 0) / 100.0) "
                 "* (1 + Coalesce([Growth Adj %], 0) / 100.0) + Coalesce([Events Bump], 0)",
                 "name": "AdjustedDemandPlan",
             },
         ],
-        "sort": [{"columnId": "ia-relmonth2", "direction": "ascending", "nulls": "last"}],
+        "sort": [{"columnId": "ia-relmonth3", "direction": "ascending", "nulls": "last"}],
         "tableComponents": {"summaryBar": "hidden"},
     },
     # 3. Book — the single downstream read surface every chart/KPI uses.
     {
         "id": "book",
         "kind": "table",
-        "source": {"elementId": "assum2", "kind": "table"},
+        "source": {"elementId": "assum3", "kind": "table"},
         "name": "Book",
         "visibleAsSource": True,
         "columns": [
@@ -177,12 +180,12 @@ elements = [
                 "effects": [
                     {
                         "effect": "update-rows",
-                        "table": "assum2",
+                        "table": "assum3",
                         "whichRows": {"type": "formula", "formula": "True"},
                         "values": {
-                            "ia-season2": {"type": "constant", "value": {"type": "number", "value": None}},
-                            "ia-growth2": {"type": "constant", "value": {"type": "number", "value": None}},
-                            "ia-events2": {"type": "constant", "value": {"type": "number", "value": None}},
+                            "ia-season3": {"type": "constant", "value": {"type": "number", "value": None}},
+                            "ia-growth3": {"type": "constant", "value": {"type": "number", "value": None}},
+                            "ia-events3": {"type": "constant", "value": {"type": "number", "value": None}},
                         },
                     }
                 ],
@@ -204,9 +207,9 @@ elements = [
                 "effects": [
                     {
                         "effect": "update-rows",
-                        "table": "assum2",
+                        "table": "assum3",
                         "whichRows": {"type": "formula", "formula": "[RelMonth] >= 0"},
-                        "values": {"ia-growth2": {"type": "constant", "value": {"type": "number", "value": 10}}},
+                        "values": {"ia-growth3": {"type": "constant", "value": {"type": "number", "value": 10}}},
                     }
                 ],
             }
@@ -282,7 +285,7 @@ layout = """<?xml version="1.0" encoding="utf-8"?>
   <Element elementId="kpiAdj" gridColumn="17 / 25" gridRow="10 / 15"/>
   <Element elementId="kpiDelta" gridColumn="17 / 25" gridRow="15 / 18"/>
   <Element elementId="kpiAccuracy" gridColumn="17 / 25" gridRow="18 / 21"/>
-  <Element elementId="assum2" gridColumn="1 / 25" gridRow="21 / 32"/>
+  <Element elementId="assum3" gridColumn="1 / 25" gridRow="21 / 32"/>
   <Element elementId="srcTbl" gridColumn="1 / 13" gridRow="32 / 40"/>
   <Element elementId="book" gridColumn="13 / 25" gridRow="32 / 40"/>
 </Page>

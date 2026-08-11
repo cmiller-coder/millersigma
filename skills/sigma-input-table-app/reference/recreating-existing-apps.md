@@ -38,6 +38,24 @@ reject on write).
 
 ## Gotchas hit rebuilding a real Demand Planning app (new, 2026-08-11)
 
+- **⚠ If someone has the workbook open in a browser tab while you iterate on
+  it via the API, a UI edit as small as changing one dropdown can silently
+  revert ALL of your API fixes back to whatever the tab's client-side state
+  was when it first loaded.** Hit this directly: after three separate PUTs
+  fixing bugs across a session (verified via export each time — real numbers
+  everywhere), the user made one small UI change (an `inputMode` dropdown)
+  and the workbook's `documentVersion` bumped, but a fresh `GET /spec`
+  showed the *original, most-broken* content — bare unqualified column refs,
+  the pre-rename element id, everything. The editor's save action appears to
+  write back its own full in-memory document, not a diff against the
+  server's current state — so a tab opened before your fixes landed, then
+  touched at all, clobbers them wholesale. **Practical rule: after any API
+  PUT, tell whoever has the workbook open to hard-refresh the tab before
+  making ANY UI edit, even a trivial one** — or don't let anyone touch the UI
+  at all until you're done iterating via the API. If a "verified" fix
+  mysteriously regresses with no PUT of your own in between, `GET /spec`
+  first and diff against what you last pushed before assuming you introduced
+  a new bug — you may be looking at exactly this.
 - **A bare `[col]` formula does NOT reach the raw SQL output on a custom-SQL
   table that hand-authors its own `columns` array — it needs
   `[Custom SQL/col]` (the raw query result has an implicit source name
