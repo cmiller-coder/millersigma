@@ -38,15 +38,39 @@ reject on write).
 
 ## Gotchas hit rebuilding a real Demand Planning app (new, 2026-08-11)
 
-- **Circular column reference is a real trap, not just a masked-kind issue.**
-  Declaring a passthrough/aggregate column with `formula:"[demand_fcst]"`
-  AND `name:"demand_fcst"` (same string) makes the bare bracket resolve to
-  the sibling column itself — Sigma rejects it: `"Circular column reference
-  to [demand_fcst]"`. This bit at **two levels** of the same build (the base
-  SQL table's passthrough columns, and separately the chart/KPI columns one
-  hop downstream) because the same naming habit was repeated. **Fix: always
-  give a declared column a display `name` that's textually different from
-  the raw column name in its own `formula` bracket.**
+- **A bare `[col]` formula does NOT reach the raw SQL output on a custom-SQL
+  table that hand-authors its own `columns` array — it needs
+  `[Custom SQL/col]` (the raw query result has an implicit source name
+  `"Custom SQL"`, even referenced from inside the very element that IS the
+  SQL source).** Getting this wrong is dangerously silent at POST/PUT time —
+  the spec saves fine — and only shows up when someone actually opens the
+  workbook: every cell in that column renders the literal string
+  `Unknown column "[col]"`, and every DOWNSTREAM element (a linked input
+  table, a chart, a KPI) shows an unrelated-looking cascade error —
+  `"Invalid Argument: Join key contains type error"` — pointing at the wrong
+  element entirely. **If you see that error on a linked-input-table/chart,
+  go check the upstream custom-SQL table's own column formulas first**,
+  even though the error text doesn't mention it. This is exactly the kind of
+  bug POST-time validation and even export-based QA (see below) will not
+  catch — only opening it in-browser (or a screenshot from someone who did)
+  surfaced it here.
+- **Circular column reference is a related but distinct trap.** Declaring a
+  passthrough/aggregate column with `formula:"[demand_fcst]"` AND
+  `name:"demand_fcst"` (same string) makes the bare bracket resolve to the
+  sibling column itself — Sigma rejects it: `"Circular column reference to
+  [demand_fcst]"`. **Fix: always give a declared column a display `name`
+  that's textually different from the raw column name in its own `formula`
+  bracket** (and, per the bullet above, qualify the SOURCE side with
+  `Custom SQL/` when it's a same-element raw-SQL reference).
+- **Once a linked input table's column type has materialized wrong (e.g.
+  inferred as `text` because its upstream source was erroring), a later PUT
+  that fixes the upstream and would change that column to `number` is
+  rejected: `"type change is not supported... Drop and re-add the column to
+  change its type."`** PUT can't silently retype a column in place. Give the
+  WHOLE input-table element a fresh id (forcing Sigma to treat it as a new
+  element, re-inferring types clean) rather than trying to patch the
+  existing one. This only bites when iterating on a spec that already got
+  PUT once with an upstream bug — a correct from-scratch build won't hit it.
 - **`controlId` can't contain dots on POST-create.** Must match
   `^[a-zA-Z0-9_-]{1,64}$`. Some UI-built production workbooks GET-back with
   dotted controlIds (`c.relative_month`) — that's legacy/UI-only naming; a
@@ -77,14 +101,16 @@ reject on write).
   Look up the real folder id: `GET /v2/files?typeFilters=folder&search=<name>`
   and use an entry whose `path` is exactly `"My Documents"` (its `parentId`
   is the org's true My-Documents root).
-- **Live-query verification (export) is not uniformly available.** The
-  documented QA step (export every element, poll for the CSV) failed with a
-  generic masked 500 (`"Export failed ... with errors"`) for *every* custom-SQL
-  element on one connection — including a trivial `SELECT 1` probe — while a
-  pre-existing data-model-backed element in the real production workbook
-  exported fine on the same org/token. This matches a previously-seen limit
-  where the API service-account token can't carry the interactive OAuth a
-  connection needs to run a fresh live query. **If a trivial probe query
-  fails identically to your real element, stop treating it as a spec bug** —
-  it's a token/connection limitation, and you need a different verification
-  path (open it in-browser, or have the user check).
+- **Don't conclude "export/live-query is broken for this token" too early —
+  first rule out a real spec bug.** Every custom-SQL element on one
+  connection, including a trivial `SELECT 1` probe, initially failed export
+  with a generic masked 500 (`"Export failed ... with errors"`), which read
+  like the known "API service token can't carry interactive OAuth" limit
+  seen in other environments. It wasn't that — it was the `[Custom SQL/col]`
+  qualification bug above; once fixed, export worked cleanly end-to-end,
+  including through the linked input table. A masked 500 on a *trivial*
+  probe query is genuinely ambiguous between "this token/connection can't
+  run live queries" and "something upstream in this exact spec silently
+  errors" — don't commit to either conclusion without independent
+  confirmation (e.g. a DIFFERENT, definitely-correct element on the same
+  connection exporting fine).

@@ -67,11 +67,23 @@ elements = [
         "verticalAlign": "middle",
     },
     # 1. Base — one row per month, straight off a synthetic SQL source.
-    #    ⚠ Give declared passthrough columns a DISPLAY NAME that differs from
-    #    the raw column the formula references, e.g. name:"StatForecast" for
-    #    formula:"[demand_fcst]" — naming it "demand_fcst" too makes the bare
-    #    bracket resolve to ITSELF (a sibling column of the same name), which
-    #    Sigma rejects as "Circular column reference to [demand_fcst]".
+    #    ⚠ TWO gotchas live in this one element:
+    #    (a) A bare `formula:"[demand_fcst]"` does NOT reach the raw SQL
+    #        output when the element also hand-authors its own `columns`
+    #        array — it must be qualified as `[Custom SQL/demand_fcst]` (the
+    #        raw query result has an implicit source name "Custom SQL", even
+    #        referenced from within the very element that IS the SQL source).
+    #        Omitting the qualifier renders every cell as the literal string
+    #        `Unknown column "[demand_fcst]"`, which cascades into every
+    #        downstream linked-input-table/chart as "Join key contains type
+    #        error" — a confusing error pointing at the wrong element.
+    #    (b) Give declared passthrough columns a DISPLAY NAME that differs
+    #        from the raw column the formula references, e.g.
+    #        name:"StatForecast" for formula:"[Custom SQL/demand_fcst]" —
+    #        naming it "demand_fcst" too makes the bare bracket resolve to
+    #        ITSELF (a sibling column of the same name) instead of the
+    #        qualified target, which Sigma rejects as "Circular column
+    #        reference to [demand_fcst]".
     {
         "id": "srcTbl",
         "kind": "table",
@@ -79,44 +91,53 @@ elements = [
         "name": "Demand Source",
         "visibleAsSource": True,
         "columns": [
-            {"id": "c_relmonth", "formula": "[relative_month]", "name": "RelMonth"},
-            {"id": "c_month", "formula": "[month_start]", "name": "MonthStart"},
-            {"id": "c_fcst", "formula": "[demand_fcst]", "name": "StatForecast"},
-            {"id": "c_sales", "formula": "[sales]", "name": "ActualSalesRaw"},
+            {"id": "c_relmonth", "formula": "[Custom SQL/relative_month]", "name": "RelMonth"},
+            {"id": "c_month", "formula": "[Custom SQL/month_start]", "name": "MonthStart"},
+            {"id": "c_fcst", "formula": "[Custom SQL/demand_fcst]", "name": "StatForecast"},
+            {"id": "c_sales", "formula": "[Custom SQL/sales]", "name": "ActualSalesRaw"},
         ],
     },
     # 2. Linked input table — the editable demand-plan grid (verified pattern:
     #    ../reference/scenario-modeler-pattern.md §4). inputMode "view" so
     #    it's editable once PUBLISHED, not just in the draft editor.
+    # ⚠ Element id has a stray "2": once a linked input table's columns have
+    # materialized with a type (e.g. inferred as "text" while its upstream
+    # source was erroring), a later PUT that fixes the upstream and would
+    # change that column's real type to "number" is rejected — "type change
+    # is not supported... Drop and re-add the column to change its type."
+    # Give the WHOLE input-table element a fresh id (forcing a real
+    # drop-and-recreate) rather than trying to patch types in place. A
+    # from-scratch build wouldn't hit this; it only bites when iterating on
+    # a spec that's already been PUT once with a bug upstream.
     {
-        "id": "assum",
+        "id": "assum2",
         "kind": "input-table",
         "source": {"kind": "linked", "from": "srcTbl"},
         "inputMode": "view",
         "name": "Assumptions",
         "columns": [
-            {"id": "ia-relmonth", "key": "c_relmonth"},
-            {"id": "ia-month", "key": "c_month"},
-            {"id": "ia-fcst", "key": "c_fcst"},
-            {"id": "ia-sales", "key": "c_sales"},
-            {"id": "ia-season", "type": "number", "name": "Season Adj %"},
-            {"id": "ia-growth", "type": "number", "name": "Growth Adj %"},
-            {"id": "ia-events", "type": "number", "name": "Events Bump"},
+            {"id": "ia-relmonth2", "key": "c_relmonth"},
+            {"id": "ia-month2", "key": "c_month"},
+            {"id": "ia-fcst2", "key": "c_fcst"},
+            {"id": "ia-sales2", "key": "c_sales"},
+            {"id": "ia-season2", "type": "number", "name": "Season Adj %"},
+            {"id": "ia-growth2", "type": "number", "name": "Growth Adj %"},
+            {"id": "ia-events2", "type": "number", "name": "Events Bump"},
             {
-                "id": "ia-adj",
+                "id": "ia-adj2",
                 "formula": "[StatForecast] * (1 + Coalesce([Season Adj %], 0) / 100.0) "
                 "* (1 + Coalesce([Growth Adj %], 0) / 100.0) + Coalesce([Events Bump], 0)",
                 "name": "AdjustedDemandPlan",
             },
         ],
-        "sort": [{"columnId": "ia-relmonth", "direction": "ascending", "nulls": "last"}],
+        "sort": [{"columnId": "ia-relmonth2", "direction": "ascending", "nulls": "last"}],
         "tableComponents": {"summaryBar": "hidden"},
     },
     # 3. Book — the single downstream read surface every chart/KPI uses.
     {
         "id": "book",
         "kind": "table",
-        "source": {"elementId": "assum", "kind": "table"},
+        "source": {"elementId": "assum2", "kind": "table"},
         "name": "Book",
         "visibleAsSource": True,
         "columns": [
@@ -156,12 +177,12 @@ elements = [
                 "effects": [
                     {
                         "effect": "update-rows",
-                        "table": "assum",
+                        "table": "assum2",
                         "whichRows": {"type": "formula", "formula": "True"},
                         "values": {
-                            "ia-season": {"type": "constant", "value": {"type": "number", "value": None}},
-                            "ia-growth": {"type": "constant", "value": {"type": "number", "value": None}},
-                            "ia-events": {"type": "constant", "value": {"type": "number", "value": None}},
+                            "ia-season2": {"type": "constant", "value": {"type": "number", "value": None}},
+                            "ia-growth2": {"type": "constant", "value": {"type": "number", "value": None}},
+                            "ia-events2": {"type": "constant", "value": {"type": "number", "value": None}},
                         },
                     }
                 ],
@@ -183,9 +204,9 @@ elements = [
                 "effects": [
                     {
                         "effect": "update-rows",
-                        "table": "assum",
+                        "table": "assum2",
                         "whichRows": {"type": "formula", "formula": "[RelMonth] >= 0"},
-                        "values": {"ia-growth": {"type": "constant", "value": {"type": "number", "value": 10}}},
+                        "values": {"ia-growth2": {"type": "constant", "value": {"type": "number", "value": 10}}},
                     }
                 ],
             }
@@ -261,7 +282,7 @@ layout = """<?xml version="1.0" encoding="utf-8"?>
   <Element elementId="kpiAdj" gridColumn="17 / 25" gridRow="10 / 15"/>
   <Element elementId="kpiDelta" gridColumn="17 / 25" gridRow="15 / 18"/>
   <Element elementId="kpiAccuracy" gridColumn="17 / 25" gridRow="18 / 21"/>
-  <Element elementId="assum" gridColumn="1 / 25" gridRow="21 / 32"/>
+  <Element elementId="assum2" gridColumn="1 / 25" gridRow="21 / 32"/>
   <Element elementId="srcTbl" gridColumn="1 / 13" gridRow="32 / 40"/>
   <Element elementId="book" gridColumn="13 / 25" gridRow="32 / 40"/>
 </Page>
