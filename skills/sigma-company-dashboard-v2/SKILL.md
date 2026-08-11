@@ -8,10 +8,11 @@ description: >-
   drives EVERYTHING — the builder scripts (scripts/build_sofi.py,
   scripts/build_statement.py) are never edited per prospect. Supports building
   only a subset of surfaces (SURFACES=command / command,model / command,cohort
-  / command,model,cohort env var). Proven across nine companies spanning
+  / command,model,cohort env var). Proven across eleven companies spanning
   fintech, banking, healthcare payer, QSR, private equity, dental, airline,
-  hospitality and semiconductors. Use this — not v1 — for any new "build a Sigma
-  dashboard/workbook/POV/demo for [company]" request.
+  hospitality, semiconductors, interactive entertainment and biotech/pharma.
+  Use this — not v1 — for any new "build a Sigma dashboard/workbook/POV/demo
+  for [company]" request.
 ---
 
 # Sigma Company Dashboard v2 — one config, whole app
@@ -59,17 +60,28 @@ SURFACES=command COMPANY=<key> python3 build_sofi.py create   # command center o
 COMPANY=<key> python3 build_statement.py create      # the pixel-perfect PDF, if configured
 ```
 
-Existing companies: `sofi, boa, elevance, mcd, abry, nuvia, delta, marriott, nvidia` —
-skim the nearest-industry block in `scripts/company.py` before writing a new
-one; copy it rather than starting blank.
+Existing companies: `sofi, boa, elevance, mcd, abry, nuvia, delta, marriott,
+blizzard, nvidia, alnylam` — skim the nearest-industry block in
+`scripts/company.py` before writing a new one; copy it rather than starting
+blank.
 
 ## Adding a company
 
-Ask the user only what cannot be inferred (surfaces wanted, demo vs prospect
-org, whether a bespoke plugin is in scope — it only renders from the machine
-hosting `plugins/`). Do not ask for products, colors, or metric names —
-deriving those from the company's real public segment reporting is the entire
-value of this skill. Full workflow in HANDOFF.md §5.
+Ask the user only what cannot be inferred — and ask all four of these, not
+just the first three (a cold run has skipped the fourth before):
+1. **Which surfaces?** command center only / + modeler / + cohort builder
+2. **Demo org or prospect org?**
+3. **Bespoke plugin?** (it only renders from the machine hosting `plugins/`)
+4. **Pixel-perfect PDF report too?** — this is a separate script
+   (`build_statement.py`) and, for a brand-new company, a whole new
+   `STATEMENTS` config block to author (copy Delta's or SoFi's — the only two
+   that exist so far). Say this cost up front rather than silently building it
+   or silently skipping it.
+
+Do not ask for products, colors, or metric names — deriving those from the
+company's real public segment reporting is the entire value of this skill.
+Full workflow in HANDOFF.md §5 and §5b; the PDF specifics are in
+HANDOFF-report.md.
 
 ## Plugins
 
