@@ -54,6 +54,19 @@ reject on write).
   bug POST-time validation and even export-based QA (see below) will not
   catch — only opening it in-browser (or a screenshot from someone who did)
   surfaced it here.
+- **The qualification rule applies at EVERY hop, not just the raw-SQL one.**
+  A chart/KPI sourcing from a plain derived table (`source:{elementId:"book",
+  kind:"table"}`) still needs `[Book/statfcst]`, not bare `[statfcst]`, even
+  though `book` itself is a completely ordinary table one clean hop above the
+  linked input table. This bit AGAIN, one layer further downstream, after
+  the `Custom SQL/` fix above — a line chart and 3 of 4 KPIs all silently
+  saved fine and only failed once opened in-browser (`Unknown column
+  "[statfcst]"`), because export-based QA on `book` itself (the direct
+  parent) passed, and it's tempting to stop checking once the immediate
+  parent resolves. **Check every element that reads from another element,
+  not just the first hop from raw SQL** — the rule is "bare bracket = same-
+  element sibling only," full stop; anything crossing an element boundary
+  needs `[<parent's `name`>/<column>]`, all the way down the chain.
 - **Circular column reference is a related but distinct trap.** Declaring a
   passthrough/aggregate column with `formula:"[demand_fcst]"` AND
   `name:"demand_fcst"` (same string) makes the bare bracket resolve to the
