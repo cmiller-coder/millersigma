@@ -137,6 +137,13 @@ def get_workbook(workbook_id):
     return call("GET", "/v2/workbooks/%s/spec" % workbook_id)
 
 
+def get_workbook_meta(workbook_id):
+    # Cheap: no spec body, just latestVersion/updatedAt/updatedBy. Use this to
+    # check whether someone edited the workbook since we last pushed, without
+    # paying for a full spec fetch every time.
+    return call("GET", "/v2/workbooks/%s" % workbook_id)
+
+
 # ------------------------------------------------------------------ reports
 
 

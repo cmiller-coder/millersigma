@@ -268,6 +268,48 @@ Then:
 
 ---
 
+## 5a. `update` refuses to silently overwrite a hand-edited workbook
+
+**The problem this closes:** Sigma's spec API has no partial update — every
+`PUT /v2/workbooks/{id}/spec` sends the COMPLETE representation. If a real
+person opens the workbook and hides a column, resizes something, or adds a
+filter via the UI, then someone re-runs `build_sofi.py update` afterward
+(the normal "reprompt to make a change" workflow), that full-overwrite push
+silently erases every UI edit with no warning. Reported as "still seeing
+hidden columns" and "my UI changes disappear" — same root cause both times.
+
+**What's actually built (a safety gate, not a merge):** a genuine three-way
+merge of arbitrary UI edits into a freshly regenerated spec is a real, risky
+engineering problem — Sigma's API gives no diff/patch primitive to build it
+on. What's implemented instead: `update` checks whether the workbook changed
+since *our own* last push, and refuses if so, rather than overwriting blind.
+
+- `sigmaapi.get_workbook_meta(id)` calls `GET /v2/workbooks/{id}` (no `/spec`)
+  — returns `latestVersion` / `updatedAt` / `updatedBy` without paying for the
+  full spec body. This is the cheap check.
+- Each company's last-known-pushed version is tracked locally in
+  `specs/wb_state_<key>.json`.
+- `update` compares live `latestVersion` to that local baseline:
+  - **Unchanged** → push proceeds normally, baseline advances.
+  - **Live version is ahead** (someone edited it since our last push) →
+    **refuses**, prints who edited it and when, and requires `FORCE=1` to
+    overwrite anyway.
+  - **No baseline file yet** (first `update` from this checkout, or state was
+    cleared) → same refusal, `FORCE=1` bootstraps the baseline.
+- After any successful push, the new `latestVersion` is saved as the baseline.
+
+Verified live against Nuvia's real workbook: no-baseline refusal, `FORCE=1`
+bootstrap, a clean re-run with no live changes, and an out-of-band edit
+(simulated via a second script re-pushing the same spec) correctly detected
+and blocked on the next `update` — all four cases behaved as designed.
+
+**What this does NOT do:** it does not preserve the UI edit and merge it in.
+If someone hides a column and you `FORCE=1` past the warning, that hide is
+still gone. The gate's entire job is making the overwrite a decision someone
+makes on purpose, not something that happens silently.
+
+---
+
 ## 5b. Surface selection — building only the pieces you want
 
 ```bash

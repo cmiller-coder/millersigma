@@ -36,6 +36,10 @@ import sigmaapi as S
 
 SQL = pathlib.Path(__file__).resolve().parent.parent / "sql"
 SPECS = pathlib.Path(__file__).resolve().parent.parent / "specs"
+# a fresh git clone has no specs/ (it is gitignored, per-session output) --
+# a genuinely new SE hit FileNotFoundError here on the very first cold
+# clone-and-build test. Create it once, here, rather than at every write site.
+SPECS.mkdir(parents=True, exist_ok=True)
 TICKER_PLUGIN_ID = "646412eb-228a-4bb0-850b-9d251c07c404"
 FLYWHEEL_PLUGIN_ID = "2119eea0-d740-4ad5-8307-09e452392bb3"
 REPORT_ID_FILE = SPECS / ("report_id_%s.txt" % CFG["key"])
@@ -1785,6 +1789,60 @@ SPEC = {"name": "%s — %s" % (CFG["name"], CFG["title"]),
         "document": DOCUMENT}
 
 
+def _state_file(key):
+    return SPECS / ("wb_state_%s.json" % key)
+
+
+def _save_state(workbook_id, version):
+    _state_file(CFG["key"]).write_text(
+        json.dumps({"workbookId": workbook_id, "lastVersion": version}))
+
+
+def _check_not_edited_since_last_push(workbook_id):
+    """Refuse a silent overwrite if someone touched this workbook in the UI
+    since our last push. `update` always sends a COMPLETE spec (Sigma has no
+    partial-update endpoint), so pushing blind means every UI edit since --
+    a resized column, a hidden column, a manually added filter -- gets wiped
+    with no warning. This can't merge those edits back in (that would need a
+    real diff/merge across layout XML + JSON elements, which isn't built and
+    would be risky to ship half-working); it can only stop and ask first.
+    Cheap check: GET /v2/workbooks/{id} (no /spec) returns latestVersion
+    without paying for the full spec body -- that's the metadata call, not
+    the workbook's real edit history."""
+    meta = S.get_workbook_meta(workbook_id)
+    live_version = meta.get("latestVersion")
+    state_path = _state_file(CFG["key"])
+    force = os.environ.get("FORCE") == "1"
+
+    if not state_path.exists():
+        if not force:
+            print("⚠️  No local baseline for this workbook (never pushed from "
+                  "this checkout, or state file was cleared).")
+            print("    Live version: %d, last edited by %s at %s"
+                  % (live_version, meta.get("updatedBy"), meta.get("updatedAt")))
+            print("    Re-run with FORCE=1 to push anyway and establish a "
+                  "baseline for future runs.")
+            sys.exit(1)
+        print("⚠️  FORCE=1 set, no baseline yet — pushing and recording v%d "
+              "as the new baseline." % live_version)
+        return
+
+    known = json.loads(state_path.read_text())
+    last_known = known.get("lastVersion")
+    if live_version > last_known:
+        if not force:
+            print("⚠️  This workbook was edited since the last push — v%d -> v%d, "
+                  "by %s at %s." % (last_known, live_version,
+                                     meta.get("updatedBy"), meta.get("updatedAt")))
+            print("    Pushing now will silently overwrite those edits (Sigma's "
+                  "spec API has no partial update / merge). Open the workbook "
+                  "and re-apply anything important in company.py first, or "
+                  "re-run with FORCE=1 to overwrite anyway.")
+            sys.exit(1)
+        print("⚠️  FORCE=1 set — overwriting v%d despite edits since v%d."
+              % (live_version, last_known))
+
+
 def main():
     action = sys.argv[1] if len(sys.argv) > 1 else "verify"
     if action == "verify":
@@ -1803,9 +1861,15 @@ def main():
         r = S.create_workbook(SPEC)
         print("✅ created", r["workbookId"])
         (SPECS / "workbook_id.txt").write_text(r["workbookId"])
+        meta = S.get_workbook_meta(r["workbookId"])
+        _save_state(r["workbookId"], meta.get("latestVersion", 1))
     elif action == "update":
-        S.update_workbook(sys.argv[2], SPEC)
-        print("✅ updated", sys.argv[2])
+        workbook_id = sys.argv[2]
+        _check_not_edited_since_last_push(workbook_id)
+        S.update_workbook(workbook_id, SPEC)
+        meta = S.get_workbook_meta(workbook_id)
+        _save_state(workbook_id, meta.get("latestVersion"))
+        print("✅ updated", workbook_id, "(now v%d)" % meta.get("latestVersion", 0))
 
 
 if __name__ == "__main__":
