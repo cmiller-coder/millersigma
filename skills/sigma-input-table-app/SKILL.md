@@ -18,6 +18,26 @@ description: >-
 
 # Sigma Input-Table / Data-App builder
 
+> **Recreating an existing/live Sigma app from scratch?** Use
+> [reference/recreating-existing-apps.md](reference/recreating-existing-apps.md) —
+> the workflow for pulling a real app's spec via the API and distilling it to
+> a lightweight rebuild, plus a fresh batch of gotchas (circular column
+> references, controlId/controlType validation, layout-placement rules)
+> caught doing exactly this on 2026-08-11.
+>
+> **Building a scenario modeler?** Use
+> [reference/scenario-modeler-pattern.md](reference/scenario-modeler-pattern.md) —
+> the full verified pattern (baseline pivot → linked input table → projection
+> formulas → comparison KPIs → bulk-edit buttons), every shape confirmed
+> round-tripping on 2026-08-08.
+>
+> Two things in there cause most "it used to work" reports:
+> **`inputMode: "view"`** — the default `edit` makes a published modeler read-only
+> and silently kills every `update-rows` — and **`stacking: "none"`** on the
+> projected-vs-baseline chart, since two y-series stack by default, so the chart
+> renders their sum and looks plausible while being wrong.
+
+
 Given "let users model / forecast / adjust / write back data," build a working
 interactive app via `POST /v2/workbooks/spec`. Verified end-to-end on staging.
 Pair with `[[sigma-code-rep-interactivity]]` (memory) for the raw shape cheatsheet
@@ -253,8 +273,9 @@ that references the control by controlId; it recomputes reactively:
    (`POST /v2/workbooks/{id}/export {elementId,format:{type:"csv"}}` → poll
    `GET /v2/query/{qid}/download`) to confirm each resolves (no Invalid Query) and numbers are
    sane. This catches the class of bugs you can't see in a headless build.
-5. The one thing you can't POST-verify is row materialization — hand the user the URL and have
-   them click Create/Adjust once.
+5. Render the page to PNG (same export/poll pair, `format.type:"png"`) and look at it.
+   The only thing left that a render can't prove is row materialization — have the
+   user click Create/Adjust once.
 
 ## Exemplars
 
