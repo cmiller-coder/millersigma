@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Gallery of five selectable Sigma dashboard theme options">
+  <title>Dashboard Theme Gallery — 5 options</title>
+  <style>
+    :root { --ink:#0b2740; --muted:#5b6b7f; --line:#dce4ee; --bg:#eef2f7; --primary:#0867e8; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    header.page {
+      padding: 32px 32px 20px; background: linear-gradient(118deg,#06172a,#0b2740 46%,#0867e8); color:#fff;
+    }
+    header.page h1 { margin: 0; font-size: 30px; letter-spacing: -.03em; }
+    header.page p { margin: 8px 0 0; max-width: 720px; color: rgba(255,255,255,.72); font-size: 14px; }
+    .flow { margin: 14px 0 0; font-size: 12px; color: rgba(255,255,255,.85); }
+    .flow b { color:#fff; }
+    main { padding: 24px 32px 48px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 24px; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:0 10px 32px rgba(27,52,78,.08); }
+    .card__bar { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--line); }
+    .card__bar h2 { margin:0; font-size:16px; }
+    .card__bar .opt { font-size:11px; font-weight:700; color:var(--primary); letter-spacing:.1em; text-transform:uppercase; }
+    .card__bar a { font-size:12px; font-weight:700; color:var(--primary); text-decoration:none; }
+    .desc { padding:10px 18px 0; color:var(--muted); font-size:12px; }
+    .frame-wrap { position:relative; height:430px; overflow:hidden; margin:14px 18px 18px; border:1px solid var(--line); border-radius:12px; }
+    /* Render each theme at full desktop width, then scale the whole thing down to a thumbnail. */
+    .frame-wrap iframe {
+      width: 1440px; height: 1240px; border:0;
+      transform: scale(.404); transform-origin: top left;
+    }
+    footer { padding: 0 32px 40px; color: var(--muted); font-size: 12px; }
+    code { background:#fff; border:1px solid var(--line); border-radius:6px; padding:1px 6px; }
+  </style>
+</head>
+<body>
+  <header class="page">
+    <h1>Dashboard Theme Gallery</h1>
+    <p>Five visual systems for the same forecasting command center, so you compare aesthetics rather than different content. Pick one per build; the data app and workflow stay the same.</p>
+    <p class="flow">End-user flow: <b>1.</b> Customer name &nbsp;→&nbsp; <b>2.</b> Data app (forecasting, cohort builder, …) &nbsp;→&nbsp; <b>3.</b> Theme option 1–5 &nbsp;→&nbsp; <b>4.</b> Build.</p>
+  </header>
+  <main>
+    <div class="grid" id="grid"></div>
+  </main>
+  <footer>
+    Each tile is a live render of its <code>NN-theme.html</code> file, scaled to a thumbnail. Click <b>Open full page ↗</b> for the full-size, interactive version. Machine-readable Sigma tokens live in <code>theme-presets.json</code>.
+  </footer>
+  <script>
+    const themes = [
+      ["01-executive-gradient.html", "Executive Gradient", "Option 1", "Polished, branded command center — gradient hero and KPI cards. Default."],
+      ["02-editorial-minimal.html", "Editorial Minimal", "Option 2", "Quiet, premium, high-whitespace — serif display, flat cards, fine rules."],
+      ["03-operations-control-room.html", "Operations Control Room", "Option 3", "Dense dark-mode monitoring — mono type, teal signals, amber exceptions."],
+      ["04-aurora-glass.html", "Aurora Glass", "Option 4", "Futuristic dark gradient — translucent glass cards and luminous marks."],
+      ["05-field-natural.html", "Field & Natural", "Option 5", "Warm, approachable operations — forest tones with orange highlights."],
+    ];
+    document.getElementById("grid").innerHTML = themes.map(([file, name, opt, desc]) => `
+      <section class="card">
+        <div class="card__bar">
+          <div><span class="opt">${opt}</span><h2>${name}</h2></div>
+          <a href="${file}" target="_blank" rel="noopener">Open full page ↗</a>
+        </div>
+        <p class="desc">${desc}</p>
+        <div class="frame-wrap"><iframe loading="lazy" title="${name} preview" src="${file}"></iframe></div>
+      </section>
+    `).join("");
+  </script>
+</body>
+</html>
