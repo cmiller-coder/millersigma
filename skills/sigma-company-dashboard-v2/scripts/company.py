@@ -1348,6 +1348,41 @@ STATEMENTS = {
                    "from a Sigma report specification — synthetic data, not a "
                    "real account."),
     },
+    "veraset": {
+        "spec_name": "Veraset — Data License Invoice (July 2026)",
+        "page_name": "Invoice Summary",
+        "manage_url": "www.veraset.com/portal",
+        "service_label": "Account Support",
+        "service_phone": "support@veraset.com",
+        "period": "07/01 – 07/31/2026",
+        "sect_rewards": "USAGE SUMMARY",
+        "sect_summary": "CONTRACT SUMMARY",
+        "sect_category": "LICENSED VOLUME BY PRODUCT",
+        "sect_activity": "USAGE DETAIL",
+        "sect_messages": "YOUR ACCOUNT MESSAGES",
+        "headline": [("Invoice Total", None), ("Overage Charges", None),
+                     ("Payment Due Date", "08/30/2026")],
+        "button_label": "Data license invoice ↗",
+        "rewards_total": "Total records delivered",
+        "h_formulas": [("src", 'Sum([Statement Activity/Amount])', "MONEY"),
+                       ("src", 'Round(Sum([Statement Activity/Amount]) * 0.08, 2)',
+                        "MONEY")],
+        "msg_body": ("Beginning 09/01/2026, overage rates for Movement and Visits "
+                     "volume above committed minimums decrease 10% after this "
+                     "quarter's 6-country panel expansion. No action is required."),
+        "warn1": ("**Late Payment Notice:** If payment is not received within 30 "
+                  "days of the invoice date, a 1.5% monthly late fee may apply "
+                  "and data delivery may be suspended until the account is "
+                  "brought current."),
+        "warn2": ("**Usage Overage Notice:** Charges beyond your committed "
+                  "volume are billed monthly in arrears at the current overage "
+                  "rate. Contact your account team to adjust committed volume "
+                  "and avoid overage charges."),
+        "footer": ("Veraset licenses anonymized, privacy-compliant location data "
+                   "under a data processing agreement with each customer. "
+                   "Illustrative invoice generated from a Sigma report "
+                   "specification — synthetic data, not a real account."),
+    },
 }
 
 
@@ -1413,8 +1448,58 @@ _DL_MEDALLION = [
     (8, "SkyMiles member since", "2011"),
 ]
 
+# --- Veraset: one enterprise customer's monthly data-license invoice --------
+# Report template is shaped like a credit-card statement (fixed columns:
+# Merchant Name or Transaction Description, Points Earned). Reframed as an
+# invoice rather than extending the builder -- "Points" here holds records
+# delivered (thousands), not loyalty points; "Merchant Name" holds a
+# delivery line-item description. Represents ONE customer's monthly
+# activity, not Veraset's whole-company revenue (same scale as Delta's
+# report being one flyer's SkyMiles statement, not Delta's revenue).
+_VR_ACTIVITY = [
+    ("07/01", "07/02", "Movement — Daily GPS Ping Delivery (US Panel)", "Movement", 8200.00, 420),
+    ("07/01", "07/02", "Visits — POI Attribution Batch", "Visits", 5400.00, 180),
+    ("07/08", "07/09", "Movement — Daily GPS Ping Delivery (US Panel)", "Movement", 8350.00, 428),
+    ("07/08", "07/09", "Trade Area — Site Selection Scoring Refresh", "Trade Area & Site Selection", 3100.00, 60),
+    ("07/15", "07/16", "Movement — Daily GPS Ping Delivery (US Panel)", "Movement", 8180.00, 419),
+    ("07/15", "07/16", "Visits — POI Attribution Batch", "Visits", 5550.00, 185),
+    ("07/18", "07/19", "Visits — Cannibalization Overlay Add-on", "Visits", 2200.00, 40),
+    ("07/22", "07/23", "Movement — Daily GPS Ping Delivery (US Panel)", "Movement", 8290.00, 424),
+    ("07/22", "07/23", "Trade Area — Site Selection Scoring Refresh", "Trade Area & Site Selection", 3050.00, 58),
+    ("07/29", "07/30", "Movement — Daily GPS Ping Delivery (US Panel)", "Movement", 8410.00, 431),
+    ("07/29", "07/30", "Visits — Overage Records Beyond Committed Volume", "Visits", 4600.00, 95),
+]
+
+_VR_USAGE = [
+    (1, "Committed monthly volume", 2_400_000),
+    (2, "+ Movement records delivered", 1_702_000),
+    (3, "+ Visits records delivered", 500_000),
+    (4, "+ Trade Area records delivered", 118_000),
+    (5, "Overage records this cycle", 95_000),
+    (6, "Carryover from prior cycle", 40_000),
+    (7, "Balance carried forward", 2_855_000),
+]
+
+_VR_CONTRACT = [
+    (1, "Contract ID", "VRS-2026-04417"),
+    (2, "Data products licensed", "3 of 6"),
+    (3, "Committed monthly volume", "2.4M records"),
+    (4, "Contract renewal date", "03/01/2027"),
+    (5, "Account manager", "J. Alvarez"),
+    (6, "Billing cycle", "Monthly, net-30"),
+    (7, "Overage rate", "$0.0035 / record"),
+]
+
 
 def statement_activity_sql(cfg):
+    if cfg["key"] == "veraset":
+        cols = ["Transaction Date", "Post Date",
+                "Merchant Name or Transaction Description", "Category", "Amount",
+                "Points Earned"]
+        rows = [("'%s/2026'" % t, "'%s/2026'" % pd, "'%s'" % d.replace("'", "''"),
+                 "'%s'" % c, "%.2f" % amt, str(pts))
+                for t, pd, d, c, amt, pts in _VR_ACTIVITY]
+        return _union(rows, cols)
     if cfg["key"] != "delta":
         return None
     cols = ["Transaction Date", "Post Date",
@@ -1427,6 +1512,9 @@ def statement_activity_sql(cfg):
 
 
 def rewards_summary_sql(cfg):
+    if cfg["key"] == "veraset":
+        rows = [(str(o), "'%s'" % d, str(p)) for o, d, p in _VR_USAGE]
+        return _union(rows, ["Line Order", "Description", "Points"])
     if cfg["key"] != "delta":
         return None
     rows = [(str(o), "'%s'" % d, str(p)) for o, d, p in _DL_MILES]
@@ -1434,6 +1522,9 @@ def rewards_summary_sql(cfg):
 
 
 def account_summary_sql(cfg):
+    if cfg["key"] == "veraset":
+        rows = [(str(o), "'%s'" % m, "'%s'" % v) for o, m, v in _VR_CONTRACT]
+        return _union(rows, ["Line Order", "Metric", "Value"])
     if cfg["key"] != "delta":
         return None
     rows = [(str(o), "'%s'" % m, "'%s'" % v) for o, m, v in _DL_MEDALLION]
