@@ -1,6 +1,6 @@
 {
   "name": "millersigma",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Connor Miller's Sigma Computing skill collection — end-to-end company dashboard builder (data model + themed workbook + CallText AI summary + hosted domain plugin), workbook conventions, styling, branded dashboard format, embed portals, and plugin development. Skills auto-discovered from ./skills; hosted plugin sources in ./plugins, plus sigma-company-dashboard-v2 (one config drives a universal generator across 8 proven companies — successor to sigma-company-dashboard).",
   "author": {
     "name": "Connor Miller",
