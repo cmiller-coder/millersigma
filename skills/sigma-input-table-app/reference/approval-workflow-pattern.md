@@ -127,6 +127,52 @@ For a fuller modeler, add:
 
 See the main `sigma-input-table-app` skill for these non-negotiable defaults.
 
+## Linked input tables: carry source columns as `key`, not `formula`
+
+Verified live 2026-08-12 on a 576-row baseline. When a linked input table
+(`source: {kind: linked, from: <element>}`) needs to display columns from its
+source, bind them as **key** columns:
+
+```json
+{"id": "al-month", "key": "ab-month", "name": "Month"}
+```
+
+A `formula` passthrough does **not** scope to the linked row:
+
+| Source shape | Passthrough style | Result |
+|---|---|---|
+| ungrouped table | `formula: "[Source/Col]"` | renders `multiple values`; wrapping in `Min()`/`Sum()` "fixes" the error but returns the **whole-table** aggregate on every row — silently wrong data |
+| grouped table | `formula: "[Source/Col]"` | returns blank |
+| either | `key: "<source-col-id>"` | correct per-row value |
+
+The failure is dangerous because the aggregate-wrapped version looks plausible:
+every row shows the same grand total (e.g. an Accord row reporting the entire
+network's units and the wrong plant). Export the input table to CSV and confirm
+row values differ before trusting the grid.
+
+Only the editable storage columns (`type: number` / `text`) and locally-derived
+formula columns belong outside the key set. Local formulas referencing the
+element's own column names work normally:
+
+```json
+{"id": "al-eff", "name": "Effective Units",
+ "formula": "Coalesce([Proposed Units], [Baseline Units])"}
+```
+
+## Aggregating at a group grain, not the leaf grain
+
+A KPI sourced from a grouped table still counts **leaf** rows by default. A
+`CountIf` over a per-group status column returned 96 (the leaf rows behind the
+breaching groups) instead of 6 (the groups themselves). Count a
+group-identifying value instead:
+
+```json
+{"formula": "CountDistinct(If([Plant Month Load/Capacity Status] = \"Over capacity\", [Plant Month Load/Plant Month], Null))"}
+```
+
+where `Plant Month` is a grouping calculation such as
+`[Plant] & " · " & DateFormat([Month], "%b %Y")`.
+
 ## Current API requirements
 
 - Controls need IDs matching `^[a-zA-Z0-9_-]{1,64}$`; do not copy dotted IDs

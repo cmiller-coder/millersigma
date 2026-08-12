@@ -13,6 +13,7 @@ Open any HTML file directly:
 | 3 | [Operations Control Room](03-operations-control-room.html) | Manufacturing, logistics, network/real-time operations |
 | 4 | [Aurora Glass](04-aurora-glass.html) | AI applications, innovation demos, technology |
 | 5 | [Field & Natural](05-field-natural.html) | Food/agriculture, field service, sustainability, healthcare ops |
+| 6 | Editorial Ops (`theme-presets.json` only) | Exec overview paired with a data-app page — Editorial structure, Control Room density, light surfaces. Built for [`../build_honda_ev_allocation.py`](../build_honda_ev_allocation.py). |
 
 `theme-presets.json` is the machine-readable contract for a future theme
 selector. The HTML uses `theme-gallery.css` for the richer browser preview;

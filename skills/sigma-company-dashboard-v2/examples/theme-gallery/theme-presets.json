@@ -7,7 +7,12 @@
       "id": "executive-gradient",
       "label": "Executive Gradient",
       "description": "Polished, branded command center with gradient hero and KPI cards.",
-      "bestFor": ["executive dashboard", "forecasting", "scenario modeler", "sales POV"],
+      "bestFor": [
+        "executive dashboard",
+        "forecasting",
+        "scenario modeler",
+        "sales POV"
+      ],
       "sigma": {
         "surface": "light",
         "canvas": "#EEF2F7",
@@ -18,7 +23,11 @@
         "textMuted": "#5B6B7F",
         "header": {
           "mode": "gradient-image",
-          "colors": ["#06172A", "#0B2740", "{brand.primary}"],
+          "colors": [
+            "#06172A",
+            "#0B2740",
+            "{brand.primary}"
+          ],
           "textColor": "#FFFFFF",
           "subtextColor": "#C7E4F7"
         },
@@ -29,7 +38,13 @@
           "nativeTitle": true,
           "comparison": true
         },
-        "categorical": ["{brand.primary}", "{brand.mint}", "#0B2740", "{brand.accent}", "{brand.secondary}"],
+        "categorical": [
+          "{brand.primary}",
+          "{brand.mint}",
+          "#0B2740",
+          "{brand.accent}",
+          "{brand.secondary}"
+        ],
         "borderRadius": "round",
         "spacing": "small",
         "tablePreset": "presentation"
@@ -40,7 +55,12 @@
       "id": "editorial-minimal",
       "label": "Editorial Minimal",
       "description": "Quiet, premium, high-whitespace dashboard with flat cards and fine rules.",
-      "bestFor": ["board reporting", "finance", "professional services", "strategy"],
+      "bestFor": [
+        "board reporting",
+        "finance",
+        "professional services",
+        "strategy"
+      ],
       "sigma": {
         "surface": "warm-light",
         "canvas": "#F5F1E9",
@@ -51,7 +71,9 @@
         "textMuted": "#746F67",
         "header": {
           "mode": "flat",
-          "colors": ["#F5F1E9"],
+          "colors": [
+            "#F5F1E9"
+          ],
           "textColor": "#24211D",
           "subtextColor": "#746F67"
         },
@@ -62,7 +84,13 @@
           "nativeTitle": true,
           "comparison": true
         },
-        "categorical": ["#2D5B50", "#6C8A80", "#BE6A42", "#24211D", "#B4A58E"],
+        "categorical": [
+          "#2D5B50",
+          "#6C8A80",
+          "#BE6A42",
+          "#24211D",
+          "#B4A58E"
+        ],
         "borderRadius": "square",
         "spacing": "large",
         "tablePreset": "presentation"
@@ -73,7 +101,12 @@
       "id": "operations-control-room",
       "label": "Operations Control Room",
       "description": "Dense dark-mode monitoring surface with cyan signals and amber exceptions.",
-      "bestFor": ["manufacturing", "network operations", "logistics", "real-time monitoring"],
+      "bestFor": [
+        "manufacturing",
+        "network operations",
+        "logistics",
+        "real-time monitoring"
+      ],
       "sigma": {
         "surface": "dark",
         "canvas": "#0C1117",
@@ -84,7 +117,10 @@
         "textMuted": "#8CA3AD",
         "header": {
           "mode": "dark-flat",
-          "colors": ["#0A1016", "#142B37"],
+          "colors": [
+            "#0A1016",
+            "#142B37"
+          ],
           "textColor": "#EAF4F4",
           "subtextColor": "#8CA3AD"
         },
@@ -95,7 +131,13 @@
           "nativeTitle": true,
           "comparison": true
         },
-        "categorical": ["#00D3C7", "#00A7C4", "#F6B94A", "#8CA3AD", "#FF6370"],
+        "categorical": [
+          "#00D3C7",
+          "#00A7C4",
+          "#F6B94A",
+          "#8CA3AD",
+          "#FF6370"
+        ],
         "borderRadius": "square",
         "spacing": "small",
         "tablePreset": "spreadsheet"
@@ -106,7 +148,12 @@
       "id": "aurora-glass",
       "label": "Aurora Glass",
       "description": "Futuristic dark gradient with translucent cards and luminous data marks.",
-      "bestFor": ["AI application", "innovation demo", "technology", "product analytics"],
+      "bestFor": [
+        "AI application",
+        "innovation demo",
+        "technology",
+        "product analytics"
+      ],
       "sigma": {
         "surface": "dark-gradient",
         "canvas": "#080B1E",
@@ -117,7 +164,11 @@
         "textMuted": "#AAB1D2",
         "header": {
           "mode": "gradient-image",
-          "colors": ["#0B0B26", "#24125A", "#086C91"],
+          "colors": [
+            "#0B0B26",
+            "#24125A",
+            "#086C91"
+          ],
           "textColor": "#F5F7FF",
           "subtextColor": "#AAB1D2"
         },
@@ -128,7 +179,13 @@
           "nativeTitle": true,
           "comparison": true
         },
-        "categorical": ["#8B7CFF", "#40D7FF", "#FF72D0", "#4DE2AE", "#FFC65C"],
+        "categorical": [
+          "#8B7CFF",
+          "#40D7FF",
+          "#FF72D0",
+          "#4DE2AE",
+          "#FFC65C"
+        ],
         "borderRadius": "round",
         "spacing": "medium",
         "tablePreset": "presentation"
@@ -139,7 +196,12 @@
       "id": "field-natural",
       "label": "Field & Natural",
       "description": "Warm, approachable operations aesthetic with forest tones and orange highlights.",
-      "bestFor": ["food and agriculture", "field service", "sustainability", "healthcare operations"],
+      "bestFor": [
+        "food and agriculture",
+        "field service",
+        "sustainability",
+        "healthcare operations"
+      ],
       "sigma": {
         "surface": "warm-light",
         "canvas": "#F2EFE6",
@@ -150,7 +212,11 @@
         "textMuted": "#66776E",
         "header": {
           "mode": "gradient-image",
-          "colors": ["#173C30", "#285A44", "#5F7F62"],
+          "colors": [
+            "#173C30",
+            "#285A44",
+            "#5F7F62"
+          ],
           "textColor": "#FFFFFF",
           "subtextColor": "#DDE8DE"
         },
@@ -161,10 +227,74 @@
           "nativeTitle": true,
           "comparison": true
         },
-        "categorical": ["#2F684D", "#73956F", "#E78B42", "#7CA690", "#C2A15E"],
+        "categorical": [
+          "#2F684D",
+          "#73956F",
+          "#E78B42",
+          "#7CA690",
+          "#C2A15E"
+        ],
         "borderRadius": "round",
         "spacing": "medium",
         "tablePreset": "presentation"
+      }
+    },
+    {
+      "option": 6,
+      "id": "editorial-ops",
+      "label": "Editorial Ops",
+      "description": "Editorial Minimal structure with Operations Control Room density. Light surfaces throughout so input tables stay usable; brand colour reserved for chrome and constraint breaches.",
+      "bestFor": [
+        "planning data app",
+        "allocation",
+        "forecast + approval workflow",
+        "exec overview paired with an operational editor"
+      ],
+      "provenance": "Built for the Honda hybrid vs. EV allocation app.",
+      "sigma": {
+        "surface": "light",
+        "canvas": "#F7F7F5",
+        "card": "#FFFFFF",
+        "cardAlt": "#F1F2F0",
+        "border": "#DEDFDB",
+        "text": "#16181A",
+        "textMuted": "#5C6166",
+        "header": {
+          "mode": "flat-card",
+          "colors": [
+            "#FFFFFF"
+          ],
+          "textColor": "#16181A",
+          "subtextColor": "#5C6166",
+          "wordmarkColor": "{brand.primary}",
+          "displayFont": "Georgia"
+        },
+        "kpi": {
+          "mode": "flat-rule",
+          "valueColor": "#16181A",
+          "valueFontSize": 34,
+          "nativeTitle": true,
+          "comparison": true
+        },
+        "categorical": [
+          "{brand.primary}",
+          "#16181A",
+          "#8A9099",
+          "#0E7C66",
+          "#B4761B"
+        ],
+        "semantics": {
+          "good": "#0E7C66",
+          "warning": "#B4761B",
+          "alarm": "{brand.primary}"
+        },
+        "borderRadius": "square",
+        "spacing": "medium",
+        "tablePreset": "presentation",
+        "notes": [
+          "Dark themes make input tables and dropdowns render white-on-white, so any workbook containing a data-app page must stay light.",
+          "Reserve the brand colour for chrome plus one alarm meaning; use teal/amber for deltas so a negative number is not confused with branding."
+        ]
       }
     }
   ]

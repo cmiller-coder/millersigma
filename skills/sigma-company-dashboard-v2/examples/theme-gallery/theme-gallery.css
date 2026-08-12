@@ -307,6 +307,13 @@ footer { display: flex; justify-content: space-between; padding: 0 28px 22px; co
 .theme-field .kpi--hero .kpi__value em { color: rgba(255,255,255,.78); }
 .theme-field .kpi--hero .kpi__icon { color: #fff; background: rgba(255,255,255,.14); }
 .theme-field .kpi--hero .spark polyline { stroke: #fff; }
+/* Delta text needs a light tint on the dark hero cards — the default good/bad
+   colours are tuned for light surfaces and disappear green-on-green. */
+.theme-field .kpi--hero .is-positive span,
+.theme-executive .kpi--hero .is-positive span { color: #CDEBB8; }
+.theme-field .kpi--hero .is-negative span,
+.theme-executive .kpi--hero .is-negative span,
+.theme-executive .kpi--risk .is-negative span { color: #FFCFC7; }
 .theme-field .kpi--risk { background: #fff8ee; border-color: #ead6bd; }
 .theme-field .bar-track span { background: linear-gradient(90deg, var(--primary), var(--secondary)); }
 .theme-field .insight { background: #fff5e8; border: 1px solid #ecd8bd; }
