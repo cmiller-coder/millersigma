@@ -4,25 +4,74 @@ Canonical patterns for `POST/GET/PUT /v2/workbooks/spec`. These rules are the
 result of iteration loops where the create endpoint accepted broken specs that
 failed at render time. Read this before authoring any workbook spec.
 
+## ⚠️ The spec shape changed — start here (re-verified 2026-08-12)
+
+Sigma retired the flat spec shape this file originally documented. Every form
+below is now **rejected**, and most are rejected with a masked error, so a stale
+generator looks like a mystery `Invalid kind` bug:
+
+| Retired form | Current form | Error you get |
+|---|---|---|
+| `pages`/`layout`/`schemaVersion` at the body's top level | everything except `name`/`folderId` nested under `document` | a wall of `Expecting { schemaVersion: 1 } at 0.document...` |
+| elements nested under `pages[i].elements` | one flat `document.elements` array; `pages[]` entries carry only `id` + `name` | `document.pages[].elements is no longer supported. Move elements to document.elements instead.` |
+| `<GridContainer>` / `<LayoutElement>` layout tags | `<Container>` / `<Element>` (plus `<TabbedContainer>` / `<Tab>`) | bare HTTP 400 `An error has occurred` + incident-id |
+| `value: {id}` on a KPI | `value: {columnId}` | `Invalid kind: "kpi-chart"` |
+| `xAxis: {id}`, `yAxis: [{id}, ...]` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}` | `Invalid kind: "<chart-kind>"` |
+| omitting column `format` entirely | `format: {kind: "number", formatString: "$.3~s"}` is supported | (the old advice merely lost you formatting) |
+
+`document.kind: "workbook"` is required. A minimal current body:
+
+```json
+{
+  "name": "Retail Overview",
+  "folderId": "<folder-uuid>",
+  "document": {
+    "schemaVersion": 1,
+    "kind": "workbook",
+    "pages": [{ "id": "page-overview", "name": "Overview" }],
+    "elements": [ /* every element on every page, flat */ ],
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page ...>...</Page>\n"
+  }
+}
+```
+
+Two habits make this drift cheap to survive:
+
+1. **`POST /v2/workbooks/spec/verify` before you create.** It returns
+   `{"valid": true}` or the same error the create would raise, and creates
+   nothing — so shape probes cost no cleanup.
+2. **Treat a GET-back of a live UI-built workbook as the source of truth** for
+   any field shape, including the ones documented here. That is how each row of
+   the table above was found.
+
+`scripts/smoke-test-workbook.py` builds a small workbook end to end (verify →
+create → per-element SQL → PNG render → delete) and is the fastest way to tell
+whether the shape has drifted again.
+
+Sections further down were written against the older API and are corrected
+in place where verified. Where a section is *not* marked verified, prefer a
+GET-back over its wording. The example specs in `examples/` still use the
+retired shapes and would be rejected as-is —
+`scripts/validate-spec.py` flags every retired form in them by name.
+
 ## Layout rules — read before authoring multi-page
 
 Three rules that the POST validator does not enforce. Sigma silently rewrites
 the layout when any of them is broken, producing a workbook that opens but
 looks wrong:
 
-1. **`layout` is a top-level workbook field.** A `layout` placed under
-   `pages[i]` is **silently discarded** by the API (verified 2026-05-11).
-   The agent's expected output is one top-level `layout` string for the whole
+1. **`layout` belongs to the document** (`document.layout`), not to a page. A
+   `layout` placed under `pages[i]` is **silently discarded** by the API.
+   The agent's expected output is one `document.layout` string for the whole
    workbook.
 2. **Multi-page = one `<?xml>` declaration + multiple `<Page>` siblings.** No
    outer wrapper element. Sigma's XML parser tolerates the multi-root form;
    the GET-back preserves it.
-3. **Container children must be nested inside `<GridContainer>` in the XML.**
-   The order of entries in `pages[].elements` does NOT define visual
-   structure. A `<GridContainer>` with no nested `<LayoutElement>` /
-   `<GridContainer>` children renders as an empty box, and all the elements
-   you *thought* were inside it stack flat at the bottom of the page in a
-   1/13-wide single column.
+3. **Container children must be nested inside `<Container>` in the XML.**
+   The order of entries in `document.elements` does NOT define visual
+   structure. A `<Container>` with no nested `<Element>` / `<Container>`
+   children renders as an empty box, and all the elements you *thought* were
+   inside it stack flat at the bottom of the page in a 1/13-wide single column.
 
 Run `scripts/validate-spec.py <spec.json>` before every POST/PUT — it checks
 all three.
@@ -32,13 +81,13 @@ Example of the correct shape:
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-overview">
-  <GridContainer elementId="container-hdr" type="grid"
-                 gridColumn="1 / 25" gridRow="1 / 4"
-                 gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <LayoutElement elementId="text-title" gridColumn="1 / 9" gridRow="1 / 4"/>
-    <LayoutElement elementId="ctrl-date"  gridColumn="9 / 25" gridRow="1 / 4"/>
-  </GridContainer>
-  <LayoutElement elementId="chart-bar" gridColumn="1 / 25" gridRow="4 / 18"/>
+  <Container elementId="container-hdr" type="grid"
+             gridColumn="1 / 25" gridRow="1 / 4"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="text-title" gridColumn="1 / 9" gridRow="1 / 4"/>
+    <Element elementId="ctrl-date"  gridColumn="9 / 25" gridRow="1 / 4"/>
+  </Container>
+  <Element elementId="chart-bar" gridColumn="1 / 25" gridRow="4 / 18"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-detail">
   ...
@@ -80,10 +129,11 @@ iterations searching for a field that doesn't exist.
 
 | Method | Path | Notes |
 |--------|------|-------|
-| `POST` | `/v2/workbooks/spec` | Create. Body is JSON or YAML. Required: `name`, `schemaVersion: 1`, `folderId`, `pages`. Optional: `layout`. POST defaults to YAML response — pass `Accept: application/json` for JSON. |
-| `GET`  | `/v2/workbooks/{workbookId}/spec` | **Defaults to YAML.** Pass `Accept: application/json` for JSON. |
-| `PUT`  | `/v2/workbooks/{workbookId}/spec` | Full-spec update; no partials. |
-| `DELETE` | _unknown_ | **Open issue:** both `DELETE /v2/workbooks/{id}` and `DELETE /v2/files/{id}` return 404 against staging for workbooks the same token just CREATEd. Until the right endpoint is found, test workbooks accumulate and need manual UI cleanup. Discover via Sigma docs / network tab on a UI delete. |
+| `POST` | `/v2/workbooks/spec/verify` | **Dry run — use this first.** Same validation as create, creates nothing. Returns `{"valid": true}` or the create's error. |
+| `POST` | `/v2/workbooks/spec` | Create. Body is JSON or YAML. Required: `name`, `folderId`, `document` (with `schemaVersion: 1`, `kind: "workbook"`, `pages`, `elements`). Optional: `document.layout`. POST defaults to YAML response — pass `Accept: application/json` for JSON. |
+| `GET`  | `/v2/workbooks/{workbookId}/spec` | **Defaults to YAML.** Pass `Accept: application/json` for JSON. Returns the same `{document: ...}` envelope the create takes. |
+| `PUT`  | `/v2/workbooks/{workbookId}/spec` | Full-spec update; no partials. Same body shape as create. |
+| `DELETE` | `/v2/files/{workbookId}` | **Resolved 2026-08-12** (this file previously recorded it as an open issue). Returns `{}` and moves the workbook to trash; a subsequent `GET /v2/workbooks/{id}` returns 409. Note it is the **files** path — `DELETE /v2/workbooks/{id}` still 404s. Use it to clean up probe workbooks instead of leaving them for manual UI cleanup. |
 
 `folderId` is the **internal UUID** (e.g. `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`),
 NOT the urlId (a short base62 string like `AbC123...`). Look up via
@@ -104,20 +154,23 @@ Sigma staging API. For each, see the per-kind shape section further
 down for the full required-field layout and any gotchas. Reference
 example specs live in `examples/`.
 
+Axis fields take **column ids** (`{columnId}` / `{columnIds: [...]}`), not the
+`{id}` objects an older version of this file documented.
+
 | What you want | Spec `kind` | Encoding fields | Notes |
 |---------------|-------------|-----------------|-------|
-| Bar chart | `bar-chart` | `xAxis: {id}`, `yAxis: [{id}, ...]` | Single or grouped series. See "Bar / line / area / combo chart shape" below. |
-| Line chart | `line-chart` | `xAxis: {id}`, `yAxis: [{id}]`, optional `color: {by, column}` | Series breakout uses the `{by, column}` shape with `column` as a bare id string — NOT `{id}`. See "Series breakout / color-by on charts." |
-| Area chart | `area-chart` | `xAxis: {id}`, `yAxis: [{id}, ...]`, optional `stacking` | `stacking: "none"` = unstacked overlay, default = stacked, `"normalized"` = 100% stacked. |
-| Combo chart | `combo-chart` | `xAxis: {id}`, `yAxis: [{id}, {id, type: "line"}, ...]` | Per-series `type` field on yAxis entries overrides the bar default — that's how you mix bars + lines on the same chart. |
-| Scatter / bubble | `scatter-chart` | `xAxis: {id}`, `yAxis: [{id}]`, optional `size: {id}`, optional `color: {by, column}` | Both axes are metrics (not categorical). `size` makes it a bubble chart. |
-| Pie chart | `pie-chart` | `color: {id}` (categorical), `value: {id}` (metric) | No xAxis/yAxis. The categorical column drives slice identity; the metric column drives slice size. |
-| Donut chart | `donut-chart` | `color: {id}`, `value: {id}` | Same shape as pie-chart; render differs in the UI only. |
-| KPI / single-value tile | `kpi-chart` | `value: {id}` plus a date dimension in `columns` for sparkline/comparison | **Docs example says `kpi` — API rejects with `Invalid kind: "kpi"`. Use `kpi-chart`.** See "KPI element shape." |
+| Bar chart | `bar-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}` | Single or grouped series. See "Bar / line / area / combo chart shape" below. |
+| Line chart | `line-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}`, optional `color: {by, column}` | Series breakout uses the `{by, column}` shape with `column` as a bare id string. See "Series breakout / color-by on charts." |
+| Area chart | `area-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}`, optional `stacking` | `stacking: "none"` = unstacked overlay, default = stacked, `"normalized"` = 100% stacked. |
+| Combo chart | `combo-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}` | Mixing bars + lines is a per-series `type` override; confirm its current shape from a GET-back. |
+| Scatter / bubble | `scatter-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}`, optional `size`, optional `color: {by, column}` | Both axes are metrics (not categorical). `size` makes it a bubble chart. |
+| Pie chart | `pie-chart` | `color` (categorical), `value` (metric) | No xAxis/yAxis. The categorical column drives slice identity; the metric column drives slice size. |
+| Donut chart | `donut-chart` | `color`, `value` | Same shape as pie-chart; render differs in the UI only. |
+| KPI / single-value tile | `kpi-chart` | `value: {columnId}`, optional `comparison` + `comparisonColumn` | **Docs example says `kpi` — API rejects with `Invalid kind: "kpi"`. Use `kpi-chart`.** See "KPI element shape." |
 | Pivot table | `pivot-table` | `rowsBy: [{id}]`, `columnsBy: [{id}]`, `values: ["<col-id>", ...]` | **Only this exact shape — `rows`/`cols`/`values`-as-objects is rejected.** See "Pivot-table element shape." Cell-color conditional formatting is UI-only and breaks GET-spec when present. |
 | Table | `table` | `columns: [...]`, optional `groupings`, optional `order` | Plain detail table by default; multi-level aggregating table when `groupings` carries `groupBy` + `calculations`. See "Table groupings." |
 | Control | `control` (with `controlType: ...`) | `controlType` + type-specific fields | Catalog of `controlType` values in the "Control catalog" section. |
-| Layout container | `container` | (element body is `{id, kind}` only) | Child placement happens in the layout XML via `<GridContainer>`. |
+| Layout container | `container` | (element body is `{id, kind}` only) | Child placement happens in the layout XML via `<Container>`. |
 | Markdown text / heading | `text` | `body` (markdown), `verticalAlign` (`top \| middle \| bottom`) | Used for page titles, section headers, narrative blocks. |
 
 When the docs and the API disagree, trust the API error and update this table.
@@ -164,6 +217,14 @@ plan step and propose a substitute that IS supported (e.g. swap map →
 `line-chart` broken out by region, or → `bar-chart` ranked by location).
 
 ### GET-spec can 500 when UI features aren't representable
+
+> **Re-checked 2026-08-12 — this may be fixed.** A GET-spec of a live workbook
+> carrying pivot-table `conditionalFormats` (the heatmap cell coloring named
+> below as the confirmed trigger) returned 200, and the formatting came back as
+> a real `conditionalFormats` array on the element — i.e. it is now part of the
+> code representation, not UI-only state. Treat the workaround below as
+> historical until you actually see a 500, and re-test before designing around
+> it.
 
 The GET-spec endpoint can return HTTP 500 (`code: service_error`) on a
 workbook that's otherwise healthy — open-able in the UI, listed in
@@ -254,9 +315,10 @@ When you see `Invalid kind` on a kind you know is supported:
 Don't chase kind-name variants until you've ruled out an extraneous or
 misshapen field.
 
-## KPI element shape
+## KPI element shape (verified 2026-08-12)
 
-Minimal (number only):
+Minimal (number only). Note `value` is `{columnId}` — the older `{id}` form is
+rejected as `Invalid kind: "kpi-chart"`:
 
 ```json
 {
@@ -265,32 +327,42 @@ Minimal (number only):
   "name": "Total Revenue",
   "source": { "kind": "table", "elementId": "<sibling-table-id>" },
   "columns": [
-    { "id": "kpi-rev-value", "name": "Revenue", "formula": "[Metrics/Revenue]" }
+    { "id": "kpi-rev-value", "name": "Revenue", "formula": "[Metrics/Revenue]",
+      "format": { "kind": "number", "formatString": "$.3~s" } }
   ],
-  "value": { "id": "kpi-rev-value" }
+  "value": { "columnId": "kpi-rev-value" }
 }
 ```
 
-With timeline comparison (preferred — gives readers period-over-period
-context). Add a date-dimension column to the `columns` array. Sigma renders
-the comparison/sparkline automatically when both a `value` column and a date
-dimension are present:
+An explicit delta against a baseline uses a second column plus `comparison` /
+`comparisonColumn` (shape taken from a GET-back of a UI-built KPI):
 
 ```json
 {
-  "id": "kpi-revenue",
-  "kind": "kpi-chart",
-  "name": "Total Revenue",
-  "source": { "kind": "table", "elementId": "<sibling-table-id>" },
+  "value": { "columnId": "kpi-rev-value" },
+  "comparison": { "display": "relative", "direction": "none", "label": "of Total" },
+  "comparisonColumn": { "columnId": "kpi-rev-baseline" }
+}
+```
+
+`display: "relative"` renders the delta as a percentage of the comparison
+column; `direction` controls the up/down arrow treatment; `label` is the
+caption under the delta.
+
+Adding a date-dimension column to `columns` is what enables Sigma's own
+period-over-period comparison and sparkline:
+
+```json
+{
   "columns": [
     { "id": "kpi-rev-month", "formula": "DateTrunc(\"month\", [Date])" },
     { "id": "kpi-rev-value", "name": "Revenue", "formula": "[Metrics/Revenue]" }
   ],
-  "value": { "id": "kpi-rev-value" }
+  "value": { "columnId": "kpi-rev-value" }
 }
 ```
 
-`value.id` points at the column whose value is rendered as the tile number.
+`value.columnId` points at the column whose value is rendered as the tile number.
 The column's `formula` is typically `[Metrics/<Name>]` so currency/percent
 formatting carries through from the data model. A KPI with a time-series
 metric should always include the date-dimension column for the comparison.
@@ -333,15 +405,14 @@ To match an exact `kind`-error symptom to this fix: if the validator
 rejects `<chart-kind>` and your spec has a `color` field shaped like
 `{id: "..."}`, that's the cause — change to `{by, column}`.
 
-## Bar / line / area / combo chart shape
+## Bar / line / area / combo chart shape (verified 2026-08-12)
 
-These four share the xAxis/yAxis pattern. Differences:
+These four share the xAxis/yAxis pattern: `xAxis` is one `{columnId}` object and
+`yAxis` is one `{columnIds: [...]}` object holding every metric series. Passing
+the older `xAxis: {id}` / `yAxis: [{id}]` forms is rejected with the masked
+`Invalid kind: "<chart-kind>"`.
 
-- `bar-chart`, `line-chart`, `area-chart` accept a single y-axis array
-  of metric columns. Multi-series breakout uses `color: {by, column}`.
-- `combo-chart` mixes bar + line in the same chart by giving each
-  `yAxis` entry an optional `type` override (`"line"` for line-style,
-  default is bar-style for `combo-chart` / what the `kind` implies).
+- Multi-series breakout uses `color: {by, column}`.
 - `area-chart` accepts an optional `stacking` field:
   - default (omitted) — stacked
   - `"none"` — unstacked overlay (each series drawn from the baseline)
@@ -361,23 +432,23 @@ Minimal area-chart (stacked):
     { "id": "ar-revenue", "formula": "[Metrics/Revenue]" },
     { "id": "ar-cogs",    "formula": "[Metrics/COGS]" }
   ],
-  "xAxis": { "id": "ar-month" },
-  "yAxis": [ { "id": "ar-revenue" }, { "id": "ar-cogs" } ]
+  "xAxis": { "columnId": "ar-month" },
+  "yAxis": { "columnIds": ["ar-revenue", "ar-cogs"] }
 }
 ```
 
-Combo chart with one bar series + one line series:
+`xAxis` also carries sort and label formatting:
 
 ```json
-{
-  "kind": "combo-chart",
-  "xAxis": { "id": "month-col" },
-  "yAxis": [
-    { "id": "revenue-col" },
-    { "id": "profit-margin-col", "type": "line" }
-  ]
+"xAxis": {
+  "columnId": "br-region",
+  "sort": { "by": "br-revenue", "aggregation": "sum", "direction": "descending" },
+  "format": { "labels": { "labelAngle": -45 } }
 }
 ```
+
+The `sort.by` value is a column id and `sort.aggregation` names the aggregate
+to sort on — without it, a sort against an aggregated metric is ignored.
 
 Add `color: {by: "category", column: "<col-id>"}` to break either of
 these into multiple series (e.g. one line per region). The `column`
@@ -392,9 +463,9 @@ Reference example with all variants:
 Pie and donut charts use a different encoding from xAxis/yAxis charts.
 They have two required fields:
 
-- `color: {id: "<categorical-col-id>"}` — the dimension whose values
+- `color: {columnId: "<categorical-col-id>"}` — the dimension whose values
   become slice identities.
-- `value: {id: "<metric-col-id>"}` — the metric whose values become
+- `value: {columnId: "<metric-col-id>"}` — the metric whose values become
   slice sizes.
 
 ```json
@@ -407,8 +478,8 @@ They have two required fields:
     { "id": "dn-family",  "formula": "[<table>/Product Family]" },
     { "id": "dn-revenue", "formula": "[Metrics/Revenue]" }
   ],
-  "color": { "id": "dn-family" },
-  "value": { "id": "dn-revenue" }
+  "color": { "columnId": "dn-family" },
+  "value": { "columnId": "dn-revenue" }
 }
 ```
 
@@ -420,7 +491,7 @@ spec-level difference between the two.
 Both axes are metrics (not categorical). Each row of the underlying
 data becomes one point. Optional encodings:
 
-- `size: {id: "<metric-col-id>"}` — bubble-sizes the point. Without
+- `size: {columnId: "<metric-col-id>"}` — bubble-sizes the point. Without
   this, all points are the same size (pure scatter).
 - `color: {by: "category", column: "<categorical-col-id>"}` — same
   shape as on line/area/bar; colors points by a categorical dimension.
@@ -437,9 +508,9 @@ data becomes one point. Optional encodings:
     { "id": "sc-margin",   "formula": "[Metrics/Profit Margin]" },
     { "id": "sc-region",   "formula": "[<table>/Store Region]" }
   ],
-  "xAxis": { "id": "sc-revenue" },
-  "yAxis": [ { "id": "sc-margin" } ],
-  "size":  { "id": "sc-revenue" },
+  "xAxis": { "columnId": "sc-revenue" },
+  "yAxis": { "columnIds": ["sc-margin"] },
+  "size":  { "columnId": "sc-revenue" },
   "color": { "by": "category", "column": "sc-region" }
 }
 ```
@@ -480,13 +551,15 @@ The correct shape (matches
 
 Critical field-shape rules:
 
-- `rowsBy` (NOT `rows`) — array of `{id}` objects pointing at row-grouping columns.
+- `rowsBy` (NOT `rows`) — array of `{id}` objects pointing at row-grouping
+  columns. Each entry takes an optional `sort: {by: "<col-id>", direction}`.
 - `columnsBy` (NOT `cols`) — same shape, for column-grouping columns.
 - `values` — array of **id strings** (e.g. `["pvt-units"]`), NOT objects like
   `[{"id": "pvt-units"}]`. The objects-form is rejected.
-- Cell-color conditional formatting (the "heatmap" visual) is UI-side; the
-  spec sets up the pivot structure but cell coloring is not in the code
-  representation.
+- Cell-color conditional formatting rides on the element as a
+  `conditionalFormats` array (verified present in a GET-back 2026-08-12).
+  Earlier guidance here called it UI-only — see the re-check note under
+  "GET-spec can 500" above before assuming it can't be set from code.
 
 ## Container element shape
 
@@ -498,7 +571,7 @@ container's own grid. The element body is intentionally minimal:
 { "id": "container-header", "kind": "container" }
 ```
 
-All child placement is in the layout XML using `<GridContainer>` — see
+All child placement is in the layout XML using `<Container>` — see
 Layout below.
 
 ## Text element shape (titles, headings, narrative)
@@ -784,20 +857,31 @@ page — but it must exist on the page and be placed in the layout XML.
 Place it at the bottom under the detail table; users can scroll to it
 but it stays out of the headline view.
 
-## Column `format` — undocumented, omit at POST
+## Column `format` (verified 2026-08-12 — supersedes "omit at POST")
 
-Setting `format: { type: "number", format: "currency", currency: "USD" }`
-on a column is rejected:
+The missing `kind` value this file used to call undiscovered is `"number"`, and
+the format itself is a d3 format string:
 
+```json
+{ "id": "kpi-rev-value", "name": "Revenue", "formula": "Sum([Transactions/Revenue])",
+  "format": { "kind": "number", "formatString": "$.3~s" } }
 ```
-pages[0].elements[N].columns[M].format: Missing "kind" field
+
+Verified round-trip on a KPI row: `$.3~s` → `$2.64B`, `,d` → `9,045,210`,
+`.1%` → `19.5%`. Currency and grouping symbols can be pinned explicitly when
+the locale default isn't wanted:
+
+```json
+"format": {
+  "kind": "number", "formatString": "$.1S",
+  "decimalSymbol": ".", "digitGroupingSymbol": ",",
+  "digitGroupingSize": [3], "currencySymbol": "$"
+}
 ```
 
-The required `kind` value is not in the public docs. Until the shape is
-discovered (configure currency in the UI → `GET /v2/workbooks/{id}/spec`
-→ diff), **omit `format` from POST bodies entirely** and configure
-currency/percent formatting in the UI after CREATE. Replace this section
-with the discovered shape once known.
+Set formats in the spec rather than in the UI — a percentage metric that renders
+as `0.20` instead of `19.5%` is the most common "the numbers look wrong" report,
+and it survives no round-trip when configured by hand.
 
 ## Looking up Sigma functions
 
@@ -1032,8 +1116,8 @@ control inside `DateTrunc`:
     },
     { "id": "col-revenue", "formula": "[Metrics/Revenue]" }
   ],
-  "xAxis": { "id": "col-trend-period" },
-  "yAxis": [ { "id": "col-revenue" } ]
+  "xAxis": { "columnId": "col-trend-period" },
+  "yAxis": { "columnIds": ["col-revenue"] }
 }
 ```
 
@@ -1414,8 +1498,8 @@ sibling namespace:
     { "id": "cm-margin", "formula": "[Store Aggregates/Total Profit Margin]" },
     { "id": "cm-cat",    "formula": "[Store Aggregates/cat margin]" }
   ],
-  "xAxis": { "id": "cm-store", "sort": { "by": "cm-margin", "direction": "descending" } },
-  "yAxis": [ { "id": "cm-margin" } ],
+  "xAxis": { "columnId": "cm-store", "sort": { "by": "cm-margin", "aggregation": "sum", "direction": "descending" } },
+  "yAxis": { "columnIds": ["cm-margin"] },
   "color": { "by": "category", "column": "cm-cat" }
 }
 ```
@@ -1493,45 +1577,49 @@ tbl-plugs-tx-raw  (warehouse-table, passthrough)
 
 ## Layout
 
-Layout is XML embedded as a string in the JSON `layout` field. 24-column grid.
+Layout is XML embedded as a string in `document.layout`. 24-column grid.
 Three node types:
 
 - `<Page>` — the root. `type="grid"`, `gridTemplateColumns="repeat(24, 1fr)"`,
   `gridTemplateRows="auto"`, `id="<page-id>"` (must equal the page id in the
   `pages` array).
-- `<GridContainer>` — wraps a container element's children. Has its OWN grid
+- `<Container>` — wraps a container element's children. Has its OWN grid
   (24 cols by default), so child positions inside a container are relative
   to the container, not the page. Required attrs: `elementId` (the container
   element's id), `type="grid"`, `gridColumn`, `gridRow`,
   `gridTemplateColumns`, `gridTemplateRows`.
-- `<LayoutElement>` — a leaf element placement. Required: `elementId`,
+- `<Element>` — a leaf element placement. Required: `elementId`,
   `gridColumn`, `gridRow`.
+
+A tabbed container is `<TabbedContainer elementId="..." type="tabbed-container" ...>`
+holding one `<Tab gridTemplateColumns="..." gridTemplateRows="...">` per tab, each
+with its own nested `<Element>` children.
 
 ```xml
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-overview">
 
   <!-- Header bar: title + filter controls in one row, wrapped in a container -->
-  <GridContainer elementId="container-header" type="grid"
-                 gridColumn="1 / 25" gridRow="1 / 4"
-                 gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <LayoutElement elementId="text-page-title"  gridColumn="1 / 10"  gridRow="1 / 4"/>
-    <LayoutElement elementId="ctrl-store-region" gridColumn="10 / 15" gridRow="1 / 4"/>
-    <LayoutElement elementId="ctrl-date-range"   gridColumn="15 / 20" gridRow="1 / 4"/>
-    <LayoutElement elementId="ctrl-product-family" gridColumn="20 / 25" gridRow="1 / 4"/>
-  </GridContainer>
+  <Container elementId="container-header" type="grid"
+             gridColumn="1 / 25" gridRow="1 / 4"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="text-page-title"  gridColumn="1 / 10"  gridRow="1 / 4"/>
+    <Element elementId="ctrl-store-region" gridColumn="10 / 15" gridRow="1 / 4"/>
+    <Element elementId="ctrl-date-range"   gridColumn="15 / 20" gridRow="1 / 4"/>
+    <Element elementId="ctrl-product-family" gridColumn="20 / 25" gridRow="1 / 4"/>
+  </Container>
 
   <!-- Body: 3 KPIs across the top, full-width chart below -->
-  <GridContainer elementId="container-body" type="grid"
-                 gridColumn="1 / 25" gridRow="4 / 25"
-                 gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <LayoutElement elementId="kpi-revenue"  gridColumn="1 / 9"   gridRow="1 / 10"/>
-    <LayoutElement elementId="kpi-cogs"     gridColumn="9 / 17"  gridRow="1 / 10"/>
-    <LayoutElement elementId="kpi-margin"   gridColumn="17 / 25" gridRow="1 / 10"/>
-    <LayoutElement elementId="chart-revenue-monthly" gridColumn="1 / 25" gridRow="10 / 22"/>
-  </GridContainer>
+  <Container elementId="container-body" type="grid"
+             gridColumn="1 / 25" gridRow="4 / 25"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="kpi-revenue"  gridColumn="1 / 9"   gridRow="1 / 10"/>
+    <Element elementId="kpi-cogs"     gridColumn="9 / 17"  gridRow="1 / 10"/>
+    <Element elementId="kpi-margin"   gridColumn="17 / 25" gridRow="1 / 10"/>
+    <Element elementId="chart-revenue-monthly" gridColumn="1 / 25" gridRow="10 / 22"/>
+  </Container>
 
   <!-- Bare leaf, no container -->
-  <LayoutElement elementId="tbl-plugs-tx" gridColumn="1 / 25" gridRow="25 / 45"/>
+  <Element elementId="tbl-plugs-tx" gridColumn="1 / 25" gridRow="25 / 45"/>
 </Page>
 ```
 
@@ -1542,7 +1630,7 @@ Layout rules:
   more vertical space (8–10 rows tall, not 3) so the sparkline reads.
 - Container children's coordinates are RELATIVE to the container's own grid,
   not the page. Inside the container you start a fresh `1 / 25` column space.
-- A container's element body in the JSON `pages[].elements` is just
+- A container's element body in `document.elements` is just
   `{id, kind: "container"}` — no children listed there. The XML is the
   source of truth for parent/child relationships.
 - The `id` attribute on `<Page>` MUST equal the page id in the `pages` array.
@@ -1580,8 +1668,14 @@ and `examples/data-model-sourced-kpi-overview-with-containers.json`.
    Prefer `[Metrics/<Name>]` over hand-derived sums.
 5. Author the control with `filters[].columnId` = the column id you declared
    on the table.
-6. Layout XML wires elementIds to grid positions.
-7. POST → if HTTP 200, GET it back as the new source of truth (Sigma normalizes
+6. Layout XML (in `document.layout`) wires elementIds to grid positions.
+7. `POST /v2/workbooks/spec/verify` → fix anything it reports; this costs
+   nothing and creates nothing.
+8. POST → if HTTP 200, GET it back as the new source of truth (Sigma normalizes
    IDs, layout XML, etc.) — overwrite `spec.json`.
-8. **Open the workbook in the UI and visually verify** elements render — the
-   API will not catch broken cross-element column references.
+9. **Look at the result.** `GET /v2/workbooks/{id}/elements/{elementId}/query`
+   confirms each element compiles to the SQL you meant (real `GROUP BY`, no
+   defensive `iff(equal_null(...))`), and a PNG export renders the composed
+   page headlessly — see `skills/sigma-company-dashboard-v2/scripts/shot.py`.
+   Neither the create nor `verify` catches a broken cross-element column
+   reference.

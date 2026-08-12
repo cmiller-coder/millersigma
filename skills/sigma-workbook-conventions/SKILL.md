@@ -14,6 +14,18 @@ description: >-
 Project-wide conventions for Sigma workbook/data-model specs. Read this before
 generating or editing any `spec.json` in `workbooks/` or `examples/`.
 
+> ⚠️ **The spec shape changed — read
+> [`reference/workbook-spec-api.md`](reference/workbook-spec-api.md) first.** Bodies
+> now nest everything except `name`/`folderId` under `document`, elements are one
+> flat `document.elements` array, layout tags are `<Container>`/`<Element>`, KPI
+> values are `{columnId}`, and chart axes are `{columnId}`/`{columnIds}`. The
+> example specs in `examples/` and the generator scripts in the sibling skills
+> still use the retired shapes, so copying one verbatim now fails — usually with
+> a masked `Invalid kind` error. `python3 scripts/validate-spec.py <spec.json>`
+> names every retired form it finds, and
+> `python3 scripts/smoke-test-workbook.py` proves the current shape end to end
+> against a live org.
+
 ## Inputs
 
 This skill is reference-only — no scripts. It assumes:
