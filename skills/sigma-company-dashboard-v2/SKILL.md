@@ -67,11 +67,16 @@ blank.
 
 ## Adding a company
 
-Ask the user only what cannot be inferred — and ask all four of these, not
-just the first three (a cold run has skipped the fourth before):
+Ask the user only what cannot be inferred — and ask all five of these:
 1. **Which surfaces?** command center only / + modeler / + cohort builder
-2. **Demo org or prospect org?**
-3. **Bespoke plugin?** — default to yes and design a NEW one for this
+2. **Which dashboard theme?** Show the five previews in
+   [`examples/theme-gallery/`](examples/theme-gallery/README.md): Executive
+   Gradient / Editorial Minimal / Operations Control Room / Aurora Glass /
+   Field & Natural. The machine-readable mappings live in
+   `theme-presets.json`. If the user declines to choose, default to Executive
+   Gradient.
+3. **Demo org or prospect org?**
+4. **Bespoke plugin?** — default to yes and design a NEW one for this
    company's actual industry (HANDOFF.md §9's "never reuse the last one"
    table). Don't wire up whichever plugin is already sitting in `plugins/`
    just because it exists — a reused flywheel/ticker on the wrong industry is
@@ -79,7 +84,7 @@ just the first three (a cold run has skipped the fourth before):
    host on jsDelivr off the public repo (see §9), so this renders for anyone,
    not just the machine that built it — that blocker is gone for new plugins
    registered this way.
-4. **Pixel-perfect PDF report too?** — this is a separate script
+5. **Pixel-perfect PDF report too?** — this is a separate script
    (`build_statement.py`) and, for a brand-new company, a whole new
    `STATEMENTS` config block to author (copy Delta's or SoFi's — the only two
    that exist so far). Say this cost up front rather than silently building it

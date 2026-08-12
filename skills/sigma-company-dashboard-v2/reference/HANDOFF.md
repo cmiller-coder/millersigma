@@ -635,10 +635,13 @@ KPIs) was reverse-engineered from demeng's Marketing Control Center.
 
 - **Every prospect build = dashboard page + scenario-modeler/data-app page**,
   automatically. Never auto-add a Sankey plugin.
-- **Header style**: clean brand-gradient header + the REAL logo fetched from the
-  company site, recoloured white by filling the PATHS. Native-title Current/Prior
-  KPI cards, never SVG-image titles. Flat wordmark and photo-hero were both
-  rejected.
+- **Theme selection**: show the five previews in
+  `examples/theme-gallery/` and apply the user's choice. Executive Gradient
+  remains the default (clean brand-gradient header + the REAL logo fetched
+  from the company site, recoloured white by filling the PATHS), but Editorial
+  Minimal, Operations Control Room, Aurora Glass, and Field & Natural are
+  first-class aesthetics. The workflow/data-app composition does not change
+  with the theme. Native KPI titles always; never SVG-image titles.
 - **eBay is the one deliberate exception** — its multi-colour wordmark stays
   as-is on a white chip.
 - **Aesthetics is priority #1.** Follow dashboard best practice. Produce an HTML
