@@ -470,6 +470,11 @@ LABELS = {
         "driver_cost": "Cost of funds", "driver_eff": "Efficiency ratio",
         # the third Color-by option / the Balance Type dimension
         "seg_type": "Balance type",
+        # cohort filter for CohortAge -- was hardcoded "Age Band" in
+        # build_sofi.py for every company until Veraset's build (B2B
+        # enterprise accounts have no natural "age," found via QA render).
+        # Parameterized instead of patched per-company.
+        "seg_age": "Age Band",
     },
     "boa": {
         "personas": ["Executive", "Analyst"],
@@ -2297,3 +2302,165 @@ PLUGINS["alnylam"] = {"hero": "8c93a664-6c23-4f05-9672-8b5dec130ee6",
                       "hero_config": {"product": "p0", "revenue": "p3", "pulse": "p7"}}
 
 COMPANIES["alnylam"] = ALNYLAM
+
+# ================================================================== VERASET
+# Private company -- no disclosed financials. Scale modeled from Veraset's
+# own stated coverage (10B+ anonymized GPS pings/day, ~300M devices, 200+
+# countries) and typical DaaS/alt-data pricing, not real reported numbers.
+# funding_rate=0 throughout (fee-only/margin-only pattern, same as NVIDIA's
+# compute segments and SoFi Money) -- a data-licensing business has no
+# "cost of funds," yield_rate alone IS the gross margin.
+VERASET = {
+    "key": "veraset",
+    "name": "Veraset",
+    "title": "Data Licensing Command Center",
+    "domain": "location data intelligence",
+    "base_table": "Data License Book",
+    "unit_noun": "account",
+    "volume_noun": "licensed volume",
+    "logo_domain": "veraset.com",
+    # sampled directly from veraset.com's page CSS, not guessed: #011627 (dark
+    # navy, near-black -- the site's actual header/background) and #23D6C7
+    # (a saturated teal/cyan, the one vivid accent against an otherwise
+    # muted/monochrome palette -- used sparingly on their own site, same
+    # restraint applied here).
+    "palette": {
+        "navy": "#011627", "navy_deep": "#010B14",
+        "primary": "#23D6C7", "secondary": "#698A9F",
+        "accent": "#ED793B", "mint": "#23D6C7",
+    },
+    "products": [
+        # name, order, balance_type, bal_base, yield(gross margin), funding
+        # (0 -- fee-only), fee_base (MONTHLY $MM), provision(delivery-risk
+        # reserve), delinq(churn/non-renewal rate), opex_ratio, growth,
+        # units_base, phase, tagline, rate_label, goal_pct, status
+        ("Movement", 1, "Usage-Based", 62, .60, 0.0, 1.2, .0030, .020,
+         .16, .14, 850, 0.2, "Global anonymized GPS ping pipeline, 10B+ signals/day",
+         "Gross margin", .98, "On plan"),
+        ("Visits", 2, "Usage-Based", 34, .72, 0.0, 0.9, .0025, .022,
+         .18, .20, 420, 1.0, "ML-modeled foot-traffic & POI visitation",
+         "Gross margin", 1.04, "Ahead"),
+        ("Trade Area & Site Selection", 3, "Subscription", 16, .75, 0.0, 0.4, .0020, .026,
+         .20, .17, 140, 1.6, "Retail & real estate expansion analytics",
+         "Gross margin", .96, "On plan"),
+        ("Advertising & Media Measurement", 4, "Usage-Based", 26, .46, 0.0, 0.7, .0040, .034,
+         .24, .10, 310, 0.6, "Ad-tech attribution & audience measurement feed",
+         "Gross margin", .90, "Behind"),
+        ("Financial & Alt-Data", 5, "Subscription", 9, .82, 0.0, 0.35, .0015, .012,
+         .13, .26, 45, 2.0, "Alt-data feeds for hedge funds & equity research",
+         "Gross margin", 1.12, "Ahead"),
+        ("Government & Urban Planning", 6, "Subscription", 10, .55, 0.0, 0.25, .0020, .016,
+         .17, .07, 60, 1.3, "Public-sector mobility & census-adjacent analytics",
+         "Gross margin", .99, "On plan"),
+    ],
+    "subs": {
+        "Movement": [("Core ping feed", .620, 10, 22.4, "On plan"),
+                     ("Historical archive", .240, -20, 8.2, "Behind"),
+                     ("Real-time streaming add-on", .140, 60, 12.6, "Ahead")],
+        "Visits": [("POI visit attribution", .680, 15, 18.4, "Ahead"),
+                   ("Trade-area overlays", .320, -10, 6.2, "On plan")],
+        "Trade Area & Site Selection": [("Site selection scoring", .580, 20, 8.6, "Ahead"),
+                                        ("Cannibalization modeling", .420, -15, 4.4, "On plan")],
+        "Advertising & Media Measurement": [("Attribution feed", .640, -25, -2.4, "Behind"),
+                                            ("Audience segments", .360, 30, 6.8, "On plan")],
+        "Financial & Alt-Data": [("Hedge fund feeds", .700, 45, 12.2, "Ahead"),
+                                 ("Equity research add-on", .300, 20, 4.6, "On plan")],
+        "Government & Urban Planning": [("Census-adjacent studies", .560, 5, 4.8, "On plan"),
+                                        ("Transportation planning", .440, -10, 2.2, "Behind")],
+    },
+    "alerts": [
+        ("critical", "Largest device panel partner renewal at risk",
+         "Top SDK-partner contract representing 18% of device panel coverage "
+         "up for renewal with a competing bidder", "31m ago",
+         "Partnerships", 18, "pct of panel coverage"),
+        ("warning", "iOS ATT opt-in rate drift",
+         "App Tracking Transparency opt-in rate down 260 bps against plan, "
+         "thinning device panel density in 4 top metro markets", "2h ago",
+         "Data Operations", 260, "bps below plan"),
+        ("warning", "Ad-tech pricing compression",
+         "Two hyperscaler resellers renegotiated per-record pricing down "
+         "12% at last renewal", "5h ago", "Advertising & Media Measurement",
+         12, "pct price compression"),
+        ("info", "Alt-data demand surge",
+         "Inbound hedge-fund and equity-research pipeline up 34% quarter over "
+         "quarter", "1d ago", "Financial & Alt-Data", 34, "pct QoQ growth"),
+        ("info", "New country coverage live",
+         "Device panel coverage extended to 6 additional countries in "
+         "Southeast Asia", "2d ago", "Data Operations", 6, "new countries"),
+    ],
+    "agent": ("You are an analyst covering Veraset's Movement, Visits, Trade Area, "
+              "Advertising, Financial Alt-Data and Government data products, gross "
+              "margin trends and device-panel/churn risk. Answer with numbers from "
+              "the workbook."),
+}
+
+# HQ in San Francisco; footprint weighted toward enterprise-customer
+# concentration (finance, adtech, retail hubs) rather than device coverage,
+# since the base table's geography represents customer/contract location.
+FOOTPRINTS["veraset"] = [("CA", .180), ("NY", .142), ("TX", .086), ("IL", .068),
+                         ("MA", .062), ("WA", .058), ("FL", .052), ("GA", .046),
+                         ("VA", .042), ("CO", .038), ("NJ", .034), ("PA", .030),
+                         ("OH", .026), ("NC", .022), ("AZ", .018)]
+
+LABELS["veraset"] = {
+    "personas": ["Executive", "Partner Success"],
+    "modeler_page": "Contract Renewal Planning",
+    "cohort_page": "Customer Segments",
+    "modeler_title": "Data License Renewal & Pricing Scenario Modeler",
+    "shock_label": "Per-record pricing shock (bps)",
+    "kpi_revenue": "Revenue ($M)",
+    "kpi_margin": "Gross profit ($M)",
+    "kpi_volume": "Licensed volume ($M)",
+    "kpi_units": "Devices covered (M)",
+    "driver_nim": "Gross margin",
+    "driver_risk": "Churn / non-renewal rate",
+    "driver_cost": "Cost to deliver rate",
+    "driver_eff": "Opex ratio",
+    "seg_product": "Data product",
+    "seg_credit": "Customer tier",
+    "seg_type": "Contract type",
+    "seg_dd": "Direct enterprise account",
+    "seg_engage": "Renewal cadence",
+    "seg_held": "Data products licensed",
+    "seg_age": "Contract age",
+    "cohort_name": "Segment name",
+    "kpi_cohort_size": "Accounts in segment",
+    "kpi_cohort_vol": "Annual contract value",
+    "kpi_cohort_rev": "ACV per account",
+    "kpi_cohort_risk": "Avg churn risk",
+    "col_volume": "Baseline licensed volume",
+    "col_growth": "Volume growth %",
+    "col_yield": "Gross margin Δ bps",
+    "col_cost": "Cost to deliver Δ bps",
+}
+
+SEGMENTS["veraset"] = {"Near Prime": "Emerging", "Prime": "Growth",
+                       "Super Prime": "Enterprise", "Exceptional": "Strategic",
+                       "Daily": "Active", "Weekly": "Recurring",
+                       "Monthly": "Occasional", "Dormant": "Churned"}
+
+VOCAB["veraset"] = {
+    "econ": ("Veraset licenses anonymized location data as a subscription or "
+             "usage-based feed; each data product earns a gross margin against "
+             "its cost to source, cleanse and deliver the underlying device "
+             "signal. The spread between licensing revenue and delivery cost "
+             "is the gross profit the product contributes before opex."),
+    "metrics": ("revenue, gross profit, licensed data volume and churn/"
+                "non-renewal risk"),
+    "bands": ("Customer tiers: Emerging, Growth, Enterprise, Strategic. "
+              "Renewal cadence: Active, Recurring, Occasional, Churned."),
+    "cohort_report": ("accounts in the segment, annual contract value and "
+                      "average churn risk"),
+}
+
+# Per-account annual contract value, in DOLLARS -- an enterprise data-license
+# customer runs from a small startup feed to a strategic hyperscale account,
+# nothing like a retail-banking balance, so this must override the default.
+POP["veraset"] = {"bases": (18000, 85000, 420000, 1850000), "rev_rate": 0.62,
+                  "fee_per_product": 22000}
+
+# Plugin-free for this build per explicit request (quick build, cohort-only
+# surfaces) -- no bespoke plugin authored this session.
+PLUGINS["veraset"] = {"hero": None, "hero_label": None, "ticker": None}
+
+COMPANIES["veraset"] = VERASET

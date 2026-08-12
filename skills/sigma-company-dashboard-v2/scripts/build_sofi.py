@@ -1066,7 +1066,7 @@ header(3, "Member Cohort Builder",
 # the segment filters; the agent gets one set-control-value tool per dimension
 COHORT_FILTERS = [
     ("s-prod", "CohortProduct", CO.lab(CFG, "seg_product"), "m1"),
-    ("s-age", "CohortAge", "Age Band", "m2"),
+    ("s-age", "CohortAge", CO.lab(CFG, "seg_age"), "m2"),
     ("s-region", "CohortRegion", "Region", "m3"),
     ("s-credit", "CohortCredit", CO.lab(CFG, "seg_credit"), "m4"),
     ("s-dd", "CohortDirectDeposit", CO.lab(CFG, "seg_dd"), "m7"),
