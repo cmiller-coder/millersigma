@@ -34,6 +34,24 @@ capacity utilisation and flags breaches. The approval queue reuses the
 Draft → Submitted → Approved / Adjust / Rejected lifecycle from
 `sigma-input-table-app`.
 
+### Visual techniques worth copying
+
+Everything below was verified to round-trip and render:
+
+| Technique | Shape |
+|---|---|
+| Real logo, no asset host | fetch the public-domain SVG at build time, inline as a `data:image/svg+xml;base64` URI on an `image` element's `source.url` |
+| Paper canvas instead of stark white | `pages[].backgroundColor` (a page-level field, not a theme colour) |
+| Editable-cell affordance | `conditionalFormats` `type: single`, `condition: formula`, `formula: "True"` on the editable columns with a warm tint |
+| In-cell magnitude | `conditionalFormats` `type: dataBars` with `scheme: [bar, track]` |
+| Status pills | two `type: single` rules on the status column, one per value, each with `style.backgroundColor` + `color` |
+| Every KPI comparative | `comparisonColumn` + `comparison: {display: "delta", colorGood, colorBad, label}` against a *named* baseline (demand signal, FY goal, operating ceiling) |
+| Live narrative callout | a `text` element whose body carries `{{Sum([Element/Col]) / Sum([Element/Col2]) | .1%}}` segments — cross-element references resolve inside text bodies |
+
+Two things that do **not** work: the `progress` gauge element is rejected
+(`Invalid kind: "progress"`), and adding a date column to a `kpi-chart` did not
+produce a sparkline — use an explicit comparison instead.
+
 ### Two traps this example encodes
 
 1. **Linked input tables carry source columns as `key`, not `formula`.** A `formula`

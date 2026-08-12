@@ -1,14 +1,4 @@
-#!/usr/bin/env python3
-"""Honda — Hybrid vs. EV Allocation.
-
-Page 1  Executive overview   (Editorial Ops theme: light paper, hairline rules)
-Page 2  Allocation data app  (denser console feel, still light so input tables work)
-Page 3  Data (hidden)        baseline + registry plumbing
-
-Theme: "Editorial Ops" — Editorial Minimal structure recoloured to Honda
-(#CC0000 sampled from Honda's own logo SVG), with Control Room density on page 2.
-Semantics are teal/amber so Honda red only ever means brand or a capacity breach.
-"""
+import base64
 import json
 import os
 import sys
@@ -19,13 +9,24 @@ import urllib.request
 #   python3 build_honda_ev_allocation.py                      # print the spec only
 #   python3 build_honda_ev_allocation.py <BASE> <TOKEN> <CONNECTION_ID> <FOLDER_ID>
 #
-# CONNECTION_ID must be a warehouse connection with Sigma write-back enabled
-# (the linked input table and the plan registry both persist there).
+# CONNECTION_ID must be a warehouse connection with Sigma write-back enabled --
+# the linked input table and the plan registry both persist there.
 _ARGS = sys.argv[1:]
 BASE = _ARGS[0] if len(_ARGS) > 0 else os.environ.get("SIGMA_BASE_URL", "")
 TOKEN = _ARGS[1] if len(_ARGS) > 1 else os.environ.get("SIGMA_API_TOKEN", "")
 CONN = _ARGS[2] if len(_ARGS) > 2 else "<connection-id>"
 FOLDER = _ARGS[3] if len(_ARGS) > 3 else "<folder-id>"
+
+# Honda's corporate wordmark, public domain on Wikimedia Commons. Fetched at build
+# time and inlined as a data URI so the workbook needs no external asset host.
+# Falls back to a typographic wordmark if the fetch fails -- never hand-draw a mark.
+LOGO_SVG_URL = "https://upload.wikimedia.org/wikipedia/commons/7/76/Honda_logo.svg"
+try:
+    _req = urllib.request.Request(LOGO_SVG_URL, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(_req, timeout=20) as _r:
+        LOGO_URI = "data:image/svg+xml;base64," + base64.b64encode(_r.read()).decode()
+except Exception:
+    LOGO_URI = None
 
 # ---- Editorial Ops palette (Honda) ----
 PAPER, CARD, CARD_ALT = "#F7F7F5", "#FFFFFF", "#F1F2F0"
@@ -206,6 +207,11 @@ add({"id": "it-alloc", "kind": "input-table", "name": "Allocation Plan",
      "sort": [{"columnId": "al-month", "direction": "ascending", "nulls": "last"},
               {"columnId": "al-model", "direction": "ascending", "nulls": "last"}],
      "tableComponents": {"summaryBar": "hidden"},
+     "conditionalFormats": [
+         {"type": "single", "columnIds": ["al-prop", "al-note"], "condition": "formula",
+          "formula": "True", "style": {"backgroundColor": "#FFFDF3"}},
+         {"type": "dataBars", "columnIds": ["al-var"], "scheme": [HONDA, CARD_ALT]},
+     ],
      "tableStyle": {"preset": "presentation", "cellSpacing": "small",
                     "banding": "shown", "bandingColor": CARD_ALT,
                     "gridLines": "horizontal",
@@ -249,6 +255,15 @@ add({"id": "tbl-load", "kind": "table", "name": "Plant Month Load",
      "groupings": [{"id": "g-pl", "groupBy": ["pl-plant", "pl-month"],
                     "calculations": ["pl-eff", "pl-cap", "pl-util", "pl-id", "pl-flag"]}],
      "tableComponents": {"summaryBar": "hidden"},
+     "conditionalFormats": [
+         {"type": "dataBars", "columnIds": ["pl-util"], "scheme": [GOOD, CARD_ALT]},
+         {"type": "single", "columnIds": ["pl-flag"], "condition": "formula",
+          "formula": '[Capacity Status] = "Over capacity"',
+          "style": {"backgroundColor": "#FBE9E7", "color": ALARM}},
+         {"type": "single", "columnIds": ["pl-flag"], "condition": "formula",
+          "formula": '[Capacity Status] = "Within capacity"',
+          "style": {"backgroundColor": "#E9F5F1", "color": GOOD}},
+     ],
      "tableStyle": {"preset": "presentation", "cellSpacing": "small"},
      "visibleAsSource": True})
 
@@ -274,18 +289,23 @@ def kpi(eid, label, source, formula, fmt, comparison=None, comp_formula=None,
 
 EFF = "[Allocation Plan/Effective Units]"
 add(kpi("k-units", "Plan of record units", "sql-alloc",
-        "Sum([Allocation Baseline/Baseline Units])", INT))
+        "Sum([Allocation Baseline/Baseline Units])", INT,
+        comparison="Demand signal",
+        comp_formula="Sum([Allocation Baseline/Demand Signal])"))
 add(kpi("k-elec", "Electrified mix", "sql-alloc",
         'Sum(If([Allocation Baseline/Powertrain] <> "ICE", [Allocation Baseline/Baseline Units], 0))'
-        " / Sum([Allocation Baseline/Baseline Units])", PCT1))
+        " / Sum([Allocation Baseline/Baseline Units])", PCT1,
+        comparison="FY goal", comp_formula="0.60", comp_fmt=PCT1))
 add(kpi("k-bev", "BEV mix vs target", "sql-alloc",
         'Sum(If([Allocation Baseline/Powertrain] = "BEV", [Allocation Baseline/Baseline Units], 0))'
         " / Sum([Allocation Baseline/Baseline Units])", PCT1,
         comparison="Target", comp_formula="Avg([Allocation Baseline/BEV Mix Target])"))
 add(kpi("k-cap", "Plant capacity used", "sql-plant",
-        "Sum([Plant Capacity/Allocated Units]) / Sum([Plant Capacity/Capacity Units])", PCT1))
+        "Sum([Plant Capacity/Allocated Units]) / Sum([Plant Capacity/Capacity Units])", PCT1,
+        comparison="Operating ceiling", comp_formula="0.95", comp_fmt=PCT1))
 add(kpi("k-cell", "Battery cell used", "sql-plant",
-        "Sum([Plant Capacity/Cell kWh Used]) / Sum([Plant Capacity/Cell kWh Available])", PCT1))
+        "Sum([Plant Capacity/Cell kWh Used]) / Sum([Plant Capacity/Cell kWh Available])", PCT1,
+        comparison="Cell commitment", comp_formula="0.85", comp_fmt=PCT1))
 
 add(kpi("k-prop", "Proposed units", "it-alloc", "Sum(%s)" % EFF, INT,
         comparison="Plan of record", comp_formula="Sum([Allocation Plan/Baseline Units])"))
@@ -339,7 +359,7 @@ add({"id": "ch-region", "kind": "bar-chart", "name": "Units by region and powert
      "color": {"by": "category", "column": "cr-pt"}, "legend": {"position": "top"},
      "stacking": "stacked"})
 
-add({"id": "ch-prop", "kind": "line-chart", "name": "Proposed vs plan of record",
+add({"id": "ch-prop", "kind": "bar-chart", "name": "Proposed vs plan of record",
      "source": {"kind": "table", "elementId": "it-alloc"},
      "columns": [
          {"id": "pv-month", "name": "Month", "formula": "[Allocation Plan/Month]", "format": MON},
@@ -349,6 +369,7 @@ add({"id": "ch-prop", "kind": "line-chart", "name": "Proposed vs plan of record"
      ],
      "xAxis": {"columnId": "pv-month"}, "yAxis": {"columnIds": ["pv-base", "pv-eff"]},
      "stacking": "none", "legend": {"position": "top"}})
+
 
 # --------------------------------------------------------------- controls
 def control(eid, cid, name, ctype="text", value="", **extra):
@@ -482,10 +503,16 @@ for idx, (head, sub) in enumerate([
     add({"id": "c-hdr%d" % idx, "kind": "container", "spacing": "small",
          "style": {"backgroundColor": CARD, "borderRadius": "square",
                    "borderColor": RULE, "borderWidth": 1}})
-    add(text("wm%d" % idx,
-             '<span style="font-size: 26px; color: %s">**HONDA**</span>' % HONDA,
-             style={"backgroundColor": "transparent", "padding": "none"},
-             verticalAlign="middle"))
+    if LOGO_URI:
+        add({"id": "wm%d" % idx, "kind": "image",
+             "source": {"kind": "url", "url": LOGO_URI},
+             "style": {"fit": "contain", "align": "start",
+                       "backgroundColor": "transparent", "padding": "none"}})
+    else:
+        add(text("wm%d" % idx,
+                 '<span style="font-size: 26px; color: %s">**HONDA**</span>' % HONDA,
+                 style={"backgroundColor": "transparent", "padding": "none"},
+                 verticalAlign="middle"))
     add(text("eyebrow%d" % idx,
              '<span style="color: %s">**HONDA · NORTH AMERICA PLANNING**</span>' % HONDA,
              style={"backgroundColor": "transparent", "padding": "none"},
@@ -507,6 +534,25 @@ for idx, (head, sub) in enumerate([
 add(text("q-exec", '<span style="color: %s">**THE DECISION**</span>  '
                    '<span style="color: %s">How much volume should move from ICE to hybrid and EV '
                    'without breaching plant capacity or battery cell supply?</span>' % (HONDA, INK)))
+add({"id": "c-insight", "kind": "container", "spacing": "small",
+     "style": {"backgroundColor": "#FFF8F7", "borderRadius": "square",
+               "borderColor": "#F2D6D2", "borderWidth": 1}})
+add(text("insight",
+         '<span style="color: %s">**WHERE THE PLAN IS TIGHT**</span>  '
+         '<span style="color: %s">BEV is </span>'
+         '<span style="color: %s">**{{Sum(If([Allocation Baseline/Powertrain] = "BEV", '
+         '[Allocation Baseline/Baseline Units], 0)) / Sum([Allocation Baseline/Baseline Units]) '
+         '| .1%%}}**</span>'
+         '<span style="color: %s"> of the plan against an 18.0%% target, while plants run at </span>'
+         '<span style="color: %s">**{{Sum([Plant Capacity/Allocated Units]) '
+         '/ Sum([Plant Capacity/Capacity Units]) | .1%%}}**</span>'
+         '<span style="color: %s"> of build capacity and </span>'
+         '<span style="color: %s">**{{Sum([Plant Capacity/Cell kWh Used]) '
+         '/ Sum([Plant Capacity/Cell kWh Available]) | .1%%}}**</span>'
+         '<span style="color: %s"> of cell supply. Adding BEV volume therefore has to come '
+         'out of another powertrain at the same plant.</span>'
+         % (HONDA, INK_SOFT, INK, INK_SOFT, INK, INK_SOFT, INK, INK_SOFT),
+         style={"backgroundColor": "transparent", "padding": "none"}))
 add(text("s-mix", '<span style="color: %s">**MIX TRAJECTORY**</span>' % INK_SOFT))
 add(text("s-cap", '<span style="color: %s">**CAPACITY POSTURE**</span>' % INK_SOFT))
 add(text("s-region", '<span style="color: %s">**REGIONAL MIX**</span>' % INK_SOFT))
@@ -521,8 +567,8 @@ for cid in ("c-kpi1", "c-app-kpi", "c-grid", "c-queue"):
          "style": {"backgroundColor": CARD, "borderRadius": "square",
                    "borderColor": RULE, "borderWidth": 1}})
 
-pages = [{"id": "pg-exec", "name": "Executive overview"},
-         {"id": "pg-app", "name": "Allocation planner"},
+pages = [{"id": "pg-exec", "name": "Executive overview", "backgroundColor": PAPER},
+         {"id": "pg-app", "name": "Allocation planner", "backgroundColor": PAPER},
          {"id": "pg-data", "name": "Data", "visibility": "hidden"}]
 overlays = [
     {"id": "m-create", "type": "modal", "name": "Create plan",
@@ -547,6 +593,10 @@ layout = f"""<?xml version="1.0" encoding="utf-8"?>
     <Element elementId="b-goto-app" gridColumn="19 / 25" gridRow="6 / 8"/>
   </Container>
   <Element elementId="q-exec" gridColumn="1 / 25" gridRow="9 / 11"/>
+  <Container elementId="c-insight" type="grid" gridColumn="1 / 25" gridRow="48 / 52"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="insight" gridColumn="1 / 25" gridRow="1 / 4"/>
+  </Container>
   <Container elementId="c-kpi1" type="grid" gridColumn="1 / 25" gridRow="11 / 19"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="k-units" gridColumn="1 / 6" gridRow="1 / 8"/>
@@ -593,9 +643,9 @@ layout = f"""<?xml version="1.0" encoding="utf-8"?>
   <Element elementId="s-load" gridColumn="13 / 25" gridRow="39 / 40"/>
   <Element elementId="tbl-load" gridColumn="13 / 25" gridRow="40 / 53"/>
   <Element elementId="s-queue" gridColumn="1 / 25" gridRow="53 / 54"/>
-  <Container elementId="c-queue" type="grid" gridColumn="1 / 25" gridRow="54 / 68"
+  <Container elementId="c-queue" type="grid" gridColumn="1 / 25" gridRow="54 / 64"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="tbl-review" gridColumn="1 / 20" gridRow="1 / 14"/>
+    <Element elementId="tbl-review" gridColumn="1 / 20" gridRow="1 / 10"/>
     <Element elementId="b-submit" gridColumn="20 / 25" gridRow="1 / 4"/>
   </Container>
 </Page>
