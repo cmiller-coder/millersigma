@@ -117,6 +117,14 @@ Safe from a button — scalars only:
 Note that `whichRows` is a different context: it *is* a row filter over the
 element, so `[Powertrain] = "BEV"` there is fine. Only `values` is scalar-only.
 
+**The same restriction applies to a Sigma AI agent's action tools.** An
+`update-rows` effect fired from an agent tool step (`document.agents[].tools[]`)
+has no row-bearing trigger either, so its `values` are constants / controls /
+scalar formulas only — never a per-row expression. Model any per-row transform
+as a computed column (below) and have the tool set a control instead. See
+`sigma-workbook-conventions/reference/workbook-spec-api.md` → "Agents & chat
+(Sigma AI copilots)."
+
 A **scalar** formula in `values` is fine, which is the clean way to stop asking
 users to invent a record ID:
 

@@ -52,6 +52,22 @@ real workbook state: region, credential, risk and commission-scenario controls;
 facility staging/reset; commission submit/approve. Agent action tools obey the
 same scalar-write rule as buttons.
 
+Three copilot rules this build encodes (see
+[`workbook-spec-api.md`](../../sigma-workbook-conventions/reference/workbook-spec-api.md)
+→ "Agents & chat (Sigma AI copilots)"):
+
+- **Static greeting, not generated.** A `greeting` of `mode: "generated"` was
+  observed hanging on "Thinking…" in the chat shell, leaving no prompt chips on
+  open. It is now `mode: "static"` with a concrete opener that names a real
+  critical facility (Cedar Creek) and lists the three questions the agent can
+  answer — it renders instantly and deterministically for a live walk.
+- **Definitions pinned in `instructions`.** Fill rate, unfilled shifts, the 90%
+  plan, take, and risk tiers are stated so the agent never re-derives a metric
+  the workbook already governs.
+- **Deterministic rankings are handed to the agent, not computed by it.** The
+  worst region / top critical account come from grounded elements; the agent
+  narrates the number rather than doing arithmetic over rows.
+
 All metrics come from one deterministic Snowflake activity contract plus
 facility, supply and commission rollups. The output is explicitly illustrative;
 replace the SQL sources with ShiftKey semantic views for a real POV.

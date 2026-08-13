@@ -430,6 +430,12 @@ numbers match what the user sees in the UI.
     and a minimal example for each kind. Bar/line/area/combo share one
     section; pie/donut share another; scatter, pivot, KPI, table-with-
     groupings each have their own.
+  - **Agents & chat (Sigma AI copilots)** — `document.agents` + `chat`
+    element shape, and the copilot rules learned live: static greeting
+    (generated greetings can hang on "Thinking…"), pin metric
+    definitions in `instructions`, hand the model deterministic
+    rankings, and agent action tools obey the same scalar-only
+    `update-rows` rule as buttons.
   - **Control catalog** — `controlType` values (`date-range`, `list`,
     `text`, `number-range`, `segmented`) and the controls-as-formula-
     values pattern (`[ControlId]` referenced inside formulas).

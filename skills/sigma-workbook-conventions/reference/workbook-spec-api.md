@@ -172,6 +172,7 @@ Axis fields take **column ids** (`{columnId}` / `{columnIds: [...]}`), not the
 | Control | `control` (with `controlType: ...`) | `controlType` + type-specific fields | Catalog of `controlType` values in the "Control catalog" section. |
 | Layout container | `container` | (element body is `{id, kind}` only) | Child placement happens in the layout XML via `<Container>`. |
 | Markdown text / heading | `text` | `body` (markdown), `verticalAlign` (`top \| middle \| bottom`) | Used for page titles, section headers, narrative blocks. |
+| AI copilot chat | `chat` | `agentId` (points at a `document.agents[].id`) | Embeds a Sigma AI agent as an on-page chat panel. Element body is `{id, kind: "chat", agentId}` only; the agent itself is defined in `document.agents`. See "Agents & chat (Sigma AI copilots)." |
 
 When the docs and the API disagree, trust the API error and update this table.
 
@@ -969,6 +970,81 @@ workbook. Reasons:
 Discover available metrics with `jq '.. | objects | select(.metrics) | .metrics'`
 on `GET /v2/dataModels/{id}/spec`. They live on the node element's `metrics`
 array. Always check this BEFORE writing a custom calc.
+
+## Agents & chat (Sigma AI copilots)
+
+A Sigma AI agent is defined once in `document.agents` (a top-level array on the
+document, sibling to `elements`) and surfaced on a page with a `chat` element
+that points at it by `agentId`. This is how a data app gets an embedded copilot
+that can answer questions about the governed metrics *and* drive workbook state.
+
+```json
+// document.agents[i]
+{
+  "id": "ag-market",
+  "name": "Marketplace Copilot",
+  "description": "Answers fill/coverage/margin questions and drives the action queue.",
+  "instructions": "You are ... fill rate = filled / posted; the plan is 90 percent ...",
+  "greeting": {"mode": "static", "message": "Cedar Creek is the top critical account. Ask me:\n1) ...\n2) ...\n3) ..."},
+  "dataSources": [
+    {"kind": "table", "elementId": "sql-market"},
+    {"kind": "table", "elementId": "it-actions"}
+  ],
+  "tools": [
+    {"toolId": "t-region", "kind": "action", "name": "Focus a region",
+     "description": "Filter the workbook to one or more regions.",
+     "steps": [{"kind": "effect", "effect": "set-control-value",
+                "control": "region_filter",
+                "value": {"type": "agent-input", "inputName": "Region(s) to focus on"}}]}
+  ]
+}
+```
+
+```json
+// the on-page element that renders it
+{"id": "chat-copilot", "kind": "chat", "agentId": "ag-market"}
+```
+
+Rules learned building live copilots (verified on papercranestaging 2026-08-13):
+
+1. **Prefer a static greeting; `mode: "generated"` can hang on "Thinking…".**
+   A `greeting` of `{"mode": "generated", "prompt": "…"}` asks the model to
+   compose the opener at load time; in the chat shell this can stall
+   indefinitely on "Thinking…" and leave the panel with no prompt chips — the
+   worst possible first impression for a live demo. Use
+   `{"mode": "static", "message": "…"}` with a concrete opener that names a real
+   entity from the data and lists the exact questions the agent can answer. It
+   renders instantly and deterministically.
+
+2. **Pin every definition in `instructions`; never let the model redefine a
+   metric.** Spell out the governed formulas the agent must not restate
+   differently (e.g. "fill rate = filled / posted; the fill plan is 90 percent").
+   Finance-vs-sales definition drift is exactly the problem these apps exist to
+   kill, so the agent must inherit the one governed definition.
+
+3. **Feed the model deterministic rankings — don't ask it to compute them.**
+   When the agent needs "the worst region" or "the top critical facility",
+   compute the ranking in a grounded element (or in the prompt text handed to
+   the agent) and give the agent the answer to narrate. LLMs are unreliable at
+   arithmetic over row sets; they are reliable at explaining a number you hand
+   them. Same rule as the Cortex `CallText` pattern (feed per-entity numbers,
+   not raw tables).
+
+4. **Agent action tools obey the same scalar-only write rule as buttons.**
+   Tool `steps` are `{"kind": "effect", "effect": …}` entries. Common effects:
+   `set-control-value` (drive a filter/segmented control), `update-rows` (write
+   to a linked input table), and `refresh-element` (force the grid/queue to
+   re-read after a write). An `update-rows` step fired by an agent tool has **no
+   row context**, exactly like a button — its `values` may only use constants,
+   controls, or scalar formulas, never a per-row expression like
+   `[Baseline Units]`. See
+   `sigma-input-table-app/reference/approval-workflow-pattern.md` →
+   "`values` formulas have no row context when the trigger is a button."
+
+5. **`dataSources` reference elements, not warehouse tables.** Each entry is
+   `{"kind": "table", "elementId": "<element-id>"}` pointing at a SQL/table or
+   linked-input element already on the workbook, so the agent is grounded in the
+   exact governed data the user sees — not a fresh warehouse pull.
 
 ## Control catalog (`controlType` values)
 
