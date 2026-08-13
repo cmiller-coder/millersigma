@@ -4,6 +4,7 @@
 |---|---|
 | [`theme-gallery/`](theme-gallery/README.md) | Six selectable dashboard aesthetics with HTML previews and a Sigma token contract (`theme-presets.json`). Open `theme-gallery/index.html` to see all of them at once. |
 | [`build_honda_ev_allocation.py`](build_honda_ev_allocation.py) | A complete two-page prospect build: executive overview + allocation data app, themed with preset 6 ("Editorial Ops"). |
+| [`build_shiftkey_marketplace_control_tower.py`](build_shiftkey_marketplace_control_tower.py) | ShiftKey-specific marketplace command center + facility/supply action workspace: actual vs plan, complete region→facility→credential drill context, Cortex brief, and linked-input write-back. |
 
 ## build_honda_ev_allocation.py
 
