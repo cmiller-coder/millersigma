@@ -115,6 +115,7 @@
     var cs=document.getElementById('capacitySub');
     cs.textContent=breaches?breaches+' constraints':'within limits';cs.className=breaches?'alarm':'good';
     width('bevBar',bev/0.18);width('elecBar',elec);width('capacityBar',util);width('cellsBar',cell);
+    if(client)client.setLoadingState(false);
   }
   function bind(cfg){
     st.cfg=cfg||{};if(st.unMix)st.unMix();if(st.unCap)st.unCap();st.unMix=st.unCap=null;
