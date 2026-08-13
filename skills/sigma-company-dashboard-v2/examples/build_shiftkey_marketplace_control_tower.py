@@ -742,27 +742,25 @@ add({
          "formula": "[Commission Scenario Grid/Scenario Name]"},
         # Descriptive columns must be aggregates to sit in a grouping's
         # calculations; Min() over a constant-per-group value is the idiom.
-        {"id": "so-desc", "name": "Scenario Description",
-         "formula": "Min([Commission Scenario Grid/Scenario Description])"},
-        {"id": "so-status", "name": "Workflow Status",
+        {"id": "so-status", "name": "Status",
          "formula": "Min([Commission Scenario Grid/Scenario Workflow Status])"},
         {"id": "so-payout", "name": "Total Payout",
          "formula": "Sum([Commission Scenario Grid/Final Payout])", "format": MONEY},
-        {"id": "so-gp", "name": "Total Commissionable GP",
+        {"id": "so-gp", "name": "Commissionable GP",
          "formula": "Sum([Commission Scenario Grid/Commissionable Gross Profit])",
          "format": MONEY},
-        {"id": "so-rate", "name": "Commission Payout Rate",
+        {"id": "so-rate", "name": "Payout Rate",
          "formula": "Sum([Commission Scenario Grid/Final Payout]) / "
                     "Sum([Commission Scenario Grid/Commissionable Gross Profit])",
          "format": PCT1},
         {"id": "so-attain", "name": "Avg Attainment",
          "formula": "Avg([Commission Scenario Grid/Attainment])", "format": PCT1},
-        {"id": "so-above", "name": "AMs At or Above Quota",
+        {"id": "so-above", "name": "AMs \u2265 Quota",
          "formula": 'CountDistinct(If([Commission Scenario Grid/Attainment] >= 1, '
                     "[Commission Scenario Grid/Account Manager], Null))", "format": INT},
     ],
     "groupings": [{"id": "so-grp", "groupBy": ["so-scenario"],
-                   "calculations": ["so-desc", "so-status", "so-payout", "so-gp",
+                   "calculations": ["so-status", "so-payout", "so-gp",
                                     "so-rate", "so-attain", "so-above"]}],
     "conditionalFormats": [scale_cf(["so-rate"]),
                            {"type": "dataBars", "columnIds": ["so-payout"],
@@ -778,30 +776,28 @@ add({
     "visibleAsSource": True,
     "source": {"kind": "table", "elementId": "jn-comm-calc"},
     "columns": [
-        {"id": "sw-owner", "name": "Account Manager",
+        {"id": "sw-owner", "name": "Account Mgr",
          "formula": "[Commission Scenario Grid/Account Manager]"},
-        {"id": "sw-scenario", "name": "Scenario Name",
+        {"id": "sw-scenario", "name": "Scenario",
          "formula": "[Commission Scenario Grid/Scenario Name]"},
-        {"id": "sw-region", "name": "Primary Region",
-         "formula": "Min([Commission Scenario Grid/Primary Region])"},
         {"id": "sw-payout", "name": "Total Payout",
          "formula": "Sum([Commission Scenario Grid/Final Payout])", "format": MONEY},
         {"id": "sw-gp", "name": "Commissionable GP",
          "formula": "Sum([Commission Scenario Grid/Commissionable Gross Profit])",
          "format": MONEY},
-        {"id": "sw-rate", "name": "Commission Payout Rate",
+        {"id": "sw-rate", "name": "Payout Rate",
          "formula": "Sum([Commission Scenario Grid/Final Payout]) / "
                     "Sum([Commission Scenario Grid/Commissionable Gross Profit])",
          "format": PCT1},
         {"id": "sw-attain", "name": "Attainment",
          "formula": "Avg([Commission Scenario Grid/Attainment])", "format": PCT1},
-        {"id": "sw-tier", "name": "Tier Achieved",
+        {"id": "sw-tier", "name": "Tier",
          "formula": "Min([Commission Scenario Grid/Tier Achieved])"},
         {"id": "sw-fill", "name": "Fill Rate",
          "formula": "Avg([Commission Scenario Grid/Fill Rate])", "format": PCT1},
     ],
     "groupings": [{"id": "sw-grp", "groupBy": ["sw-owner", "sw-scenario"],
-                   "calculations": ["sw-region", "sw-payout", "sw-gp", "sw-rate",
+                   "calculations": ["sw-payout", "sw-gp", "sw-rate",
                                     "sw-attain", "sw-tier", "sw-fill"]}],
     "conditionalFormats": [scale_cf(["sw-rate"]),
                            {"type": "dataBars", "columnIds": ["sw-payout"],
@@ -816,24 +812,24 @@ add({
     "visibleAsSource": True,
     "source": {"kind": "table", "elementId": "jn-comm-month"},
     "columns": [
-        {"id": "st-scenario", "name": "Scenario Name",
+        {"id": "st-scenario", "name": "Scenario",
          "formula": "[Commission Month Grid/Scenario Name]"},
-        {"id": "st-owner", "name": "Account Manager",
+        {"id": "st-owner", "name": "Account Mgr",
          "formula": "[Commission Month Grid/Account Manager]"},
         {"id": "st-month", "name": "Month",
          "formula": "[Commission Month Grid/Month]", "format": MON},
-        {"id": "st-gp", "name": "Commissionable GP",
+        {"id": "st-gp", "name": "Comm. GP",
          "formula": "Sum([Commission Month Grid/Monthly Gross Profit])", "format": MONEY},
-        {"id": "st-quota", "name": "Monthly Quota",
+        {"id": "st-quota", "name": "Quota",
          "formula": "Sum([Commission Month Grid/Monthly Quota])", "format": MONEY},
         {"id": "st-attain", "name": "Attainment",
          "formula": "Sum([Commission Month Grid/Monthly Gross Profit]) / "
                     "Sum([Commission Month Grid/Monthly Quota])", "format": PCT1},
-        {"id": "st-tier", "name": "Tier Achieved",
+        {"id": "st-tier", "name": "Tier",
          "formula": "Min([Commission Month Grid/Tier Achieved])"},
-        {"id": "st-rate", "name": "Payout Modifier %",
+        {"id": "st-rate", "name": "Rate",
          "formula": "Avg([Commission Month Grid/Effective Rate])", "format": PCT1},
-        {"id": "st-payout", "name": "Final Payout",
+        {"id": "st-payout", "name": "Payout",
          "formula": "Sum([Commission Month Grid/Monthly Payout])", "format": MONEY},
     ],
     "groupings": [{"id": "st-grp",
@@ -2322,40 +2318,40 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
     <Element elementId="sub-1" gridColumn="1 / 18" gridRow="7 / 9"/>
   </Container>
   <Element elementId="decision" gridColumn="1 / 25" gridRow="10 / 12"/>
-  <Container elementId="kpi-pulse" type="grid" gridColumn="1 / 25" gridRow="12 / 20"
+  <Container elementId="kpi-pulse" type="grid" gridColumn="1 / 17" gridRow="12 / 19"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-fill" gridColumn="1 / 6" gridRow="1 / 8"/>
-    <Element elementId="k-open" gridColumn="6 / 11" gridRow="1 / 8"/>
-    <Element elementId="k-exposure" gridColumn="11 / 16" gridRow="1 / 8"/>
-    <Element elementId="k-margin" gridColumn="16 / 21" gridRow="1 / 8"/>
-    <Element elementId="k-sami" gridColumn="21 / 25" gridRow="1 / 8"/>
+    <Element elementId="k-fill" gridColumn="1 / 6" gridRow="1 / 7"/>
+    <Element elementId="k-open" gridColumn="6 / 11" gridRow="1 / 7"/>
+    <Element elementId="k-exposure" gridColumn="11 / 16" gridRow="1 / 7"/>
+    <Element elementId="k-margin" gridColumn="16 / 21" gridRow="1 / 7"/>
+    <Element elementId="k-sami" gridColumn="21 / 25" gridRow="1 / 7"/>
   </Container>
-  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="20 / 24"
+  <Container elementId="c-ai" type="grid" gridColumn="17 / 25" gridRow="12 / 19"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="txt-ai" gridColumn="1 / 25" gridRow="1 / 4"/>
+    <Element elementId="txt-ai" gridColumn="1 / 25" gridRow="1 / 7"/>
   </Container>
-  <Container elementId="filters-pulse" type="grid" gridColumn="1 / 25" gridRow="24 / 28"
+  <Container elementId="filters-pulse" type="grid" gridColumn="1 / 25" gridRow="19 / 23"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ct-region" gridColumn="1 / 9" gridRow="1 / 4"/>
     <Element elementId="ct-credential" gridColumn="9 / 17" gridRow="1 / 4"/>
     <Element elementId="ct-grain" gridColumn="17 / 25" gridRow="1 / 4"/>
   </Container>
-  <Element elementId="sec-trend" gridColumn="1 / 13" gridRow="28 / 29"/>
-  <Element elementId="sec-gap" gridColumn="13 / 25" gridRow="28 / 29"/>
-  <Element elementId="ch-fill" gridColumn="1 / 13" gridRow="29 / 43"/>
-  <Element elementId="ch-region" gridColumn="13 / 25" gridRow="29 / 43"/>
-  <Element elementId="sec-pulse-credential" gridColumn="1 / 13" gridRow="43 / 44"/>
-  <Element elementId="sec-pulse-analyst" gridColumn="13 / 25" gridRow="43 / 44"/>
-  <Element elementId="ch-credential" gridColumn="1 / 13" gridRow="44 / 60"/>
-  <Container elementId="analyst-wrap" type="grid" gridColumn="13 / 25" gridRow="44 / 60"
+  <Element elementId="sec-trend" gridColumn="1 / 13" gridRow="23 / 24"/>
+  <Element elementId="sec-gap" gridColumn="13 / 25" gridRow="23 / 24"/>
+  <Element elementId="ch-fill" gridColumn="1 / 13" gridRow="24 / 35"/>
+  <Element elementId="ch-region" gridColumn="13 / 25" gridRow="24 / 35"/>
+  <Element elementId="sec-pulse-credential" gridColumn="1 / 13" gridRow="35 / 36"/>
+  <Element elementId="sec-pulse-analyst" gridColumn="13 / 25" gridRow="35 / 36"/>
+  <Element elementId="ch-credential" gridColumn="1 / 13" gridRow="36 / 49"/>
+  <Container elementId="analyst-wrap" type="grid" gridColumn="13 / 25" gridRow="36 / 49"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="pulse-analyst-hd" gridColumn="1 / 25" gridRow="1 / 2"/>
-    <Element elementId="chat-pulse" gridColumn="1 / 25" gridRow="2 / 16"/>
+    <Element elementId="chat-pulse" gridColumn="1 / 25" gridRow="2 / 13"/>
   </Container>
-  <Element elementId="sec-drill" gridColumn="1 / 25" gridRow="60 / 61"/>
-  <Container elementId="pivot-wrap" type="grid" gridColumn="1 / 25" gridRow="61 / 76"
+  <Element elementId="sec-drill" gridColumn="1 / 25" gridRow="49 / 50"/>
+  <Container elementId="pivot-wrap" type="grid" gridColumn="1 / 25" gridRow="50 / 62"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="pvt-variance" gridColumn="1 / 25" gridRow="1 / 15"/>
+    <Element elementId="pvt-variance" gridColumn="1 / 25" gridRow="1 / 12"/>
   </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-action">
@@ -2413,49 +2409,49 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
     <Element elementId="title-3" gridColumn="1 / 18" gridRow="4 / 7"/>
     <Element elementId="sub-3" gridColumn="1 / 18" gridRow="7 / 9"/>
   </Container>
-  <Container elementId="comm-controls" type="grid" gridColumn="1 / 25" gridRow="10 / 17"
+  <Container elementId="comm-controls" type="grid" gridColumn="1 / 25" gridRow="10 / 15"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ct-comm-scenario" gridColumn="1 / 7" gridRow="1 / 4"/>
-    <Element elementId="ct-comm-owner" gridColumn="7 / 12" gridRow="1 / 4"/>
-    <Element elementId="b-comm-create" gridColumn="12 / 18" gridRow="1 / 4"/>
-    <Element elementId="b-comm-seed" gridColumn="18 / 25" gridRow="1 / 4"/>
-    <Element elementId="b-comm-submit" gridColumn="1 / 9" gridRow="4 / 7"/>
-    <Element elementId="b-comm-review" gridColumn="9 / 17" gridRow="4 / 7"/>
-    <Element elementId="b-comm-reset" gridColumn="17 / 25" gridRow="4 / 7"/>
+    <Element elementId="ct-comm-owner" gridColumn="7 / 13" gridRow="1 / 4"/>
+    <Element elementId="b-comm-create" gridColumn="13 / 19" gridRow="1 / 4"/>
+    <Element elementId="b-comm-seed" gridColumn="19 / 25" gridRow="1 / 4"/>
+    <Element elementId="b-comm-submit" gridColumn="13 / 17" gridRow="4 / 6"/>
+    <Element elementId="b-comm-review" gridColumn="17 / 21" gridRow="4 / 6"/>
+    <Element elementId="b-comm-reset" gridColumn="21 / 25" gridRow="4 / 6"/>
   </Container>
-  <Container elementId="kpi-commission" type="grid" gridColumn="1 / 25" gridRow="17 / 25"
+  <Container elementId="kpi-commission" type="grid" gridColumn="1 / 17" gridRow="15 / 22"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-comm-payout" gridColumn="1 / 7" gridRow="1 / 8"/>
-    <Element elementId="k-comm-rate" gridColumn="7 / 13" gridRow="1 / 8"/>
-    <Element elementId="k-comm-attain" gridColumn="13 / 19" gridRow="1 / 8"/>
-    <Element elementId="k-comm-above" gridColumn="19 / 25" gridRow="1 / 8"/>
+    <Element elementId="k-comm-payout" gridColumn="1 / 7" gridRow="1 / 7"/>
+    <Element elementId="k-comm-rate" gridColumn="7 / 13" gridRow="1 / 7"/>
+    <Element elementId="k-comm-attain" gridColumn="13 / 19" gridRow="1 / 7"/>
+    <Element elementId="k-comm-above" gridColumn="19 / 25" gridRow="1 / 7"/>
   </Container>
-  <Container elementId="c-comm-ai" type="grid" gridColumn="1 / 25" gridRow="25 / 29"
+  <Container elementId="c-comm-ai" type="grid" gridColumn="17 / 25" gridRow="15 / 22"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="txt-comm-ai" gridColumn="1 / 25" gridRow="1 / 4"/>
+    <Element elementId="txt-comm-ai" gridColumn="1 / 25" gridRow="1 / 7"/>
   </Container>
-  <Element elementId="sec-comm-outcome" gridColumn="1 / 25" gridRow="29 / 30"/>
-  <Container elementId="comm-outcome-wrap" type="grid" gridColumn="1 / 25" gridRow="30 / 43"
+  <Element elementId="sec-comm-outcome" gridColumn="1 / 13" gridRow="22 / 23"/>
+  <Element elementId="sec-comm-owner" gridColumn="13 / 25" gridRow="22 / 23"/>
+  <Container elementId="comm-outcome-wrap" type="grid" gridColumn="1 / 13" gridRow="23 / 34"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="tbl-comm-outcome" gridColumn="1 / 25" gridRow="1 / 13"/>
+    <Element elementId="tbl-comm-outcome" gridColumn="1 / 25" gridRow="1 / 11"/>
   </Container>
-  <Element elementId="ch-comm-owner" gridColumn="1 / 13" gridRow="43 / 57"/>
-  <Element elementId="ch-comm-attain" gridColumn="13 / 25" gridRow="43 / 57"/>
-  <Element elementId="sec-comm-owner" gridColumn="1 / 25" gridRow="57 / 58"/>
-  <Container elementId="comm-owner-wrap" type="grid" gridColumn="1 / 25" gridRow="58 / 76"
+  <Container elementId="comm-owner-wrap" type="grid" gridColumn="13 / 25" gridRow="23 / 34"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="tbl-comm-owner" gridColumn="1 / 25" gridRow="1 / 18"/>
+    <Element elementId="tbl-comm-owner" gridColumn="1 / 25" gridRow="1 / 11"/>
   </Container>
-  <Element elementId="sec-comm-time" gridColumn="1 / 25" gridRow="76 / 77"/>
-  <Container elementId="comm-time-wrap" type="grid" gridColumn="1 / 25" gridRow="77 / 96"
+  <Element elementId="ch-comm-owner" gridColumn="1 / 13" gridRow="34 / 44"/>
+  <Element elementId="ch-comm-attain" gridColumn="13 / 25" gridRow="34 / 44"/>
+  <Element elementId="sec-comm-time" gridColumn="1 / 25" gridRow="44 / 45"/>
+  <Container elementId="comm-time-wrap" type="grid" gridColumn="1 / 25" gridRow="45 / 57"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="ch-comm-time" gridColumn="1 / 25" gridRow="1 / 8"/>
-    <Element elementId="tbl-comm-time" gridColumn="1 / 25" gridRow="8 / 19"/>
+    <Element elementId="ch-comm-time" gridColumn="1 / 10" gridRow="1 / 12"/>
+    <Element elementId="tbl-comm-time" gridColumn="10 / 25" gridRow="1 / 12"/>
   </Container>
-  <Element elementId="sec-comm-registry" gridColumn="1 / 25" gridRow="96 / 97"/>
-  <Container elementId="comm-registry" type="grid" gridColumn="1 / 25" gridRow="97 / 110"
+  <Element elementId="sec-comm-registry" gridColumn="1 / 25" gridRow="57 / 58"/>
+  <Container elementId="comm-registry" type="grid" gridColumn="1 / 25" gridRow="58 / 66"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="it-scenario-reg" gridColumn="1 / 25" gridRow="1 / 13"/>
+    <Element elementId="it-scenario-reg" gridColumn="1 / 25" gridRow="1 / 7"/>
   </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-dispute">
@@ -2474,23 +2470,23 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
     <Element elementId="b-dispute-seed" gridColumn="11 / 18" gridRow="1 / 4"/>
     <Element elementId="b-dispute-new" gridColumn="18 / 25" gridRow="1 / 4"/>
   </Container>
-  <Container elementId="kpi-dispute" type="grid" gridColumn="1 / 25" gridRow="14 / 22"
+  <Container elementId="kpi-dispute" type="grid" gridColumn="1 / 25" gridRow="14 / 21"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-dp-open" gridColumn="1 / 7" gridRow="1 / 8"/>
-    <Element elementId="k-dp-amount" gridColumn="7 / 13" gridRow="1 / 8"/>
-    <Element elementId="k-dp-age" gridColumn="13 / 19" gridRow="1 / 8"/>
-    <Element elementId="k-dp-esc" gridColumn="19 / 25" gridRow="1 / 8"/>
+    <Element elementId="k-dp-open" gridColumn="1 / 7" gridRow="1 / 7"/>
+    <Element elementId="k-dp-amount" gridColumn="7 / 13" gridRow="1 / 7"/>
+    <Element elementId="k-dp-age" gridColumn="13 / 19" gridRow="1 / 7"/>
+    <Element elementId="k-dp-esc" gridColumn="19 / 25" gridRow="1 / 7"/>
   </Container>
-  <Element elementId="sec-dispute-mix" gridColumn="1 / 25" gridRow="22 / 23"/>
-  <Container elementId="dispute-mix" type="grid" gridColumn="1 / 25" gridRow="23 / 37"
+  <Element elementId="sec-dispute-mix" gridColumn="1 / 25" gridRow="21 / 22"/>
+  <Container elementId="dispute-mix" type="grid" gridColumn="1 / 25" gridRow="22 / 33"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="ch-dp-status" gridColumn="1 / 13" gridRow="1 / 14"/>
-    <Element elementId="ch-dp-type" gridColumn="13 / 25" gridRow="1 / 14"/>
+    <Element elementId="ch-dp-status" gridColumn="1 / 13" gridRow="1 / 11"/>
+    <Element elementId="ch-dp-type" gridColumn="13 / 25" gridRow="1 / 11"/>
   </Container>
-  <Element elementId="sec-dispute-queue" gridColumn="1 / 25" gridRow="37 / 38"/>
-  <Container elementId="dispute-queue-wrap" type="grid" gridColumn="1 / 25" gridRow="38 / 60"
+  <Element elementId="sec-dispute-queue" gridColumn="1 / 25" gridRow="33 / 34"/>
+  <Container elementId="dispute-queue-wrap" type="grid" gridColumn="1 / 25" gridRow="34 / 49"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="tbl-dispute" gridColumn="1 / 25" gridRow="1 / 22"/>
+    <Element elementId="tbl-dispute" gridColumn="1 / 25" gridRow="1 / 14"/>
   </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-data">

@@ -1905,6 +1905,38 @@ Layout rules:
 - Sigma normalizes by prepending `<?xml version="1.0" encoding="utf-8"?>`
   and a trailing newline on save.
 
+## Layout density — pair, don't stack (aesthetics first)
+
+The single most common way a code-built page looks amateurish: every section is
+given the full 24 columns and a generous row span, so the page becomes a vertical
+pile of full-width slabs that no end user will scroll through. A real build of the
+ShiftKey commission page hit **3,612px tall** with six stacked sections before
+being reworked to **~2,000px** with the same content.
+
+Default to pairing. Rules that produced the fix:
+
+1. **Two related surfaces share a row at `1 / 13` and `13 / 25`.** Outcome tables
+   go side by side (totals-by-entity next to totals-by-scenario), charts go side
+   by side, and a chart pairs with its detail table. Reference apps do exactly
+   this — the Summit commission page puts its two outcome pivots on one row.
+2. **Put the narrative panel beside the KPI row, not under it.** KPIs at
+   `1 / 17` with the Cortex/AI brief at `17 / 25` removes a whole band of vertical
+   space and reads as one "state of the business" block.
+3. **Budget row spans.** A table needs ~10–12 rows, a chart ~10–11, a KPI row 6–7,
+   a control bar 3–5, a section band 1. Anything larger is usually padding.
+4. **Only the widest artifact earns full width** — a drill table with 8+ columns,
+   or a queue that is the page's main worklist. Everything else pairs.
+5. **When a table goes half-width, cut its columns.** Long descriptive columns
+   are the space hog; drop them or shorten headers ("Commission Payout Rate" →
+   "Payout Rate") so headers stop truncating.
+6. **Chat/agent panels are side rails, never bottom slabs.** Put the chat at
+   `13 / 25` or `17 / 25` next to the content it interrogates, inside a card
+   container with a band title.
+
+Sanity check the result instead of trusting the spec: export the page to PNG and
+measure it (`Image.open(png).size`). If a page is much past ~2,000px at 1600 wide,
+it is stacked rather than composed.
+
 ## Page-structure pattern (apply by default)
 
 Every page starts with a header bar container holding the page title text
