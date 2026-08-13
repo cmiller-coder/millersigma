@@ -213,6 +213,49 @@ GROUP BY region, state, market, credential
 """.strip() % MARKET_SQL
 
 
+# One row per commission scenario x account manager. The current marketplace
+# economics are governed by MARKET_SQL; only plan assumptions vary. The linked
+# input table below carries editable overrides and Coalesce finals, matching the
+# proven Summit commission-model pattern without copying its opportunity terms.
+COMMISSION_SQL = """
+WITH activity AS (%s),
+reps AS (
+  SELECT
+    account_owner,
+    MIN(region) AS primary_region,
+    SUM(gross_profit) AS commissionable_gross_profit,
+    SUM(actual_revenue) AS actual_revenue,
+    SUM(filled_shifts) / NULLIF(SUM(posted_shifts),0) AS fill_rate,
+    COUNT(DISTINCT facility_id) AS facilities,
+    COUNT(DISTINCT IFF(risk_tier='Critical', facility_id, NULL)) AS critical_facilities
+  FROM activity
+  GROUP BY account_owner
+),
+scenarios AS (
+  SELECT * FROM VALUES
+    ('Base Plan',1,1.00,0.030,0.050,0.080,1.00,'Balanced payout against governed gross profit'),
+    ('Retention Weighted',2,0.96,0.028,0.052,0.085,1.08,'Rewards fill quality and critical-account recovery'),
+    ('Growth Accelerator',3,1.08,0.035,0.060,0.100,0.96,'Raises quota and pays more above target')
+  AS s(scenario_name, scenario_order, quota_factor, tier_1_rate, tier_2_rate,
+       tier_3_rate, quality_modifier, scenario_comment)
+)
+SELECT
+  s.scenario_name || '|' || r.account_owner AS commission_key,
+  s.scenario_name, s.scenario_order, s.scenario_comment,
+  r.account_owner, r.primary_region,
+  r.commissionable_gross_profit, r.actual_revenue, r.fill_rate,
+  r.facilities, r.critical_facilities,
+  ROUND((270000 + MOD(ABS(HASH(r.account_owner)),90000)) * s.quota_factor) AS base_quota,
+  0.80 AS base_tier_1_limit,
+  s.tier_1_rate AS base_tier_1_rate,
+  1.00 AS base_tier_2_limit,
+  s.tier_2_rate AS base_tier_2_rate,
+  s.tier_3_rate AS base_tier_3_rate,
+  s.quality_modifier AS base_quality_modifier
+FROM reps r CROSS JOIN scenarios s
+""".strip() % MARKET_SQL
+
+
 elements = []
 add = elements.append
 
@@ -324,6 +367,27 @@ _supply_table["conditionalFormats"] = [
 ]
 add(_supply_table)
 
+add(sql_table("sql-commission", "Commission Scenario Base", COMMISSION_SQL, [
+    col("cb-key", "Commission Key", "commission_key", hidden=True),
+    col("cb-scenario", "Scenario Name", "scenario_name"),
+    col("cb-order", "Scenario Order", "scenario_order", INT, hidden=True),
+    col("cb-comment", "Scenario Description", "scenario_comment"),
+    col("cb-owner", "Account Manager", "account_owner"),
+    col("cb-region", "Primary Region", "primary_region"),
+    col("cb-gp", "Commissionable Gross Profit", "commissionable_gross_profit", MONEY),
+    col("cb-rev", "Actual Revenue", "actual_revenue", MONEY),
+    col("cb-fill", "Fill Rate", "fill_rate", PCT1),
+    col("cb-facs", "Facilities", "facilities", INT),
+    col("cb-critical", "Critical Facilities", "critical_facilities", INT),
+    col("cb-quota", "Base Quota", "base_quota", MONEY),
+    col("cb-t1lim", "Base Tier 1 Limit", "base_tier_1_limit", PCT1),
+    col("cb-t1rate", "Base Tier 1 Rate", "base_tier_1_rate", PCT1),
+    col("cb-t2lim", "Base Tier 2 Limit", "base_tier_2_limit", PCT1),
+    col("cb-t2rate", "Base Tier 2 Rate", "base_tier_2_rate", PCT1),
+    col("cb-t3rate", "Base Tier 3 Rate", "base_tier_3_rate", PCT1),
+    col("cb-quality", "Base Quality Modifier", "base_quality_modifier"),
+]))
+
 
 # ------------------------------------------------------------- write-back app
 add({
@@ -376,6 +440,97 @@ add({
         {"type": "single", "columnIds": ["ap-risk"], "condition": "formula",
          "formula": '[Risk Tier] = "On plan"',
          "style": {"backgroundColor": "#E8F7EC", "color": GOOD}},
+    ],
+    "tableComponents": {"summaryBar": "hidden"},
+    "tableStyle": {"preset": "presentation", "cellSpacing": "small",
+                   "gridLines": "horizontal", "banding": "shown",
+                   "bandingColor": CARD_ALT},
+})
+
+add({
+    "id": "it-commission", "kind": "input-table", "name": "Commission Scenarios",
+    "inputMode": "view",
+    "source": {"kind": "linked", "from": "sql-commission"},
+    "columns": [
+        {"id": "cm-key", "key": "cb-key", "name": "Commission Key", "hidden": True},
+        {"id": "cm-scenario", "key": "cb-scenario", "name": "Scenario Name"},
+        {"id": "cm-order", "key": "cb-order", "name": "Scenario Order", "hidden": True},
+        {"id": "cm-desc", "key": "cb-comment", "name": "Scenario Description"},
+        {"id": "cm-owner", "key": "cb-owner", "name": "Account Manager"},
+        {"id": "cm-region", "key": "cb-region", "name": "Primary Region"},
+        {"id": "cm-gp", "key": "cb-gp", "name": "Commissionable Gross Profit"},
+        {"id": "cm-rev", "key": "cb-rev", "name": "Actual Revenue"},
+        {"id": "cm-fill", "key": "cb-fill", "name": "Fill Rate"},
+        {"id": "cm-facs", "key": "cb-facs", "name": "Facilities"},
+        {"id": "cm-critical", "key": "cb-critical", "name": "Critical Facilities"},
+        {"id": "cm-quota0", "key": "cb-quota", "name": "Base Quota"},
+        {"id": "cm-t1lim0", "key": "cb-t1lim", "name": "Base Tier 1 Limit"},
+        {"id": "cm-t1rate0", "key": "cb-t1rate", "name": "Base Tier 1 Rate"},
+        {"id": "cm-t2lim0", "key": "cb-t2lim", "name": "Base Tier 2 Limit"},
+        {"id": "cm-t2rate0", "key": "cb-t2rate", "name": "Base Tier 2 Rate"},
+        {"id": "cm-t3rate0", "key": "cb-t3rate", "name": "Base Tier 3 Rate"},
+        {"id": "cm-quality0", "key": "cb-quality", "name": "Base Quality Modifier"},
+        {"id": "cm-quota", "type": "number", "name": "Quota Override"},
+        {"id": "cm-t1lim", "type": "number", "name": "Tier 1 Limit Override"},
+        {"id": "cm-t1rate", "type": "number", "name": "Tier 1 Rate Override"},
+        {"id": "cm-t2lim", "type": "number", "name": "Tier 2 Limit Override"},
+        {"id": "cm-t2rate", "type": "number", "name": "Tier 2 Rate Override"},
+        {"id": "cm-t3rate", "type": "number", "name": "Tier 3 Rate Override"},
+        {"id": "cm-quality", "type": "number", "name": "Quality Modifier Override"},
+        {"id": "cm-quota-f", "name": "Quota Final",
+         "formula": "Coalesce([Quota Override], [Base Quota])", "format": MONEY},
+        {"id": "cm-t1lim-f", "name": "Tier 1 Limit Final",
+         "formula": "Coalesce([Tier 1 Limit Override], [Base Tier 1 Limit])", "format": PCT1},
+        {"id": "cm-t1rate-f", "name": "Tier 1 Rate Final",
+         "formula": "Coalesce([Tier 1 Rate Override], [Base Tier 1 Rate])", "format": PCT1},
+        {"id": "cm-t2lim-f", "name": "Tier 2 Limit Final",
+         "formula": "Coalesce([Tier 2 Limit Override], [Base Tier 2 Limit])", "format": PCT1},
+        {"id": "cm-t2rate-f", "name": "Tier 2 Rate Final",
+         "formula": "Coalesce([Tier 2 Rate Override], [Base Tier 2 Rate])", "format": PCT1},
+        {"id": "cm-t3rate-f", "name": "Tier 3 Rate Final",
+         "formula": "Coalesce([Tier 3 Rate Override], [Base Tier 3 Rate])", "format": PCT1},
+        {"id": "cm-quality-f", "name": "Quality Modifier Final",
+         "formula": "Coalesce([Quality Modifier Override], [Base Quality Modifier])"},
+        {"id": "cm-attain", "name": "Attainment",
+         "formula": "[Commissionable Gross Profit] / [Quota Final]", "format": PCT1},
+        {"id": "cm-tier", "name": "Tier Achieved",
+         "formula": 'If([Attainment] <= [Tier 1 Limit Final], "Tier 1", '
+                    '[Attainment] <= [Tier 2 Limit Final], "Tier 2", "Tier 3")'},
+        {"id": "cm-payout0", "name": "Payout Before Quality",
+         "formula": (
+             "If([Commissionable Gross Profit] <= [Quota Final] * [Tier 1 Limit Final], "
+             "[Commissionable Gross Profit] * [Tier 1 Rate Final], "
+             "[Quota Final] * [Tier 1 Limit Final] * [Tier 1 Rate Final] + "
+             "If([Commissionable Gross Profit] <= [Quota Final] * [Tier 2 Limit Final], "
+             "([Commissionable Gross Profit] - [Quota Final] * [Tier 1 Limit Final]) "
+             "* [Tier 2 Rate Final], "
+             "([Quota Final] * [Tier 2 Limit Final] - "
+             "[Quota Final] * [Tier 1 Limit Final]) * [Tier 2 Rate Final] + "
+             "([Commissionable Gross Profit] - [Quota Final] * [Tier 2 Limit Final]) "
+             "* [Tier 3 Rate Final]))"
+         ), "format": MONEY},
+        {"id": "cm-payout", "name": "Final Payout",
+         "formula": "[Payout Before Quality] * [Quality Modifier Final] * "
+                    "If([Fill Rate] >= 0.90, 1.05, [Fill Rate] < 0.82, 0.90, 1.00)",
+         "format": MONEY},
+        {"id": "cm-status", "type": "text", "name": "Scenario Status",
+         "values": ["Draft", "Submitted", "Approved", "Adjust", "Rejected"],
+         "pills": "color-by-option"},
+        {"id": "cm-note", "type": "text", "name": "Finance Note"},
+        {"id": "cm-status-f", "name": "Workflow Status",
+         "formula": 'Coalesce([Scenario Status], "Draft")'},
+    ],
+    "sort": [
+        {"columnId": "cm-order", "direction": "ascending", "nulls": "last"},
+        {"columnId": "cm-owner", "direction": "ascending", "nulls": "last"},
+    ],
+    "conditionalFormats": [
+        {"type": "single",
+         "columnIds": ["cm-quota", "cm-t1lim", "cm-t1rate", "cm-t2lim",
+                       "cm-t2rate", "cm-t3rate", "cm-quality", "cm-status", "cm-note"],
+         "condition": "formula", "formula": "True",
+         "style": {"backgroundColor": "#F2FFF3"}},
+        {"type": "dataBars", "columnIds": ["cm-attain"], "scheme": [GREEN, CARD_ALT]},
     ],
     "tableComponents": {"summaryBar": "hidden"},
     "tableStyle": {"preset": "presentation", "cellSpacing": "small",
@@ -524,6 +679,32 @@ add(control(
 add(control("ct-action-owner", "action_owner", "Action owner"))
 add(control("ct-action-note", "action_note", "Client note", "text-area"))
 add(control("ct-next-step", "next_step", "Next step"))
+add(control(
+    "ct-comm-scenario", "commission_scenario", "Commission scenario",
+    "list", "Base Plan", mode="include", selectionMode="single", values=[],
+    source={"kind": "source",
+            "source": {"kind": "table", "elementId": "it-commission"},
+            "columnId": "cm-scenario"},
+    filters=[{"source": {"kind": "table", "elementId": "it-commission"},
+              "columnId": "cm-scenario"}],
+))
+add(control(
+    "ct-comm-owner", "commission_owner", "Account manager",
+    "list", "", mode="include", selectionMode="multiple", values=[],
+    source={"kind": "source",
+            "source": {"kind": "table", "elementId": "it-commission"},
+            "columnId": "cm-owner"},
+    filters=[{"source": {"kind": "table", "elementId": "it-commission"},
+              "columnId": "cm-owner"}],
+))
+add(control(
+    "ct-comm-decision", "commission_decision", "Finance decision",
+    "segmented", "Approved",
+    source={"kind": "manual", "valueType": "text",
+            "values": ["Approved", "Adjust", "Rejected"],
+            "labels": ["Approve", "Request changes", "Reject"]},
+))
+add(control("ct-comm-note", "commission_note", "Finance note", "text-area"))
 
 
 # ------------------------------------------------------------------ KPIs
@@ -562,6 +743,18 @@ add(kpi("k-action-fill", "Queue fill rate", "it-actions",
         PCT1, "plan",
         "Sum([Facility Action Plan/Plan Filled Shifts]) / "
         "Sum([Facility Action Plan/Posted Shifts])"))
+add(kpi("k-comm-payout", "Scenario payout", "it-commission",
+        "Sum([Commission Scenarios/Final Payout])", MONEY))
+add(kpi("k-comm-rate", "Payout / gross profit", "it-commission",
+        "Sum([Commission Scenarios/Final Payout]) / "
+        "Sum([Commission Scenarios/Commissionable Gross Profit])", PCT1,
+        "operating guardrail", "0.055"))
+add(kpi("k-comm-attain", "Average attainment", "it-commission",
+        "Avg([Commission Scenarios/Attainment])", PCT1,
+        "target", "1.00"))
+add(kpi("k-comm-above", "AMs at or above quota", "it-commission",
+        'CountDistinct(If([Commission Scenarios/Attainment] >= 1, '
+        "[Commission Scenarios/Account Manager], Null))", INT))
 
 
 # ---------------------------------------------------------------- visuals
@@ -663,6 +856,43 @@ add({
     "color": {"by": "category", "column": "su-cred"},
     "stacking": "none", "legend": {"position": "top"},
 })
+add({
+    "id": "ch-comm-owner", "kind": "bar-chart",
+    "name": "Projected payout by account manager",
+    "source": {"kind": "table", "elementId": "it-commission"},
+    "columns": [
+        {"id": "co-owner", "name": "Account Manager",
+         "formula": "[Commission Scenarios/Account Manager]"},
+        {"id": "co-payout", "name": "Final Payout",
+         "formula": "Sum([Commission Scenarios/Final Payout])", "format": MONEY},
+        {"id": "co-gp", "name": "Commissionable Gross Profit",
+         "formula": "Sum([Commission Scenarios/Commissionable Gross Profit])",
+         "format": MONEY},
+        {"id": "co-attain", "name": "Attainment",
+         "formula": "Avg([Commission Scenarios/Attainment])", "format": PCT1},
+        {"id": "co-tier", "name": "Tier Achieved",
+         "formula": "[Commission Scenarios/Tier Achieved]"},
+    ],
+    "xAxis": {"columnId": "co-owner"},
+    "yAxis": {"columnIds": ["co-payout"]},
+    "color": {"by": "category", "column": "co-tier"},
+    "legend": {"position": "top"},
+})
+add({
+    "id": "ch-comm-attain", "kind": "bar-chart",
+    "name": "Attainment vs quota",
+    "source": {"kind": "table", "elementId": "it-commission"},
+    "columns": [
+        {"id": "ca-owner", "name": "Account Manager",
+         "formula": "[Commission Scenarios/Account Manager]"},
+        {"id": "ca-attain", "name": "Attainment",
+         "formula": "Avg([Commission Scenarios/Attainment])", "format": PCT1},
+        {"id": "ca-target", "name": "Quota", "formula": "1.00", "format": PCT1},
+    ],
+    "xAxis": {"columnId": "ca-owner"},
+    "yAxis": {"columnIds": ["ca-attain", "ca-target"]},
+    "stacking": "none", "legend": {"position": "top"},
+})
 
 
 # ------------------------------------------------------------------ actions
@@ -697,6 +927,50 @@ add(button("b-save-action", "✓ Save account action", [
      }},
 ] + REFRESH_ACTIONS + [{"effect": "close-overlay"}], GREEN, INK))
 add(button("b-cancel-action", "Cancel", [{"effect": "close-overlay"}],
+           CARD, INK, "outline"))
+add(button("b-comm-submit", "✓ Submit scenario", [
+    {"effect": "update-rows", "table": "it-commission",
+     "whichRows": {"type": "formula",
+                   "formula": "[Scenario Name] = [commission_scenario]"},
+     "values": {"cm-status": {"type": "constant",
+                              "value": {"type": "text", "value": "Submitted"}}}},
+    {"effect": "refresh-element",
+     "target": {"type": "element", "element": "it-commission"}},
+], GREEN, INK))
+add(button("b-comm-review", "Finance review", [
+    {"effect": "open-overlay", "overlayId": "m-commission"},
+], INK))
+add(button("b-comm-reset", "↺ Reset selected scenario", [
+    {"effect": "update-rows", "table": "it-commission",
+     "whichRows": {"type": "formula",
+                   "formula": "[Scenario Name] = [commission_scenario]"},
+     "values": {
+         "cm-quota": {"type": "constant", "value": {"type": "number", "value": None}},
+         "cm-t1lim": {"type": "constant", "value": {"type": "number", "value": None}},
+         "cm-t1rate": {"type": "constant", "value": {"type": "number", "value": None}},
+         "cm-t2lim": {"type": "constant", "value": {"type": "number", "value": None}},
+         "cm-t2rate": {"type": "constant", "value": {"type": "number", "value": None}},
+         "cm-t3rate": {"type": "constant", "value": {"type": "number", "value": None}},
+         "cm-quality": {"type": "constant", "value": {"type": "number", "value": None}},
+         "cm-status": {"type": "constant", "value": {"type": "text", "value": None}},
+         "cm-note": {"type": "constant", "value": {"type": "text", "value": None}},
+     }},
+    {"effect": "refresh-element",
+     "target": {"type": "element", "element": "it-commission"}},
+], CARD, INK, "outline"))
+add(button("b-comm-save", "✓ Save finance decision", [
+    {"effect": "update-rows", "table": "it-commission",
+     "whichRows": {"type": "formula",
+                   "formula": "[Scenario Name] = [commission_scenario]"},
+     "values": {
+         "cm-status": {"type": "control", "control": "commission_decision"},
+         "cm-note": {"type": "control", "control": "commission_note"},
+     }},
+    {"effect": "refresh-element",
+     "target": {"type": "element", "element": "it-commission"}},
+    {"effect": "close-overlay"},
+], GREEN, INK))
+add(button("b-comm-cancel", "Cancel", [{"effect": "close-overlay"}],
            CARD, INK, "outline"))
 
 
@@ -735,6 +1009,8 @@ def brand_header(page_num, title, subtitle, nav_id):
               "destination": {"type": "page", "pageId": "pg-pulse"}},
              {"label": "Action workspace",
               "destination": {"type": "page", "pageId": "pg-action"}},
+             {"label": "Commission modeling",
+              "destination": {"type": "page", "pageId": "pg-commission"}},
          ]})
 
 
@@ -748,6 +1024,11 @@ brand_header(
     "Account and supply teams work the same constraint queue — without exporting to a spreadsheet.",
     "nav-2",
 )
+brand_header(
+    3, "Commission & exceptions",
+    "Model payout tiers on governed marketplace economics, then submit one scenario for finance review.",
+    "nav-3",
+)
 
 add(text(
     "decision",
@@ -760,6 +1041,11 @@ add(text("sec-gap", '<span style="color:%s">**WHERE COVERAGE BREAKS**</span>' % 
 add(text("sec-drill", '<span style="color:%s">**ACTUAL VS PLAN — EXPAND REGION → STATE → MARKET → FACILITY**</span>' % MUTED))
 add(text("sec-queue", '<span style="color:%s">**FACILITY ACTION QUEUE — SELECT A ROW FOR THE CALL BRIEF**</span>' % MUTED))
 add(text("sec-supply", '<span style="color:%s">**SUPPLY ACTIVATION — MARKET × CREDENTIAL**</span>' % MUTED))
+add(text("sec-comm-model",
+         '<span style="color:%s">**SCENARIO ASSUMPTIONS — GREEN CELLS ARE EDITABLE**</span>'
+         % MUTED))
+add(text("sec-comm-outcome",
+         '<span style="color:%s">**PAYOUT & ATTAINMENT OUTCOMES**</span>' % MUTED))
 
 def region_fill_formula(region):
     return (
@@ -832,6 +1118,28 @@ add(text(
     verticalAlign="middle",
 ))
 
+add({"id": "c-comm-ai", "kind": "container", "spacing": "small",
+     "style": {"backgroundColor": "#EFF8F1", "borderRadius": "round",
+               "borderColor": "#C9E8D0", "borderWidth": 1}})
+add({"id": "txt-comm-ai", "kind": "text",
+     "body": '<span style="color:%s">**CORTEX SCENARIO READ**</span>  '
+             '{{Replace(CallText("SNOWFLAKE.CORTEX.COMPLETE", "CLAUDE-4-SONNET", '
+             '"You are ShiftKey sales compensation finance. In two sentences, '
+             'assess the selected scenario for payout cost, attainment distribution '
+             'and whether its quality modifier aligns account-manager incentives with '
+             'facility fill. Be quantitative and do not invent metrics. Scenario " & '
+             '[commission_scenario] & ": total payout $" & '
+             'Text(Round(Sum([Commission Scenarios/Final Payout]),0)) & '
+             '", commissionable gross profit $" & '
+             'Text(Round(Sum([Commission Scenarios/Commissionable Gross Profit]),0)) & '
+             '", average attainment " & '
+             'Text(Round(Avg([Commission Scenarios/Attainment])*100,1)) & '
+             '" percent, average fill " & '
+             'Text(Round(Avg([Commission Scenarios/Fill Rate])*100,1)) & " percent."'
+             "), '\"', \"\")}}" % GOOD,
+     "style": {"backgroundColor": "transparent", "padding": "none"},
+     "verticalAlign": "middle"})
+
 add({"id": "tabs-persona", "kind": "tabbed-container",
      "tabs": [{"name": "Account Team"}, {"name": "Supply Ops"}],
      "tabBar": {"visibility": "shown", "style": "button",
@@ -839,7 +1147,8 @@ add({"id": "tabs-persona", "kind": "tabbed-container",
      "spacing": "small", "style": {"backgroundColor": PAPER}})
 
 for cid in ("kpi-pulse", "filters-pulse", "pivot-wrap",
-            "kpi-action", "queue-wrap", "supply-wrap"):
+            "kpi-action", "queue-wrap", "supply-wrap",
+            "kpi-commission", "comm-controls", "comm-grid"):
     add({"id": cid, "kind": "container", "spacing": "small",
          "style": {"backgroundColor": CARD, "borderRadius": "round",
                    "borderColor": RULE, "borderWidth": 1}})
@@ -851,6 +1160,13 @@ add(text(
     'Use the governed anomaly, assign an owner, and record the next action. '
     '**Ready for outreach** stages the facility for CRM/Twilio handoff; this demo '
     'does not send production messages.',
+    style={"backgroundColor": "transparent"},
+))
+add(text(
+    "commission-modal-copy",
+    'Review **{{[commission_scenario]}}** against governed gross profit, attainment '
+    'and fill quality. The decision applies to every account-manager row in the '
+    'selected scenario and remains in the linked input table audit trail.',
     style={"backgroundColor": "transparent"},
 ))
 
@@ -896,7 +1212,8 @@ agents = [{
     "dataSources": [{"kind": "table", "elementId": "sql-market"},
                     {"kind": "table", "elementId": "sql-facility"},
                     {"kind": "table", "elementId": "sql-supply"},
-                    {"kind": "table", "elementId": "it-actions"}],
+                    {"kind": "table", "elementId": "it-actions"},
+                    {"kind": "table", "elementId": "it-commission"}],
     "tools": [
         {"toolId": "t-region", "kind": "action", "name": "Focus a region",
          "description": "Filter the workbook to one or more marketplace regions.",
@@ -944,6 +1261,38 @@ agents = [{
               "target": {"type": "element", "element": "it-actions"}},
              {"kind": "effect", "effect": "refresh-element",
               "target": {"type": "element", "element": "tbl-action-view"}}]},
+        {"toolId": "t-comm-scenario", "kind": "action",
+         "name": "Focus a commission scenario",
+         "description": "Select Base Plan, Retention Weighted or Growth Accelerator.",
+         "steps": [{"kind": "effect", "effect": "set-control-value",
+                    "control": "commission_scenario",
+                    "value": {"type": "agent-input",
+                              "inputName": "Commission scenario to select"}}]},
+        {"toolId": "t-comm-submit", "kind": "action",
+         "name": "Submit the selected commission scenario",
+         "description": "Set every account-manager row in the selected scenario to Submitted.",
+         "steps": [
+             {"kind": "effect", "effect": "update-rows", "table": "it-commission",
+              "whichRows": {"type": "formula",
+                            "formula": "[Scenario Name] = [commission_scenario]"},
+              "values": {"cm-status": {"type": "constant",
+                                       "value": {"type": "text", "value": "Submitted"}}}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "it-commission"}}]},
+        {"toolId": "t-comm-approve", "kind": "action",
+         "name": "Approve the selected commission scenario",
+         "description": "Finance-approve the scenario and write an audit note.",
+         "steps": [
+             {"kind": "effect", "effect": "update-rows", "table": "it-commission",
+              "whichRows": {"type": "formula",
+                            "formula": "[Scenario Name] = [commission_scenario]"},
+              "values": {
+                  "cm-status": {"type": "constant",
+                                "value": {"type": "text", "value": "Approved"}},
+                  "cm-note": {"type": "agent-input",
+                              "inputName": "Finance approval note"}}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "it-commission"}}]},
     ],
 }]
 
@@ -991,12 +1340,19 @@ add_drill_columns()
 pages = [
     {"id": "pg-pulse", "name": "Marketplace pulse", "backgroundColor": PAPER},
     {"id": "pg-action", "name": "Action workspace", "backgroundColor": PAPER},
+    {"id": "pg-commission", "name": "Commission modeling", "backgroundColor": PAPER},
     {"id": "pg-data", "name": "Data", "visibility": "hidden", "backgroundColor": PAPER},
 ]
 overlays = [
     {"id": "m-action", "type": "modal", "name": "Facility action",
      "modal": {"width": "small",
                "header": {"title": "Facility action", "showCloseIcon": "shown"},
+               "footer": {"primaryCta": {"visible": "hidden"},
+                          "secondaryCta": {"visible": "hidden"}}}},
+    {"id": "m-commission", "type": "modal", "name": "Finance review",
+     "modal": {"width": "small",
+               "header": {"title": "Commission scenario review",
+                          "showCloseIcon": "shown"},
                "footer": {"primaryCta": {"visible": "hidden"},
                           "secondaryCta": {"visible": "hidden"}}}},
 ]
@@ -1086,11 +1442,50 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
     </Tab>
   </TabbedContainer>
 </Page>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-commission">
+  <Container elementId="hdr-3" type="grid" gridColumn="1 / 25" gridRow="1 / 10"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="logo-3" gridColumn="1 / 3" gridRow="1 / 3"/>
+    <Element elementId="word-3" gridColumn="3 / 7" gridRow="1 / 3"/>
+    <Element elementId="nav-3" gridColumn="14 / 25" gridRow="1 / 3"/>
+    <Element elementId="eyebrow-3" gridColumn="1 / 12" gridRow="3 / 4"/>
+    <Element elementId="title-3" gridColumn="1 / 18" gridRow="4 / 7"/>
+    <Element elementId="sub-3" gridColumn="1 / 18" gridRow="7 / 9"/>
+  </Container>
+  <Container elementId="comm-controls" type="grid" gridColumn="1 / 25" gridRow="10 / 14"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ct-comm-scenario" gridColumn="1 / 7" gridRow="1 / 4"/>
+    <Element elementId="ct-comm-owner" gridColumn="7 / 12" gridRow="1 / 4"/>
+    <Element elementId="b-comm-submit" gridColumn="12 / 16" gridRow="1 / 4"/>
+    <Element elementId="b-comm-review" gridColumn="16 / 20" gridRow="1 / 4"/>
+    <Element elementId="b-comm-reset" gridColumn="20 / 25" gridRow="1 / 4"/>
+  </Container>
+  <Container elementId="kpi-commission" type="grid" gridColumn="1 / 25" gridRow="14 / 22"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="k-comm-payout" gridColumn="1 / 7" gridRow="1 / 8"/>
+    <Element elementId="k-comm-rate" gridColumn="7 / 13" gridRow="1 / 8"/>
+    <Element elementId="k-comm-attain" gridColumn="13 / 19" gridRow="1 / 8"/>
+    <Element elementId="k-comm-above" gridColumn="19 / 25" gridRow="1 / 8"/>
+  </Container>
+  <Container elementId="c-comm-ai" type="grid" gridColumn="1 / 25" gridRow="22 / 26"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="txt-comm-ai" gridColumn="1 / 25" gridRow="1 / 4"/>
+  </Container>
+  <Element elementId="sec-comm-outcome" gridColumn="1 / 25" gridRow="26 / 27"/>
+  <Element elementId="ch-comm-owner" gridColumn="1 / 13" gridRow="27 / 41"/>
+  <Element elementId="ch-comm-attain" gridColumn="13 / 25" gridRow="27 / 41"/>
+  <Element elementId="sec-comm-model" gridColumn="1 / 25" gridRow="41 / 42"/>
+  <Container elementId="comm-grid" type="grid" gridColumn="1 / 25" gridRow="42 / 65"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="it-commission" gridColumn="1 / 25" gridRow="1 / 23"/>
+  </Container>
+</Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-data">
   <Element elementId="sql-market" gridColumn="1 / 13" gridRow="1 / 16"/>
   <Element elementId="sql-facility" gridColumn="13 / 25" gridRow="1 / 16"/>
   <Element elementId="it-actions" gridColumn="1 / 25" gridRow="16 / 34"/>
   <Element elementId="ct-selected" gridColumn="1 / 7" gridRow="34 / 37"/>
+  <Element elementId="sql-commission" gridColumn="7 / 16" gridRow="34 / 48"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-action">
   <Element elementId="modal-copy" gridColumn="1 / 25" gridRow="1 / 4"/>
@@ -1100,6 +1495,13 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Element elementId="ct-action-note" gridColumn="1 / 25" gridRow="10 / 15"/>
   <Element elementId="b-cancel-action" gridColumn="1 / 13" gridRow="15 / 18"/>
   <Element elementId="b-save-action" gridColumn="13 / 25" gridRow="15 / 18"/>
+</Page>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-commission">
+  <Element elementId="commission-modal-copy" gridColumn="1 / 25" gridRow="1 / 4"/>
+  <Element elementId="ct-comm-decision" gridColumn="1 / 25" gridRow="4 / 7"/>
+  <Element elementId="ct-comm-note" gridColumn="1 / 25" gridRow="7 / 12"/>
+  <Element elementId="b-comm-cancel" gridColumn="1 / 13" gridRow="12 / 15"/>
+  <Element elementId="b-comm-save" gridColumn="13 / 25" gridRow="12 / 15"/>
 </Page>"""
 
 
