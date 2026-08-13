@@ -1733,7 +1733,7 @@ add({"id": "tabs-persona", "kind": "tabbed-container",
                 "alignment": "end", "size": "small"},
      "spacing": "small", "style": {"backgroundColor": PAPER}})
 
-for cid in ("kpi-pulse", "filters-pulse", "pivot-wrap",
+for cid in ("kpi-pulse", "filters-pulse", "pivot-wrap", "analyst-wrap",
             "kpi-action", "queue-wrap", "supply-wrap",
             "kpi-commission", "comm-controls", "comm-grid", "comm-registry",
             "kpi-dispute", "dispute-controls", "dispute-queue-wrap", "dispute-mix"):
@@ -1963,6 +1963,71 @@ agents = [{
     ],
 }]
 
+# A second, purpose-configured agent for the Marketplace pulse page. Where the
+# Action-workspace copilot drives write-back workflows, this one is an analyst:
+# it answers the "why is fill below plan" drill questions and reshapes the pulse
+# page's own controls (region, credential, month/quarter grain). Same governed
+# definitions, narrower toolset, no write actions.
+agents.append({
+    "id": "ag-pulse",
+    "name": "Marketplace Analyst",
+    "description": ("Answers marketplace fill, coverage and margin questions on the "
+                    "pulse page and reshapes its region, credential and date-grain "
+                    "controls."),
+    "instructions": (
+        "You are ShiftKey's marketplace analyst on the Marketplace Pulse page. The "
+        "data covers posted, filled and unfilled shifts across region, state, market, "
+        "facility, facility type, credential (CNA, CMA, LPN, RN) and shift over six "
+        "months, spanning demand (Marketplace Activity, Facility Performance) and "
+        "supply (Supply Coverage). Definitions you must not redefine: fill rate = "
+        "filled shifts / posted shifts; unfilled shifts = posted - filled; the fill "
+        "plan is 90 percent; open-shift exposure and revenue are dollars; marketplace "
+        "take = (facility bill rate - professional payout) / facility bill rate; "
+        "credential-ready supply is qualified professionals in the market catchment. "
+        "When asked why fill is below plan, name the worst region and the credential "
+        "with the largest supply gap, and separate a demand-side account lever from a "
+        "supply-side activation lever. You reshape the page with the focus-region, "
+        "focus-credential and date-grain tools; you do not write back data. Be concise "
+        "and quantitative."
+    ),
+    "greeting": {"mode": "static",
+                 "message": "Fill is 84.9% against a 90% plan. Ask me:\n"
+                            "1) Which region is worst, and is it demand or supply?\n"
+                            "2) Show the credential with the biggest coverage gap.\n"
+                            "3) Switch the trend to quarterly."},
+    "dataSources": [{"kind": "table", "elementId": "sql-market"},
+                    {"kind": "table", "elementId": "sql-facility"},
+                    {"kind": "table", "elementId": "sql-supply"}],
+    "tools": [
+        {"toolId": "tp-region", "kind": "action", "name": "Focus a region",
+         "description": "Filter the pulse page to one or more marketplace regions.",
+         "steps": [{"kind": "effect", "effect": "set-control-value",
+                    "control": "region_filter",
+                    "value": {"type": "agent-input",
+                              "inputName": "Region(s) to focus on"}}]},
+        {"toolId": "tp-cred", "kind": "action", "name": "Focus a credential",
+         "description": "Filter the pulse page to one or more credentials (CNA, CMA, LPN, RN).",
+         "steps": [{"kind": "effect", "effect": "set-control-value",
+                    "control": "credential_filter",
+                    "value": {"type": "agent-input",
+                              "inputName": "Credential(s) to focus on"}}]},
+        {"toolId": "tp-grain", "kind": "action", "name": "Set the trend date grain",
+         "description": "Switch the fill-rate trend between month and quarter.",
+         "steps": [{"kind": "effect", "effect": "set-control-value",
+                    "control": "date_grain",
+                    "value": {"type": "agent-input",
+                              "inputName": "Date grain (month or quarter)"}}]},
+    ],
+})
+
+add(text("pulse-analyst-hd",
+         '<span style="color:%s">**◆ MARKETPLACE ANALYST**</span>　'
+         '<span style="color:%s">Ask why fill is below plan — the analyst answers '
+         'and reshapes this page</span>' % (GREEN, MUTED),
+         style={"backgroundColor": "transparent", "padding": "none"},
+         verticalAlign="middle"))
+add({"id": "chat-pulse", "kind": "chat", "agentId": "ag-pulse"})
+
 
 # --------------------------------------------------------------- drill pass
 DRILL_KINDS = {"bar-chart", "line-chart", "area-chart", "combo-chart",
@@ -2084,6 +2149,11 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Container elementId="pivot-wrap" type="grid" gridColumn="9 / 25" gridRow="44 / 58"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="pvt-variance" gridColumn="1 / 25" gridRow="1 / 14"/>
+  </Container>
+  <Element elementId="pulse-analyst-hd" gridColumn="1 / 25" gridRow="58 / 59"/>
+  <Container elementId="analyst-wrap" type="grid" gridColumn="1 / 25" gridRow="59 / 77"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="chat-pulse" gridColumn="1 / 25" gridRow="1 / 18"/>
   </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-action">
