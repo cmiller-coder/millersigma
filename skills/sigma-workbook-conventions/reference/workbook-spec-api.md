@@ -1916,6 +1916,41 @@ middle. The convention that reads correctly:
 2. **Page title and subtitle on the canvas below it**, in ink at ~23px with a
    ~13px muted subtitle beside (not under) the title.
 
+### There are no gradients — compose with solid blocks
+
+Verified by rendering a probe workbook and sampling pixels: a CSS string in
+`backgroundColor` (`"linear-gradient(90deg, #1D2227 0%, #0ABC28 100%)"`) passes
+verification and then renders **nothing** — the fill disappears entirely, so
+white text on it vanishes. A `backgroundGradient: {from, to, angle}` key is also
+accepted and silently ignored. `shadow` verifies but made no visible difference.
+
+So depth in an app bar has to come from composition. What works:
+
+- **Put the logo in its own tile** — a nested container inside the bar with a
+  slightly raised fill (`#2A3138` against an `INK` bar) and a brand-coloured
+  border. It reads as an app icon instead of a mark floating in dead space.
+  ⚠️ Don't make the tile a saturated brand fill if the logo is a thin white
+  glyph; it washes out. Raised-neutral + coloured edge keeps it crisp.
+- **Give the bar a brand border** (`borderColor: GREEN, borderWidth: 1` over the
+  ink fill) for a defined edge.
+- **A live metric chip on the right**, right-aligned via
+  `<p style="text-align: right">`, with `{{formula}}` segments pulling the
+  headline number and its exposure. It makes the bar feel operational and puts
+  the top-line KPI on every page.
+
+### Text bodies: the allowed inline-HTML set is small
+
+`<u>`, `<sub>`, `<sup>`, `<span>`, `<a>` only. Two specific rejections worth
+knowing because they are the obvious ways to build a two-line wordmark:
+
+- `<br>` / `<br/>` → *"is not in the allowed inline-HTML set"*.
+- A bare `<p>...</p>` → *"carries no non-default block style or alignment; use a
+  plain paragraph or # heading"*. A `<p>` is only legal when it carries something
+  like `style="text-align: right"` or `class="p-large"`.
+
+To stack two lines, use a **blank line** between them (markdown paragraphs) and
+style each line with a `<span>`.
+
 ### Navigation: use buttons, not the `navigation` element
 
 `kind: "navigation"` accepts exactly one `optionStyle.style` value — `"pill"`.
@@ -1936,7 +1971,14 @@ own tab as active:
 ```
 
 Note the navigate target key is `page` (not `pageId`, which is what an overlay's
-`destination` uses). Inactive tabs use `appearance: "outline"` on the bar colour.
+`destination` uses).
+
+`appearance` accepts only **`filled`**, **`outline`** and **`text`** — `ghost`,
+`link`, `subtle`, `plain`, `minimal` and `none` are all rejected. Use
+`appearance: "text"` for inactive tabs and `filled` for the active one: outline
+on every tab makes the row read as four buttons rather than a tab bar. Keep tab
+labels short ("Pulse", "Actions", "Commissions") so three grid columns each is
+enough; the page title below already states the full name.
 
 ## Check the layout before you POST
 
@@ -1954,6 +1996,13 @@ self-check in any generator:
 
 Also assert every layout `elementId` exists and every element is placed exactly
 once; an unplaced element simply never renders.
+
+⚠️ **Make the collision check scope-aware.** Each container establishes its own
+coordinate space, so only *siblings within the same parent* can collide. A
+checker that groups boxes by indentation depth (or compares everything on a page)
+reports a flood of false positives the moment you nest a container — e.g. a logo
+tile inside a header bar "colliding" with a KPI inside a different container.
+Walk the tags with a parent stack and compare within each scope.
 
 ## Layout density — pair, don't stack (aesthetics first)
 

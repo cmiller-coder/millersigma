@@ -1730,50 +1730,76 @@ add(button("b-dispute-close", "Close", [{"effect": "close-overlay"}], CARD, INK,
 
 
 # ------------------------------------------------------------------- chrome
-# Slim app bar, not a hero banner. The first version was nine grid rows of mostly
-# empty dark space with the logo floating in the middle of it. Dashboard
-# convention: a thin branded bar carrying logo + wordmark + navigation, then the
-# page title on the canvas where it reads at normal weight.
-#
-# Navigation is BUTTONS rather than the `navigation` element on purpose: that
-# element only accepts optionStyle.style "pill" (every other value is rejected
-# with a masked Invalid kind), while buttons let each page render its own tab
-# filled and the rest ghosted — a real active state a single nav cannot express.
+# App bar composed of solid blocks, because Sigma renders no gradients: a CSS
+# `linear-gradient(...)` in backgroundColor silently kills the fill entirely
+# (same failure mode as a text element's background) and a `backgroundGradient`
+# key is accepted and ignored. Verified by rendering a probe workbook and
+# sampling pixels. So depth comes from composition instead:
+#   * the logo sits in a green rounded tile, so it reads as an app icon rather
+#     than a mark floating in dead space
+#   * the bar carries a thin green border against the ink fill
+#   * tabs use appearance "text" when inactive (the only ghost-like value the
+#     API accepts — "ghost"/"link"/"subtle" are all rejected) and filled green
+#     when active, so the row reads as a tab bar, not four buttons
+#   * a live metric chip on the right makes the bar feel operational
 NAV_PAGES = [
-    ("Marketplace pulse", "pg-pulse"),
-    ("Action workspace", "pg-action"),
-    ("Commission modeling", "pg-commission"),
+    ("Pulse", "pg-pulse"),
+    ("Actions", "pg-action"),
+    ("Commissions", "pg-commission"),
     ("Disputes", "pg-dispute"),
 ]
+
+_LIVE_FILL = ("Sum([Marketplace Activity/Filled Shifts]) / "
+              "Sum([Marketplace Activity/Posted Shifts])")
+_LIVE_EXPOSURE = "Sum([Marketplace Activity/Open Shift Exposure])"
 
 
 def brand_header(page_num, title, subtitle, active_page):
     add({"id": "hdr-%d" % page_num, "kind": "container", "spacing": "small",
          "style": {"backgroundColor": INK, "borderRadius": "round",
-                   "borderColor": INK, "borderWidth": 1}})
+                   "borderColor": GREEN, "borderWidth": 1}})
+    # Raised ink tile with a green edge — the shiftkey mark is a thin white
+    # glyph, so it washes out on a saturated green fill.
+    add({"id": "logo-tile-%d" % page_num, "kind": "container", "spacing": "small",
+         "style": {"backgroundColor": "#2A3138", "borderRadius": "round",
+                   "borderColor": GREEN, "borderWidth": 1}})
     if LOGO_URI:
         add({"id": "logo-%d" % page_num, "kind": "image",
              "source": {"kind": "url", "url": LOGO_URI},
-             "style": {"fit": "contain", "align": "start",
+             "style": {"fit": "contain", "align": "center",
                        "backgroundColor": "transparent", "padding": "none"}})
     else:
-        add(text("logo-%d" % page_num, '<span style="color: %s">**\u219f**</span>' % GREEN))
+        add(text("logo-%d" % page_num, '<span style="color:%s">**\u219f**</span>' % INK))
+    # Two markdown paragraphs, not <br> and not bare <p>: the allowed inline-HTML
+    # set is only <u>, <sub>, <sup>, <span>, <a>, and a <p> without a non-default
+    # block style or alignment is rejected too. A blank line is the way to stack.
     add(text("word-%d" % page_num,
-             '<span style="color:#FFFFFF;font-size:17px">**shiftkey**</span>'
-             '<span style="color:%s;font-size:13px">  MARKETPLACE INTELLIGENCE</span>'
+             '<span style="color:#FFFFFF;font-size:18px">**shiftkey**</span>\n\n'
+             '<span style="color:%s;font-size:10px">MARKETPLACE INTELLIGENCE</span>'
              % TEAL,
              style={"backgroundColor": "transparent", "padding": "none"},
              verticalAlign="middle"))
     for idx, (label, pid) in enumerate(NAV_PAGES):
         is_active = pid == active_page
         add({"id": "nav-%d-%d" % (page_num, idx), "kind": "button", "text": label,
-             "appearance": "filled" if is_active else "outline",
+             "appearance": "filled" if is_active else "text",
              "style": {"backgroundColor": GREEN if is_active else INK,
                        "color": INK if is_active else "#FFFFFF"},
              "actions": [{"id": "act-nav-%d-%d" % (page_num, idx),
                           "trigger": "on-click",
                           "effects": [{"effect": "navigate",
                                        "target": {"type": "page", "page": pid}}]}]})
+    # Live chip: the marketplace's current state, on every page.
+    add(text("hdr-live-%d" % page_num,
+             '<p style="text-align: right">'
+             '<span style="color:%s;font-size:11px">\u25cf LIVE</span>'
+             '<span style="color:#8A9299;font-size:11px">  FILL </span>'
+             '<span style="color:#FFFFFF;font-size:14px">**{{%s | .1%%}}**</span>'
+             '<span style="color:#8A9299;font-size:11px">  EXPOSURE </span>'
+             '<span style="color:%s;font-size:14px">**{{%s | $,.0f}}**</span>'
+             '</p>' % (GREEN, _LIVE_FILL, ALARM, _LIVE_EXPOSURE),
+             style={"backgroundColor": "transparent", "padding": "none"},
+             verticalAlign="middle"))
     add(text("title-%d" % page_num,
              '<span style="color:%s;font-size:23px">**%s**</span>' % (INK, title),
              style={"backgroundColor": "transparent", "padding": "none"},
@@ -2323,12 +2349,16 @@ overlays = [
 layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-pulse">
   <Container elementId="hdr-1" type="grid" gridColumn="1 / 25" gridRow="1 / 4"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="logo-1" gridColumn="1 / 3" gridRow="1 / 3"/>
-    <Element elementId="word-1" gridColumn="3 / 9" gridRow="1 / 3"/>
-    <Element elementId="nav-1-0" gridColumn="9 / 13" gridRow="1 / 3"/>
-    <Element elementId="nav-1-1" gridColumn="13 / 17" gridRow="1 / 3"/>
-    <Element elementId="nav-1-2" gridColumn="17 / 21" gridRow="1 / 3"/>
-    <Element elementId="nav-1-3" gridColumn="21 / 25" gridRow="1 / 3"/>
+    <Container elementId="logo-tile-1" type="grid" gridColumn="1 / 3" gridRow="1 / 3"
+               gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="logo-1" gridColumn="1 / 25" gridRow="1 / 2"/>
+    </Container>
+    <Element elementId="word-1" gridColumn="3 / 8" gridRow="1 / 3"/>
+    <Element elementId="nav-1-0" gridColumn="8 / 11" gridRow="1 / 3"/>
+    <Element elementId="nav-1-1" gridColumn="11 / 14" gridRow="1 / 3"/>
+    <Element elementId="nav-1-2" gridColumn="14 / 17" gridRow="1 / 3"/>
+    <Element elementId="nav-1-3" gridColumn="17 / 20" gridRow="1 / 3"/>
+    <Element elementId="hdr-live-1" gridColumn="20 / 25" gridRow="1 / 3"/>
   </Container>
   <Element elementId="title-1" gridColumn="1 / 15" gridRow="4 / 6"/>
   <Element elementId="sub-1" gridColumn="15 / 25" gridRow="4 / 6"/>
@@ -2372,12 +2402,16 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-action">
   <Container elementId="hdr-2" type="grid" gridColumn="1 / 25" gridRow="1 / 4"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="logo-2" gridColumn="1 / 3" gridRow="1 / 3"/>
-    <Element elementId="word-2" gridColumn="3 / 9" gridRow="1 / 3"/>
-    <Element elementId="nav-2-0" gridColumn="9 / 13" gridRow="1 / 3"/>
-    <Element elementId="nav-2-1" gridColumn="13 / 17" gridRow="1 / 3"/>
-    <Element elementId="nav-2-2" gridColumn="17 / 21" gridRow="1 / 3"/>
-    <Element elementId="nav-2-3" gridColumn="21 / 25" gridRow="1 / 3"/>
+    <Container elementId="logo-tile-2" type="grid" gridColumn="1 / 3" gridRow="1 / 3"
+               gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="logo-2" gridColumn="1 / 25" gridRow="1 / 2"/>
+    </Container>
+    <Element elementId="word-2" gridColumn="3 / 8" gridRow="1 / 3"/>
+    <Element elementId="nav-2-0" gridColumn="8 / 11" gridRow="1 / 3"/>
+    <Element elementId="nav-2-1" gridColumn="11 / 14" gridRow="1 / 3"/>
+    <Element elementId="nav-2-2" gridColumn="14 / 17" gridRow="1 / 3"/>
+    <Element elementId="nav-2-3" gridColumn="17 / 20" gridRow="1 / 3"/>
+    <Element elementId="hdr-live-2" gridColumn="20 / 25" gridRow="1 / 3"/>
   </Container>
   <Element elementId="title-2" gridColumn="1 / 15" gridRow="4 / 6"/>
   <Element elementId="sub-2" gridColumn="15 / 25" gridRow="4 / 6"/>
@@ -2419,12 +2453,16 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-commission">
   <Container elementId="hdr-3" type="grid" gridColumn="1 / 25" gridRow="1 / 4"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="logo-3" gridColumn="1 / 3" gridRow="1 / 3"/>
-    <Element elementId="word-3" gridColumn="3 / 9" gridRow="1 / 3"/>
-    <Element elementId="nav-3-0" gridColumn="9 / 13" gridRow="1 / 3"/>
-    <Element elementId="nav-3-1" gridColumn="13 / 17" gridRow="1 / 3"/>
-    <Element elementId="nav-3-2" gridColumn="17 / 21" gridRow="1 / 3"/>
-    <Element elementId="nav-3-3" gridColumn="21 / 25" gridRow="1 / 3"/>
+    <Container elementId="logo-tile-3" type="grid" gridColumn="1 / 3" gridRow="1 / 3"
+               gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="logo-3" gridColumn="1 / 25" gridRow="1 / 2"/>
+    </Container>
+    <Element elementId="word-3" gridColumn="3 / 8" gridRow="1 / 3"/>
+    <Element elementId="nav-3-0" gridColumn="8 / 11" gridRow="1 / 3"/>
+    <Element elementId="nav-3-1" gridColumn="11 / 14" gridRow="1 / 3"/>
+    <Element elementId="nav-3-2" gridColumn="14 / 17" gridRow="1 / 3"/>
+    <Element elementId="nav-3-3" gridColumn="17 / 20" gridRow="1 / 3"/>
+    <Element elementId="hdr-live-3" gridColumn="20 / 25" gridRow="1 / 3"/>
   </Container>
   <Element elementId="title-3" gridColumn="1 / 15" gridRow="4 / 6"/>
   <Element elementId="sub-3" gridColumn="15 / 25" gridRow="4 / 6"/>
@@ -2476,12 +2514,16 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-dispute">
   <Container elementId="hdr-4" type="grid" gridColumn="1 / 25" gridRow="1 / 4"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="logo-4" gridColumn="1 / 3" gridRow="1 / 3"/>
-    <Element elementId="word-4" gridColumn="3 / 9" gridRow="1 / 3"/>
-    <Element elementId="nav-4-0" gridColumn="9 / 13" gridRow="1 / 3"/>
-    <Element elementId="nav-4-1" gridColumn="13 / 17" gridRow="1 / 3"/>
-    <Element elementId="nav-4-2" gridColumn="17 / 21" gridRow="1 / 3"/>
-    <Element elementId="nav-4-3" gridColumn="21 / 25" gridRow="1 / 3"/>
+    <Container elementId="logo-tile-4" type="grid" gridColumn="1 / 3" gridRow="1 / 3"
+               gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="logo-4" gridColumn="1 / 25" gridRow="1 / 2"/>
+    </Container>
+    <Element elementId="word-4" gridColumn="3 / 8" gridRow="1 / 3"/>
+    <Element elementId="nav-4-0" gridColumn="8 / 11" gridRow="1 / 3"/>
+    <Element elementId="nav-4-1" gridColumn="11 / 14" gridRow="1 / 3"/>
+    <Element elementId="nav-4-2" gridColumn="14 / 17" gridRow="1 / 3"/>
+    <Element elementId="nav-4-3" gridColumn="17 / 20" gridRow="1 / 3"/>
+    <Element elementId="hdr-live-4" gridColumn="20 / 25" gridRow="1 / 3"/>
   </Container>
   <Element elementId="title-4" gridColumn="1 / 15" gridRow="4 / 6"/>
   <Element elementId="sub-4" gridColumn="15 / 25" gridRow="4 / 6"/>
