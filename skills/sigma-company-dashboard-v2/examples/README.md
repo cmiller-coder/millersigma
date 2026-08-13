@@ -4,7 +4,7 @@
 |---|---|
 | [`theme-gallery/`](theme-gallery/README.md) | Six selectable dashboard aesthetics with HTML previews and a Sigma token contract (`theme-presets.json`). Open `theme-gallery/index.html` to see all of them at once. |
 | [`build_honda_ev_allocation.py`](build_honda_ev_allocation.py) | A complete two-page prospect build: executive overview + allocation data app, themed with preset 6 ("Editorial Ops"). |
-| [`build_shiftkey_marketplace_control_tower.py`](build_shiftkey_marketplace_control_tower.py) | ShiftKey-specific marketplace command center + facility/supply action workspace: actual vs plan, complete region→facility→credential drill context, Cortex brief, and linked-input write-back. |
+| [`build_shiftkey_marketplace_control_tower.py`](build_shiftkey_marketplace_control_tower.py) | ShiftKey-specific three-surface app: marketplace pulse, facility/supply action workspace, and commission scenario modeler with finance approval, Cortex, Sigma agent, complete drill context and linked-input write-back. |
 
 ## build_shiftkey_marketplace_control_tower.py
 
@@ -38,9 +38,23 @@ facility-action modal with Sigma's native footer CTAs hidden. Bulk actions only
 write constants, and modal actions only write control values—no per-row action
 formula bug.
 
+**Commission Modeling** adapts the demeng Sales Commission Modeling pattern into
+ShiftKey marketplace terms. Three seeded scenarios cross account managers with
+governed gross profit/fill performance. The linked input table carries base
+quota/tier/quality assumptions, green editable overrides, hidden `Coalesce`
+finals, attainment/tier/payout calculations, and Draft → Submitted → Approved /
+Adjust / Rejected finance review. Payout is quality-adjusted by facility fill,
+so the plan cannot reward growth while ignoring marketplace health.
+
+**Marketplace Copilot** is a real Sigma agent (`document.agents` + `chat`) grounded
+in all five governed demand/supply/action/commission tables. Eight tools drive
+real workbook state: region, credential, risk and commission-scenario controls;
+facility staging/reset; commission submit/approve. Agent action tools obey the
+same scalar-write rule as buttons.
+
 All metrics come from one deterministic Snowflake activity contract plus
-facility and supply rollups. The output is explicitly illustrative; replace
-the SQL sources with ShiftKey semantic views for a real POV.
+facility, supply and commission rollups. The output is explicitly illustrative;
+replace the SQL sources with ShiftKey semantic views for a real POV.
 
 ## build_honda_ev_allocation.py
 
