@@ -296,7 +296,7 @@ add(sql_table("sql-facility", "Facility Performance", FACILITY_SQL, [
     col("fp-reco", "Recommended Action", "recommended_action"),
 ]))
 
-add(sql_table("sql-supply", "Supply Coverage", SUPPLY_SQL, [
+_supply_table = sql_table("sql-supply", "Supply Coverage", SUPPLY_SQL, [
     col("sc-region", "Region", "region"),
     col("sc-state", "State", "state"),
     col("sc-market", "Market", "market"),
@@ -309,7 +309,20 @@ add(sql_table("sql-supply", "Supply Coverage", SUPPLY_SQL, [
     col("sc-ttf", "Time to Fill", "time_to_fill_hours", HOURS1),
     col("sc-fr", "Fill Rate", "fill_rate", PCT1),
     col("sc-status", "Supply Status", "supply_status"),
-]))
+])
+_supply_table["conditionalFormats"] = [
+    {"type": "dataBars", "columnIds": ["sc-fr"], "scheme": [GREEN, CARD_ALT]},
+    {"type": "single", "columnIds": ["sc-status"], "condition": "formula",
+     "formula": '[Supply Status] = "Activate now"',
+     "style": {"backgroundColor": "#FCE8E8", "color": ALARM}},
+    {"type": "single", "columnIds": ["sc-status"], "condition": "formula",
+     "formula": '[Supply Status] = "Build bid depth"',
+     "style": {"backgroundColor": "#FFF3DF", "color": WARN}},
+    {"type": "single", "columnIds": ["sc-status"], "condition": "formula",
+     "formula": '[Supply Status] = "Balanced"',
+     "style": {"backgroundColor": "#E8F7EC", "color": GOOD}},
+]
+add(_supply_table)
 
 
 # ------------------------------------------------------------- write-back app
