@@ -219,6 +219,17 @@ GROUP BY region, state, market, credential
 # proven Summit commission-model pattern without copying its opportunity terms.
 COMMISSION_SQL = """
 WITH activity AS (%s),
+facility_perf AS (
+  SELECT
+    account_owner, region, facility_id,
+    SUM(gross_profit) AS gross_profit,
+    SUM(actual_revenue) AS actual_revenue,
+    SUM(filled_shifts) AS filled_shifts,
+    SUM(posted_shifts) AS posted_shifts,
+    SUM(budget_filled_shifts) AS budget_filled_shifts
+  FROM activity
+  GROUP BY account_owner, region, facility_id
+),
 reps AS (
   SELECT
     account_owner,
@@ -227,8 +238,11 @@ reps AS (
     SUM(actual_revenue) AS actual_revenue,
     SUM(filled_shifts) / NULLIF(SUM(posted_shifts),0) AS fill_rate,
     COUNT(DISTINCT facility_id) AS facilities,
-    COUNT(DISTINCT IFF(risk_tier='Critical', facility_id, NULL)) AS critical_facilities
-  FROM activity
+    COUNT(DISTINCT IFF(
+      filled_shifts/NULLIF(posted_shifts,0)
+      < budget_filled_shifts/NULLIF(posted_shifts,0) - 0.10,
+      facility_id, NULL)) AS critical_facilities
+  FROM facility_perf
   GROUP BY account_owner
 ),
 scenarios AS (
@@ -245,7 +259,7 @@ SELECT
   r.account_owner, r.primary_region,
   r.commissionable_gross_profit, r.actual_revenue, r.fill_rate,
   r.facilities, r.critical_facilities,
-  ROUND((270000 + MOD(ABS(HASH(r.account_owner)),90000)) * s.quota_factor) AS base_quota,
+  ROUND((85000 + MOD(ABS(HASH(r.account_owner)),45000)) * s.quota_factor) AS base_quota,
   0.80 AS base_tier_1_limit,
   s.tier_1_rate AS base_tier_1_rate,
   1.00 AS base_tier_2_limit,
