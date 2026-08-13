@@ -39,12 +39,38 @@ write constants, and modal actions only write control values—no per-row action
 formula bug.
 
 **Commission Modeling** adapts the demeng Sales Commission Modeling pattern into
-ShiftKey marketplace terms. Three seeded scenarios cross account managers with
-governed gross profit/fill performance. The linked input table carries base
-quota/tier/quality assumptions, green editable overrides, hidden `Coalesce`
-finals, attainment/tier/payout calculations, and Draft → Submitted → Approved /
-Adjust / Rejected finance review. Payout is quality-adjusted by facility fill,
-so the plan cannot reward growth while ignoring marketplace health.
+ShiftKey marketplace terms, including the part that makes it an *app*: users
+**create scenarios**, they are not a fixed list.
+
+- `sql-commission` is the governed AM baseline only (gross profit, revenue, fill,
+  facilities, quota basis, default tier rates) — no scenarios in the SQL.
+- `it-scenario-reg` is an **empty input table**: the scenario registry. One row
+  per scenario, holding that scenario's quota factor, tier rates, fill-quality
+  modifier, and the Draft → Submitted → Approved / Adjust / Rejected lifecycle.
+- `jn-commission` cross-joins (`1 = 1`, `left-outer`) every account manager
+  against every registered scenario, resolving each assumption as
+  `Coalesce([Registry/…], <governed default>)`. An empty registry still renders a
+  usable **Base Plan** at defaults, so the page is never blank.
+- `it-comm-model` (displayed as *Commission Scenarios*) is the linked grid over
+  the join: green per-AM overrides, hidden `Coalesce` finals, progressive
+  attainment tiers, and payout quality-adjusted by facility fill, so the plan
+  cannot reward growth while ignoring marketplace health.
+- **+ New scenario** opens a modal (name, description, quota factor, tier rates,
+  quality modifier) that `insert-rows` into the registry and immediately selects
+  the new scenario. **⤓ Load governed plans** seeds the three starter plans as
+  real editable rows — needed because no public API can seed input-table rows.
+  The copilot has the same power through a `create-scenario` tool.
+
+Lifecycle writes target the **registry**, not every AM row: status is a property
+of the scenario, so submit/approve/reset touch one row and the grid inherits the
+status through the join.
+
+Two API constraints shaped this and are documented in
+[`approval-workflow-pattern.md`](../../sigma-input-table-app/reference/approval-workflow-pattern.md):
+there is **no union source kind** (so the registry must be the single source of
+scenario rows), and a linked input table's **`key` bindings are frozen after
+creation** (repointing the grid onto the join required a new element id while
+keeping the display name so downstream formulas kept resolving).
 
 **Marketplace Copilot** is a real Sigma agent (`document.agents` + `chat`) grounded
 in all five governed demand/supply/action/commission tables. Eight tools drive

@@ -560,7 +560,7 @@ add({
 })
 
 add({
-    "id": "it-commission", "kind": "input-table", "name": "Commission Scenarios",
+    "id": "it-comm-model", "kind": "input-table", "name": "Commission Scenarios",
     "inputMode": "view",
     "source": {"kind": "linked", "from": "jn-commission"},
     "columns": [
@@ -800,16 +800,16 @@ add(control(
     source={"kind": "source",
             "source": {"kind": "table", "elementId": "jn-commission"},
             "columnId": "jn-scenario"},
-    filters=[{"source": {"kind": "table", "elementId": "it-commission"},
+    filters=[{"source": {"kind": "table", "elementId": "it-comm-model"},
               "columnId": "cm-scenario"}],
 ))
 add(control(
     "ct-comm-owner", "commission_owner", "Account manager",
     "list", "", mode="include", selectionMode="multiple", values=[],
     source={"kind": "source",
-            "source": {"kind": "table", "elementId": "it-commission"},
+            "source": {"kind": "table", "elementId": "it-comm-model"},
             "columnId": "cm-owner"},
-    filters=[{"source": {"kind": "table", "elementId": "it-commission"},
+    filters=[{"source": {"kind": "table", "elementId": "it-comm-model"},
               "columnId": "cm-owner"}],
 ))
 add(control(
@@ -868,16 +868,16 @@ add(kpi("k-action-fill", "Queue fill rate", "it-actions",
         PCT1, "plan",
         "Sum([Facility Action Plan/Plan Filled Shifts]) / "
         "Sum([Facility Action Plan/Posted Shifts])"))
-add(kpi("k-comm-payout", "Scenario payout", "it-commission",
+add(kpi("k-comm-payout", "Scenario payout", "it-comm-model",
         "Sum([Commission Scenarios/Final Payout])", MONEY))
-add(kpi("k-comm-rate", "Payout / gross profit", "it-commission",
+add(kpi("k-comm-rate", "Payout / gross profit", "it-comm-model",
         "Sum([Commission Scenarios/Final Payout]) / "
         "Sum([Commission Scenarios/Commissionable Gross Profit])", PCT1,
         "operating guardrail", "0.055"))
-add(kpi("k-comm-attain", "Average attainment", "it-commission",
+add(kpi("k-comm-attain", "Average attainment", "it-comm-model",
         "Avg([Commission Scenarios/Attainment])", PCT1,
         "target", "1.00"))
-add(kpi("k-comm-above", "AMs at or above quota", "it-commission",
+add(kpi("k-comm-above", "AMs at or above quota", "it-comm-model",
         'CountDistinct(If([Commission Scenarios/Attainment] >= 1, '
         "[Commission Scenarios/Account Manager], Null))", INT))
 
@@ -984,7 +984,7 @@ add({
 add({
     "id": "ch-comm-owner", "kind": "bar-chart",
     "name": "Projected payout by account manager",
-    "source": {"kind": "table", "elementId": "it-commission"},
+    "source": {"kind": "table", "elementId": "it-comm-model"},
     "columns": [
         {"id": "co-owner", "name": "Account Manager",
          "formula": "[Commission Scenarios/Account Manager]"},
@@ -1006,7 +1006,7 @@ add({
 add({
     "id": "ch-comm-attain", "kind": "bar-chart",
     "name": "Attainment vs quota",
-    "source": {"kind": "table", "elementId": "it-commission"},
+    "source": {"kind": "table", "elementId": "it-comm-model"},
     "columns": [
         {"id": "ca-owner", "name": "Account Manager",
          "formula": "[Commission Scenarios/Account Manager]"},
@@ -1061,7 +1061,7 @@ COMM_REFRESH = [
     {"effect": "refresh-element",
      "target": {"type": "element", "element": "jn-commission"}},
     {"effect": "refresh-element",
-     "target": {"type": "element", "element": "it-commission"}},
+     "target": {"type": "element", "element": "it-comm-model"}},
 ]
 SCENARIO_ROW = {"type": "formula", "formula": "[Scenario Name] = [commission_scenario]"}
 
@@ -1145,7 +1145,7 @@ add(button("b-comm-review", "Finance review", [
 ], INK))
 add(button("b-comm-reset", "↺ Reset selected scenario", [
     # Per-AM overrides live on the modeling grid...
-    {"effect": "update-rows", "table": "it-commission",
+    {"effect": "update-rows", "table": "it-comm-model",
      "whichRows": SCENARIO_ROW,
      "values": {
          "cm-quota": {"type": "constant", "value": {"type": "number", "value": None}},
@@ -1431,7 +1431,7 @@ agents = [{
                     {"kind": "table", "elementId": "sql-facility"},
                     {"kind": "table", "elementId": "sql-supply"},
                     {"kind": "table", "elementId": "it-actions"},
-                    {"kind": "table", "elementId": "it-commission"},
+                    {"kind": "table", "elementId": "it-comm-model"},
                     {"kind": "table", "elementId": "it-scenario-reg"}],
     "tools": [
         {"toolId": "t-region", "kind": "action", "name": "Focus a region",
@@ -1520,7 +1520,7 @@ agents = [{
              {"kind": "effect", "effect": "refresh-element",
               "target": {"type": "element", "element": "jn-commission"}},
              {"kind": "effect", "effect": "refresh-element",
-              "target": {"type": "element", "element": "it-commission"}}]},
+              "target": {"type": "element", "element": "it-comm-model"}}]},
         {"toolId": "t-comm-submit", "kind": "action",
          "name": "Submit the selected commission scenario",
          "description": "Move the selected scenario to Submitted for finance review.",
@@ -1533,7 +1533,7 @@ agents = [{
              {"kind": "effect", "effect": "refresh-element",
               "target": {"type": "element", "element": "it-scenario-reg"}},
              {"kind": "effect", "effect": "refresh-element",
-              "target": {"type": "element", "element": "it-commission"}}]},
+              "target": {"type": "element", "element": "it-comm-model"}}]},
         {"toolId": "t-comm-approve", "kind": "action",
          "name": "Approve the selected commission scenario",
          "description": "Finance-approve the scenario and write an audit note.",
@@ -1549,7 +1549,7 @@ agents = [{
              {"kind": "effect", "effect": "refresh-element",
               "target": {"type": "element", "element": "it-scenario-reg"}},
              {"kind": "effect", "effect": "refresh-element",
-              "target": {"type": "element", "element": "it-commission"}}]},
+              "target": {"type": "element", "element": "it-comm-model"}}]},
     ],
 }]
 
@@ -1742,7 +1742,7 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Element elementId="sec-comm-model" gridColumn="1 / 25" gridRow="44 / 45"/>
   <Container elementId="comm-grid" type="grid" gridColumn="1 / 25" gridRow="45 / 68"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="it-commission" gridColumn="1 / 25" gridRow="1 / 23"/>
+    <Element elementId="it-comm-model" gridColumn="1 / 25" gridRow="1 / 23"/>
   </Container>
   <Element elementId="sec-comm-registry" gridColumn="1 / 25" gridRow="68 / 69"/>
   <Container elementId="comm-registry" type="grid" gridColumn="1 / 25" gridRow="69 / 82"

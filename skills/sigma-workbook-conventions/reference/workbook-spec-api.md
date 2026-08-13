@@ -567,6 +567,41 @@ Critical field-shape rules:
   Earlier guidance here called it UI-only — see the re-check note under
   "GET-spec can 500" above before assuming it can't be set from code.
 
+## Join sources (and the absent union)
+
+A `table` element can source a join instead of a single element, which is how you
+cross-join a user-editable registry onto a governed baseline (the scenario-modeler
+pattern). Verified on papercranestaging 2026-08-13 — note it works on a plain
+`table`, which matters here because `pivot-table` is rejected in this org:
+
+```json
+"source": {
+  "kind": "join",
+  "joins": [{"left":  {"elementId": "sql-base",     "kind": "table"},
+             "right": {"elementId": "it-registry",  "kind": "table"},
+             "columns": [{"left": "1", "right": "1"}],
+             "joinType": "left-outer"}],
+  "primarySource": {"elementId": "sql-base", "kind": "table"}
+}
+```
+
+- `columns: [{"left": "1", "right": "1"}]` is the **cartesian** idiom (join on
+  `1 = 1`): every left row against every right row.
+- Column formulas address each side by display name —
+  `[Commission AM Base/Gross Profit]`, `[Commission Scenario Registry/Quota Factor]`.
+- With `left-outer` plus `Coalesce([Registry/Col], <default>)`, an empty right
+  side still renders the left rows at governed defaults — the empty-state guard.
+- A **linked input table can link from a join element** (`source: {kind: "linked",
+  from: "<join element>"}`) with normal `key` bindings.
+
+**There is no union.** `source.kind` of `"union"`, `"append"` and `"union-all"`
+are all rejected (masked as `Invalid kind: "table"`), so you cannot concatenate a
+SQL seed list with a user-created input table — whichever element supplies the
+rows must supply *all* of them. See
+`sigma-input-table-app/reference/approval-workflow-pattern.md` → "Scenario
+registries" for the full pattern and the seed-button workaround, and "Key columns
+are FROZEN once a linked input table exists" before repointing an existing grid.
+
 ## Container element shape
 
 Containers group other elements into a logical visual block (header bar,

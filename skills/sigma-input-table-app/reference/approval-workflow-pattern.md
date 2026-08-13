@@ -222,6 +222,71 @@ For a fuller modeler, add:
 
 See the main `sigma-input-table-app` skill for these non-negotiable defaults.
 
+## Key columns are FROZEN once a linked input table exists
+
+Verified live 2026-08-13 on papercranestaging. A linked input table's `key`
+bindings are immutable after creation. Repointing an existing linked input table
+at a different source element fails the PUT:
+
+```text
+elements[7].columns[0]: Cannot change key columns on existing linked input table:
+it-commission. Key column "cm-scenario" (bound to source column "jn-scenario")
+does not match the existing key binding; key columns are fixed once the input
+table is created.
+```
+
+This bites when you evolve a modeler — e.g. moving the grid from a plain SQL
+table onto a cross-join so scenarios become user-created rows. The fix is to
+**give the grid a new element `id`** and drop the old one in the same PUT. Keep
+the `name` identical (`"Commission Scenarios"`) and every downstream formula,
+which resolves by display name (`[Commission Scenarios/Final Payout]`), keeps
+working untouched — only id references (element `source.elementId`, control
+`filters`, `update-rows` `table`, agent `dataSources`, layout `elementId`) need
+the rename.
+
+⚠️ The old input table's stored rows are dropped with it. Fine for a demo or a
+scenario sandbox; plan a migration for anything holding real user data.
+
+## Scenario registries: make "create a new scenario" a real action
+
+A scenario list seeded in SQL can be *edited* but never *extended* — users cannot
+create a scenario, which is the heart of a modeling app. The working shape
+(verified 2026-08-13):
+
+1. **Baseline** — a normal `table` at the grain you model (one row per rep,
+   segment, plant …). No scenarios in the SQL.
+2. **Registry** — an EMPTY `input-table` (`source: {kind: "empty", connectionId}`,
+   `inputMode: "view"`), one row per scenario, holding scenario-level assumptions
+   plus the lifecycle columns (status pills, finance note).
+3. **Cross join** — a `table` whose `source` is
+   `{kind: "join", joins: [{left: baseline, right: registry, columns: [{left: "1", right: "1"}], joinType: "left-outer"}], primarySource: baseline}`.
+   Resolve each assumption as `Coalesce([Registry/<Assumption>], <governed default>)`
+   and the scenario label as `Coalesce([Registry/Scenario Name], "Base Plan")`.
+4. **Modeling grid** — a linked input table over the join, `key`-bound to the
+   join's columns, carrying the per-row overrides and `Coalesce` finals.
+5. **Create** — a modal whose button does
+   `insert-rows(registry) → set-control-value(scenarioSelect ← new name) → refresh-element ×3 → clear-control ×N → close-overlay`.
+
+Three constraints that shape this:
+
+- **There is no union/append source kind.** `kind: "union"`, `"append"` and
+  `"union-all"` are all rejected (masked as `Invalid kind: "table"`), so you
+  cannot concatenate a SQL seed list with a user registry. The registry has to be
+  the *single* source of scenario rows.
+- **`left-outer` + `Coalesce` is the empty-state guard.** With an empty registry
+  the join still yields one row per baseline row labelled `"Base Plan"` at
+  governed defaults, so the page is never blank before the first scenario exists.
+  Note the corollary: once any scenario exists, the fallback label disappears.
+- **No public API seeds input-table rows.** `/v2/workbooks/{id}/input-tables`
+  and friends are 404. Ship a **"Load governed plans"** button that fires one
+  `insert-rows` per starter scenario (constants only) so a fresh build is one
+  click from demo-ready.
+
+Put the lifecycle on the **registry**, not on every baseline row: status is a
+property of the scenario, so `update-rows` with
+`whichRows: [Scenario Name] = [scenarioSelect]` touches one row, and the grid
+inherits it through the join as a read-only column.
+
 ## Linked input tables: carry source columns as `key`, not `formula`
 
 Verified live 2026-08-12 on a 576-row baseline. When a linked input table
