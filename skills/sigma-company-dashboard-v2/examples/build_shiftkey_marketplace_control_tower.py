@@ -1177,6 +1177,299 @@ add(button("b-comm-cancel", "Cancel", [{"effect": "close-overlay"}],
            CARD, INK, "outline"))
 
 
+# ------------------------------------------------------- commission disputes
+# Adapted from the demeng "Commissions Dispute" POV: a full ticketing workflow
+# where an account manager disputes a payout, then finance works it through a
+# status lifecycle with a threaded comment trail and SLA timestamps. Two empty
+# input tables — the dispute registry and an append-only comment log — plus a
+# selectable queue and two modals. This is the finance/commissions workflow the
+# discovery call named as living in spreadsheets today.
+DISPUTE_TYPES = ["Rate or tier", "Quota", "Fill-quality modifier",
+                 "Missing facility credit", "Clawback", "Other"]
+
+add({
+    "id": "it-dispute", "kind": "input-table", "name": "Commission Disputes",
+    "inputMode": "view", "source": {"kind": "empty", "connectionId": CONN},
+    "columns": [
+        {"id": "dp-ticket", "type": "text", "name": "Dispute ID"},
+        {"id": "dp-am", "type": "text", "name": "Account Manager"},
+        {"id": "dp-scenario", "type": "text", "name": "Scenario"},
+        {"id": "dp-type", "type": "text", "name": "Dispute Type",
+         "values": DISPUTE_TYPES, "pills": "color-by-option"},
+        {"id": "dp-priority", "type": "text", "name": "Priority",
+         "values": ["Low", "Medium", "High", "Critical"], "pills": "color-by-option"},
+        {"id": "dp-status", "type": "text", "name": "Status",
+         "values": ["Submitted", "In Review", "Escalated", "Resolved"],
+         "pills": "color-by-option"},
+        {"id": "dp-amount", "type": "number", "name": "Amount in Dispute",
+         "format": MONEY},
+        {"id": "dp-title", "type": "text", "name": "Case Title"},
+        {"id": "dp-desc", "type": "text", "name": "Description"},
+        {"id": "dp-inreview", "type": "datetime", "name": "In Review Date"},
+        {"id": "dp-esc", "type": "datetime", "name": "Escalation Date"},
+        {"id": "dp-resolved", "type": "datetime", "name": "Resolved Date"},
+        {"id": "dp-resolution", "type": "text", "name": "Resolution Note"},
+        {"id": "CREATED_AT"},
+        {"id": "CREATED_BY"},
+        # Threaded comment view: pull every log entry for this ticket, oldest to
+        # newest, into one cell — the demeng ListAgg-into-Lookup pattern.
+        {"id": "dp-comments", "name": "Comment Thread",
+         "formula": 'Lookup(ListAgg([Dispute Comment Log/Entry Text], "\\n\\n"), '
+                    "[Dispute ID], [Dispute Comment Log/Ticket ID])"},
+        {"id": "dp-age", "name": "Age (days)",
+         "formula": 'DateDiff("day", [Created At], Coalesce([Resolved Date], Now()))',
+         "format": INT},
+        {"id": "dp-status-f", "name": "Workflow Status",
+         "formula": 'Coalesce([Status], "Submitted")'},
+    ],
+    "sort": [{"columnId": "dp-status", "direction": "ascending", "nulls": "last"},
+             {"columnId": "dp-amount", "direction": "descending", "nulls": "last"}],
+    "conditionalFormats": [
+        {"type": "dataBars", "columnIds": ["dp-amount"], "scheme": [ALARM, CARD_ALT]},
+        {"type": "single", "columnIds": ["dp-status"], "condition": "formula",
+         "formula": '[Status] = "Escalated"',
+         "style": {"backgroundColor": "#FCE8E8", "color": ALARM}},
+        {"type": "single", "columnIds": ["dp-status"], "condition": "formula",
+         "formula": '[Status] = "Resolved"',
+         "style": {"backgroundColor": "#E8F7EC", "color": GOOD}},
+    ],
+    "tableComponents": {"summaryBar": "hidden"},
+    "tableStyle": {"preset": "presentation", "cellSpacing": "small",
+                   "gridLines": "horizontal", "banding": "shown",
+                   "bandingColor": CARD_ALT},
+})
+
+add({
+    "id": "it-dispute-log", "kind": "input-table", "name": "Dispute Comment Log",
+    "inputMode": "edit", "source": {"kind": "empty", "connectionId": CONN},
+    "columns": [
+        {"id": "dl-ticket", "type": "text", "name": "Ticket ID"},
+        {"id": "dl-author", "type": "text", "name": "Author",
+         "values": ["Account Manager", "Finance"], "pills": "color-by-option"},
+        {"id": "dl-comment", "type": "text", "name": "Comment"},
+        {"id": "CREATED_AT"},
+        {"id": "CREATED_BY"},
+        # One rendered line per comment; CREATED_AT/CREATED_BY are auto system
+        # columns and must not be written by the insert.
+        {"id": "dl-entry", "name": "Entry Text",
+         "formula": 'DateFormat([Created At], "%b %-d %-I:%M %p") & "  ·  " & '
+                    'Coalesce([Author], "") & ": " & Coalesce([Comment], "")'},
+    ],
+    "sort": [{"columnId": "CREATED_AT", "direction": "ascending", "nulls": "last"}],
+})
+
+add({
+    "id": "tbl-dispute", "kind": "table", "name": "Dispute Queue",
+    "visibleAsSource": True,
+    "source": {"kind": "table", "elementId": "it-dispute"},
+    "columns": [
+        {"id": "dq-ticket", "name": "Dispute ID", "formula": "[Commission Disputes/Dispute ID]"},
+        {"id": "dq-am", "name": "Account Manager", "formula": "[Commission Disputes/Account Manager]"},
+        {"id": "dq-scenario", "name": "Scenario", "formula": "[Commission Disputes/Scenario]"},
+        {"id": "dq-type", "name": "Dispute Type", "formula": "[Commission Disputes/Dispute Type]"},
+        {"id": "dq-priority", "name": "Priority", "formula": "[Commission Disputes/Priority]"},
+        {"id": "dq-amount", "name": "Amount in Dispute", "formula": "[Commission Disputes/Amount in Dispute]", "format": MONEY},
+        {"id": "dq-age", "name": "Age (days)", "formula": "[Commission Disputes/Age (days)]", "format": INT},
+        {"id": "dq-status", "name": "Workflow Status", "formula": "[Commission Disputes/Workflow Status]"},
+    ],
+    "actions": [{"id": "act-open-dispute", "trigger": "on-select", "effects": [
+        {"effect": "set-control-value", "control": "dispute_selected",
+         "value": {"type": "column", "column": "dq-ticket"}},
+        {"effect": "open-overlay", "overlayId": "m-dispute-detail"},
+    ]}],
+    "sort": [{"columnId": "dq-amount", "direction": "descending", "nulls": "last"}],
+    "conditionalFormats": [
+        {"type": "dataBars", "columnIds": ["dq-amount"], "scheme": [ALARM, CARD_ALT]},
+        {"type": "single", "columnIds": ["dq-status"], "condition": "formula",
+         "formula": '[Workflow Status] = "Escalated"',
+         "style": {"backgroundColor": "#FCE8E8", "color": ALARM}},
+    ],
+    "tableComponents": {"summaryBar": "hidden"},
+    "tableStyle": {"preset": "presentation", "cellSpacing": "small"},
+})
+
+add({
+    "id": "tbl-dispute-thread", "kind": "table", "name": "Selected Dispute Comments",
+    "visibleAsSource": True,
+    "source": {"kind": "table", "elementId": "it-dispute-log"},
+    "columns": [
+        {"id": "dt-entry", "name": "Comment trail", "formula": "[Dispute Comment Log/Entry Text]"},
+        {"id": "dt-ticket", "name": "Ticket ID", "formula": "[Dispute Comment Log/Ticket ID]", "hidden": True},
+        {"id": "dt-created", "name": "Logged", "formula": "[Dispute Comment Log/Created At]", "hidden": True},
+    ],
+    "sort": [{"columnId": "dt-created", "direction": "ascending", "nulls": "last"}],
+    "tableComponents": {"summaryBar": "hidden"},
+    "tableStyle": {"preset": "presentation", "cellSpacing": "small"},
+})
+
+# Dispute KPIs.
+add(kpi("k-dp-open", "Open disputes", "it-dispute",
+        'CountDistinct(If([Commission Disputes/Workflow Status] <> "Resolved", '
+        "[Commission Disputes/Dispute ID], Null))", INT, value_color=ALARM))
+add(kpi("k-dp-amount", "Amount in dispute", "it-dispute",
+        'SumIf([Commission Disputes/Amount in Dispute], '
+        '[Commission Disputes/Workflow Status] <> "Resolved")', MONEY,
+        value_color=ALARM))
+add(kpi("k-dp-age", "Avg open age (days)", "it-dispute",
+        'Avg(If([Commission Disputes/Workflow Status] <> "Resolved", '
+        "[Commission Disputes/Age (days)], Null))", HOURS1, value_color=INK))
+add(kpi("k-dp-esc", "Escalated", "it-dispute",
+        'CountDistinct(If([Commission Disputes/Workflow Status] = "Escalated", '
+        "[Commission Disputes/Dispute ID], Null))", INT, value_color=WARN))
+
+add({
+    "id": "ch-dp-status", "kind": "bar-chart", "name": "Disputes by status",
+    "source": {"kind": "table", "elementId": "it-dispute"},
+    "columns": [
+        {"id": "ds-status", "name": "Status", "formula": "[Commission Disputes/Workflow Status]"},
+        {"id": "ds-count", "name": "Disputes",
+         "formula": "CountDistinct([Commission Disputes/Dispute ID])", "format": INT},
+        {"id": "ds-amt", "name": "Amount in Dispute",
+         "formula": "Sum([Commission Disputes/Amount in Dispute])", "format": MONEY},
+    ],
+    "xAxis": {"columnId": "ds-status"},
+    "yAxis": {"columnIds": ["ds-count"]},
+    "legend": {"position": "top"},
+})
+add({
+    # Pie/donut are rejected on papercranestaging (same org drift as pivot-table),
+    # so disputed-$-by-type is a horizontal-reading bar instead.
+    "id": "ch-dp-type", "kind": "bar-chart", "name": "Disputed $ by type",
+    "source": {"kind": "table", "elementId": "it-dispute"},
+    "columns": [
+        {"id": "dt-type", "name": "Dispute Type", "formula": "[Commission Disputes/Dispute Type]"},
+        {"id": "dt-amt", "name": "Amount in Dispute",
+         "formula": "Sum([Commission Disputes/Amount in Dispute])", "format": MONEY},
+    ],
+    "xAxis": {"columnId": "dt-type"},
+    "yAxis": {"columnIds": ["dt-amt"]},
+    "legend": {"position": "top"},
+    "noDrill": True,
+})
+
+# Dispute controls. The selected-dispute control is set by the queue's on-select
+# and also filters the comment log + thread table, so the detail modal shows only
+# the chosen ticket's trail.
+add(control(
+    "ct-dispute-selected", "dispute_selected", "Selected dispute", "text", "",
+    mode="equals",
+    filters=[
+        {"source": {"kind": "table", "elementId": "it-dispute-log"}, "columnId": "dl-ticket"},
+        {"source": {"kind": "table", "elementId": "tbl-dispute-thread"}, "columnId": "dt-ticket"},
+    ],
+))
+add(control(
+    "ct-dispute-statusf", "dispute_status_filter", "Status", "list", "",
+    mode="include", selectionMode="multiple", values=[],
+    source={"kind": "source", "source": {"kind": "table", "elementId": "it-dispute"},
+            "columnId": "dp-status-f"},
+    filters=[
+        {"source": {"kind": "table", "elementId": "it-dispute"}, "columnId": "dp-status-f"},
+        {"source": {"kind": "table", "elementId": "tbl-dispute"}, "columnId": "dq-status"},
+    ],
+))
+# New-dispute form: AM and Scenario pull from governed lists; the rest are typed.
+add(control(
+    "ct-nd-am", "nd_am", "Account manager", "list", "",
+    mode="include", selectionMode="single", values=[],
+    source={"kind": "source", "source": {"kind": "table", "elementId": "sql-commission"},
+            "columnId": "cb-owner"},
+))
+add(control(
+    "ct-nd-scenario", "nd_scenario", "Scenario", "list", "",
+    mode="include", selectionMode="single", values=[],
+    source={"kind": "source", "source": {"kind": "table", "elementId": "jn-commission"},
+            "columnId": "jn-scenario"},
+))
+add(control(
+    "ct-nd-type", "nd_type", "Dispute type", "segmented", "Rate or tier",
+    source={"kind": "manual", "valueType": "text",
+            "values": DISPUTE_TYPES, "labels": DISPUTE_TYPES},
+))
+add(control(
+    "ct-nd-priority", "nd_priority", "Priority", "segmented", "Medium",
+    source={"kind": "manual", "valueType": "text",
+            "values": ["Low", "Medium", "High", "Critical"],
+            "labels": ["Low", "Medium", "High", "Critical"]},
+))
+add(control("ct-nd-amount", "nd_amount", "Amount in dispute ($)"))
+add(control("ct-nd-title", "nd_title", "Case title"))
+add(control("ct-nd-desc", "nd_desc", "What is being disputed", "text-area"))
+add(control(
+    "ct-dp-author", "comment_author", "Commenting as", "segmented", "Finance",
+    source={"kind": "manual", "valueType": "text",
+            "values": ["Account Manager", "Finance"],
+            "labels": ["Account Manager", "Finance"]},
+))
+add(control("ct-dp-comment", "dispute_comment", "Add a comment", "text-area"))
+add(control("ct-dp-resolution", "resolution_note", "Resolution note", "text-area"))
+
+# Dispute actions.
+DISPUTE_REFRESH = [
+    {"effect": "refresh-element", "target": {"type": "element", "element": "it-dispute"}},
+    {"effect": "refresh-element", "target": {"type": "element", "element": "tbl-dispute"}},
+]
+DISPUTE_ROW = {"type": "formula", "formula": "[Dispute ID] = [dispute_selected]"}
+
+add(button("b-dispute-new", "+ File a dispute", [
+    {"effect": "open-overlay", "overlayId": "m-dispute-new"},
+], GREEN, INK))
+add(button("b-dispute-create", "✓ Create dispute", [
+    {"effect": "insert-rows", "table": "it-dispute", "values": {
+        # Generated on insert with a scalar formula — never asked of the user.
+        "dp-ticket": {"type": "formula",
+                      "formula": '"DSP-" & DateFormat(Now(), "%y%m%d-%H%M%S")'},
+        "dp-am": {"type": "control", "control": "nd_am"},
+        "dp-scenario": {"type": "control", "control": "nd_scenario"},
+        "dp-type": {"type": "control", "control": "nd_type"},
+        "dp-priority": {"type": "control", "control": "nd_priority"},
+        "dp-amount": {"type": "formula", "formula": "Number([nd_amount])"},
+        "dp-title": {"type": "control", "control": "nd_title"},
+        "dp-desc": {"type": "control", "control": "nd_desc"},
+        "dp-status": {"type": "constant", "value": {"type": "text", "value": "Submitted"}},
+    }},
+] + DISPUTE_REFRESH + [
+    {"effect": "clear-control", "scope": {"type": "control", "control": "nd_am"}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "nd_scenario"}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "nd_amount"}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "nd_title"}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "nd_desc"}},
+    {"effect": "close-overlay"},
+], GREEN, INK))
+add(button("b-dispute-cancel", "Cancel", [{"effect": "close-overlay"}],
+           CARD, INK, "outline"))
+add(button("b-dispute-comment", "✓ Add comment", [
+    {"effect": "insert-rows", "table": "it-dispute-log", "values": {
+        "dl-ticket": {"type": "control", "control": "dispute_selected"},
+        "dl-author": {"type": "control", "control": "comment_author"},
+        "dl-comment": {"type": "control", "control": "dispute_comment"}}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "dispute_comment"}},
+    {"effect": "refresh-element", "target": {"type": "element", "element": "it-dispute-log"}},
+    {"effect": "refresh-element", "target": {"type": "element", "element": "tbl-dispute-thread"}},
+    {"effect": "refresh-element", "target": {"type": "element", "element": "it-dispute"}},
+], INK))
+add(button("b-dispute-review", "▶ Start review", [
+    {"effect": "update-rows", "table": "it-dispute", "whichRows": DISPUTE_ROW,
+     "values": {"dp-status": {"type": "constant", "value": {"type": "text", "value": "In Review"}},
+                "dp-inreview": {"type": "formula", "formula": "Now()"}}},
+] + DISPUTE_REFRESH, GREEN, INK))
+add(button("b-dispute-escalate", "▲ Escalate", [
+    {"effect": "update-rows", "table": "it-dispute", "whichRows": DISPUTE_ROW,
+     "values": {"dp-status": {"type": "constant", "value": {"type": "text", "value": "Escalated"}},
+                "dp-esc": {"type": "formula", "formula": "Now()"}}},
+] + DISPUTE_REFRESH, ALARM, "#FFFFFF"))
+add(button("b-dispute-resolve", "✓ Resolve dispute", [
+    {"effect": "update-rows", "table": "it-dispute", "whichRows": DISPUTE_ROW,
+     "values": {"dp-status": {"type": "constant", "value": {"type": "text", "value": "Resolved"}},
+                "dp-resolved": {"type": "formula", "formula": "Now()"},
+                "dp-resolution": {"type": "control", "control": "resolution_note"}}},
+] + DISPUTE_REFRESH + [
+    {"effect": "clear-control", "scope": {"type": "control", "control": "resolution_note"}},
+    {"effect": "close-overlay"},
+], GREEN, INK))
+add(button("b-dispute-close", "Close", [{"effect": "close-overlay"}], CARD, INK, "outline"))
+
+
 # ------------------------------------------------------------------- chrome
 def brand_header(page_num, title, subtitle, nav_id):
     add({"id": "hdr-%d" % page_num, "kind": "container", "spacing": "small",
@@ -1214,6 +1507,8 @@ def brand_header(page_num, title, subtitle, nav_id):
               "destination": {"type": "page", "pageId": "pg-action"}},
              {"label": "Commission modeling",
               "destination": {"type": "page", "pageId": "pg-commission"}},
+             {"label": "Disputes",
+              "destination": {"type": "page", "pageId": "pg-dispute"}},
          ]})
 
 
@@ -1231,6 +1526,11 @@ brand_header(
     3, "Commission & exceptions",
     "Model payout tiers on governed marketplace economics, then submit one scenario for finance review.",
     "nav-3",
+)
+brand_header(
+    4, "Commission disputes",
+    "Account managers file payout disputes; finance works each case through review, escalation and resolution — with a full comment trail.",
+    "nav-4",
 )
 
 add(text(
@@ -1252,6 +1552,28 @@ add(text("sec-comm-outcome",
 add(text("sec-comm-registry",
          '<span style="color:%s">**SCENARIO REGISTRY — EVERY PLAN A USER CREATED**</span>'
          % MUTED))
+add(text("sec-dispute-queue",
+         '<span style="color:%s">**DISPUTE QUEUE — SELECT A ROW TO WORK THE CASE**</span>'
+         % MUTED))
+add(text("sec-dispute-mix",
+         '<span style="color:%s">**WHERE DISPUTES CONCENTRATE**</span>' % MUTED))
+add(text(
+    "dispute-new-copy",
+    "### File a commission dispute\n"
+    "Name the account manager, the scenario in question, and the amount. A Dispute "
+    "ID is generated automatically and the case enters the queue as **Submitted** "
+    "for finance to review.",
+    style={"backgroundColor": "transparent"},
+))
+add(text(
+    "dispute-detail-copy",
+    '**Dispute {{[dispute_selected]}}** — move it through review, add to the comment '
+    'trail, and record a resolution. Status changes stamp the SLA dates, and the '
+    'comment log keeps a full audit trail per ticket.',
+    style={"backgroundColor": "transparent"},
+))
+add(text("sec-dispute-thread",
+         '<span style="color:%s">**COMMENT TRAIL**</span>' % MUTED))
 
 def region_fill_formula(region):
     return (
@@ -1354,7 +1676,8 @@ add({"id": "tabs-persona", "kind": "tabbed-container",
 
 for cid in ("kpi-pulse", "filters-pulse", "pivot-wrap",
             "kpi-action", "queue-wrap", "supply-wrap",
-            "kpi-commission", "comm-controls", "comm-grid", "comm-registry"):
+            "kpi-commission", "comm-controls", "comm-grid", "comm-registry",
+            "kpi-dispute", "dispute-controls", "dispute-queue-wrap", "dispute-mix"):
     add({"id": cid, "kind": "container", "spacing": "small",
          "style": {"backgroundColor": CARD, "borderRadius": "round",
                    "borderColor": RULE, "borderWidth": 1}})
@@ -1416,7 +1739,9 @@ agents = [{
         "is qualified professionals in the market catchment. Risk tiers are Critical, "
         "Watch and On plan. Always name the specific region, market, facility and "
         "credential, and always separate a demand-side account lever from a supply-side "
-        "activation lever. Be concise and quantitative."
+        "activation lever. You can also focus, create, submit and approve commission "
+        "scenarios, and file commission disputes on an account manager's behalf. Be "
+        "concise and quantitative."
     ),
     # Static greeting: generated-mode openings can hang on "Thinking..." in the
     # chat shell and leave the demo with no prompt chips. A concrete opener that
@@ -1432,7 +1757,8 @@ agents = [{
                     {"kind": "table", "elementId": "sql-supply"},
                     {"kind": "table", "elementId": "it-actions"},
                     {"kind": "table", "elementId": "it-comm-model"},
-                    {"kind": "table", "elementId": "it-scenario-reg"}],
+                    {"kind": "table", "elementId": "it-scenario-reg"},
+                    {"kind": "table", "elementId": "it-dispute"}],
     "tools": [
         {"toolId": "t-region", "kind": "action", "name": "Focus a region",
          "description": "Filter the workbook to one or more marketplace regions.",
@@ -1550,6 +1876,31 @@ agents = [{
               "target": {"type": "element", "element": "it-scenario-reg"}},
              {"kind": "effect", "effect": "refresh-element",
               "target": {"type": "element", "element": "it-comm-model"}}]},
+        # File a commission dispute on an AM's behalf. Dispute ID is generated on
+        # insert; amount is cast from the agent's text input.
+        {"toolId": "t-dispute-file", "kind": "action",
+         "name": "File a commission dispute",
+         "description": ("Open a commission dispute ticket for an account manager, "
+                         "capturing the scenario, dispute type, amount and a "
+                         "description. Use when the user wants to contest a payout."),
+         "steps": [
+             {"kind": "effect", "effect": "insert-rows", "table": "it-dispute",
+              "values": {
+                  "dp-ticket": {"type": "formula",
+                                "formula": '"DSP-" & DateFormat(Now(), "%y%m%d-%H%M%S")'},
+                  "dp-am": {"type": "agent-input", "inputName": "Account manager"},
+                  "dp-scenario": {"type": "agent-input", "inputName": "Scenario in dispute"},
+                  "dp-type": {"type": "agent-input", "inputName": "Dispute type"},
+                  "dp-priority": {"type": "agent-input", "inputName": "Priority"},
+                  "dp-amount": {"type": "agent-input", "inputName": "Amount in dispute"},
+                  "dp-title": {"type": "agent-input", "inputName": "Case title"},
+                  "dp-desc": {"type": "agent-input", "inputName": "What is being disputed"},
+                  "dp-status": {"type": "constant",
+                                "value": {"type": "text", "value": "Submitted"}}}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "it-dispute"}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "tbl-dispute"}}]},
     ],
 }]
 
@@ -1563,7 +1914,7 @@ TECHNICAL_NAMES = {"Activity Key", "Facility ID"}
 def add_drill_columns():
     by_id = {e["id"]: e for e in elements}
     for viz in elements:
-        if viz.get("kind") not in DRILL_KINDS:
+        if viz.get("kind") not in DRILL_KINDS or viz.get("noDrill"):
             continue
         source = viz.get("source") or {}
         if source.get("kind") != "table":
@@ -1592,12 +1943,17 @@ def add_drill_columns():
 
 add_drill_columns()
 
+# `noDrill` is a builder-only marker; strip it before it reaches the API.
+for _el in elements:
+    _el.pop("noDrill", None)
+
 
 # ------------------------------------------------------------------- layout
 pages = [
     {"id": "pg-pulse", "name": "Marketplace pulse", "backgroundColor": PAPER},
     {"id": "pg-action", "name": "Action workspace", "backgroundColor": PAPER},
     {"id": "pg-commission", "name": "Commission modeling", "backgroundColor": PAPER},
+    {"id": "pg-dispute", "name": "Commission disputes", "backgroundColor": PAPER},
     {"id": "pg-data", "name": "Data", "visibility": "hidden", "backgroundColor": PAPER},
 ]
 overlays = [
@@ -1616,6 +1972,17 @@ overlays = [
      "modal": {"width": "small",
                "header": {"title": "New commission scenario",
                           "showCloseIcon": "shown"},
+               "footer": {"primaryCta": {"visible": "hidden"},
+                          "secondaryCta": {"visible": "hidden"}}}},
+    {"id": "m-dispute-new", "type": "modal", "name": "File a dispute",
+     "modal": {"width": "small",
+               "header": {"title": "File a commission dispute",
+                          "showCloseIcon": "shown"},
+               "footer": {"primaryCta": {"visible": "hidden"},
+                          "secondaryCta": {"visible": "hidden"}}}},
+    {"id": "m-dispute-detail", "type": "modal", "name": "Dispute detail",
+     "modal": {"width": "medium",
+               "header": {"title": "Work the dispute", "showCloseIcon": "shown"},
                "footer": {"primaryCta": {"visible": "hidden"},
                           "secondaryCta": {"visible": "hidden"}}}},
 ]
@@ -1750,6 +2117,40 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
     <Element elementId="it-scenario-reg" gridColumn="1 / 25" gridRow="1 / 13"/>
   </Container>
 </Page>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-dispute">
+  <Container elementId="hdr-4" type="grid" gridColumn="1 / 25" gridRow="1 / 10"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="logo-4" gridColumn="1 / 3" gridRow="1 / 3"/>
+    <Element elementId="word-4" gridColumn="3 / 7" gridRow="1 / 3"/>
+    <Element elementId="nav-4" gridColumn="14 / 25" gridRow="1 / 3"/>
+    <Element elementId="eyebrow-4" gridColumn="1 / 12" gridRow="3 / 4"/>
+    <Element elementId="title-4" gridColumn="1 / 18" gridRow="4 / 7"/>
+    <Element elementId="sub-4" gridColumn="1 / 20" gridRow="7 / 9"/>
+  </Container>
+  <Container elementId="dispute-controls" type="grid" gridColumn="1 / 25" gridRow="10 / 14"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ct-dispute-statusf" gridColumn="1 / 9" gridRow="1 / 4"/>
+    <Element elementId="b-dispute-new" gridColumn="18 / 25" gridRow="1 / 4"/>
+  </Container>
+  <Container elementId="kpi-dispute" type="grid" gridColumn="1 / 25" gridRow="14 / 22"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="k-dp-open" gridColumn="1 / 7" gridRow="1 / 8"/>
+    <Element elementId="k-dp-amount" gridColumn="7 / 13" gridRow="1 / 8"/>
+    <Element elementId="k-dp-age" gridColumn="13 / 19" gridRow="1 / 8"/>
+    <Element elementId="k-dp-esc" gridColumn="19 / 25" gridRow="1 / 8"/>
+  </Container>
+  <Element elementId="sec-dispute-mix" gridColumn="1 / 25" gridRow="22 / 23"/>
+  <Container elementId="dispute-mix" type="grid" gridColumn="1 / 25" gridRow="23 / 37"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ch-dp-status" gridColumn="1 / 13" gridRow="1 / 14"/>
+    <Element elementId="ch-dp-type" gridColumn="13 / 25" gridRow="1 / 14"/>
+  </Container>
+  <Element elementId="sec-dispute-queue" gridColumn="1 / 25" gridRow="37 / 38"/>
+  <Container elementId="dispute-queue-wrap" type="grid" gridColumn="1 / 25" gridRow="38 / 60"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="tbl-dispute" gridColumn="1 / 25" gridRow="1 / 22"/>
+  </Container>
+</Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-data">
   <Element elementId="sql-market" gridColumn="1 / 13" gridRow="1 / 16"/>
   <Element elementId="sql-facility" gridColumn="13 / 25" gridRow="1 / 16"/>
@@ -1757,6 +2158,9 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Element elementId="ct-selected" gridColumn="1 / 7" gridRow="34 / 37"/>
   <Element elementId="sql-commission" gridColumn="7 / 16" gridRow="34 / 48"/>
   <Element elementId="jn-commission" gridColumn="16 / 25" gridRow="34 / 48"/>
+  <Element elementId="it-dispute" gridColumn="1 / 13" gridRow="48 / 64"/>
+  <Element elementId="it-dispute-log" gridColumn="13 / 25" gridRow="48 / 64"/>
+  <Element elementId="ct-dispute-selected" gridColumn="1 / 7" gridRow="64 / 67"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-action">
   <Element elementId="modal-copy" gridColumn="1 / 25" gridRow="1 / 4"/>
@@ -1773,6 +2177,31 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Element elementId="ct-comm-note" gridColumn="1 / 25" gridRow="7 / 12"/>
   <Element elementId="b-comm-cancel" gridColumn="1 / 13" gridRow="12 / 15"/>
   <Element elementId="b-comm-save" gridColumn="13 / 25" gridRow="12 / 15"/>
+</Page>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-dispute-new">
+  <Element elementId="dispute-new-copy" gridColumn="1 / 25" gridRow="1 / 4"/>
+  <Element elementId="ct-nd-am" gridColumn="1 / 13" gridRow="4 / 7"/>
+  <Element elementId="ct-nd-scenario" gridColumn="13 / 25" gridRow="4 / 7"/>
+  <Element elementId="ct-nd-title" gridColumn="1 / 17" gridRow="7 / 10"/>
+  <Element elementId="ct-nd-amount" gridColumn="17 / 25" gridRow="7 / 10"/>
+  <Element elementId="ct-nd-type" gridColumn="1 / 25" gridRow="10 / 13"/>
+  <Element elementId="ct-nd-priority" gridColumn="1 / 25" gridRow="13 / 16"/>
+  <Element elementId="ct-nd-desc" gridColumn="1 / 25" gridRow="16 / 20"/>
+  <Element elementId="b-dispute-cancel" gridColumn="1 / 13" gridRow="20 / 23"/>
+  <Element elementId="b-dispute-create" gridColumn="13 / 25" gridRow="20 / 23"/>
+</Page>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-dispute-detail">
+  <Element elementId="dispute-detail-copy" gridColumn="1 / 25" gridRow="1 / 4"/>
+  <Element elementId="b-dispute-review" gridColumn="1 / 9" gridRow="4 / 7"/>
+  <Element elementId="b-dispute-escalate" gridColumn="9 / 17" gridRow="4 / 7"/>
+  <Element elementId="sec-dispute-thread" gridColumn="1 / 25" gridRow="7 / 8"/>
+  <Element elementId="tbl-dispute-thread" gridColumn="1 / 25" gridRow="8 / 18"/>
+  <Element elementId="ct-dp-author" gridColumn="1 / 25" gridRow="18 / 21"/>
+  <Element elementId="ct-dp-comment" gridColumn="1 / 19" gridRow="21 / 25"/>
+  <Element elementId="b-dispute-comment" gridColumn="19 / 25" gridRow="21 / 24"/>
+  <Element elementId="ct-dp-resolution" gridColumn="1 / 25" gridRow="25 / 29"/>
+  <Element elementId="b-dispute-close" gridColumn="1 / 13" gridRow="29 / 32"/>
+  <Element elementId="b-dispute-resolve" gridColumn="13 / 25" gridRow="29 / 32"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-scenario">
   <Element elementId="scenario-modal-copy" gridColumn="1 / 25" gridRow="1 / 5"/>
