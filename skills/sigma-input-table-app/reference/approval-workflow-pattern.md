@@ -287,6 +287,51 @@ property of the scenario, so `update-rows` with
 `whichRows: [Scenario Name] = [scenarioSelect]` touches one row, and the grid
 inherits it through the join as a read-only column.
 
+## Ticketing / case-management pattern (dispute resolution)
+
+A dispute/ticket workflow is a registry + an append-only comment log + a status
+lifecycle. Verified live on papercranestaging 2026-08-13 (ShiftKey "Commission
+Disputes", adapted from the demeng "Commissions Dispute" POV).
+
+1. **Ticket registry** — an EMPTY `input-table` (`inputMode: "view"`), one row
+   per ticket. Business fields (requestor, subject, amount, priority) plus:
+   - **A generated ID written on insert**, never asked of the user:
+     `"dp-ticket": {"type": "formula", "formula": "\"DSP-\" & DateFormat(Now(), \"%y%m%d-%H%M%S\")"}`.
+   - **A status column** (`values: [...]`, `pills: "color-by-option"`).
+   - **One `datetime` column per lifecycle stage** (In Review / Escalation /
+     Resolved dates) — see the `Now()` write below.
+   - **A threaded comment view** that pulls the whole log for this ticket into
+     one cell:
+     `Lookup(ListAgg([Comment Log/Entry Text], "\n\n"), [Ticket ID], [Comment Log/Ticket ID])`.
+   - **An age column**:
+     `DateDiff("day", [Created At], Coalesce([Resolved Date], Now()))`.
+2. **Comment log** — an append-only EMPTY `input-table` (`inputMode: "edit"`),
+   keyed by ticket id, with an author column, the comment text, the auto system
+   columns `{id: "CREATED_AT"}` + `{id: "CREATED_BY"}` (do NOT write these in the
+   insert), and a rendered `Entry Text` formula
+   (`DateFormat([Created At], "%b %-d %-I:%M %p") & "  ·  " & [Author] & ": " & [Comment]`).
+3. **Queue** — a `table` over the registry with an `on-select` action that sets a
+   `selected_ticket` control and opens the detail modal (same row-select →
+   control → overlay chain as a record picker).
+4. **Detail modal** — a comment-thread table filtered to `selected_ticket`, a
+   compose-comment control + Add-comment button (`insert-rows` into the log), and
+   the lifecycle buttons.
+
+Two mechanics worth reusing:
+
+- **Stamp SLA dates with a scalar `Now()` in `update-rows`.** A status button
+  both sets the status constant and writes the timestamp:
+  `"dp-resolved": {"type": "formula", "formula": "Now()"}`. `Now()` is a scalar,
+  so it is legal in `values` (unlike a per-row column expression). The `whichRows`
+  filter is `[Ticket ID] = [selected_ticket]`.
+- **The selected-ticket control both receives `set-control-value` and filters.**
+  One `text` control (`mode: "equals"`) is set from the queue's `on-select`
+  column value and carries `filters` targeting the comment log + thread table, so
+  the modal shows only that ticket's trail.
+
+Empty-state polish: `SumIf`/`Avg(If(...))` KPIs return `null` on an empty
+registry and render as an ugly "null". Wrap them in `Coalesce(..., 0)`.
+
 ## Linked input tables: carry source columns as `key`, not `formula`
 
 Verified live 2026-08-12 on a 576-row baseline. When a linked input table

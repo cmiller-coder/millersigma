@@ -164,8 +164,8 @@ Axis fields take **column ids** (`{columnId}` / `{columnIds: [...]}`), not the
 | Area chart | `area-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}`, optional `stacking` | `stacking: "none"` = unstacked overlay, default = stacked, `"normalized"` = 100% stacked. |
 | Combo chart | `combo-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}` | Mixing bars + lines is a per-series `type` override; confirm its current shape from a GET-back. |
 | Scatter / bubble | `scatter-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}`, optional `size`, optional `color: {by, column}` | Both axes are metrics (not categorical). `size` makes it a bubble chart. |
-| Pie chart | `pie-chart` | `color` (categorical), `value` (metric) | No xAxis/yAxis. The categorical column drives slice identity; the metric column drives slice size. |
-| Donut chart | `donut-chart` | `color`, `value` | Same shape as pie-chart; render differs in the UI only. |
+| Pie chart | `pie-chart` | `color` (categorical), `value` (metric) | No xAxis/yAxis. **Rejected on papercranestaging (2026-08-13)** — use a `bar-chart` there. See "Pivot-table / pie / donut API drift." |
+| Donut chart | `donut-chart` | `color`, `value` | Same shape as pie-chart. **Also rejected on papercranestaging.** |
 | KPI / single-value tile | `kpi-chart` | `value: {columnId}`, optional `comparison` + `comparisonColumn` | **Docs example says `kpi` — API rejects with `Invalid kind: "kpi"`. Use `kpi-chart`.** See "KPI element shape." |
 | Pivot table | **Not accepted in papercranestaging** | — | Live `verify` rejects both `kind: "pivot-table"` and `kind: "pivot"` as invalid (2026-08-13). Use a grouped `table` with ordered `groupBy` columns for a drillable hierarchy. See "Pivot-table API drift." |
 | Table | `table` | `columns: [...]`, optional `groupings`, optional `order` | Plain detail table by default; multi-level aggregating table when `groupings` carries `groupBy` + `calculations`. See "Table groupings." |
@@ -456,6 +456,20 @@ these into multiple series (e.g. one line per region). The `column`
 value is a bare id string, not an `{id}` object — see "Series breakout
 / color-by on charts."
 
+⚠️ **A column may sit on only one channel.** Putting the same column on both
+`xAxis` and `color` is rejected: `Column '<id>' is referenced from both 'xAxis'
+and 'color'; a column can only be on one channel at a time`. When you replace a
+pie/donut with a single-dimension bar (metric by category), the category goes on
+`xAxis` only — do not also add a redundant `color` by that same column.
+
+⚠️ **Aggregate charts reject row-level drill passthrough.** If you run a
+drill-passthrough pass that copies every source column onto each chart (so
+right-click drill exposes them), skip aggregate-by-dimension charts like a
+metric-by-category bar or a pie/donut: adding row-level columns to a chart whose
+value is a `Sum()`/`Avg()` over a single grouping mixes grains and the element is
+rejected (again masked as `Invalid kind`). Give those charts an opt-out flag in
+the builder and strip it before POST.
+
 Reference example with all variants:
 `examples/additional-workbook-features-chart-and-control-catalog.json`.
 
@@ -523,19 +537,24 @@ transaction), the underlying source element must do that aggregation
 first — either via `groupings` or by sourcing from a pre-aggregated
 sibling.
 
-## Pivot-table API drift
+## Pivot-table / pie / donut API drift
 
-**Do not emit pivot tables to papercranestaging.** On 2026-08-13, live
-`POST /v2/workbooks/spec/verify` rejected both `kind: "pivot-table"` and
-`kind: "pivot"` as invalid. Use a grouped `table` with ordered `groupBy`
-columns instead (the ShiftKey Region → State → Market → Facility
-Actual-vs-Plan hierarchy is the live reference).
+**Do not emit pivot, pie, or donut charts to papercranestaging.** On
+2026-08-13, live `POST /v2/workbooks/spec/verify` rejected `kind: "pivot-table"`,
+`kind: "pivot"`, `kind: "pie-chart"` and `kind: "donut-chart"` as invalid — even
+with the minimal documented shape. These are org/version-specific rejections, not
+spec errors, and they surface as the masked `Invalid kind: "…"`.
 
-The archived shape below exists in older GET-backs and representation docs,
+- Pivot → use a grouped `table` with ordered `groupBy` columns (the ShiftKey
+  Region → State → Market → Facility Actual-vs-Plan hierarchy is the live
+  reference).
+- Pie / donut → use a `bar-chart` of the metric by the categorical dimension
+  (the ShiftKey "Disputed $ by type" bar is the live reference). Put the category
+  only on `xAxis`; see the color-channel rule under "Bar / line / area / combo."
+
+The archived pivot shape below exists in older GET-backs and representation docs,
 but is environment/version-specific and is **not accepted by the current
-papercranestaging write API**:
-
-The correct shape (matches
+papercranestaging write API** (matches
 <https://help.sigmacomputing.com/docs/example-representation-workbook-with-a-pivot-table>):
 
 ```json

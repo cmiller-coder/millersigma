@@ -4,7 +4,7 @@
 |---|---|
 | [`theme-gallery/`](theme-gallery/README.md) | Six selectable dashboard aesthetics with HTML previews and a Sigma token contract (`theme-presets.json`). Open `theme-gallery/index.html` to see all of them at once. |
 | [`build_honda_ev_allocation.py`](build_honda_ev_allocation.py) | A complete two-page prospect build: executive overview + allocation data app, themed with preset 6 ("Editorial Ops"). |
-| [`build_shiftkey_marketplace_control_tower.py`](build_shiftkey_marketplace_control_tower.py) | ShiftKey-specific three-surface app: marketplace pulse, facility/supply action workspace, and commission scenario modeler with finance approval, Cortex, Sigma agent, complete drill context and linked-input write-back. |
+| [`build_shiftkey_marketplace_control_tower.py`](build_shiftkey_marketplace_control_tower.py) | ShiftKey-specific four-surface app: marketplace pulse, facility/supply action workspace, commission scenario modeler with finance approval, and a commission-dispute ticketing workflow — Cortex, a Sigma agent, complete drill context and linked-input write-back. |
 
 ## build_shiftkey_marketplace_control_tower.py
 
@@ -64,6 +64,31 @@ ShiftKey marketplace terms, including the part that makes it an *app*: users
 Lifecycle writes target the **registry**, not every AM row: status is a property
 of the scenario, so submit/approve/reset touch one row and the grid inherits the
 status through the join.
+
+**Commission Disputes** adapts the demeng *Commissions Dispute* POV — a full
+case-management workflow for the finance/commissions disputes the discovery call
+said live in spreadsheets today.
+
+- `it-dispute` is the dispute registry (empty input table). A **Dispute ID is
+  generated on insert**; the row carries AM, scenario, dispute type, priority,
+  amount, a status lifecycle (Submitted → In Review → Escalated → Resolved), one
+  `datetime` per stage, a resolution note, an age (`DateDiff` to now or resolved),
+  and a **threaded comment view** (`ListAgg` of the log, keyed by ticket).
+- `it-dispute-log` is an append-only comment log keyed by ticket id, with the
+  auto `CREATED_AT`/`CREATED_BY` system columns and a rendered `Entry Text` line.
+- `tbl-dispute` is the queue: selecting a row sets `dispute_selected` and opens
+  the detail modal, where **Start review / Escalate / Resolve** stamp the SLA
+  dates with a scalar `Now()`, and **Add comment** appends to the trail.
+- **+ File a dispute** opens a modal (AM + scenario from governed lists,
+  type/priority segmented, amount typed); the copilot has a matching
+  `file-dispute` tool.
+
+Full pattern in
+[`approval-workflow-pattern.md`](../../sigma-input-table-app/reference/approval-workflow-pattern.md)
+→ "Ticketing / case-management pattern". Two papercranestaging drifts shaped it:
+**pie/donut are rejected** (the by-type chart is a bar), and a bar column **cannot
+sit on both `xAxis` and `color`**; the aggregate by-type bar also opts out of the
+drill-passthrough pass (row-level columns break an aggregate chart).
 
 Two API constraints shaped this and are documented in
 [`approval-workflow-pattern.md`](../../sigma-input-table-app/reference/approval-workflow-pattern.md):
