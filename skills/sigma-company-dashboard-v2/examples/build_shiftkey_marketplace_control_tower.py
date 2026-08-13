@@ -855,6 +855,99 @@ add(text(
 ))
 
 
+# ------------------------------------------------------- Marketplace Copilot
+# A Sigma agent grounded in the SAME governed tables the tiles use, with action
+# tools that drive the real controls and the Facility Action Plan input table.
+# Every tool writes only constants, control values, or formula-scoped rows -- no
+# per-row action-value formula (which has no row context from a chat/button).
+add(text("copilot-hd",
+         '<span style="color:%s">**◆ MARKETPLACE COPILOT**</span>　'
+         '<span style="color:%s">Ask, filter, and stage — grounded in the '
+         'governed metrics</span>' % (GREEN, MUTED),
+         style={"backgroundColor": "transparent", "padding": "none"},
+         verticalAlign="middle"))
+add({"id": "chat-copilot", "kind": "chat", "agentId": "ag-market"})
+
+agents = [{
+    "id": "ag-market",
+    "name": "Marketplace Copilot",
+    "description": ("Answers ShiftKey marketplace fill, coverage and margin "
+                    "questions and drives the facility action queue."),
+    "instructions": (
+        "You are ShiftKey's marketplace operations copilot. The data covers posted, "
+        "filled and unfilled shifts across region, state, market, facility, facility "
+        "type, credential (CNA, CMA, LPN, RN) and shift, over six months, spanning "
+        "demand (Marketplace Activity and Facility Performance) and supply (Supply "
+        "Coverage), plus the editable Facility Action Plan. Definitions, which you must "
+        "not redefine: fill rate = filled shifts / posted shifts; unfilled shifts = "
+        "posted - filled; the fill plan is 90 percent; open-shift exposure and revenue "
+        "are dollars; marketplace take = (facility bill rate - professional payout) / "
+        "facility bill rate; bid depth = bids per posted shift; credential-ready supply "
+        "is qualified professionals in the market catchment. Risk tiers are Critical, "
+        "Watch and On plan. Always name the specific region, market, facility and "
+        "credential, and always separate a demand-side account lever from a supply-side "
+        "activation lever. Be concise and quantitative."
+    ),
+    "greeting": {"mode": "generated",
+                 "prompt": "Greet the user in one short line, then offer exactly three "
+                           "specific questions you can answer from this data. Name a real "
+                           "critical facility and make one question about where "
+                           "credentialed supply can be activated."},
+    "dataSources": [{"kind": "table", "elementId": "sql-market"},
+                    {"kind": "table", "elementId": "sql-facility"},
+                    {"kind": "table", "elementId": "sql-supply"},
+                    {"kind": "table", "elementId": "it-actions"}],
+    "tools": [
+        {"toolId": "t-region", "kind": "action", "name": "Focus a region",
+         "description": "Filter the workbook to one or more marketplace regions.",
+         "steps": [{"kind": "effect", "effect": "set-control-value",
+                    "control": "region_filter",
+                    "value": {"type": "agent-input",
+                              "inputName": "Region(s) to focus on"}}]},
+        {"toolId": "t-cred", "kind": "action", "name": "Focus a credential",
+         "description": "Filter the workbook to one or more credentials (CNA, CMA, LPN, RN).",
+         "steps": [{"kind": "effect", "effect": "set-control-value",
+                    "control": "credential_filter",
+                    "value": {"type": "agent-input",
+                              "inputName": "Credential(s) to focus on"}}]},
+        {"toolId": "t-risk", "kind": "action",
+         "name": "Filter the queue by risk tier",
+         "description": "Set the action-queue risk filter (Critical, Watch, On plan).",
+         "steps": [{"kind": "effect", "effect": "set-control-value",
+                    "control": "risk_filter",
+                    "value": {"type": "agent-input",
+                              "inputName": "Risk tier(s) to show"}}]},
+        {"toolId": "t-stage", "kind": "action",
+         "name": "Stage critical facilities for outreach",
+         "description": "Mark every critical-risk facility Ready for outreach.",
+         "steps": [
+             {"kind": "effect", "effect": "update-rows", "table": "it-actions",
+              "whichRows": {"type": "formula", "formula": '[Risk Tier] = "Critical"'},
+              "values": {"ap-status": {"type": "constant",
+                                       "value": {"type": "text",
+                                                 "value": "Ready for outreach"}}}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "it-actions"}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "tbl-action-view"}}]},
+        {"toolId": "t-clear", "kind": "action", "name": "Clear workflow fields",
+         "description": "Reset status, owner, note and next step on every facility.",
+         "steps": [
+             {"kind": "effect", "effect": "update-rows", "table": "it-actions",
+              "whichRows": {"type": "formula", "formula": "True"},
+              "values": {
+                  "ap-status": {"type": "constant", "value": {"type": "text", "value": None}},
+                  "ap-owner": {"type": "constant", "value": {"type": "text", "value": None}},
+                  "ap-note": {"type": "constant", "value": {"type": "text", "value": None}},
+                  "ap-next": {"type": "constant", "value": {"type": "text", "value": None}}}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "it-actions"}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "tbl-action-view"}}]},
+    ],
+}]
+
+
 # --------------------------------------------------------------- drill pass
 DRILL_KINDS = {"bar-chart", "line-chart", "area-chart", "combo-chart",
                "scatter-chart", "pie-chart", "donut-chart", "kpi-chart"}
@@ -974,11 +1067,13 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
       <Element elementId="ct-risk" gridColumn="1 / 8" gridRow="1 / 4"/>
       <Element elementId="b-ready" gridColumn="8 / 16" gridRow="1 / 4"/>
       <Element elementId="b-clear" gridColumn="16 / 25" gridRow="1 / 4"/>
-      <Element elementId="sec-queue" gridColumn="1 / 25" gridRow="4 / 5"/>
-      <Container elementId="queue-wrap" type="grid" gridColumn="1 / 25" gridRow="5 / 24"
+      <Element elementId="sec-queue" gridColumn="1 / 17" gridRow="4 / 5"/>
+      <Container elementId="queue-wrap" type="grid" gridColumn="1 / 17" gridRow="5 / 24"
                  gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
         <Element elementId="tbl-action-view" gridColumn="1 / 25" gridRow="1 / 19"/>
       </Container>
+      <Element elementId="copilot-hd" gridColumn="17 / 25" gridRow="4 / 5"/>
+      <Element elementId="chat-copilot" gridColumn="17 / 25" gridRow="5 / 24"/>
       <Element elementId="ch-facility" gridColumn="1 / 25" gridRow="24 / 40"/>
     </Tab>
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
@@ -1010,7 +1105,7 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
 
 document = {
     "schemaVersion": 1, "kind": "workbook", "elements": elements,
-    "pages": pages, "overlays": overlays, "layout": layout,
+    "pages": pages, "overlays": overlays, "layout": layout, "agents": agents,
     "settings": {
         "theme": {"name": "Light", "overrides": {
             "colors": {"text": INK, "surface": CARD, "highlight": GREEN,
