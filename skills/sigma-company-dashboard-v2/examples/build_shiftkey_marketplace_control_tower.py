@@ -589,7 +589,7 @@ add({
     "stacking": "none", "legend": {"position": "top"},
 })
 add({
-    "id": "pvt-variance", "kind": "pivot-table",
+    "id": "pvt-variance", "kind": "table",
     "name": "Actual vs plan — drill from region to facility",
     "source": {"kind": "table", "elementId": "sql-market"},
     "columns": [
@@ -604,10 +604,14 @@ add({
          "formula": "Sum([Marketplace Activity/Filled Shifts]) / "
                     "Sum([Marketplace Activity/Posted Shifts])", "format": PCT1},
     ],
-    "rowsBy": [{"id": "pv-region"}, {"id": "pv-state"}, {"id": "pv-market"}, {"id": "pv-fac"}],
-    "columnsBy": [],
-    "values": ["pv-actual", "pv-plan", "pv-var", "pv-fill"],
+    "groupings": [{
+        "id": "g-pv",
+        "groupBy": ["pv-region", "pv-state", "pv-market", "pv-fac"],
+        "calculations": ["pv-actual", "pv-plan", "pv-var", "pv-fill"],
+    }],
     "tableComponents": {"summaryBar": "hidden"},
+    "tableStyle": {"preset": "presentation", "cellSpacing": "small",
+                   "gridLines": "horizontal"},
 })
 add({
     "id": "ch-facility", "kind": "bar-chart", "name": "Facility actual vs plan revenue",
@@ -808,8 +812,7 @@ add(text(
 
 # --------------------------------------------------------------- drill pass
 DRILL_KINDS = {"bar-chart", "line-chart", "area-chart", "combo-chart",
-               "scatter-chart", "pie-chart", "donut-chart", "kpi-chart",
-               "pivot-table"}
+               "scatter-chart", "pie-chart", "donut-chart", "kpi-chart"}
 TECHNICAL_NAMES = {"Activity Key", "Facility ID"}
 
 
