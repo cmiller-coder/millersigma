@@ -1730,7 +1730,24 @@ add(button("b-dispute-close", "Close", [{"effect": "close-overlay"}], CARD, INK,
 
 
 # ------------------------------------------------------------------- chrome
-def brand_header(page_num, title, subtitle, nav_id):
+# Slim app bar, not a hero banner. The first version was nine grid rows of mostly
+# empty dark space with the logo floating in the middle of it. Dashboard
+# convention: a thin branded bar carrying logo + wordmark + navigation, then the
+# page title on the canvas where it reads at normal weight.
+#
+# Navigation is BUTTONS rather than the `navigation` element on purpose: that
+# element only accepts optionStyle.style "pill" (every other value is rejected
+# with a masked Invalid kind), while buttons let each page render its own tab
+# filled and the rest ghosted — a real active state a single nav cannot express.
+NAV_PAGES = [
+    ("Marketplace pulse", "pg-pulse"),
+    ("Action workspace", "pg-action"),
+    ("Commission modeling", "pg-commission"),
+    ("Disputes", "pg-dispute"),
+]
+
+
+def brand_header(page_num, title, subtitle, active_page):
     add({"id": "hdr-%d" % page_num, "kind": "container", "spacing": "small",
          "style": {"backgroundColor": INK, "borderRadius": "round",
                    "borderColor": INK, "borderWidth": 1}})
@@ -1740,56 +1757,52 @@ def brand_header(page_num, title, subtitle, nav_id):
              "style": {"fit": "contain", "align": "start",
                        "backgroundColor": "transparent", "padding": "none"}})
     else:
-        add(text("logo-%d" % page_num, '<span style="color: %s">**↟**</span>' % GREEN))
+        add(text("logo-%d" % page_num, '<span style="color: %s">**\u219f**</span>' % GREEN))
     add(text("word-%d" % page_num,
-             '<span style="color:#FFFFFF;font-size:22px">**shiftkey**</span>',
+             '<span style="color:#FFFFFF;font-size:17px">**shiftkey**</span>'
+             '<span style="color:%s;font-size:13px">  MARKETPLACE INTELLIGENCE</span>'
+             % TEAL,
              style={"backgroundColor": "transparent", "padding": "none"},
              verticalAlign="middle"))
-    add(text("eyebrow-%d" % page_num,
-             '<span style="color:%s">**MARKETPLACE INTELLIGENCE**</span>' % GREEN,
-             style={"backgroundColor": "transparent", "padding": "none"}))
+    for idx, (label, pid) in enumerate(NAV_PAGES):
+        is_active = pid == active_page
+        add({"id": "nav-%d-%d" % (page_num, idx), "kind": "button", "text": label,
+             "appearance": "filled" if is_active else "outline",
+             "style": {"backgroundColor": GREEN if is_active else INK,
+                       "color": INK if is_active else "#FFFFFF"},
+             "actions": [{"id": "act-nav-%d-%d" % (page_num, idx),
+                          "trigger": "on-click",
+                          "effects": [{"effect": "navigate",
+                                       "target": {"type": "page", "page": pid}}]}]})
     add(text("title-%d" % page_num,
-             '<span style="color:#FFFFFF;font-size:30px">**%s**</span>' % title,
+             '<span style="color:%s;font-size:23px">**%s**</span>' % (INK, title),
              style={"backgroundColor": "transparent", "padding": "none"},
              verticalAlign="middle"))
     add(text("sub-%d" % page_num,
-             '<span style="color:#D2D3D4">%s</span>' % subtitle,
-             style={"backgroundColor": "transparent", "padding": "none"}))
-    add({"id": nav_id, "kind": "navigation", "mode": "manual",
-         "showIcons": False, "style": {"backgroundColor": "transparent"},
-         "optionStyle": {"textColor": "#FFFFFF", "selectedColor": GREEN,
-                         "style": "pill", "orientation": "horizontal"},
-         "options": [
-             {"label": "Marketplace pulse",
-              "destination": {"type": "page", "pageId": "pg-pulse"}},
-             {"label": "Action workspace",
-              "destination": {"type": "page", "pageId": "pg-action"}},
-             {"label": "Commission modeling",
-              "destination": {"type": "page", "pageId": "pg-commission"}},
-             {"label": "Disputes",
-              "destination": {"type": "page", "pageId": "pg-dispute"}},
-         ]})
+             '<span style="color:%s;font-size:13px">%s</span>' % (MUTED, subtitle),
+             style={"backgroundColor": "transparent", "padding": "none"},
+             verticalAlign="middle"))
 
 
 brand_header(
     1, "Marketplace control tower",
     "One governed path from national fill rate to facility, credential and the next action.",
-    "nav-1",
+    "pg-pulse",
 )
 brand_header(
     2, "From insight to action",
     "Account and supply teams work the same constraint queue — without exporting to a spreadsheet.",
-    "nav-2",
+    "pg-action",
 )
 brand_header(
     3, "Commission & exceptions",
     "Model payout tiers on governed marketplace economics, then submit one scenario for finance review.",
-    "nav-3",
+    "pg-commission",
 )
 brand_header(
     4, "Commission disputes",
     "Account managers file payout disputes; finance works each case through review, escalation and resolution — with a full comment trail.",
-    "nav-4",
+    "pg-dispute",
 )
 
 add(text(
@@ -2308,17 +2321,9 @@ overlays = [
 ]
 
 layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-pulse">
-  <Container elementId="hdr-1" type="grid" gridColumn="1 / 25" gridRow="1 / 10"
-             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="logo-1" gridColumn="1 / 3" gridRow="1 / 3"/>
-    <Element elementId="word-1" gridColumn="3 / 7" gridRow="1 / 3"/>
-    <Element elementId="nav-1" gridColumn="14 / 25" gridRow="1 / 3"/>
-    <Element elementId="eyebrow-1" gridColumn="1 / 12" gridRow="3 / 4"/>
-    <Element elementId="title-1" gridColumn="1 / 18" gridRow="4 / 7"/>
-    <Element elementId="sub-1" gridColumn="1 / 18" gridRow="7 / 9"/>
-  </Container>
-  <Element elementId="decision" gridColumn="1 / 25" gridRow="10 / 12"/>
-  <Container elementId="kpi-pulse" type="grid" gridColumn="1 / 17" gridRow="12 / 19"
+  <Container elementId="hdr-1" type="grid" gridColumn="1 / 25" gridRow="1 / 4"\n             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">\n    <Element elementId="logo-1" gridColumn="1 / 3" gridRow="1 / 3"/>\n    <Element elementId="word-1" gridColumn="3 / 9" gridRow="1 / 3"/>\n    <Element elementId="nav-1-0" gridColumn="9 / 13" gridRow="1 / 3"/>\n    <Element elementId="nav-1-1" gridColumn="13 / 17" gridRow="1 / 3"/>\n    <Element elementId="nav-1-2" gridColumn="17 / 21" gridRow="1 / 3"/>\n    <Element elementId="nav-1-3" gridColumn="21 / 25" gridRow="1 / 3"/>\n  </Container>\n  <Element elementId="title-1" gridColumn="1 / 15" gridRow="4 / 6"/>\n  <Element elementId="sub-1" gridColumn="15 / 25" gridRow="4 / 6"/>
+  <Element elementId="decision" gridColumn="1 / 25" gridRow="6 / 8"/>
+  <Container elementId="kpi-pulse" type="grid" gridColumn="1 / 17" gridRow="8 / 15"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="k-fill" gridColumn="1 / 6" gridRow="1 / 7"/>
     <Element elementId="k-open" gridColumn="6 / 11" gridRow="1 / 7"/>
@@ -2326,56 +2331,48 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
     <Element elementId="k-margin" gridColumn="16 / 21" gridRow="1 / 7"/>
     <Element elementId="k-sami" gridColumn="21 / 25" gridRow="1 / 7"/>
   </Container>
-  <Container elementId="c-ai" type="grid" gridColumn="17 / 25" gridRow="12 / 19"
+  <Container elementId="c-ai" type="grid" gridColumn="17 / 25" gridRow="8 / 15"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-ai" gridColumn="1 / 25" gridRow="1 / 7"/>
   </Container>
-  <Container elementId="filters-pulse" type="grid" gridColumn="1 / 25" gridRow="19 / 23"
+  <Container elementId="filters-pulse" type="grid" gridColumn="1 / 25" gridRow="15 / 19"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ct-region" gridColumn="1 / 9" gridRow="1 / 4"/>
     <Element elementId="ct-credential" gridColumn="9 / 17" gridRow="1 / 4"/>
     <Element elementId="ct-grain" gridColumn="17 / 25" gridRow="1 / 4"/>
   </Container>
-  <Element elementId="sec-trend" gridColumn="1 / 13" gridRow="23 / 24"/>
-  <Element elementId="sec-gap" gridColumn="13 / 25" gridRow="23 / 24"/>
-  <Element elementId="ch-fill" gridColumn="1 / 13" gridRow="24 / 35"/>
-  <Element elementId="ch-region" gridColumn="13 / 25" gridRow="24 / 35"/>
-  <Element elementId="sec-pulse-credential" gridColumn="1 / 13" gridRow="35 / 36"/>
-  <Element elementId="sec-pulse-analyst" gridColumn="13 / 25" gridRow="35 / 36"/>
-  <Element elementId="ch-credential" gridColumn="1 / 13" gridRow="36 / 49"/>
-  <Container elementId="analyst-wrap" type="grid" gridColumn="13 / 25" gridRow="36 / 49"
+  <Element elementId="sec-trend" gridColumn="1 / 13" gridRow="19 / 20"/>
+  <Element elementId="sec-gap" gridColumn="13 / 25" gridRow="19 / 20"/>
+  <Element elementId="ch-fill" gridColumn="1 / 13" gridRow="20 / 31"/>
+  <Element elementId="ch-region" gridColumn="13 / 25" gridRow="20 / 31"/>
+  <Element elementId="sec-pulse-credential" gridColumn="1 / 13" gridRow="31 / 32"/>
+  <Element elementId="sec-pulse-analyst" gridColumn="13 / 25" gridRow="31 / 32"/>
+  <Element elementId="ch-credential" gridColumn="1 / 13" gridRow="32 / 45"/>
+  <Container elementId="analyst-wrap" type="grid" gridColumn="13 / 25" gridRow="32 / 45"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="pulse-analyst-hd" gridColumn="1 / 25" gridRow="1 / 2"/>
     <Element elementId="chat-pulse" gridColumn="1 / 25" gridRow="2 / 13"/>
   </Container>
-  <Element elementId="sec-drill" gridColumn="1 / 25" gridRow="49 / 50"/>
-  <Container elementId="pivot-wrap" type="grid" gridColumn="1 / 25" gridRow="50 / 62"
+  <Element elementId="sec-drill" gridColumn="1 / 25" gridRow="45 / 46"/>
+  <Container elementId="pivot-wrap" type="grid" gridColumn="1 / 25" gridRow="46 / 58"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="pvt-variance" gridColumn="1 / 25" gridRow="1 / 12"/>
   </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-action">
-  <Container elementId="hdr-2" type="grid" gridColumn="1 / 25" gridRow="1 / 10"
-             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="logo-2" gridColumn="1 / 3" gridRow="1 / 3"/>
-    <Element elementId="word-2" gridColumn="3 / 7" gridRow="1 / 3"/>
-    <Element elementId="nav-2" gridColumn="14 / 25" gridRow="1 / 3"/>
-    <Element elementId="eyebrow-2" gridColumn="1 / 12" gridRow="3 / 4"/>
-    <Element elementId="title-2" gridColumn="1 / 18" gridRow="4 / 7"/>
-    <Element elementId="sub-2" gridColumn="1 / 18" gridRow="7 / 9"/>
-  </Container>
-  <Container elementId="pulse-action" type="grid" gridColumn="1 / 25" gridRow="10 / 14"
+  <Container elementId="hdr-2" type="grid" gridColumn="1 / 25" gridRow="1 / 4"\n             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">\n    <Element elementId="logo-2" gridColumn="1 / 3" gridRow="1 / 3"/>\n    <Element elementId="word-2" gridColumn="3 / 9" gridRow="1 / 3"/>\n    <Element elementId="nav-2-0" gridColumn="9 / 13" gridRow="1 / 3"/>\n    <Element elementId="nav-2-1" gridColumn="13 / 17" gridRow="1 / 3"/>\n    <Element elementId="nav-2-2" gridColumn="17 / 21" gridRow="1 / 3"/>\n    <Element elementId="nav-2-3" gridColumn="21 / 25" gridRow="1 / 3"/>\n  </Container>\n  <Element elementId="title-2" gridColumn="1 / 15" gridRow="4 / 6"/>\n  <Element elementId="sub-2" gridColumn="15 / 25" gridRow="4 / 6"/>
+  <Container elementId="pulse-action" type="grid" gridColumn="1 / 25" gridRow="6 / 10"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-action-pulse" gridColumn="1 / 25" gridRow="1 / 4"/>
   </Container>
-  <Container elementId="kpi-action" type="grid" gridColumn="1 / 25" gridRow="14 / 22"
+  <Container elementId="kpi-action" type="grid" gridColumn="1 / 25" gridRow="10 / 18"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="k-critical" gridColumn="1 / 7" gridRow="1 / 8"/>
     <Element elementId="k-action-exp" gridColumn="7 / 13" gridRow="1 / 8"/>
     <Element elementId="k-ready" gridColumn="13 / 19" gridRow="1 / 8"/>
     <Element elementId="k-action-fill" gridColumn="19 / 25" gridRow="1 / 8"/>
   </Container>
-  <TabbedContainer elementId="tabs-persona" gridColumn="1 / 25" gridRow="22 / 69">
+  <TabbedContainer elementId="tabs-persona" gridColumn="1 / 25" gridRow="18 / 65">
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
       <Element elementId="ct-risk" gridColumn="1 / 8" gridRow="1 / 4"/>
       <Element elementId="b-ready" gridColumn="8 / 16" gridRow="1 / 4"/>
@@ -2400,16 +2397,8 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   </TabbedContainer>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-commission">
-  <Container elementId="hdr-3" type="grid" gridColumn="1 / 25" gridRow="1 / 10"
-             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="logo-3" gridColumn="1 / 3" gridRow="1 / 3"/>
-    <Element elementId="word-3" gridColumn="3 / 7" gridRow="1 / 3"/>
-    <Element elementId="nav-3" gridColumn="14 / 25" gridRow="1 / 3"/>
-    <Element elementId="eyebrow-3" gridColumn="1 / 12" gridRow="3 / 4"/>
-    <Element elementId="title-3" gridColumn="1 / 18" gridRow="4 / 7"/>
-    <Element elementId="sub-3" gridColumn="1 / 18" gridRow="7 / 9"/>
-  </Container>
-  <Container elementId="comm-controls" type="grid" gridColumn="1 / 25" gridRow="10 / 15"
+  <Container elementId="hdr-3" type="grid" gridColumn="1 / 25" gridRow="1 / 4"\n             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">\n    <Element elementId="logo-3" gridColumn="1 / 3" gridRow="1 / 3"/>\n    <Element elementId="word-3" gridColumn="3 / 9" gridRow="1 / 3"/>\n    <Element elementId="nav-3-0" gridColumn="9 / 13" gridRow="1 / 3"/>\n    <Element elementId="nav-3-1" gridColumn="13 / 17" gridRow="1 / 3"/>\n    <Element elementId="nav-3-2" gridColumn="17 / 21" gridRow="1 / 3"/>\n    <Element elementId="nav-3-3" gridColumn="21 / 25" gridRow="1 / 3"/>\n  </Container>\n  <Element elementId="title-3" gridColumn="1 / 15" gridRow="4 / 6"/>\n  <Element elementId="sub-3" gridColumn="15 / 25" gridRow="4 / 6"/>
+  <Container elementId="comm-controls" type="grid" gridColumn="1 / 25" gridRow="6 / 11"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ct-comm-scenario" gridColumn="1 / 7" gridRow="1 / 4"/>
     <Element elementId="ct-comm-owner" gridColumn="7 / 13" gridRow="1 / 4"/>
@@ -2419,72 +2408,64 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
     <Element elementId="b-comm-review" gridColumn="17 / 21" gridRow="4 / 6"/>
     <Element elementId="b-comm-reset" gridColumn="21 / 25" gridRow="4 / 6"/>
   </Container>
-  <Container elementId="kpi-commission" type="grid" gridColumn="1 / 17" gridRow="15 / 22"
+  <Container elementId="kpi-commission" type="grid" gridColumn="1 / 17" gridRow="11 / 18"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="k-comm-payout" gridColumn="1 / 7" gridRow="1 / 7"/>
     <Element elementId="k-comm-rate" gridColumn="7 / 13" gridRow="1 / 7"/>
     <Element elementId="k-comm-attain" gridColumn="13 / 19" gridRow="1 / 7"/>
     <Element elementId="k-comm-above" gridColumn="19 / 25" gridRow="1 / 7"/>
   </Container>
-  <Container elementId="c-comm-ai" type="grid" gridColumn="17 / 25" gridRow="15 / 22"
+  <Container elementId="c-comm-ai" type="grid" gridColumn="17 / 25" gridRow="11 / 18"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-comm-ai" gridColumn="1 / 25" gridRow="1 / 7"/>
   </Container>
-  <Element elementId="sec-comm-outcome" gridColumn="1 / 13" gridRow="22 / 23"/>
-  <Element elementId="sec-comm-owner" gridColumn="13 / 25" gridRow="22 / 23"/>
-  <Container elementId="comm-outcome-wrap" type="grid" gridColumn="1 / 13" gridRow="23 / 34"
+  <Element elementId="sec-comm-outcome" gridColumn="1 / 13" gridRow="18 / 19"/>
+  <Element elementId="sec-comm-owner" gridColumn="13 / 25" gridRow="18 / 19"/>
+  <Container elementId="comm-outcome-wrap" type="grid" gridColumn="1 / 13" gridRow="19 / 30"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="tbl-comm-outcome" gridColumn="1 / 25" gridRow="1 / 11"/>
   </Container>
-  <Container elementId="comm-owner-wrap" type="grid" gridColumn="13 / 25" gridRow="23 / 34"
+  <Container elementId="comm-owner-wrap" type="grid" gridColumn="13 / 25" gridRow="19 / 30"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="tbl-comm-owner" gridColumn="1 / 25" gridRow="1 / 11"/>
   </Container>
-  <Element elementId="ch-comm-owner" gridColumn="1 / 13" gridRow="34 / 44"/>
-  <Element elementId="ch-comm-attain" gridColumn="13 / 25" gridRow="34 / 44"/>
-  <Element elementId="sec-comm-time" gridColumn="1 / 25" gridRow="44 / 45"/>
-  <Container elementId="comm-time-wrap" type="grid" gridColumn="1 / 25" gridRow="45 / 57"
+  <Element elementId="ch-comm-owner" gridColumn="1 / 13" gridRow="30 / 40"/>
+  <Element elementId="ch-comm-attain" gridColumn="13 / 25" gridRow="30 / 40"/>
+  <Element elementId="sec-comm-time" gridColumn="1 / 25" gridRow="40 / 41"/>
+  <Container elementId="comm-time-wrap" type="grid" gridColumn="1 / 25" gridRow="41 / 53"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ch-comm-time" gridColumn="1 / 10" gridRow="1 / 12"/>
     <Element elementId="tbl-comm-time" gridColumn="10 / 25" gridRow="1 / 12"/>
   </Container>
-  <Element elementId="sec-comm-registry" gridColumn="1 / 25" gridRow="57 / 58"/>
-  <Container elementId="comm-registry" type="grid" gridColumn="1 / 25" gridRow="58 / 66"
+  <Element elementId="sec-comm-registry" gridColumn="1 / 25" gridRow="53 / 54"/>
+  <Container elementId="comm-registry" type="grid" gridColumn="1 / 25" gridRow="54 / 62"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="it-scenario-reg" gridColumn="1 / 25" gridRow="1 / 7"/>
   </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-dispute">
-  <Container elementId="hdr-4" type="grid" gridColumn="1 / 25" gridRow="1 / 10"
-             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="logo-4" gridColumn="1 / 3" gridRow="1 / 3"/>
-    <Element elementId="word-4" gridColumn="3 / 7" gridRow="1 / 3"/>
-    <Element elementId="nav-4" gridColumn="14 / 25" gridRow="1 / 3"/>
-    <Element elementId="eyebrow-4" gridColumn="1 / 12" gridRow="3 / 4"/>
-    <Element elementId="title-4" gridColumn="1 / 18" gridRow="4 / 7"/>
-    <Element elementId="sub-4" gridColumn="1 / 20" gridRow="7 / 9"/>
-  </Container>
-  <Container elementId="dispute-controls" type="grid" gridColumn="1 / 25" gridRow="10 / 14"
+  <Container elementId="hdr-4" type="grid" gridColumn="1 / 25" gridRow="1 / 4"\n             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">\n    <Element elementId="logo-4" gridColumn="1 / 3" gridRow="1 / 3"/>\n    <Element elementId="word-4" gridColumn="3 / 9" gridRow="1 / 3"/>\n    <Element elementId="nav-4-0" gridColumn="9 / 13" gridRow="1 / 3"/>\n    <Element elementId="nav-4-1" gridColumn="13 / 17" gridRow="1 / 3"/>\n    <Element elementId="nav-4-2" gridColumn="17 / 21" gridRow="1 / 3"/>\n    <Element elementId="nav-4-3" gridColumn="21 / 25" gridRow="1 / 3"/>\n  </Container>\n  <Element elementId="title-4" gridColumn="1 / 15" gridRow="4 / 6"/>\n  <Element elementId="sub-4" gridColumn="15 / 25" gridRow="4 / 6"/>
+  <Container elementId="dispute-controls" type="grid" gridColumn="1 / 25" gridRow="6 / 10"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ct-dispute-statusf" gridColumn="1 / 9" gridRow="1 / 4"/>
     <Element elementId="b-dispute-seed" gridColumn="11 / 18" gridRow="1 / 4"/>
     <Element elementId="b-dispute-new" gridColumn="18 / 25" gridRow="1 / 4"/>
   </Container>
-  <Container elementId="kpi-dispute" type="grid" gridColumn="1 / 25" gridRow="14 / 21"
+  <Container elementId="kpi-dispute" type="grid" gridColumn="1 / 25" gridRow="10 / 17"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="k-dp-open" gridColumn="1 / 7" gridRow="1 / 7"/>
     <Element elementId="k-dp-amount" gridColumn="7 / 13" gridRow="1 / 7"/>
     <Element elementId="k-dp-age" gridColumn="13 / 19" gridRow="1 / 7"/>
     <Element elementId="k-dp-esc" gridColumn="19 / 25" gridRow="1 / 7"/>
   </Container>
-  <Element elementId="sec-dispute-mix" gridColumn="1 / 25" gridRow="21 / 22"/>
-  <Container elementId="dispute-mix" type="grid" gridColumn="1 / 25" gridRow="22 / 33"
+  <Element elementId="sec-dispute-mix" gridColumn="1 / 25" gridRow="17 / 18"/>
+  <Container elementId="dispute-mix" type="grid" gridColumn="1 / 25" gridRow="18 / 29"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ch-dp-status" gridColumn="1 / 13" gridRow="1 / 11"/>
     <Element elementId="ch-dp-type" gridColumn="13 / 25" gridRow="1 / 11"/>
   </Container>
-  <Element elementId="sec-dispute-queue" gridColumn="1 / 25" gridRow="33 / 34"/>
-  <Container elementId="dispute-queue-wrap" type="grid" gridColumn="1 / 25" gridRow="34 / 49"
+  <Element elementId="sec-dispute-queue" gridColumn="1 / 25" gridRow="29 / 30"/>
+  <Container elementId="dispute-queue-wrap" type="grid" gridColumn="1 / 25" gridRow="30 / 45"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="tbl-dispute" gridColumn="1 / 25" gridRow="1 / 14"/>
   </Container>
