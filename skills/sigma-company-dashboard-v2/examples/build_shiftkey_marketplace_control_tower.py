@@ -1414,6 +1414,65 @@ DISPUTE_ROW = {"type": "formula", "formula": "[Dispute ID] = [dispute_selected]"
 add(button("b-dispute-new", "+ File a dispute", [
     {"effect": "open-overlay", "overlayId": "m-dispute-new"},
 ], GREEN, INK))
+
+
+def seed_dispute(ticket, am, scenario, dtype, priority, amount, title, desc,
+                 status, resolution=None):
+    """One sample dispute, inserted as a real registry row (constants only).
+
+    No public API inserts input-table rows, so a one-click seed button is how a
+    fresh demo is populated. Ticket ids are explicit constants (unique), and the
+    open stages stamp Now() into the matching SLA date so the queue looks worked.
+    """
+    def txt(v):
+        return {"type": "constant", "value": {"type": "text", "value": v}}
+
+    def num(v):
+        return {"type": "constant", "value": {"type": "number", "value": v}}
+
+    def now():
+        return {"type": "formula", "formula": "Now()"}
+
+    values = {"dp-ticket": txt(ticket), "dp-am": txt(am), "dp-scenario": txt(scenario),
+              "dp-type": txt(dtype), "dp-priority": txt(priority), "dp-amount": num(amount),
+              "dp-title": txt(title), "dp-desc": txt(desc), "dp-status": txt(status)}
+    if status in ("In Review", "Escalated", "Resolved"):
+        values["dp-inreview"] = now()
+    if status == "Escalated":
+        values["dp-esc"] = now()
+    if status == "Resolved":
+        values["dp-resolved"] = now()
+        values["dp-resolution"] = txt(resolution or "Adjusted and closed.")
+    return {"effect": "insert-rows", "table": "it-dispute", "values": values}
+
+
+# Six realistic disputes across the full lifecycle so the KPIs, both charts and
+# the queue all populate from one click.
+add(button("b-dispute-seed", "⤓ Load sample disputes", [
+    seed_dispute("DSP-1001", "Maya Chen", "Growth Accelerator", "Rate or tier",
+                 "High", 4200, "Tier 3 rate not applied above target",
+                 "Attainment cleared the Tier 3 boundary but payout used the "
+                 "Tier 2 rate.", "Submitted"),
+    seed_dispute("DSP-1002", "Jordan Ellis", "Base Plan", "Fill-quality modifier",
+                 "Medium", 1800, "Fill modifier penalized facility cancellations",
+                 "Late facility cancellations dropped my fill rate below 82% and "
+                 "cut the modifier — those shifts were filled.", "In Review"),
+    seed_dispute("DSP-1003", "Marcus Reed", "Retention Weighted", "Missing facility credit",
+                 "Critical", 7600, "Cedar Creek recovery not credited",
+                 "Critical-account recovery at Cedar Creek Skilled Nursing is not "
+                 "reflected in commissionable gross profit.", "Escalated"),
+    seed_dispute("DSP-1004", "Lena Ortiz", "Growth Accelerator", "Quota",
+                 "Medium", 3100, "Quota factor above signed plan",
+                 "Quota factor applied is 1.08; my signed plan is 1.00.", "Submitted"),
+    seed_dispute("DSP-1005", "Evan Brooks", "Base Plan", "Clawback",
+                 "High", 5400, "Clawback on shifts that were filled",
+                 "Clawback applied to shifts that were filled and worked; looks "
+                 "like a late-cancel misclassification.", "In Review"),
+    seed_dispute("DSP-1006", "Priya Nair", "Retention Weighted", "Rate or tier",
+                 "Low", 900, "Rounding on tier boundary",
+                 "Small rounding difference at the tier boundary.", "Resolved",
+                 resolution="Confirmed rounding; corrected in next payout run."),
+] + DISPUTE_REFRESH, CARD, INK, "outline"))
 add(button("b-dispute-create", "✓ Create dispute", [
     {"effect": "insert-rows", "table": "it-dispute", "values": {
         # Generated on insert with a scalar formula — never asked of the user.
@@ -2130,6 +2189,7 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Container elementId="dispute-controls" type="grid" gridColumn="1 / 25" gridRow="10 / 14"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ct-dispute-statusf" gridColumn="1 / 9" gridRow="1 / 4"/>
+    <Element elementId="b-dispute-seed" gridColumn="11 / 18" gridRow="1 / 4"/>
     <Element elementId="b-dispute-new" gridColumn="18 / 25" gridRow="1 / 4"/>
   </Container>
   <Container elementId="kpi-dispute" type="grid" gridColumn="1 / 25" gridRow="14 / 22"
