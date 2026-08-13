@@ -12,6 +12,11 @@ import urllib.request
 #
 # CONNECTION_ID must be a warehouse connection with Sigma write-back enabled --
 # the linked input table and the plan registry both persist there.
+#
+# The Allocation Pulse plugin is optional. Set HONDA_PULSE_PLUGIN_ID to a plugin
+# registered in the target org to include it; leave it unset (the default) to
+# build without it. Registering a plugin needs the org's `canDevelopPlugins`
+# feature, so the plugin-free build is the portable path.
 _ARGS = sys.argv[1:]
 BASE = _ARGS[0] if len(_ARGS) > 0 else os.environ.get("SIGMA_BASE_URL", "")
 TOKEN = _ARGS[1] if len(_ARGS) > 1 else os.environ.get("SIGMA_API_TOKEN", "")
@@ -695,23 +700,30 @@ for _eid, _label in {
 }.items():
     next(e for e in elements if e["id"] == _eid)["text"] = _label
 
-add({
-    "id": "plg-pulse",
-    "kind": "plugin",
-    "pluginId": PULSE_PLUGIN_ID,
-    "displayName": "Allocation Pulse",
-    "config": {
-        "mixSource": {"kind": "element", "elementId": "it-alloc"},
-        "powertrain": "al-pt",
-        "units": "al-eff",
-        "cellKwh": "al-cells",
-        "capacitySource": {"kind": "element", "elementId": "tbl-load"},
-        "allocated": "pl-eff",
-        "capacity": "pl-cap",
-        "status": "pl-flag",
-    },
-    "style": {"backgroundColor": "#FFFFFF"},
-})
+# The Allocation Pulse plugin is optional. Registering a plugin needs the
+# `canDevelopPlugins` org feature; when it is unavailable (or no plugin id is
+# passed) the workbook is built without the plugin strip and the app page
+# reclaims that row. Everything else -- KPIs, personas, input tables, approval
+# queue -- is unaffected.
+HAS_PULSE = not PULSE_PLUGIN_ID.startswith("<")
+if HAS_PULSE:
+    add({
+        "id": "plg-pulse",
+        "kind": "plugin",
+        "pluginId": PULSE_PLUGIN_ID,
+        "displayName": "Allocation Pulse",
+        "config": {
+            "mixSource": {"kind": "element", "elementId": "it-alloc"},
+            "powertrain": "al-pt",
+            "units": "al-eff",
+            "cellKwh": "al-cells",
+            "capacitySource": {"kind": "element", "elementId": "tbl-load"},
+            "allocated": "pl-eff",
+            "capacity": "pl-cap",
+            "status": "pl-flag",
+        },
+        "style": {"backgroundColor": "#FFFFFF"},
+    })
 add({
     "id": "tc-persona",
     "kind": "tabbed-container",
@@ -726,6 +738,105 @@ add({
     "style": {"backgroundColor": PAPER},
 })
 
+# Formula-driven dashboard controls, following the same DateTrunc / Switch
+# pattern as the universal v2 builder.
+add(control(
+    "ct-exec-grain", "ExecDateGrain", "Date grain", "segmented", "month",
+    source={"kind": "manual", "valueType": "text",
+            "values": ["month", "quarter"],
+            "labels": ["Month", "Quarter"]},
+))
+add(control(
+    "ct-exec-series", "ExecSeries", "Color by", "segmented", "Powertrain",
+    source={"kind": "manual", "valueType": "text",
+            "values": ["Powertrain", "Plant", "Model"],
+            "labels": ["Powertrain", "Plant", "Model"]},
+))
+add(control(
+    "ct-app-grain", "AppDateGrain", "Date grain", "segmented", "month",
+    source={"kind": "manual", "valueType": "text",
+            "values": ["month", "quarter"],
+            "labels": ["Month", "Quarter"]},
+))
+
+for _col in next(e for e in elements if e["id"] == "ch-mix")["columns"]:
+    if _col["id"] == "mx-month":
+        _col["formula"] = (
+            'DateTrunc([ExecDateGrain], [Allocation Baseline/Month])'
+        )
+for _col in next(e for e in elements if e["id"] == "ch-region")["columns"]:
+    if _col["id"] == "cr-pt":
+        _col["name"] = "Series"
+        _col["formula"] = (
+            'Switch([ExecSeries], "Plant", [Allocation Baseline/Plant], '
+            '"Model", [Allocation Baseline/Model], '
+            '[Allocation Baseline/Powertrain])'
+        )
+next(e for e in elements if e["id"] == "ch-region")["name"] = (
+    "Units by region and selected series"
+)
+for _col in next(e for e in elements if e["id"] == "ch-prop")["columns"]:
+    if _col["id"] == "pv-month":
+        _col["formula"] = (
+            'DateTrunc([AppDateGrain], [Allocation Plan/Month])'
+        )
+
+_demand_effects = [
+    {"effect": "update-rows", "table": "it-alloc",
+     "whichRows": {"type": "formula", "formula": "True"},
+     "values": {
+         "al-prop": {"type": "formula", "formula": "[Demand Signal]"}
+     }},
+    {"effect": "refresh-element",
+     "target": {"type": "element", "element": "it-alloc"}},
+    {"effect": "refresh-element",
+     "target": {"type": "element", "element": "tbl-load"}},
+]
+if HAS_PULSE:
+    _demand_effects.append(
+        {"effect": "refresh-element",
+         "target": {"type": "element", "element": "plg-pulse"}})
+add(button("b-demand", "↯ Use demand signal", _demand_effects, HONDA_DEEP))
+
+_exec_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-exec">
+  <Container elementId="c-hdr1" type="grid" gridColumn="1 / 25" gridRow="1 / 9"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="wm1" gridColumn="1 / 5" gridRow="1 / 3"/>
+    <Element elementId="nav1" gridColumn="13 / 25" gridRow="1 / 3"/>
+    <Element elementId="eyebrow1" gridColumn="1 / 13" gridRow="3 / 4"/>
+    <Element elementId="ttl1" gridColumn="1 / 17" gridRow="4 / 7"/>
+    <Element elementId="sub1" gridColumn="1 / 17" gridRow="7 / 8"/>
+    <Element elementId="b-goto-app" gridColumn="19 / 25" gridRow="6 / 8"/>
+  </Container>
+  <Element elementId="q-exec" gridColumn="1 / 25" gridRow="9 / 11"/>
+  <Container elementId="c-kpi1" type="grid" gridColumn="1 / 25" gridRow="11 / 19"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="k-units" gridColumn="1 / 6" gridRow="1 / 8"/>
+    <Element elementId="k-elec" gridColumn="6 / 11" gridRow="1 / 8"/>
+    <Element elementId="k-bev" gridColumn="11 / 16" gridRow="1 / 8"/>
+    <Element elementId="k-cap" gridColumn="16 / 20" gridRow="1 / 8"/>
+    <Element elementId="k-cell" gridColumn="20 / 25" gridRow="1 / 8"/>
+  </Container>
+  <Element elementId="ct-exec-grain" gridColumn="1 / 7" gridRow="19 / 22"/>
+  <Element elementId="ct-exec-series" gridColumn="7 / 15" gridRow="19 / 22"/>
+  <Element elementId="s-mix" gridColumn="1 / 13" gridRow="22 / 23"/>
+  <Element elementId="s-cap" gridColumn="13 / 25" gridRow="22 / 23"/>
+  <Element elementId="ch-mix" gridColumn="1 / 13" gridRow="23 / 37"/>
+  <Element elementId="ch-plant" gridColumn="13 / 25" gridRow="23 / 37"/>
+  <Element elementId="s-region" gridColumn="1 / 25" gridRow="37 / 38"/>
+  <Element elementId="ch-region" gridColumn="1 / 25" gridRow="38 / 51"/>
+  <Container elementId="c-insight" type="grid" gridColumn="1 / 25" gridRow="51 / 55"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="insight" gridColumn="1 / 25" gridRow="1 / 4"/>
+  </Container>
+</Page>"""
+
+_pulse_slot = ('  <Element elementId="plg-pulse" gridColumn="1 / 25" gridRow="9 / 14"/>\n'
+               if HAS_PULSE else "")
+_kpi_row0 = 14 if HAS_PULSE else 9
+_kpi_row1 = _kpi_row0 + 8
+_tabs_row0 = _kpi_row1
+_tabs_row1 = _tabs_row0 + 49
 _app_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-app">
   <Container elementId="c-hdr2" type="grid" gridColumn="1 / 25" gridRow="1 / 9"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
@@ -736,28 +847,29 @@ _app_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTempl
     <Element elementId="sub2" gridColumn="1 / 17" gridRow="7 / 8"/>
     <Element elementId="b-newplan" gridColumn="19 / 25" gridRow="6 / 8"/>
   </Container>
-  <Element elementId="plg-pulse" gridColumn="1 / 25" gridRow="9 / 14"/>
-  <Container elementId="c-app-kpi" type="grid" gridColumn="1 / 25" gridRow="14 / 22"
+""" + _pulse_slot + """  <Container elementId="c-app-kpi" type="grid" gridColumn="1 / 25" gridRow="{kpi0} / {kpi1}"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="k-prop" gridColumn="1 / 7" gridRow="1 / 8"/>
     <Element elementId="k-bev2" gridColumn="7 / 13" gridRow="1 / 8"/>
     <Element elementId="k-shift" gridColumn="13 / 19" gridRow="1 / 8"/>
     <Element elementId="k-over" gridColumn="19 / 25" gridRow="1 / 8"/>
   </Container>
-  <TabbedContainer elementId="tc-persona" gridColumn="1 / 25" gridRow="22 / 67">
+  <TabbedContainer elementId="tc-persona" gridColumn="1 / 25" gridRow="{tabs0} / {tabs1}">
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-      <Element elementId="ct-region" gridColumn="1 / 6" gridRow="1 / 4"/>
-      <Element elementId="ct-pt" gridColumn="6 / 11" gridRow="1 / 4"/>
-      <Element elementId="ct-shift" gridColumn="11 / 15" gridRow="1 / 4"/>
-      <Element elementId="b-shift" gridColumn="15 / 19" gridRow="1 / 4"/>
-      <Element elementId="b-populate" gridColumn="19 / 22" gridRow="1 / 4"/>
-      <Element elementId="b-clear" gridColumn="22 / 25" gridRow="1 / 4"/>
-      <Element elementId="s-grid" gridColumn="1 / 25" gridRow="4 / 5"/>
-      <Container elementId="c-grid" type="grid" gridColumn="1 / 25" gridRow="5 / 24"
+      <Element elementId="ct-region" gridColumn="1 / 7" gridRow="1 / 4"/>
+      <Element elementId="ct-pt" gridColumn="7 / 13" gridRow="1 / 4"/>
+      <Element elementId="ct-app-grain" gridColumn="13 / 18" gridRow="1 / 4"/>
+      <Element elementId="ct-shift" gridColumn="18 / 22" gridRow="1 / 4"/>
+      <Element elementId="b-shift" gridColumn="22 / 25" gridRow="1 / 4"/>
+      <Element elementId="b-demand" gridColumn="1 / 9" gridRow="4 / 7"/>
+      <Element elementId="b-populate" gridColumn="9 / 17" gridRow="4 / 7"/>
+      <Element elementId="b-clear" gridColumn="17 / 25" gridRow="4 / 7"/>
+      <Element elementId="s-grid" gridColumn="1 / 25" gridRow="7 / 8"/>
+      <Container elementId="c-grid" type="grid" gridColumn="1 / 25" gridRow="8 / 27"
                  gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
         <Element elementId="it-alloc" gridColumn="1 / 25" gridRow="1 / 19"/>
       </Container>
-      <Element elementId="ch-prop" gridColumn="1 / 25" gridRow="24 / 40"/>
+      <Element elementId="ch-prop" gridColumn="1 / 25" gridRow="27 / 43"/>
     </Tab>
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
       <Element elementId="s-load" gridColumn="1 / 25" gridRow="1 / 2"/>
@@ -770,7 +882,14 @@ _app_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTempl
       </Container>
     </Tab>
   </TabbedContainer>
-</Page>"""
+</Page>""".format(kpi0=_kpi_row0, kpi1=_kpi_row1, tabs0=_tabs_row0, tabs1=_tabs_row1)
+layout, _exec_count = re.subn(
+    r'<Page type="grid"[^>]*id="pg-exec">.*?</Page>',
+    _exec_page,
+    layout,
+    count=1,
+    flags=re.S,
+)
 layout, _app_count = re.subn(
     r'<Page type="grid"[^>]*id="pg-app">.*?</Page>',
     _app_page,
@@ -778,8 +897,8 @@ layout, _app_count = re.subn(
     count=1,
     flags=re.S,
 )
-if _app_count != 1:
-    raise RuntimeError("could not replace pg-app layout")
+if (_exec_count, _app_count) != (1, 1):
+    raise RuntimeError("could not replace visible page layouts")
 
 document = {"schemaVersion": 1, "kind": "workbook", "elements": elements,
             "pages": pages, "overlays": overlays, "layout": layout,
@@ -819,11 +938,9 @@ if __name__ == "__main__":
     if len(_ARGS) < 4:
         print(json.dumps(body, indent=2))
         raise SystemExit(0)
-    if PULSE_PLUGIN_ID.startswith("<"):
-        raise SystemExit(
-            "HONDA_PULSE_PLUGIN_ID is required when creating the workbook. "
-            "Register plugins/honda-allocation-pulse first."
-        )
+    if not HAS_PULSE:
+        print("note: building without the Allocation Pulse plugin "
+              "(set HONDA_PULSE_PLUGIN_ID to include it).")
     status, result = call("POST", "/v2/workbooks/spec/verify", body)
     print("verify", status, result)
     if status >= 400 or not (isinstance(result, dict) and result.get("valid")):
