@@ -92,10 +92,12 @@ drill-passthrough pass (row-level columns break an aggregate chart).
 
 Two API constraints shaped this and are documented in
 [`approval-workflow-pattern.md`](../../sigma-input-table-app/reference/approval-workflow-pattern.md):
-there is **no union source kind** (so the registry must be the single source of
-scenario rows), and a linked input table's **`key` bindings are frozen after
-creation** (repointing the grid onto the join required a new element id while
-keeping the display name so downstream formulas kept resolving).
+a linked input table's **`key` bindings are frozen after creation** (repointing the
+grid onto the join required a new element id while keeping the display name so
+downstream formulas kept resolving), and while `kind: "union"` *would* let a SQL
+seed list stack with the user registry, **a list control cannot take its value
+source from a union-derived element** — the scenario picker has to work, so the
+registry stays the single source of scenario rows and a button seeds it.
 
 **Marketplace Copilot** is a real Sigma agent (`document.agents` + `chat`) grounded
 in all five governed demand/supply/action/commission tables. Eight tools drive

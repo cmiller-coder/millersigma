@@ -586,7 +586,7 @@ Critical field-shape rules:
   Earlier guidance here called it UI-only — see the re-check note under
   "GET-spec can 500" above before assuming it can't be set from code.
 
-## Join sources (and the absent union)
+## Join and union sources
 
 A `table` element can source a join instead of a single element, which is how you
 cross-join a user-editable registry onto a governed baseline (the scenario-modeler
@@ -613,13 +613,60 @@ pattern). Verified on papercranestaging 2026-08-13 — note it works on a plain
 - A **linked input table can link from a join element** (`source: {kind: "linked",
   from: "<join element>"}`) with normal `key` bindings.
 
-**There is no union.** `source.kind` of `"union"`, `"append"` and `"union-all"`
-are all rejected (masked as `Invalid kind: "table"`), so you cannot concatenate a
-SQL seed list with a user-created input table — whichever element supplies the
-rows must supply *all* of them. See
+### `kind: "union"` — stack two elements
+
+`union` is a real source kind, sibling to `join`. It takes `sources` (2+ source
+refs, same three shapes `join` accepts: `table` / `warehouse-table` /
+`data-model`) and a **required `matches` array** that does the job a hand-written
+`UNION ALL`'s aligned SELECT lists would. Verified on papercranestaging
+2026-08-13:
+
+```json
+"source": {
+  "kind": "union",
+  "sources": [{"kind": "table", "elementId": "sql-scenario-seed"},
+              {"kind": "table", "elementId": "it-scenario-reg"}],
+  "matches": [
+    {"outputColumnName": "Scenario Name",
+     "sourceColumns": ["[Scenario Name]", "[Scenario Name]"]},
+    {"outputColumnName": "Scenario Status",
+     "sourceColumns": [null, "[Scenario Status]"]}
+  ]
+}
+```
+
+Two shape rules that are easy to get wrong (both cost a debugging cycle):
+
+1. **`sourceColumns` entries are bracketed column *references*, positional to
+   `sources` — not bare display names and not column ids.** `"Scenario Name"`
+   fails with `Unparseable formula: 'Scenario Name'`; `"sd-nm"` fails with
+   `Column reference not found`. Use `"[Scenario Name]"`. `null` means that
+   source has no matching column and those rows get null (the literal
+   `NULL AS col` side of a manual UNION ALL).
+2. **Union output columns are addressed BARE in the element's own `columns`.**
+   `{"formula": "[Scenario Name]"}` — *not* `[Union/Scenario Name]`, not the
+   element's own name, not a source's name. Getting this wrong yields
+   `Dependency not found: 'union/scenario name'`.
+
+⚠️ **A list control cannot take its value source from a union-derived element**
+(verified: `Invalid value source for list control: <id>`), and the restriction
+propagates downstream — a linked input table built over a join-over-union is also
+rejected as a control value source. Plain tables and input tables are fine. So a
+union is the right tool for *stacking data into a grid or chart*, but it cannot
+feed a dropdown's value list; if users must pick from the stacked set, either keep
+the pickable list in a plain element or drive selection by row `on-select` into a
+plain `text` control instead.
+
+This is why the ShiftKey commission modeler keeps its scenario **registry** as
+the single source of scenario rows rather than unioning a SQL seed list with the
+user registry: the scenario picker has to work. See
 `sigma-input-table-app/reference/approval-workflow-pattern.md` → "Scenario
-registries" for the full pattern and the seed-button workaround, and "Key columns
-are FROZEN once a linked input table exists" before repointing an existing grid.
+registries" for that pattern and the seed-button cold start, and "Key columns are
+FROZEN once a linked input table exists" before repointing an existing grid.
+
+> Do not confuse this element-level `kind: "union"` with hand-building a
+> `SELECT … UNION ALL SELECT …` string inside a custom-SQL element. Both stack
+> rows; use `kind: "union"` when the inputs are existing elements/tables.
 
 ## Container element shape
 

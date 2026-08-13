@@ -269,10 +269,15 @@ create a scenario, which is the heart of a modeling app. The working shape
 
 Three constraints that shape this:
 
-- **There is no union/append source kind.** `kind: "union"`, `"append"` and
-  `"union-all"` are all rejected (masked as `Invalid kind: "table"`), so you
-  cannot concatenate a SQL seed list with a user registry. The registry has to be
-  the *single* source of scenario rows.
+- **A union exists, but it cannot feed the scenario picker.** `kind: "union"`
+  *is* a real source kind (see `sigma-workbook-conventions/reference/workbook-spec-api.md`
+  → "Join and union sources" for the verified `sources` + `matches` shape), so you
+  *can* stack a SQL seed list with a user registry. What blocks it here is a
+  separate constraint: **a list control cannot take its value source from a
+  union-derived element**, and the restriction propagates to anything built over
+  it. Since a scenario modeler needs a working scenario dropdown, keep the
+  registry as the *single* source of scenario rows and seed it with a button. Use
+  a union when the stacked rows only have to land in a grid or chart.
 - **`left-outer` + `Coalesce` is the empty-state guard.** With an empty registry
   the join still yields one row per baseline row labelled `"Base Plan"` at
   governed defaults, so the page is never blank before the first scenario exists.
