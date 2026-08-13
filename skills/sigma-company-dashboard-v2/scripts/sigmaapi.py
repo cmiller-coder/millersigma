@@ -163,11 +163,24 @@ def get_report(report_id):
 
 
 def register_plugin(name, url, description=""):
-    return call(
-        "POST",
-        "/v2/plugins",
-        {"name": name, "url": url, "description": description, "type": "element"},
-    )
+    try:
+        return call(
+            "POST",
+            "/v2/plugins",
+            {"name": name, "url": url, "devUrl": url,
+             "description": description},
+        )
+    except SigmaError as exc:
+        # demeng production can create successfully and then return a masked
+        # HTTP 404. Recover by matching the exact immutable URL.
+        if exc.status == 404:
+            matches = [
+                p for p in (list_plugins() or {}).get("entries", [])
+                if p.get("name") == name and p.get("url") == url
+            ]
+            if matches:
+                return matches[-1]
+        raise
 
 
 def list_plugins():

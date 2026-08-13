@@ -842,6 +842,22 @@ export default App;
 4. The plugin becomes available to add to any workbook
 5. In a workbook, add the plugin element and configure it via the editor panel
 
+**REST API production quirk (verified demeng 2026-08-13):** the current
+`POST /v2/plugins` body is `{name, description?, url?, devUrl?}` — do not send
+the older `type: "element"` field. The endpoint can create the plugin and then
+return a masked HTTP 404. On 404, immediately `GET /v2/plugins?limit=1000` and
+match the exact `name` + immutable production `url` before retrying; blindly
+retrying creates duplicates. `scripts/register_plugin.py` implements this
+recovery. A plugin production URL cannot be changed through `PATCH` (the live
+schema only exposes name/description/devUrl), so a new immutable URL requires a
+new registration. Set `devUrl` to the same hosted production URL unless you are
+actively developing locally — if it is omitted, Sigma defaults it to
+`http://localhost:5173`, so author/edit mode shows an unreachable iframe for
+remote users. `PATCH` can update `devUrl`, but demeng masks the successful
+side-effect behind the same HTTP 404. Finally, Sigma's PNG export can hang
+indefinitely on pages containing a plugin even when both URLs are public and the
+plugin clears its loading state; verify the plugin and the page separately.
+
 ### Local Development
 
 Run your plugin locally and register `http://localhost:3000` (or your dev server port) as the plugin URL in Sigma. Changes hot-reload in the workbook. The default Vite dev server runs on `http://localhost:5173`.

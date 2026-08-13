@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -16,6 +17,9 @@ BASE = _ARGS[0] if len(_ARGS) > 0 else os.environ.get("SIGMA_BASE_URL", "")
 TOKEN = _ARGS[1] if len(_ARGS) > 1 else os.environ.get("SIGMA_API_TOKEN", "")
 CONN = _ARGS[2] if len(_ARGS) > 2 else "<connection-id>"
 FOLDER = _ARGS[3] if len(_ARGS) > 3 else "<folder-id>"
+PULSE_PLUGIN_ID = os.environ.get(
+    "HONDA_PULSE_PLUGIN_ID", "<honda-allocation-pulse-plugin-id>"
+)
 
 # Honda's corporate wordmark, public domain on Wikimedia Commons. Fetched at build
 # time and inlined as a data URI so the workbook needs no external asset host.
@@ -672,6 +676,111 @@ layout = f"""<?xml version="1.0" encoding="utf-8"?>
 </Page>
 """
 
+# ---------------------------------------------------------------- personas + plugin
+# Page 1 is already the executive persona. Page 2 switches between the two
+# operational personas: Planner edits allocations; Approver reviews capacity
+# exceptions and lifecycle status. The compact plugin is deliberately outside
+# the tabs so both personas retain the same live context.
+for _eid, _label in {
+    "b-goto-app": "→ Open allocation planner",
+    "b-newplan": "＋ Create plan",
+    "b-shift": "↗ Apply BEV shift",
+    "b-populate": "↺ Copy plan of record",
+    "b-clear": "× Clear proposals",
+    "b-submit": "✓ Submit plan for review",
+    "b-create-save": "✓ Create draft",
+    "b-create-cancel": "× Cancel",
+    "b-review-save": "✓ Save decision",
+    "b-review-cancel": "× Cancel",
+}.items():
+    next(e for e in elements if e["id"] == _eid)["text"] = _label
+
+add({
+    "id": "plg-pulse",
+    "kind": "plugin",
+    "pluginId": PULSE_PLUGIN_ID,
+    "displayName": "Allocation Pulse",
+    "config": {
+        "mixSource": {"kind": "element", "elementId": "it-alloc"},
+        "powertrain": "al-pt",
+        "units": "al-eff",
+        "cellKwh": "al-cells",
+        "capacitySource": {"kind": "element", "elementId": "tbl-load"},
+        "allocated": "pl-eff",
+        "capacity": "pl-cap",
+        "status": "pl-flag",
+    },
+    "style": {"backgroundColor": "#FFFFFF"},
+})
+add({
+    "id": "tc-persona",
+    "kind": "tabbed-container",
+    "tabs": [{"name": "Planner"}, {"name": "Approver"}],
+    "tabBar": {
+        "visibility": "shown",
+        "style": "button",
+        "alignment": "end",
+        "size": "small",
+    },
+    "spacing": "small",
+    "style": {"backgroundColor": PAPER},
+})
+
+_app_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-app">
+  <Container elementId="c-hdr2" type="grid" gridColumn="1 / 25" gridRow="1 / 9"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="wm2" gridColumn="1 / 5" gridRow="1 / 3"/>
+    <Element elementId="nav2" gridColumn="13 / 25" gridRow="1 / 3"/>
+    <Element elementId="eyebrow2" gridColumn="1 / 13" gridRow="3 / 4"/>
+    <Element elementId="ttl2" gridColumn="1 / 17" gridRow="4 / 7"/>
+    <Element elementId="sub2" gridColumn="1 / 17" gridRow="7 / 8"/>
+    <Element elementId="b-newplan" gridColumn="19 / 25" gridRow="6 / 8"/>
+  </Container>
+  <Element elementId="plg-pulse" gridColumn="1 / 25" gridRow="9 / 14"/>
+  <Container elementId="c-app-kpi" type="grid" gridColumn="1 / 25" gridRow="14 / 22"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="k-prop" gridColumn="1 / 7" gridRow="1 / 8"/>
+    <Element elementId="k-bev2" gridColumn="7 / 13" gridRow="1 / 8"/>
+    <Element elementId="k-shift" gridColumn="13 / 19" gridRow="1 / 8"/>
+    <Element elementId="k-over" gridColumn="19 / 25" gridRow="1 / 8"/>
+  </Container>
+  <TabbedContainer elementId="tc-persona" gridColumn="1 / 25" gridRow="22 / 67">
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="ct-region" gridColumn="1 / 6" gridRow="1 / 4"/>
+      <Element elementId="ct-pt" gridColumn="6 / 11" gridRow="1 / 4"/>
+      <Element elementId="ct-shift" gridColumn="11 / 15" gridRow="1 / 4"/>
+      <Element elementId="b-shift" gridColumn="15 / 19" gridRow="1 / 4"/>
+      <Element elementId="b-populate" gridColumn="19 / 22" gridRow="1 / 4"/>
+      <Element elementId="b-clear" gridColumn="22 / 25" gridRow="1 / 4"/>
+      <Element elementId="s-grid" gridColumn="1 / 25" gridRow="4 / 5"/>
+      <Container elementId="c-grid" type="grid" gridColumn="1 / 25" gridRow="5 / 24"
+                 gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+        <Element elementId="it-alloc" gridColumn="1 / 25" gridRow="1 / 19"/>
+      </Container>
+      <Element elementId="ch-prop" gridColumn="1 / 25" gridRow="24 / 40"/>
+    </Tab>
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="s-load" gridColumn="1 / 25" gridRow="1 / 2"/>
+      <Element elementId="tbl-load" gridColumn="1 / 25" gridRow="2 / 16"/>
+      <Element elementId="s-queue" gridColumn="1 / 25" gridRow="16 / 17"/>
+      <Container elementId="c-queue" type="grid" gridColumn="1 / 25" gridRow="17 / 32"
+                 gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+        <Element elementId="tbl-review" gridColumn="1 / 20" gridRow="1 / 15"/>
+        <Element elementId="b-submit" gridColumn="20 / 25" gridRow="1 / 4"/>
+      </Container>
+    </Tab>
+  </TabbedContainer>
+</Page>"""
+layout, _app_count = re.subn(
+    r'<Page type="grid"[^>]*id="pg-app">.*?</Page>',
+    _app_page,
+    layout,
+    count=1,
+    flags=re.S,
+)
+if _app_count != 1:
+    raise RuntimeError("could not replace pg-app layout")
+
 document = {"schemaVersion": 1, "kind": "workbook", "elements": elements,
             "pages": pages, "overlays": overlays, "layout": layout,
             "settings": {
@@ -710,6 +819,11 @@ if __name__ == "__main__":
     if len(_ARGS) < 4:
         print(json.dumps(body, indent=2))
         raise SystemExit(0)
+    if PULSE_PLUGIN_ID.startswith("<"):
+        raise SystemExit(
+            "HONDA_PULSE_PLUGIN_ID is required when creating the workbook. "
+            "Register plugins/honda-allocation-pulse first."
+        )
     status, result = call("POST", "/v2/workbooks/spec/verify", body)
     print("verify", status, result)
     if status >= 400 or not (isinstance(result, dict) and result.get("valid")):
