@@ -1969,9 +1969,11 @@ Default to pairing. Rules that produced the fix:
    go side by side (totals-by-entity next to totals-by-scenario), charts go side
    by side, and a chart pairs with its detail table. Reference apps do exactly
    this — the Summit commission page puts its two outcome pivots on one row.
-2. **Put the narrative panel beside the KPI row, not under it.** KPIs at
-   `1 / 17` with the Cortex/AI brief at `17 / 25` removes a whole band of vertical
-   space and reads as one "state of the business" block.
+2. **The KPI row is full width, and the AI/narrative summary sits full width
+   DIRECTLY BENEATH IT.** This is house style — the "what is happening" number row
+   and the sentence explaining it read as one block at the top of the page. Do not
+   tuck the AI brief into a column beside the KPIs; it makes both cramped and
+   buries the narrative.
 3. **Budget row spans.** A table needs ~10–12 rows, a chart ~10–11, a KPI row 6–7,
    a control bar 3–5, a section band 1. Anything larger is usually padding.
 4. **Only the widest artifact earns full width** — a drill table with 8+ columns,
@@ -1979,9 +1981,12 @@ Default to pairing. Rules that produced the fix:
 5. **When a table goes half-width, cut its columns.** Long descriptive columns
    are the space hog; drop them or shorten headers ("Commission Payout Rate" →
    "Payout Rate") so headers stop truncating.
-6. **Chat/agent panels are side rails, never bottom slabs.** Put the chat at
-   `13 / 25` or `17 / 25` next to the content it interrogates, inside a card
-   container with a band title.
+6. **Chat/agent panels are tall side rails, never bottom slabs.** Give an agent a
+   genuine share of the page: put it at `15 / 25` and let it span the full height
+   of the charts stacked beside it (three ~10-row charts on the left, one rail on
+   the right). A chat squeezed into one chart's height reads as an afterthought,
+   and one dropped at the page bottom reads as leftover. Spanning the stacked
+   charts also leaves no dead column, which a 2-of-3 height would.
 
 Sanity check the result instead of trusting the spec: export the page to PNG and
 measure it (`Image.open(png).size`). If a page is much past ~2,000px at 1600 wide,
