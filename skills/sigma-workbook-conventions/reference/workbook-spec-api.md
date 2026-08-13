@@ -1905,6 +1905,56 @@ Layout rules:
 - Sigma normalizes by prepending `<?xml version="1.0" encoding="utf-8"?>`
   and a trailing newline on save.
 
+## Page chrome: slim app bar, not a hero banner
+
+A branded header built as a tall dark container with an eyebrow, a 30px reversed
+title and a subtitle stacked inside it looks like a splash screen, not a
+dashboard — nine grid rows of mostly empty colour with the logo floating in the
+middle. The convention that reads correctly:
+
+1. **A three-row branded bar** carrying only logo, wordmark, and navigation.
+2. **Page title and subtitle on the canvas below it**, in ink at ~23px with a
+   ~13px muted subtitle beside (not under) the title.
+
+### Navigation: use buttons, not the `navigation` element
+
+`kind: "navigation"` accepts exactly one `optionStyle.style` value — `"pill"`.
+`"tab"`, `"tabs"`, `"underline"`, `"button"`, `"link"`, `"text"`, `"segmented"`
+and `"minimal"` are all rejected (masked as `Invalid kind: "navigation"`), so the
+element cannot be restyled and cannot show which page you are on.
+
+Buttons can do both. Emit one button per destination and let each page render its
+own tab as active:
+
+```json
+{"id": "nav-3-2", "kind": "button", "text": "Commission modeling",
+ "appearance": "filled",
+ "style": {"backgroundColor": "#0ABC28", "color": "#1D2227"},
+ "actions": [{"id": "act-nav-3-2", "trigger": "on-click",
+              "effects": [{"effect": "navigate",
+                           "target": {"type": "page", "page": "pg-commission"}}]}]}
+```
+
+Note the navigate target key is `page` (not `pageId`, which is what an overlay's
+`destination` uses). Inactive tabs use `appearance: "outline"` on the bar colour.
+
+## Check the layout before you POST
+
+Two classes of layout bug the API will not catch for you, both worth a ten-line
+self-check in any generator:
+
+- **Collisions.** Overlapping grid rectangles on the same page fail the PUT with
+  the unhelpful `Element collisions found during layout edit` — no element names.
+  Parse your own layout, compare every pair of top-level boxes per page, and
+  report the offending ids. This caught a bulk row-shift that moved content on
+  modal pages which had no header to shift under.
+- **Column overflow.** The grid is 24 columns, so `gridColumn` must end at 25 or
+  less. A four-item nav laid out as `10/14, 14/18, 18/22, 22/26` silently runs off
+  the page.
+
+Also assert every layout `elementId` exists and every element is placed exactly
+once; an unplaced element simply never renders.
+
 ## Layout density — pair, don't stack (aesthetics first)
 
 The single most common way a code-built page looks amateurish: every section is
