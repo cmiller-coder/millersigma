@@ -705,7 +705,8 @@ def brand_header(page_num, title, subtitle, nav_id):
     add(text("sub-%d" % page_num,
              '<span style="color:#D2D3D4">%s</span>' % subtitle,
              style={"backgroundColor": "transparent", "padding": "none"}))
-    add({"id": nav_id, "kind": "navigation", "style": "segmented-control",
+    add({"id": nav_id, "kind": "navigation", "mode": "manual",
+         "showIcons": False, "style": {"backgroundColor": "transparent"},
          "optionStyle": {"textColor": "#FFFFFF", "selectedColor": GREEN,
                          "style": "pill", "orientation": "horizontal"},
          "options": [
