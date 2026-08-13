@@ -117,6 +117,18 @@ Safe from a button — scalars only:
 Note that `whichRows` is a different context: it *is* a row filter over the
 element, so `[Powertrain] = "BEV"` there is fine. Only `values` is scalar-only.
 
+A **scalar** formula in `values` is fine, which is the clean way to stop asking
+users to invent a record ID:
+
+```json
+"pr-id": {"type": "formula",
+          "formula": "\"PLAN-\" & DateFormat(Now(), \"%y%m%d-%H%M%S\")"}
+```
+
+Generate the identifier on insert and never put it in the form. Nothing needs to
+guess it afterwards, because the review queue's `on-select` handler is what
+populates the selected-plan control.
+
 **Do not reach for a write action to seed or transform a column from other
 columns.** Model it as a computed column instead, because column formulas *can*
 read both key-bound source columns and control values:
@@ -135,6 +147,26 @@ instant (no multi-thousand-row warehouse write to wait on), it cannot partially
 fail, and `Coalesce` still lets a typed cell override the scenario — which is
 what write-back is actually for. Keep one write action to *clear* overrides
 (constants only) and let controls drive everything else.
+
+## Modal footer CTAs must be hidden
+
+Overlay-level actions cannot resolve controls, so a modal that writes anything
+needs `button` elements inside the modal page. The built-in footer CTAs are
+therefore dead weight, and if left visible the user sees a second,
+non-functional pair of buttons beside the working ones:
+
+```json
+{"id": "m-create", "type": "modal", "name": "Create plan",
+ "modal": {"width": "small",
+           "header": {"title": "Create allocation plan", "showCloseIcon": "shown"},
+           "footer": {"primaryCta": {"visible": "hidden"},
+                      "secondaryCta": {"visible": "hidden"}}}}
+```
+
+`width` accepts `x-small` / `small` / `large`. Use `small` or `x-small` for a
+form of a few fields — `large` renders as a full-width sheet. Note that
+`header.title` cannot be an empty string (it crashes the overlay); use `" "` for
+a deliberately blank bar.
 
 ## Review modal
 

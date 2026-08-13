@@ -98,6 +98,48 @@ For constraint KPIs where rising is bad, set `comparison.direction: "none"` —
 Sigma's default arrow treatment paints a breach green. That mode requires
 `colorNeutral` and rejects `colorGood`/`colorBad`.
 
+### Live AI insight (Snowflake Cortex)
+
+`txt-ai` is a `text` element whose `body` embeds a `{{formula}}` calling
+`CallText("SNOWFLAKE.CORTEX.COMPLETE", "CLAUDE-4-SONNET", <prompt>)`. It needs no
+`source`, and the formula may reference other elements.
+
+**Feed it per-entity numbers, not totals.** Handed only network aggregates it
+returns "cell commitment rose, watch capacity" — true, useless, and already on
+screen. There are only five plants, so the prompt passes each plant's own
+commitment via `SumIf` over `tbl-load`'s group-level calculations (the same
+aggregation `k-cellprop` uses, sliced per plant). With that, the model names the
+binding plant and the one with headroom, and gets the arithmetic right.
+
+Verified live on staging. At baseline it returned "Celaya Mexico leads cell
+commitment at 92% … Lincoln Alabama shows the most headroom at 84%"; at a 20%
+shift the same element returned "Celaya Mexico is 8 points over its battery cell
+contract … Lincoln Alabama has the most remaining cell headroom at 1% below
+contract." Both are correct against `cell_util_target` (0.92 and 0.84) scaled by
+the shift, which also proves the insight is bound to the live scenario rather
+than the baseline.
+
+Requires a connection whose warehouse has Cortex enabled and the model name
+available to the role. Confirm both strings for the target org — a wrong model
+name fails at render time, not at save time.
+
+### Modals
+
+Two rules, both learned the hard way:
+
+- **Hide the built-in footer CTAs.** Overlay-level actions cannot resolve
+  controls, so the working buttons have to be `button` elements placed inside the
+  modal page. Leaving the native CTAs visible shows a second, non-functional pair
+  of buttons next to the real ones. Set
+  `modal.footer.primaryCta.visible: "hidden"` and the same for `secondaryCta`.
+- **`width: "small"`** (or `x-small`) keeps it dialog-sized; `large` reads as a
+  full-width sheet for a three-field form.
+
+Do not ask the user for a record ID. The plan identifier is generated on insert
+with a scalar formula (`"PLAN-" & DateFormat(Now(), "%y%m%d-%H%M%S")`) and never
+surfaced; the approval queue's `on-select` handler supplies it downstream. Scalar
+formulas are legal in action values — only per-row expressions are not.
+
 **Page 1 — Executive overview.** The decision question, then five KPIs (plan-of-record
 units, electrified mix, BEV mix vs target, plant capacity used, battery cell used),
 powertrain mix trajectory, allocation vs capacity by plant, and regional mix.

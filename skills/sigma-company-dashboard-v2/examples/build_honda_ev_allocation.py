@@ -504,7 +504,6 @@ add(control("ct-basis", "c_basis", "Plan basis", "segmented", "record",
             source={"kind": "manual", "valueType": "text",
                     "values": ["record", "demand"],
                     "labels": ["Plan of record", "Demand signal"]}))
-add(control("ct-plan-id", "c_plan_id", "Plan ID"))
 add(control("ct-plan-name", "c_plan_name", "Plan name"))
 add(control("ct-plan-owner", "c_plan_owner", "Owner"))
 add(control("ct-sel-plan", "c_selected_plan", "Selected plan"))
@@ -536,16 +535,21 @@ add(button("b-clear", "Clear manual overrides", [
     + REFRESH, CARD, INK, "outline"))
 add(button("b-newplan", "Create plan", [
     {"effect": "open-overlay", "overlayId": "m-create"}], HONDA))
+# A plan identifier is bookkeeping, not something a planner should be asked to
+# invent, so it is generated here and never surfaced in the form. This is a
+# SCALAR formula (Now() plus concatenation) -- legal in an action value, unlike a
+# per-row expression, which has no row to resolve against from a button.
+# The identifier is picked up later by the queue's on-select handler, so nothing
+# needs to guess it at insert time.
 add(button("b-create-save", "Create draft", [
     {"effect": "insert-rows", "table": "it-registry", "values": {
-        "pr-id": {"type": "control", "control": "c_plan_id"},
+        "pr-id": {"type": "formula",
+                  "formula": '"PLAN-" & DateFormat(Now(), "%y%m%d-%H%M%S")'},
         "pr-name": {"type": "control", "control": "c_plan_name"},
         "pr-owner": {"type": "control", "control": "c_plan_owner"},
         "pr-scope": {"type": "constant",
                      "value": {"type": "text", "value": "Hybrid vs EV allocation"}},
         "pr-status": {"type": "constant", "value": {"type": "text", "value": "Draft"}}}},
-    {"effect": "set-control-value", "control": "c_selected_plan",
-     "value": {"type": "control", "control": "c_plan_id"}},
     {"effect": "refresh-element", "target": {"type": "element", "element": "tbl-review"}},
     {"effect": "close-overlay"}], GOOD))
 add(button("b-create-cancel", "Cancel", [{"effect": "close-overlay"}], CARD, INK, "outline"))
@@ -656,6 +660,55 @@ add(text("insight",
          'decision is really a battery decision.</span>'
          % (HONDA, INK_SOFT, INK, INK_SOFT, INK, INK_SOFT, INK, INK_SOFT),
          style={"backgroundColor": "transparent", "padding": "none"}))
+# --------------------------------------------------------------- AI insight
+# Live LLM narration via Snowflake Cortex. A `text` element whose body contains a
+# {{formula}} needs no `source`, and the formula may reference other elements.
+#
+# The insight is only as good as what it is handed. Aggregate totals alone produce
+# "cell commitment rose, watch capacity" -- true, useless, and already on screen.
+# There are only five plants, so pass each plant's own commitment explicitly and
+# the model can name the binding plant and where the headroom actually is.
+#
+# SumIf over tbl-load's group-level calculations is the same aggregation the
+# k-cellprop KPI uses (verified), just sliced per plant.
+PLANTS = ["Marysville OH", "East Liberty OH", "Celaya MX",
+          "Lincoln AL", "Ramos Arizpe MX"]
+_per_plant = ' & ", " & '.join(
+    '"%(p)s " & Text(Round('
+    'SumIf([Plant Month Load/Cell kWh], [Plant Month Load/Plant] = "%(p)s") '
+    '/ NullIf(SumIf([Plant Month Load/Cell Contract], '
+    '[Plant Month Load/Plant] = "%(p)s"), 0) * 100, 0)) & "%%"' % {"p": p}
+    for p in PLANTS)
+
+_AI_PROMPT = (
+    '"You are a Honda North America production planner. Write TWO sentences, '
+    '40-60 words total. First sentence: name the plant most over its battery '
+    'cell contract, quantify by how many points, and say what to do. Second '
+    'sentence: name the plant with the most remaining cell headroom and say how '
+    'much mix could move there. Use the real plant names. Do NOT restate the '
+    'network totals, they are already on screen. Data: network cell commitment " '
+    '& Text(Round(Sum([Plant Month Load/Cell kWh]) '
+    '/ NullIf(Sum([Plant Month Load/Cell Contract]), 0) * 100, 1)) & "%%, '
+    'plant-months over contract " '
+    '& Text(CountDistinct(If([Plant Month Load/Cell Status] = "Over contract", '
+    '[Plant Month Load/Plant Month], Null))) & " of " '
+    '& Text(CountDistinct([Plant Month Load/Plant Month])) '
+    '& ". Assembly utilisation " '
+    '& Text(Round(Sum([Plant Month Load/Allocated]) '
+    '/ NullIf(Sum([Plant Month Load/Capacity]), 0) * 100, 1)) '
+    '& "%%. Cell commitment by plant: " & ' + _per_plant + ' & "."'
+)
+
+add({"id": "c-ai", "kind": "container", "spacing": "small",
+     "style": {"backgroundColor": "#F4F6F8", "borderRadius": "square",
+               "borderColor": "#D8DEE4", "borderWidth": 1}})
+add({"id": "txt-ai", "kind": "text",
+     "body": '<span style="color: %s">**AI READ ON THE CONSTRAINT**</span>  '
+             '{{Replace(CallText("SNOWFLAKE.CORTEX.COMPLETE", "CLAUDE-4-SONNET", '
+             % HONDA + _AI_PROMPT + "), '\"', \"\")}}",
+     "style": {"backgroundColor": "transparent", "padding": "none"},
+     "verticalAlign": "middle"})
+
 add(text("s-mix", '<span style="color: %s">**MIX TRAJECTORY**</span>' % INK_SOFT))
 add(text("s-cap", '<span style="color: %s">**CAPACITY POSTURE**</span>' % INK_SOFT))
 add(text("s-region", '<span style="color: %s">**REGIONAL MIX**</span>' % INK_SOFT))
@@ -664,8 +717,16 @@ add(text("s-grid", '<span style="color: %s">**ALLOCATION GRID — TYPE TO OVERRI
 add(text("s-queue", '<span style="color: %s">**APPROVAL QUEUE — SELECT A ROW TO DECIDE**</span>' % INK_SOFT))
 add(text("s-load", '<span style="color: %s">**PLANT-MONTH LOAD — ASSEMBLY CAPACITY AND '
                    'CELL CONTRACT**</span>' % INK_SOFT))
-add(text("m-create-help", '### Create allocation plan\nA draft plan is registered, then submitted for review.'))
-add(text("m-review-help", '### Review allocation plan\nApprove, request changes, or reject the selected plan.'))
+# The modal header already carries the title, so the body copy says what happens
+# next instead of repeating it. No plan ID field: it is generated on insert.
+add(text("m-create-help",
+         'Name the plan and assign an owner. It is registered as a **Draft** and '
+         'appears in the approval queue, where it can be submitted for review.',
+         style={"backgroundColor": "transparent"}))
+add(text("m-review-help",
+         'Record a decision on the selected plan. Comments are written back with '
+         'the status so the queue keeps the full audit trail.',
+         style={"backgroundColor": "transparent"}))
 
 for cid in ("c-kpi1", "c-app-kpi", "c-grid", "c-queue"):
     add({"id": cid, "kind": "container", "spacing": "small",
@@ -675,13 +736,22 @@ for cid in ("c-kpi1", "c-app-kpi", "c-grid", "c-queue"):
 pages = [{"id": "pg-exec", "name": "Executive overview", "backgroundColor": PAPER},
          {"id": "pg-app", "name": "Allocation planner", "backgroundColor": PAPER},
          {"id": "pg-data", "name": "Data", "visibility": "hidden"}]
+# Overlay-level footer CTAs cannot resolve controls, so every modal here does its
+# work with button elements placed inside the modal page. Leaving the built-in
+# primary/secondary CTAs visible would show a second, non-functional pair of
+# buttons -- hide them explicitly. `x-small`/`small` keep the dialog dialog-sized;
+# `large` reads as a full-width sheet.
+_MODAL_FOOTER = {"primaryCta": {"visible": "hidden"},
+                 "secondaryCta": {"visible": "hidden"}}
 overlays = [
     {"id": "m-create", "type": "modal", "name": "Create plan",
-     "modal": {"width": "large", "header": {"title": "Create allocation plan",
-                                           "showCloseIcon": "shown"}}},
+     "modal": {"width": "small", "header": {"title": "Create allocation plan",
+                                           "showCloseIcon": "shown"},
+               "footer": _MODAL_FOOTER}},
     {"id": "m-review", "type": "modal", "name": "Review plan",
-     "modal": {"width": "large", "header": {"title": "Review allocation plan",
-                                            "showCloseIcon": "shown"}}},
+     "modal": {"width": "small", "header": {"title": "Review allocation plan",
+                                            "showCloseIcon": "shown"},
+               "footer": _MODAL_FOOTER}},
 ]
 
 logo1 = '    <Element elementId="wm1" gridColumn="1 / 5" gridRow="1 / 3"/>\n'
@@ -760,19 +830,18 @@ layout = f"""<?xml version="1.0" encoding="utf-8"?>
   <Element elementId="ct-sel-plan" gridColumn="1 / 7" gridRow="26 / 29"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-create">
-  <Element elementId="m-create-help" gridColumn="1 / 25" gridRow="1 / 4"/>
-  <Element elementId="ct-plan-id" gridColumn="1 / 13" gridRow="4 / 7"/>
-  <Element elementId="ct-plan-name" gridColumn="13 / 25" gridRow="4 / 7"/>
-  <Element elementId="ct-plan-owner" gridColumn="1 / 25" gridRow="7 / 10"/>
-  <Element elementId="b-create-cancel" gridColumn="13 / 19" gridRow="10 / 13"/>
-  <Element elementId="b-create-save" gridColumn="19 / 25" gridRow="10 / 13"/>
+  <Element elementId="m-create-help" gridColumn="1 / 25" gridRow="1 / 3"/>
+  <Element elementId="ct-plan-name" gridColumn="1 / 25" gridRow="3 / 6"/>
+  <Element elementId="ct-plan-owner" gridColumn="1 / 25" gridRow="6 / 9"/>
+  <Element elementId="b-create-cancel" gridColumn="1 / 13" gridRow="9 / 12"/>
+  <Element elementId="b-create-save" gridColumn="13 / 25" gridRow="9 / 12"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-review">
-  <Element elementId="m-review-help" gridColumn="1 / 25" gridRow="1 / 4"/>
-  <Element elementId="ct-decision" gridColumn="1 / 25" gridRow="4 / 7"/>
-  <Element elementId="ct-review-note" gridColumn="1 / 25" gridRow="7 / 12"/>
-  <Element elementId="b-review-cancel" gridColumn="13 / 19" gridRow="12 / 15"/>
-  <Element elementId="b-review-save" gridColumn="19 / 25" gridRow="12 / 15"/>
+  <Element elementId="m-review-help" gridColumn="1 / 25" gridRow="1 / 3"/>
+  <Element elementId="ct-decision" gridColumn="1 / 25" gridRow="3 / 6"/>
+  <Element elementId="ct-review-note" gridColumn="1 / 25" gridRow="6 / 11"/>
+  <Element elementId="b-review-cancel" gridColumn="1 / 13" gridRow="11 / 14"/>
+  <Element elementId="b-review-save" gridColumn="13 / 25" gridRow="11 / 14"/>
 </Page>
 """
 
@@ -915,7 +984,9 @@ _pulse_slot = ('  <Element elementId="plg-pulse" gridColumn="1 / 25" gridRow="9 
                if HAS_PULSE else "")
 _kpi_row0 = 14 if HAS_PULSE else 9
 _kpi_row1 = _kpi_row0 + 8
-_tabs_row0 = _kpi_row1
+_ai_row0 = _kpi_row1
+_ai_row1 = _ai_row0 + 4
+_tabs_row0 = _ai_row1
 _tabs_row1 = _tabs_row0 + 49
 _app_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-app">
   <Container elementId="c-hdr2" type="grid" gridColumn="1 / 25" gridRow="1 / 9"
@@ -934,6 +1005,10 @@ _app_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTempl
     <Element elementId="k-bev2" gridColumn="11 / 16" gridRow="1 / 8"/>
     <Element elementId="k-cellprop" gridColumn="16 / 20" gridRow="1 / 8"/>
     <Element elementId="k-over" gridColumn="20 / 25" gridRow="1 / 8"/>
+  </Container>
+  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="{ai0} / {ai1}"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="txt-ai" gridColumn="1 / 25" gridRow="1 / 4"/>
   </Container>
   <TabbedContainer elementId="tc-persona" gridColumn="1 / 25" gridRow="{tabs0} / {tabs1}">
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
@@ -961,7 +1036,8 @@ _app_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTempl
       </Container>
     </Tab>
   </TabbedContainer>
-</Page>""".format(kpi0=_kpi_row0, kpi1=_kpi_row1, tabs0=_tabs_row0, tabs1=_tabs_row1)
+</Page>""".format(kpi0=_kpi_row0, kpi1=_kpi_row1, ai0=_ai_row0, ai1=_ai_row1,
+                 tabs0=_tabs_row0, tabs1=_tabs_row1)
 layout, _exec_count = re.subn(
     r'<Page type="grid"[^>]*id="pg-exec">.*?</Page>',
     _exec_page,
