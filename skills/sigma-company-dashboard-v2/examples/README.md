@@ -49,21 +49,35 @@ contracted battery cells are.** Swap an ICE unit for a BEV unit on the same line
 and you build exactly the same number of vehicles while adding 85 kWh of cell
 draw where there was zero.
 
-So the `Apply BEV shift` action is deliberately **volume-neutral**. BEV rises by
-the control percentage and ICE falls by the *unit-equivalent* amount, using a
-per-month `ice_offset_factor` (the BEV:ICE baseline ratio) computed in SQL rather
-than a flat percentage. Because every powertrain shares the same model/region
+So the BEV shift is deliberately **volume-neutral**. BEV rises by the control
+percentage and ICE falls by the *unit-equivalent* amount, using a per-month
+`ice_offset_factor` (the BEV:ICE baseline ratio) computed in SQL rather than a
+flat percentage. Because every powertrain shares the same model/region
 expansion, that ratio is also the ratio of their unit totals, which makes the
 trade exact.
 
-Measured on the live staging build (20% shift, warehouse arithmetic via a
-simulation query, not algebra):
+The scenario levers are **controls driving computed columns, not write actions**
+— see [`approval-workflow-pattern.md`](../../sigma-input-table-app/reference/approval-workflow-pattern.md)
+for why an `update-rows` value formula cannot reference the row's own columns
+when fired from a button. `Basis Units` and `Scenario Factor` are hidden computed
+columns on the linked input table, and `Effective Units =
+Coalesce([Proposed Units], [Scenario Units])` so a typed cell still overrides the
+scenario. The only write action on the grid is `Clear manual overrides`
+(constants only).
 
-| | Baseline | After shift |
-|---|---|---|
-| Net unit shift | 0 | **0** |
-| Cell commitment | 87.6% | **103.0%** |
-| Plant-months over cell contract | 0 of 30 | **24 of 30** |
+Measured on the live staging build by exporting the elements to CSV, and
+cross-checked against an independent SQL simulation of the same arithmetic —
+both agree exactly:
+
+| Lever | Units | Net unit shift | Cell commitment | Plant-months over contract |
+|---|---|---|---|---|
+| Plan of record, 0% | 838,502 | +0 | 87.6% | 0 of 30 |
+| Plan of record, 20% | 838,502 | **+0** | **103.0%** | **24 of 30** |
+| Demand signal, 0% | 864,775 | +26,273 | 90.6% | 0 of 30 |
+
+The third row reinforces the message: simply meeting the demand signal adds
+26,273 units and still fits inside the cell contract. It is the *mix* trade, at
+flat volume, that breaks it.
 
 Six plant-months (Lincoln AL, the plant deliberately given the most cell
 headroom at `cell_util_target` 0.84) stay inside contract — so the app answers
@@ -98,8 +112,8 @@ linked input table over the baseline where users type `Proposed Units`;
 read left-to-right as the argument: proposed units (unchanged) → net unit shift
 (zero) → proposed BEV mix (up) → cell commitment (over contract) → plant-months
 breached. All are parented to the input table or the table derived from it, so
-they move as cells change. Bulk actions copy the plan of record, use the
-warehouse demand signal, clear proposals, or run the volume-neutral BEV shift.
+they move as cells change. Plan basis (plan of record / demand signal) and BEV
+shift % are live controls; `Clear manual overrides` is the one write action.
 Its own Month/Quarter segmented control changes the comparison chart grain.
 Approver gets the grouped plant-month table carrying **both** constraints —
 assembly utilisation and cell commitment, each with data bars and over/within

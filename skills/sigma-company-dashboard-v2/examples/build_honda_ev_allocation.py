@@ -251,7 +251,18 @@ add({"id": "it-alloc", "kind": "input-table", "name": "Allocation Plan",
           "hidden": True},
          {"id": "al-prop", "type": "number", "name": "Proposed Units"},
          {"id": "al-note", "type": "text", "name": "Planner Note"},
-         {"id": "al-eff", "formula": "Coalesce([Proposed Units], [Baseline Units])",
+         # Control-driven scenario. Column formulas CAN read key-bound source
+         # columns and control values (unlike action value formulas), so the
+         # whole what-if resolves per row at query time.
+         {"id": "al-basis", "name": "Basis Units", "hidden": True,
+          "formula": 'If([c_basis] = "demand", [Demand Signal], [Baseline Units])'},
+         {"id": "al-factor", "name": "Scenario Factor", "hidden": True,
+          "formula": 'If([Powertrain] = "BEV", 1 + [c_bev_shift] / 100, '
+                     'If([Powertrain] = "ICE", '
+                     '1 - [c_bev_shift] / 100 * [ICE Offset Factor], 1))'},
+         {"id": "al-scen", "name": "Scenario Units", "hidden": True,
+          "formula": "Round([Basis Units] * [Scenario Factor])", "format": INT},
+         {"id": "al-eff", "formula": "Coalesce([Proposed Units], [Scenario Units])",
           "name": "Effective Units", "format": INT},
          {"id": "al-var", "formula": "[Effective Units] - [Baseline Units]",
           "name": "Variance", "format": DLT},
@@ -482,7 +493,17 @@ add(control("ct-pt", "c_powertrain", "Powertrain", "list", "",
                     "columnId": "al-pt"},
             filters=[{"source": {"kind": "table", "elementId": "it-alloc"},
                       "columnId": "al-pt"}]))
-add(control("ct-shift", "c_bev_shift", "BEV shift %", "number", 20))
+# Scenario levers are CONTROLS, not write actions. An update-rows value formula
+# fired from a button has no row context, so a per-row expression like
+# [Baseline Units] cannot be evaluated ("Unknown column"). Driving the scenario
+# through computed columns instead is both correct and instant -- no 10k-row
+# warehouse write to wait on -- and manual cell edits still persist as genuine
+# overrides via Coalesce. Defaults to 0 so the app opens at plan of record.
+add(control("ct-shift", "c_bev_shift", "BEV shift %", "number", 0))
+add(control("ct-basis", "c_basis", "Plan basis", "segmented", "record",
+            source={"kind": "manual", "valueType": "text",
+                    "values": ["record", "demand"],
+                    "labels": ["Plan of record", "Demand signal"]}))
 add(control("ct-plan-id", "c_plan_id", "Plan ID"))
 add(control("ct-plan-name", "c_plan_name", "Plan name"))
 add(control("ct-plan-owner", "c_plan_owner", "Owner"))
@@ -503,31 +524,16 @@ def button(eid, label, effects, fill=INK, font="#FFFFFF", appearance="filled"):
 REFRESH = [{"effect": "refresh-element", "target": {"type": "element", "element": e}}
            for e in ("it-alloc", "tbl-load")]
 
-add(button("b-populate", "Copy plan of record", [
-    {"effect": "update-rows", "table": "it-alloc",
-     "whichRows": {"type": "formula", "formula": "True"},
-     "values": {"al-prop": {"type": "formula", "formula": "[Baseline Units]"}}}] + REFRESH))
-add(button("b-clear", "Clear proposals", [
+# Only constants and control values are legal in an update-rows value formula
+# fired from a button (no row context), so this reset is the one write action
+# that belongs on the grid. It clears manual overrides and hands the rows back
+# to the control-driven scenario.
+add(button("b-clear", "Clear manual overrides", [
     {"effect": "update-rows", "table": "it-alloc",
      "whichRows": {"type": "formula", "formula": "True"},
      "values": {"al-prop": {"type": "constant", "value": {"type": "number", "value": None}},
                 "al-note": {"type": "constant", "value": {"type": "text", "value": None}}}}]
     + REFRESH, CARD, INK, "outline"))
-# Volume-neutral mix trade: BEV goes up by the control percentage and ICE comes
-# down by the unit-equivalent amount (hence the per-month BEV:ICE offset factor,
-# not a flat percentage). Total build volume is unchanged, which is the point --
-# the constraint that moves is battery cell supply, not assembly capacity.
-add(button("b-shift", "Apply BEV shift", [
-    {"effect": "update-rows", "table": "it-alloc",
-     "whichRows": {"type": "formula", "formula": '[Powertrain] = "BEV"'},
-     "values": {"al-prop": {"type": "formula",
-                            "formula": "Round([Baseline Units] * (1 + [c_bev_shift] / 100))"}}},
-    {"effect": "update-rows", "table": "it-alloc",
-     "whichRows": {"type": "formula", "formula": '[Powertrain] = "ICE"'},
-     "values": {"al-prop": {"type": "formula",
-                            "formula": "Round([Baseline Units] * (1 - [c_bev_shift] / 100 "
-                                       "* [ICE Offset Factor]))"}}}]
-    + REFRESH, HONDA))
 add(button("b-newplan", "Create plan", [
     {"effect": "open-overlay", "overlayId": "m-create"}], HONDA))
 add(button("b-create-save", "Create draft", [
@@ -653,7 +659,8 @@ add(text("insight",
 add(text("s-mix", '<span style="color: %s">**MIX TRAJECTORY**</span>' % INK_SOFT))
 add(text("s-cap", '<span style="color: %s">**CAPACITY POSTURE**</span>' % INK_SOFT))
 add(text("s-region", '<span style="color: %s">**REGIONAL MIX**</span>' % INK_SOFT))
-add(text("s-grid", '<span style="color: %s">**ALLOCATION GRID — EDIT PROPOSED UNITS**</span>' % INK_SOFT))
+add(text("s-grid", '<span style="color: %s">**ALLOCATION GRID — TYPE TO OVERRIDE THE '
+                   'SCENARIO**</span>' % INK_SOFT))
 add(text("s-queue", '<span style="color: %s">**APPROVAL QUEUE — SELECT A ROW TO DECIDE**</span>' % INK_SOFT))
 add(text("s-load", '<span style="color: %s">**PLANT-MONTH LOAD — ASSEMBLY CAPACITY AND '
                    'CELL CONTRACT**</span>' % INK_SOFT))
@@ -726,12 +733,11 @@ layout = f"""<?xml version="1.0" encoding="utf-8"?>
     <Element elementId="k-shift" gridColumn="13 / 19" gridRow="1 / 8"/>
     <Element elementId="k-over" gridColumn="19 / 25" gridRow="1 / 8"/>
   </Container>
-  <Element elementId="ct-region" gridColumn="1 / 6" gridRow="17 / 20"/>
-  <Element elementId="ct-pt" gridColumn="6 / 11" gridRow="17 / 20"/>
-  <Element elementId="ct-shift" gridColumn="11 / 15" gridRow="17 / 20"/>
-  <Element elementId="b-shift" gridColumn="15 / 19" gridRow="17 / 20"/>
-  <Element elementId="b-populate" gridColumn="19 / 22" gridRow="17 / 20"/>
-  <Element elementId="b-clear" gridColumn="22 / 25" gridRow="17 / 20"/>
+  <Element elementId="ct-basis" gridColumn="1 / 8" gridRow="17 / 20"/>
+  <Element elementId="ct-shift" gridColumn="8 / 12" gridRow="17 / 20"/>
+  <Element elementId="ct-region" gridColumn="12 / 17" gridRow="17 / 20"/>
+  <Element elementId="ct-pt" gridColumn="17 / 21" gridRow="17 / 20"/>
+  <Element elementId="b-clear" gridColumn="21 / 25" gridRow="17 / 20"/>
   <Element elementId="s-grid" gridColumn="1 / 25" gridRow="20 / 21"/>
   <Container elementId="c-grid" type="grid" gridColumn="1 / 25" gridRow="21 / 39"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
@@ -778,9 +784,7 @@ layout = f"""<?xml version="1.0" encoding="utf-8"?>
 for _eid, _label in {
     "b-goto-app": "→ Open allocation planner",
     "b-newplan": "＋ Create plan",
-    "b-shift": "↗ Apply BEV shift",
-    "b-populate": "↺ Copy plan of record",
-    "b-clear": "× Clear proposals",
+    "b-clear": "↺ Clear manual overrides",
     "b-submit": "✓ Submit plan for review",
     "b-create-save": "✓ Create draft",
     "b-create-cancel": "× Cancel",
@@ -870,22 +874,9 @@ for _col in next(e for e in elements if e["id"] == "ch-prop")["columns"]:
             'DateTrunc([AppDateGrain], [Allocation Plan/Month])'
         )
 
-_demand_effects = [
-    {"effect": "update-rows", "table": "it-alloc",
-     "whichRows": {"type": "formula", "formula": "True"},
-     "values": {
-         "al-prop": {"type": "formula", "formula": "[Demand Signal]"}
-     }},
-    {"effect": "refresh-element",
-     "target": {"type": "element", "element": "it-alloc"}},
-    {"effect": "refresh-element",
-     "target": {"type": "element", "element": "tbl-load"}},
-]
-if HAS_PULSE:
-    _demand_effects.append(
-        {"effect": "refresh-element",
-         "target": {"type": "element", "element": "plg-pulse"}})
-add(button("b-demand", "↯ Use demand signal", _demand_effects, HONDA_DEEP))
+# "Use demand signal" used to be a write action with the same no-row-context
+# defect; it is now the ct-basis segmented control, which re-bases every row
+# instantly through the Basis Units column.
 
 _exec_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-exec">
   <Container elementId="c-hdr1" type="grid" gridColumn="1 / 25" gridRow="1 / 9"
@@ -946,14 +937,12 @@ _app_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTempl
   </Container>
   <TabbedContainer elementId="tc-persona" gridColumn="1 / 25" gridRow="{tabs0} / {tabs1}">
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-      <Element elementId="ct-region" gridColumn="1 / 7" gridRow="1 / 4"/>
-      <Element elementId="ct-pt" gridColumn="7 / 13" gridRow="1 / 4"/>
-      <Element elementId="ct-app-grain" gridColumn="13 / 18" gridRow="1 / 4"/>
-      <Element elementId="ct-shift" gridColumn="18 / 22" gridRow="1 / 4"/>
-      <Element elementId="b-shift" gridColumn="22 / 25" gridRow="1 / 4"/>
-      <Element elementId="b-demand" gridColumn="1 / 9" gridRow="4 / 7"/>
-      <Element elementId="b-populate" gridColumn="9 / 17" gridRow="4 / 7"/>
-      <Element elementId="b-clear" gridColumn="17 / 25" gridRow="4 / 7"/>
+      <Element elementId="ct-basis" gridColumn="1 / 9" gridRow="1 / 4"/>
+      <Element elementId="ct-shift" gridColumn="9 / 14" gridRow="1 / 4"/>
+      <Element elementId="ct-app-grain" gridColumn="14 / 19" gridRow="1 / 4"/>
+      <Element elementId="b-clear" gridColumn="19 / 25" gridRow="1 / 4"/>
+      <Element elementId="ct-region" gridColumn="1 / 9" gridRow="4 / 7"/>
+      <Element elementId="ct-pt" gridColumn="9 / 17" gridRow="4 / 7"/>
       <Element elementId="s-grid" gridColumn="1 / 25" gridRow="7 / 8"/>
       <Container elementId="c-grid" type="grid" gridColumn="1 / 25" gridRow="8 / 27"
                  gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">

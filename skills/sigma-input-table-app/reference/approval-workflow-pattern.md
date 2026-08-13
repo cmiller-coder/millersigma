@@ -81,6 +81,61 @@ Why formula selection instead of `single-row.primaryKeys`:
 The Plan ID must therefore be unique. In a production app, validate uniqueness
 before insert or generate the ID in a trusted upstream process.
 
+## `values` formulas have no row context when the trigger is a button
+
+**A `values` entry of `type: "formula"` cannot reference the target row's own
+columns when the action is fired from a button.** Sigma's docs list the value
+sources for Update row(s) as static value, *column from the trigger element*,
+control, and formula — and a button is not a row-bearing trigger, so there is
+no row to evaluate a per-row expression against.
+
+This fails at click time, not at write time. The spec passes `verify`, saves
+cleanly, round-trips through `GET /spec`, and every element compiles SQL. The
+only symptom is a toast when a user actually clicks:
+
+```text
+144 input table edits could not be applied: numeric value
+Invalid Query: Unknown column "[Baseline Units]" is invalid.
+```
+
+Rejected (per-row expression, no row):
+
+```json
+"values": {"al-prop": {"type": "formula", "formula": "[Baseline Units]"}}
+```
+
+Safe from a button — scalars only:
+
+```json
+"values": {
+  "pr-status": {"type": "constant", "value": {"type": "text", "value": "Submitted"}},
+  "pr-comments": {"type": "control", "control": "review_comments"},
+  "al-prop": {"type": "constant", "value": {"type": "number", "value": null}}
+}
+```
+
+Note that `whichRows` is a different context: it *is* a row filter over the
+element, so `[Powertrain] = "BEV"` there is fine. Only `values` is scalar-only.
+
+**Do not reach for a write action to seed or transform a column from other
+columns.** Model it as a computed column instead, because column formulas *can*
+read both key-bound source columns and control values:
+
+```json
+{"id": "al-factor", "name": "Scenario Factor", "hidden": true,
+ "formula": "If([Powertrain] = \"BEV\", 1 + [c_bev_shift] / 100, 1)"},
+{"id": "al-scen", "name": "Scenario Units", "hidden": true,
+ "formula": "Round([Basis Units] * [Scenario Factor])"},
+{"id": "al-eff", "name": "Effective Units",
+ "formula": "Coalesce([Proposed Units], [Scenario Units])"}
+```
+
+This is strictly better than a write action for what-if scenarios: it is
+instant (no multi-thousand-row warehouse write to wait on), it cannot partially
+fail, and `Coalesce` still lets a typed cell override the scenario — which is
+what write-back is actually for. Keep one write action to *clear* overrides
+(constants only) and let controls drive everything else.
+
 ## Review modal
 
 The queue's `on-select` action does three things in order:
