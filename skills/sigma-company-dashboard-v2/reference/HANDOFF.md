@@ -527,14 +527,16 @@ potentially broken despite returning HTTP 200.
 
 Use a host that returns `Content-Type: text/html`: Netlify, Vercel, GitHub
 Pages, S3/CloudFront, etc. Pin production builds to immutable assets. For an
-immediate demo when no authenticated host exists, HTMLPreview over an immutable
-raw GitHub commit executes correctly:
+immediate demo when no authenticated host exists, raw.githack serves an
+immutable raw GitHub commit directly as executable HTML:
 
 ```text
-https://htmlpreview.github.io/?https://raw.githubusercontent.com/<owner>/<repo>/<sha>/plugins/<folder>/index.html
+https://raw.githack.com/<owner>/<repo>/<sha>/plugins/<folder>/index.html
 ```
 
-Treat HTMLPreview as a demo bridge, not the durable production host.
+HTMLPreview is not a safe bridge inside Sigma: it performs a runtime fetch and
+rewrite that can fail in the sandbox with `TypeError: Failed to fetch`.
+Treat raw.githack as a demo bridge, not the durable production host.
 
 The Plugins API has `PATCH`, but the live schema only allows
 name/description/devUrl — **not** the production `url`. A production-host

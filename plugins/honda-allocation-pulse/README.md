@@ -19,15 +19,21 @@ the Planner / Approver persona tabs and summarizes:
   "capacitySource": {"kind": "element", "elementId": "tbl-load"},
   "allocated": "pl-eff",
   "capacity": "pl-cap",
-  "status": "pl-flag"
+  "status": "pl-flag",
+  "cellUsed": "pl-cells",
+  "cellContract": "pl-cellcap",
+  "cellStatus": "pl-cellflag"
 }
 ```
 
 The plugin supports partial configuration and synthetic fallback data when
 viewed outside Sigma. It subscribes independently to the allocation and
 capacity sources, transposes Sigma's column-oriented data in place, and clears
-Sigma's loading state after each render. A `ResizeObserver` recalculates the
-rail whenever Sigma changes the iframe size.
+Sigma's loading state after each render. Cell commitment uses the grouped
+plant-month table's actual cell draw divided by the contracted cell pool — not
+a heuristic based on vehicle units — and reports the number of plant-months
+over contract. A `ResizeObserver` recalculates the rail whenever Sigma changes
+the iframe size.
 
 ## Hosting and registration
 
@@ -35,11 +41,14 @@ The host **must return `Content-Type: text/html`**. jsDelivr is not a valid
 HTML-plugin host: it returns `.html` as `text/plain; charset=utf-8` plus
 `X-Content-Type-Options: nosniff`, so Sigma displays the plugin's source code.
 
-Preferred durable hosts: Netlify, Vercel, or GitHub Pages. For the immediate
-Honda demo, the workbook uses HTMLPreview over an immutable raw commit:
+Preferred durable hosts: Netlify, Vercel, or GitHub Pages. HTMLPreview can fail
+inside Sigma's sandbox because it fetches and rewrites another page at runtime
+(`TypeError: Failed to fetch`). For an immediate demo when no first-party host
+is available, raw.githack serves the immutable GitHub asset directly as
+`text/html`:
 
 ```text
-https://htmlpreview.github.io/?https://raw.githubusercontent.com/cmiller-coder/millersigma/<sha>/plugins/honda-allocation-pulse/index.html
+https://raw.githack.com/cmiller-coder/millersigma/<sha>/plugins/honda-allocation-pulse/index.html
 ```
 
 Set **both** production URL and development URL to the executable hosted URL.

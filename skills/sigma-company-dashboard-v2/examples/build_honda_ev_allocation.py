@@ -25,6 +25,7 @@ FOLDER = _ARGS[3] if len(_ARGS) > 3 else "<folder-id>"
 PULSE_PLUGIN_ID = os.environ.get(
     "HONDA_PULSE_PLUGIN_ID", "<honda-allocation-pulse-plugin-id>"
 )
+PAPERCRANE_ORG_ID = "8c99818a-90b3-4cae-bdb7-cf69a741171a"
 
 # Honda's corporate wordmark, public domain on Wikimedia Commons. Fetched at build
 # time and inlined as a data URI so the workbook needs no external asset host.
@@ -878,11 +879,13 @@ if HAS_PULSE:
             "mixSource": {"kind": "element", "elementId": "it-alloc"},
             "powertrain": "al-pt",
             "units": "al-eff",
-            "cellKwh": "al-cells",
             "capacitySource": {"kind": "element", "elementId": "tbl-load"},
             "allocated": "pl-eff",
             "capacity": "pl-cap",
             "status": "pl-flag",
+            "cellUsed": "pl-cells",
+            "cellContract": "pl-cellcap",
+            "cellStatus": "pl-cellflag",
         },
         "style": {"backgroundColor": "#FFFFFF"},
     })
@@ -1055,6 +1058,59 @@ layout, _app_count = re.subn(
 if (_exec_count, _app_count) != (1, 1):
     raise RuntimeError("could not replace visible page layouts")
 
+# ---------------------------------------------------------------- drillability
+# Sigma's right-click drill-down menu only exposes columns declared by the
+# visualization itself; it does not inherit the parent table's schema. A chart
+# with only Month / Units / Powertrain therefore cannot drill to Model, Plant,
+# Region, demand, or the constraint columns even though they all exist upstream.
+#
+# Copy every business-relevant source column onto every chart and KPI. These
+# passthroughs are not bound to xAxis/yAxis/color/value, so they do not alter the
+# visual; they only make the fields available in Sigma's drill menu. Technical
+# keys and helper columns stay out because an end user should never drill to
+# row_key or ice_offset_factor.
+_DRILLABLE_KINDS = {"bar-chart", "line-chart", "area-chart", "combo-chart",
+                    "scatter-chart", "pie-chart", "donut-chart", "kpi-chart",
+                    "pivot-table"}
+_TECHNICAL_DRILL_NAMES = {
+    "Row Key", "ICE Offset Factor", "Scenario Factor", "Basis Units",
+    "Scenario Units", "Plant Month",
+}
+
+
+def add_drill_passthroughs(all_elements):
+    by_id = {el["id"]: el for el in all_elements}
+    for visual in all_elements:
+        if visual.get("kind") not in _DRILLABLE_KINDS:
+            continue
+        source = visual.get("source") or {}
+        if source.get("kind") != "table":
+            continue
+        parent = by_id.get(source.get("elementId"))
+        if not parent or not isinstance(parent.get("name"), str):
+            continue
+
+        declared_names = {
+            col.get("name") for col in visual.get("columns", []) if col.get("name")
+        }
+        drill_index = 0
+        for source_col in parent.get("columns", []):
+            name = source_col.get("name")
+            if (not name or source_col.get("hidden") or
+                    name in _TECHNICAL_DRILL_NAMES or name in declared_names):
+                continue
+            drill_index += 1
+            visual.setdefault("columns", []).append({
+                "id": "%s-drill-%02d" % (visual["id"], drill_index),
+                "name": name,
+                "formula": "[%s/%s]" % (parent["name"], name),
+                **({"format": source_col["format"]} if source_col.get("format") else {}),
+            })
+            declared_names.add(name)
+
+
+add_drill_passthroughs(elements)
+
 document = {"schemaVersion": 1, "kind": "workbook", "elements": elements,
             "pages": pages, "overlays": overlays, "layout": layout,
             "settings": {
@@ -1076,9 +1132,11 @@ body = {"name": "Honda — Hybrid vs. EV Allocation",
                        "capacity/battery constraints, approval workflow). Editorial Ops theme.",
         "document": document}
 
-def call(method, path, payload):
+def call(method, path, payload=None):
     req = urllib.request.Request(
-        BASE.rstrip("/") + path, data=json.dumps(payload).encode(), method=method,
+        BASE.rstrip("/") + path,
+        data=(json.dumps(payload).encode() if payload is not None else None),
+        method=method,
         headers={"Authorization": "Bearer " + TOKEN,
                  "Content-Type": "application/json", "Accept": "application/json"})
     try:
@@ -1093,6 +1151,14 @@ if __name__ == "__main__":
     if len(_ARGS) < 4:
         print(json.dumps(body, indent=2))
         raise SystemExit(0)
+    who_status, who = call("GET", "/v2/whoami")
+    org_id = who.get("organizationId") if isinstance(who, dict) else None
+    if who_status >= 400 or org_id != PAPERCRANE_ORG_ID:
+        raise SystemExit(
+            "Refusing to build outside papercranestaging: authenticated org is "
+            "%s, expected %s. demeng is read-only for examples."
+            % (org_id, PAPERCRANE_ORG_ID)
+        )
     if not HAS_PULSE:
         print("note: building without the Allocation Pulse plugin "
               "(set HONDA_PULSE_PLUGIN_ID to include it).")

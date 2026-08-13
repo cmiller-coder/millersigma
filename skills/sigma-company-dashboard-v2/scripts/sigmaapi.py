@@ -195,6 +195,7 @@ def get_report(report_id):
 
 
 def register_plugin(name, url, description=""):
+    assert_org()
     try:
         return call(
             "POST",

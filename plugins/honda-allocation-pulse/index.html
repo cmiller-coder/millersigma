@@ -89,11 +89,13 @@
     {name:'mixSource',type:'element'},
     {name:'powertrain',type:'column',source:'mixSource',label:'Powertrain'},
     {name:'units',type:'column',source:'mixSource',allowedTypes:['number','integer'],label:'Effective units'},
-    {name:'cellKwh',type:'column',source:'mixSource',allowedTypes:['number','integer'],label:'Cell kWh'},
     {name:'capacitySource',type:'element'},
     {name:'allocated',type:'column',source:'capacitySource',allowedTypes:['number','integer'],label:'Allocated units'},
     {name:'capacity',type:'column',source:'capacitySource',allowedTypes:['number','integer'],label:'Capacity units'},
-    {name:'status',type:'column',source:'capacitySource',label:'Capacity status'}
+    {name:'status',type:'column',source:'capacitySource',label:'Capacity status'},
+    {name:'cellUsed',type:'column',source:'capacitySource',allowedTypes:['number','integer'],label:'Cell kWh used'},
+    {name:'cellContract',type:'column',source:'capacitySource',allowedTypes:['number','integer'],label:'Cell kWh contracted'},
+    {name:'cellStatus',type:'column',source:'capacitySource',label:'Cell status'}
   ];
   if(client)client.config.configureEditorPanel(defs);
   var st={cfg:{},mix:null,cap:null,unMix:null,unCap:null};
@@ -108,12 +110,18 @@
     for(var i=0;i<Math.min(pts.length,units.length);i++){var k=String(pts[i]||'').toUpperCase();if(by[k]!=null)by[k]+=Number(units[i])||0;}
     var bev=total?by.BEV/total:0,elec=total?(by.HEV+by.PHEV+by.BEV)/total:0;
     var a=sum(c.allocated&&p[c.allocated]),cap=sum(c.capacity&&p[c.capacity]),util=cap?a/cap:0;
-    var cellUsed=sum(c.cellKwh&&m[c.cellKwh]),cellAvail=total*20,cell=cellAvail?cellUsed/cellAvail:0;
+    var cellUsed=sum(c.cellUsed&&p[c.cellUsed]),cellAvail=sum(c.cellContract&&p[c.cellContract]);
+    var cell=cellAvail?cellUsed/cellAvail:0;
     var statuses=(c.status&&p[c.status])||[],breaches=statuses.filter(function(x){return String(x)==='Over capacity'}).length;
+    var cellStatuses=(c.cellStatus&&p[c.cellStatus])||[];
+    var cellBreaches=cellStatuses.filter(function(x){return String(x)==='Over contract'}).length;
     document.getElementById('bev').textContent=pct(bev);document.getElementById('elec').textContent=pct(elec);
     document.getElementById('capacity').textContent=pct(util);document.getElementById('cells').textContent=pct(cell);
     var cs=document.getElementById('capacitySub');
-    cs.textContent=breaches?breaches+' constraints':'within limits';cs.className=breaches?'alarm':'good';
+    cs.textContent=breaches?breaches+' build constraints':'within build limits';cs.className=breaches?'alarm':'good';
+    var cellSub=document.querySelector('.metric.cells .value span');
+    cellSub.textContent=cellBreaches?cellBreaches+' cell constraints':'within contract';
+    cellSub.className=cellBreaches?'alarm':'good';
     width('bevBar',bev/0.18);width('elecBar',elec);width('capacityBar',util);width('cellsBar',cell);
     if(client)client.setLoadingState(false);
   }
@@ -124,9 +132,11 @@
     render();
   }
   if(client){client.config.subscribe(bind);}else{
-    st.cfg={powertrain:'p',units:'u',cellKwh:'k',allocated:'a',capacity:'c',status:'s'};
-    st.mix={p:['ICE','HEV','PHEV','BEV'],u:[42,34,8,16],k:[0,51,136,1360]};
-    st.cap={a:[51600,16200],c:[56000,16000],s:['Within capacity','Over capacity']};render();
+    st.cfg={powertrain:'p',units:'u',allocated:'a',capacity:'c',status:'s',
+      cellUsed:'cu',cellContract:'cc',cellStatus:'cs'};
+    st.mix={p:['ICE','HEV','PHEV','BEV'],u:[42,34,8,16]};
+    st.cap={a:[51600,16200],c:[56000,16000],s:['Within capacity','Over capacity'],
+      cu:[88000,22500],cc:[100000,25000],cs:['Within contract','Within contract']};render();
   }
   if(window.ResizeObserver)new ResizeObserver(render).observe(document.getElementById('rail'));
   window.addEventListener('resize',render);
