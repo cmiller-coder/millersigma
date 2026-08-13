@@ -167,7 +167,7 @@ Axis fields take **column ids** (`{columnId}` / `{columnIds: [...]}`), not the
 | Pie chart | `pie-chart` | `color` (categorical), `value` (metric) | No xAxis/yAxis. The categorical column drives slice identity; the metric column drives slice size. |
 | Donut chart | `donut-chart` | `color`, `value` | Same shape as pie-chart; render differs in the UI only. |
 | KPI / single-value tile | `kpi-chart` | `value: {columnId}`, optional `comparison` + `comparisonColumn` | **Docs example says `kpi` — API rejects with `Invalid kind: "kpi"`. Use `kpi-chart`.** See "KPI element shape." |
-| Pivot table | `pivot-table` | `rowsBy: [{id}]`, `columnsBy: [{id}]`, `values: ["<col-id>", ...]` | **Only this exact shape — `rows`/`cols`/`values`-as-objects is rejected.** See "Pivot-table element shape." Cell-color conditional formatting is UI-only and breaks GET-spec when present. |
+| Pivot table | **Not accepted in papercranestaging** | — | Live `verify` rejects both `kind: "pivot-table"` and `kind: "pivot"` as invalid (2026-08-13). Use a grouped `table` with ordered `groupBy` columns for a drillable hierarchy. See "Pivot-table API drift." |
 | Table | `table` | `columns: [...]`, optional `groupings`, optional `order` | Plain detail table by default; multi-level aggregating table when `groupings` carries `groupBy` + `calculations`. See "Table groupings." |
 | Control | `control` (with `controlType: ...`) | `controlType` + type-specific fields | Catalog of `controlType` values in the "Control catalog" section. |
 | Layout container | `container` | (element body is `{id, kind}` only) | Child placement happens in the layout XML via `<Container>`. |
@@ -522,12 +522,17 @@ transaction), the underlying source element must do that aggregation
 first — either via `groupings` or by sourcing from a pre-aggregated
 sibling.
 
-## Pivot-table element shape
+## Pivot-table API drift
 
-Pivot tables ARE supported at POST (despite being absent from the "supported
-chart types" list in the docs page) — but the field shape is **not** the
-same as the chart elements' `xAxis`/`yAxis` pattern. Field names that look
-right but are wrong: `rows`, `cols`, `values: [{id: ...}]`.
+**Do not emit pivot tables to papercranestaging.** On 2026-08-13, live
+`POST /v2/workbooks/spec/verify` rejected both `kind: "pivot-table"` and
+`kind: "pivot"` as invalid. Use a grouped `table` with ordered `groupBy`
+columns instead (the ShiftKey Region → State → Market → Facility
+Actual-vs-Plan hierarchy is the live reference).
+
+The archived shape below exists in older GET-backs and representation docs,
+but is environment/version-specific and is **not accepted by the current
+papercranestaging write API**:
 
 The correct shape (matches
 <https://help.sigmacomputing.com/docs/example-representation-workbook-with-a-pivot-table>):

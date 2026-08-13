@@ -6,6 +6,42 @@
 | [`build_honda_ev_allocation.py`](build_honda_ev_allocation.py) | A complete two-page prospect build: executive overview + allocation data app, themed with preset 6 ("Editorial Ops"). |
 | [`build_shiftkey_marketplace_control_tower.py`](build_shiftkey_marketplace_control_tower.py) | ShiftKey-specific marketplace command center + facility/supply action workspace: actual vs plan, complete region→facility→credential drill context, Cortex brief, and linked-input write-back. |
 
+## build_shiftkey_marketplace_control_tower.py
+
+Built from ShiftKey's prospect discovery call, not a generic healthcare
+template. The core question is: **where is credentialed supply failing to meet
+facility demand, and which client or professional conversation happens today?**
+
+```bash
+# print the spec
+python3 build_shiftkey_marketplace_control_tower.py
+
+# verify + create (papercranestaging only)
+python3 build_shiftkey_marketplace_control_tower.py \
+  "$SIGMA_BASE_URL" "$TOKEN" <WRITEBACK_CONNECTION_ID> <FOLDER_ID>
+```
+
+The script checks `/v2/whoami` and refuses to write anywhere except
+papercranestaging. demeng is read-only for inspecting exemplars.
+
+**Marketplace Pulse** carries the governed 15% unfilled story: actual vs plan
+fill, open-shift exposure, marketplace take, SAMI-assisted fills, regional and
+credential gaps, a Cortex action brief, and a grouped Actual-vs-Plan hierarchy
+(Region → State → Market → Facility). Every chart/KPI declares the full
+business source schema so Explore/Author users can continue drilling to
+credential and shift; public Viewer embeds do not expose Sigma's Drill menu.
+
+**Action Workspace** uses a linked facility input table under Account Team /
+Supply Ops personas. Account teams assign status/owner/notes/next step; supply
+ops sees market × credential activation needs. Row selection opens a small
+facility-action modal with Sigma's native footer CTAs hidden. Bulk actions only
+write constants, and modal actions only write control values—no per-row action
+formula bug.
+
+All metrics come from one deterministic Snowflake activity contract plus
+facility and supply rollups. The output is explicitly illustrative; replace
+the SQL sources with ShiftKey semantic views for a real POV.
+
 ## build_honda_ev_allocation.py
 
 ```bash
