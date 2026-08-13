@@ -668,6 +668,92 @@ FROZEN once a linked input table exists" before repointing an existing grid.
 > `SELECT … UNION ALL SELECT …` string inside a custom-SQL element. Both stack
 > rows; use `kind: "union"` when the inputs are existing elements/tables.
 
+## Theming: bands, table styling, heat scales
+
+Verified live on papercranestaging 2026-08-13 by building the ShiftKey commission
+surfaces and pixel-inspecting PNG exports.
+
+### A text element's `style.backgroundColor` does NOT render
+
+This is the trap. A section title written as a `text` element with
+`style: {backgroundColor: "#4AAE9B"}` and white body text renders as **white text
+on the page background** — i.e. invisible. Confirmed by scanning an export: the
+band rows came back as the page colour, never the brand colour, while a table's
+`textStyles.header` tint *did* render.
+
+The colour has to come from a **container** wrapping the text:
+
+```json
+// container carries the colour…
+{"id": "sec-x-bg", "kind": "container", "spacing": "small",
+ "style": {"backgroundColor": "#4AAE9B", "borderRadius": "round",
+           "borderColor": "#4AAE9B", "borderWidth": 1}}
+// …the text just centers a white bold title
+{"id": "sec-x", "kind": "text", "verticalAlign": "middle",
+ "style": {"backgroundColor": "transparent", "padding": "none"},
+ "body": "<p class=\"p-large\" style=\"text-align: center\"><span style=\"color: #FFFFFF\">**Scenario outcomes**</span></p>"}
+```
+
+and in the layout the container occupies the band's grid slot with the text
+inside it. Centering comes from the inline `text-align` on a `<p>`; there is no
+`horizontalAlign` field on a text element.
+
+⚠️ Container `spacing` only accepts the named sizes — `"none"` is rejected with
+`spacing: Invalid value: string`.
+
+### Table styling vocabulary (all verified)
+
+```json
+"tableStyle": {
+  "preset": "presentation", "cellSpacing": "small",
+  "banding": "shown", "bandingColor": "#FAFBFA",
+  "headerDividerColor": "#0ABC28",
+  "textStyles": {
+    "header":       {"fontSize": 14, "backgroundColor": "#E4F7E8", "align": "center", "fontWeight": "bold"},
+    "columnHeader": {"fontWeight": "bold", "backgroundColor": "#E4F7E8"},
+    "rowHeader":    {"fontWeight": "bold", "backgroundColor": "#E4F7E8"},
+    "cell":         {"fontSize": 13, "align": "right"}
+  }
+}
+```
+
+`textStyles.header` is the element's own title bar — tinting it plus centering is
+what gives a table a themed cap without a separate band. `gridLines: "none"` is
+also accepted. ⚠️ `tableStyle.preset` values are constrained; `"plain"` is
+rejected (masked as `Invalid kind: "table"`) — use `"presentation"`.
+
+### Heat scales on a rate column
+
+```json
+{"type": "backgroundScale", "columnIds": ["so-rate"],
+ "scheme": ["#EAF8EC", "#D2F0D8", "#B6E7C3", "#95DCAB", "#6FCE90",
+            "#48BE74", "#2AA95C", "#158C47", "#0B6E36"],
+ "includeValues": true}
+```
+
+A nine-stop `scheme` light→dark is the convention (the Summit commission app uses
+a teal ramp of exactly this shape). Pair it with
+`{"type": "dataBars", "columnIds": [...], "scheme": [bar, track]}` on the money
+column so magnitude and intensity read together.
+
+## Grouped tables: one grouping, aggregate calculations
+
+A multi-level grouped table takes **one** grouping entry whose `groupBy` is the
+ordered list of dimensions — not one entry per level:
+
+```json
+"groupings": [{"id": "g", "groupBy": ["scenario", "owner", "month"],
+               "calculations": ["gp", "quota", "attainment", "payout"]}]
+```
+
+Passing `groupBy` as a bare string, or several grouping entries each with one
+`groupBy`, is rejected (masked as `Invalid kind: "table"`).
+
+**Everything in `calculations` must be an aggregate.** A descriptive passthrough
+like `[Source/Scenario Description]` is rejected; wrap it —
+`Min([Source/Scenario Description])` — which is safe when the value is constant
+within the group.
+
 ## Container element shape
 
 Containers group other elements into a logical visual block (header bar,

@@ -222,6 +222,52 @@ For a fuller modeler, add:
 
 See the main `sigma-input-table-app` skill for these non-negotiable defaults.
 
+## A linked input table's row identity is its keys — keep the keys STABLE
+
+Verified live 2026-08-13, and this one silently broke a working page. The
+commission grid was a linked input table over a cross join of
+`AM base × scenario registry`, key-bound to the joined **scenario name**. The
+moment a user created their first scenario the key values changed, and the grid
+went permanently empty: its source returned 8 rows while the linked table
+returned **0**.
+
+Rule: never key a linked input table on a dimension users can create, rename or
+delete. Key it on something stable (the entity — account manager, facility,
+plant) and let the volatile dimension live downstream.
+
+Two follow-on constraints found while trying to re-wire overrides, both of which
+return **zero rows** rather than an error:
+
+- **A join cannot take a linked input table as its `primarySource`.** Rebuilding
+  the cross join as `overrides × registry` verified fine and returned 0 rows.
+- **A `Lookup` from a join into a linked input table built over one of that
+  join's own inputs is circular.** `Lookup([Overrides/Quota Override], …)` inside
+  the join's columns also returned 0 rows.
+
+So the durable pattern is: **compute in the plain join, write back beside it.**
+Put every metric a KPI/chart/outcome surface needs on the join (or a table over
+it), and keep write-back input tables out of that dependency chain. Anything that
+must be both editable and feed the math has to be modelled as a computed column
+over a stable-keyed input table, not looked up across a join.
+
+## Include-mode list controls empty a join-backed element when nothing is selected
+
+Also verified 2026-08-13, same debugging session. A `list` control with
+`mode: "include"` and **no selected value** filtered a join-sourced element down
+to zero rows — while the identical empty control passed through on a plain
+SQL-sourced element (the same workbook's pulse page rendered fine). Symptom: every
+KPI on the page reads `null` and every table says "No data", with no error
+anywhere.
+
+Two ways out, neither free:
+
+- Point the control's `filters` at a plain (non-join) element, and accept that
+  selecting a value does not filter the join-derived surfaces.
+- Or give the control a default value that is guaranteed to exist. ⚠️ Do not
+  hardcode a label produced by a `Coalesce` fallback (e.g. `"Base Plan"` from a
+  `left-outer` empty-registry guard) — that label disappears as soon as the
+  registry has rows, and the page empties again.
+
 ## Key columns are FROZEN once a linked input table exists
 
 Verified live 2026-08-13 on papercranestaging. A linked input table's `key`
