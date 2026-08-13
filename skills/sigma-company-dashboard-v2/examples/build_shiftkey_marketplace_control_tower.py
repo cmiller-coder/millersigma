@@ -75,22 +75,22 @@ WITH months AS (
 ),
 facilities AS (
   SELECT * FROM VALUES
-    ('FAC-1001','Cherry Creek Care Center','CO','Denver','Mountain','Skilled Nursing','Maya Chen',144,0.86,62),
-    ('FAC-1002','Front Range Post Acute','CO','Aurora','Mountain','Post Acute','Maya Chen',128,0.71,48),
-    ('FAC-1003','Sonoran Senior Living','AZ','Phoenix','Mountain','Assisted Living','Jordan Ellis',122,0.79,53),
-    ('FAC-1004','Silver State Rehabilitation','NV','Las Vegas','Mountain','Rehabilitation','Jordan Ellis',106,0.83,49),
-    ('FAC-2001','Cedar Creek Skilled Nursing','TX','Dallas–Fort Worth','South Central','Skilled Nursing','Priya Shah',168,0.70,58),
-    ('FAC-2002','Trinity Senior Care','TX','Dallas–Fort Worth','South Central','Assisted Living','Priya Shah',136,0.82,64),
-    ('FAC-2003','Hill Country Recovery','TX','Austin','South Central','Post Acute','Marcus Reed',118,0.87,61),
-    ('FAC-2004','Red River Rehabilitation','OK','Oklahoma City','South Central','Rehabilitation','Marcus Reed',94,0.88,55),
-    ('FAC-3001','Lakeshore Senior Care','IL','Chicago','Midwest','Skilled Nursing','Nina Patel',152,0.80,59),
-    ('FAC-3002','Gateway Post Acute','MO','St. Louis','Midwest','Post Acute','Nina Patel',126,0.85,60),
-    ('FAC-3003','Twin Cities Transitional Care','MN','Minneapolis','Midwest','Rehabilitation','Evan Brooks',108,0.89,67),
-    ('FAC-3004','Buckeye Assisted Living','OH','Columbus','Midwest','Assisted Living','Evan Brooks',98,0.91,69),
-    ('FAC-4001','Peachtree Rehabilitation','GA','Atlanta','Southeast','Rehabilitation','Lena Ortiz',132,0.77,52),
-    ('FAC-4002','Cumberland Care Center','TN','Nashville','Southeast','Skilled Nursing','Lena Ortiz',124,0.84,57),
-    ('FAC-4003','Queen City Senior Living','NC','Charlotte','Southeast','Assisted Living','Theo Martin',112,0.88,65),
-    ('FAC-4004','Gulf Coast Health Center','FL','Tampa','Southeast','Post Acute','Theo Martin',146,0.81,56)
+    ('FAC-1001','Cherry Creek Care Center','CO','Denver','Mountain','Skilled Nursing','Maya Chen',144,0.91,62),
+    ('FAC-1002','Front Range Post Acute','CO','Aurora','Mountain','Post Acute','Maya Chen',128,0.76,48),
+    ('FAC-1003','Sonoran Senior Living','AZ','Phoenix','Mountain','Assisted Living','Jordan Ellis',122,0.84,53),
+    ('FAC-1004','Silver State Rehabilitation','NV','Las Vegas','Mountain','Rehabilitation','Jordan Ellis',106,0.88,49),
+    ('FAC-2001','Cedar Creek Skilled Nursing','TX','Dallas–Fort Worth','South Central','Skilled Nursing','Priya Shah',168,0.75,58),
+    ('FAC-2002','Trinity Senior Care','TX','Dallas–Fort Worth','South Central','Assisted Living','Priya Shah',136,0.87,64),
+    ('FAC-2003','Hill Country Recovery','TX','Austin','South Central','Post Acute','Marcus Reed',118,0.92,61),
+    ('FAC-2004','Red River Rehabilitation','OK','Oklahoma City','South Central','Rehabilitation','Marcus Reed',94,0.93,55),
+    ('FAC-3001','Lakeshore Senior Care','IL','Chicago','Midwest','Skilled Nursing','Nina Patel',152,0.85,59),
+    ('FAC-3002','Gateway Post Acute','MO','St. Louis','Midwest','Post Acute','Nina Patel',126,0.90,60),
+    ('FAC-3003','Twin Cities Transitional Care','MN','Minneapolis','Midwest','Rehabilitation','Evan Brooks',108,0.94,67),
+    ('FAC-3004','Buckeye Assisted Living','OH','Columbus','Midwest','Assisted Living','Evan Brooks',98,0.96,69),
+    ('FAC-4001','Peachtree Rehabilitation','GA','Atlanta','Southeast','Rehabilitation','Lena Ortiz',132,0.82,52),
+    ('FAC-4002','Cumberland Care Center','TN','Nashville','Southeast','Skilled Nursing','Lena Ortiz',124,0.89,57),
+    ('FAC-4003','Queen City Senior Living','NC','Charlotte','Southeast','Assisted Living','Theo Martin',112,0.93,65),
+    ('FAC-4004','Gulf Coast Health Center','FL','Tampa','Southeast','Post Acute','Theo Martin',146,0.86,56)
   AS f(facility_id, facility, state, market, region, facility_type,
        account_owner, base_demand, base_fill, supply_base)
 ),
@@ -437,7 +437,7 @@ def button(eid, label, effects, background=INK, foreground="#FFFFFF", appearance
 
 
 def kpi(eid, label, source, formula, fmt, comparison_label=None,
-        comparison_formula=None, value_color=INK):
+        comparison_formula=None, value_color=INK, neutral_comparison=False):
     columns = [{"id": eid + "-v", "name": label, "formula": formula, "format": fmt}]
     out = {
         "id": eid, "kind": "kpi-chart",
@@ -452,8 +452,13 @@ def kpi(eid, label, source, formula, fmt, comparison_label=None,
         columns.append({"id": eid + "-c", "name": comparison_label,
                         "formula": comparison_formula, "format": fmt})
         out["comparisonColumn"] = {"columnId": eid + "-c"}
-        out["comparison"] = {"display": "delta", "label": comparison_label,
-                             "fontSize": 11, "colorGood": GOOD, "colorBad": ALARM}
+        if neutral_comparison:
+            out["comparison"] = {"display": "delta", "label": comparison_label,
+                                 "fontSize": 11, "direction": "none",
+                                 "colorNeutral": ALARM}
+        else:
+            out["comparison"] = {"display": "delta", "label": comparison_label,
+                                 "fontSize": 11, "colorGood": GOOD, "colorBad": ALARM}
     return out
 
 
@@ -517,12 +522,12 @@ add(kpi("k-open", "Unfilled shifts", "sql-market",
         "Sum([Marketplace Activity/Unfilled Shifts])", INT,
         "plan gap",
         "Sum([Marketplace Activity/Posted Shifts]) - Sum([Marketplace Activity/Plan Filled Shifts])",
-        ALARM))
+        ALARM, neutral_comparison=True))
 add(kpi("k-exposure", "Open shift exposure", "sql-market",
         "Sum([Marketplace Activity/Open Shift Exposure])", MONEY,
         "revenue to plan",
         "Sum([Marketplace Activity/Plan Revenue]) - Sum([Marketplace Activity/Actual Revenue])",
-        ALARM))
+        ALARM, neutral_comparison=True))
 add(kpi("k-margin", "Marketplace take", "sql-market",
         "Sum([Marketplace Activity/Gross Profit]) / Sum([Marketplace Activity/Actual Revenue])",
         PCT1, "target", "0.245"))
@@ -743,24 +748,47 @@ add(text("sec-drill", '<span style="color:%s">**ACTUAL VS PLAN — EXPAND REGION
 add(text("sec-queue", '<span style="color:%s">**FACILITY ACTION QUEUE — SELECT A ROW FOR THE CALL BRIEF**</span>' % MUTED))
 add(text("sec-supply", '<span style="color:%s">**SUPPLY ACTIVATION — MARKET × CREDENTIAL**</span>' % MUTED))
 
+def region_fill_formula(region):
+    return (
+        '(SumIf([Marketplace Activity/Filled Shifts], '
+        '[Marketplace Activity/Region] = "%(r)s") / NullIf(SumIf('
+        '[Marketplace Activity/Posted Shifts], '
+        '[Marketplace Activity/Region] = "%(r)s"), 0))' % {"r": region}
+    )
+
+
+_MT = region_fill_formula("Mountain")
+_SC = region_fill_formula("South Central")
+_MW = region_fill_formula("Midwest")
+_SE = region_fill_formula("Southeast")
+# Rank the four regional fill rates deterministically in Sigma. Cortex receives
+# the already-resolved priority region; it explains the actions rather than
+# being asked to perform metric ranking.
+_PRIORITY_REGION = (
+    'If(%(mt)s <= %(sc)s, '
+    'If(%(mt)s <= %(mw)s, If(%(mt)s <= %(se)s, "Mountain", "Southeast"), '
+    'If(%(mw)s <= %(se)s, "Midwest", "Southeast")), '
+    'If(%(sc)s <= %(mw)s, If(%(sc)s <= %(se)s, "South Central", "Southeast"), '
+    'If(%(mw)s <= %(se)s, "Midwest", "Southeast")))' %
+    {"mt": _MT, "sc": _SC, "mw": _MW, "se": _SE}
+)
+_PRIORITY_RATE = (
+    'If(%(mt)s <= %(sc)s, '
+    'If(%(mt)s <= %(mw)s, If(%(mt)s <= %(se)s, %(mt)s, %(se)s), '
+    'If(%(mw)s <= %(se)s, %(mw)s, %(se)s)), '
+    'If(%(sc)s <= %(mw)s, If(%(sc)s <= %(se)s, %(sc)s, %(se)s), '
+    'If(%(mw)s <= %(se)s, %(mw)s, %(se)s)))' %
+    {"mt": _MT, "sc": _SC, "mw": _MW, "se": _SE}
+)
+
 AI_PROMPT = (
     '"You are ShiftKey marketplace operations. Write TWO sentences, 45-65 words. '
-    'First: identify the region with the largest fill-rate gap to the 90 percent plan '
-    'and quantify it. Second: state one demand-side account action and one supply-side '
-    'activation action. Do not restate all KPIs. Data: Mountain fill " & '
-    'Text(Round(SumIf([Marketplace Activity/Filled Shifts], '
-    '[Marketplace Activity/Region] = "Mountain") / NullIf(SumIf('
-    '[Marketplace Activity/Posted Shifts], [Marketplace Activity/Region] = "Mountain"),0)*100,1)) '
-    '& " percent; South Central " & Text(Round(SumIf([Marketplace Activity/Filled Shifts], '
-    '[Marketplace Activity/Region] = "South Central") / NullIf(SumIf('
-    '[Marketplace Activity/Posted Shifts], [Marketplace Activity/Region] = "South Central"),0)*100,1)) '
-    '& " percent; Midwest " & Text(Round(SumIf([Marketplace Activity/Filled Shifts], '
-    '[Marketplace Activity/Region] = "Midwest") / NullIf(SumIf('
-    '[Marketplace Activity/Posted Shifts], [Marketplace Activity/Region] = "Midwest"),0)*100,1)) '
-    '& " percent; Southeast " & Text(Round(SumIf([Marketplace Activity/Filled Shifts], '
-    '[Marketplace Activity/Region] = "Southeast") / NullIf(SumIf('
-    '[Marketplace Activity/Posted Shifts], [Marketplace Activity/Region] = "Southeast"),0)*100,1)) '
-    '& " percent. Plan is 90 percent."'
+    'First: explain why the supplied priority region is below the 90 percent fill '
+    'plan. Second: state one demand-side account action and one supply-side activation '
+    'action. Do not re-rank regions or restate all KPIs. The governed calculation says '
+    'the priority region is " & ' + _PRIORITY_REGION + ' & " at " & '
+    'Text(Round((' + _PRIORITY_RATE + ') * 100, 1)) & '
+    '" percent fill versus a 90 percent plan."'
 )
 add({"id": "c-ai", "kind": "container", "spacing": "small",
      "style": {"backgroundColor": "#EFF8F1", "borderRadius": "round",
