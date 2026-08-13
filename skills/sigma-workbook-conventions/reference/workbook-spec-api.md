@@ -1926,11 +1926,12 @@ accepted and silently ignored. `shadow` verifies but made no visible difference.
 
 So depth in an app bar has to come from composition. What works:
 
-- **Put the logo in its own tile** — a nested container inside the bar with a
-  slightly raised fill (`#2A3138` against an `INK` bar) and a brand-coloured
-  border. It reads as an app icon instead of a mark floating in dead space.
-  ⚠️ Don't make the tile a saturated brand fill if the logo is a thin white
-  glyph; it washes out. Raised-neutral + coloured edge keeps it crisp.
+- **Leave the logo bare on the bar.** Tiling it in a nested container — even a
+  raised neutral fill with a brand edge — was tried and rejected on review: most
+  brand marks are already a badge (a glyph inside a rounded square), so a tile
+  around them reads as an empty box nested in another box. Place the `image`
+  element directly in the bar at ~2 columns with
+  `style: {fit: "contain", align: "start"}` and let the asset be the asset.
 - **Give the bar a brand border** (`borderColor: GREEN, borderWidth: 1` over the
   ink fill) for a defined edge.
 - **A live metric chip on the right**, right-aligned via

@@ -1735,8 +1735,8 @@ add(button("b-dispute-close", "Close", [{"effect": "close-overlay"}], CARD, INK,
 # (same failure mode as a text element's background) and a `backgroundGradient`
 # key is accepted and ignored. Verified by rendering a probe workbook and
 # sampling pixels. So depth comes from composition instead:
-#   * the logo sits in a green rounded tile, so it reads as an app icon rather
-#     than a mark floating in dead space
+#   * the logo sits bare on the bar; a tile around a thin glyph reads as an
+#     empty panel, so the mark is left on its own
 #   * the bar carries a thin green border against the ink fill
 #   * tabs use appearance "text" when inactive (the only ghost-like value the
 #     API accepts — "ghost"/"link"/"subtle" are all rejected) and filled green
@@ -1758,15 +1758,10 @@ def brand_header(page_num, title, subtitle, active_page):
     add({"id": "hdr-%d" % page_num, "kind": "container", "spacing": "small",
          "style": {"backgroundColor": INK, "borderRadius": "round",
                    "borderColor": GREEN, "borderWidth": 1}})
-    # Raised ink tile with a green edge — the shiftkey mark is a thin white
-    # glyph, so it washes out on a saturated green fill.
-    add({"id": "logo-tile-%d" % page_num, "kind": "container", "spacing": "small",
-         "style": {"backgroundColor": "#2A3138", "borderRadius": "round",
-                   "borderColor": GREEN, "borderWidth": 1}})
     if LOGO_URI:
         add({"id": "logo-%d" % page_num, "kind": "image",
              "source": {"kind": "url", "url": LOGO_URI},
-             "style": {"fit": "contain", "align": "center",
+             "style": {"fit": "contain", "align": "start",
                        "backgroundColor": "transparent", "padding": "none"}})
     else:
         add(text("logo-%d" % page_num, '<span style="color:%s">**\u219f**</span>' % INK))
@@ -2349,10 +2344,7 @@ overlays = [
 layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-pulse">
   <Container elementId="hdr-1" type="grid" gridColumn="1 / 25" gridRow="1 / 4"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Container elementId="logo-tile-1" type="grid" gridColumn="1 / 3" gridRow="1 / 3"
-               gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-      <Element elementId="logo-1" gridColumn="1 / 25" gridRow="1 / 2"/>
-    </Container>
+    <Element elementId="logo-1" gridColumn="1 / 3" gridRow="1 / 3"/>
     <Element elementId="word-1" gridColumn="3 / 8" gridRow="1 / 3"/>
     <Element elementId="nav-1-0" gridColumn="8 / 11" gridRow="1 / 3"/>
     <Element elementId="nav-1-1" gridColumn="11 / 14" gridRow="1 / 3"/>
@@ -2402,10 +2394,7 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-action">
   <Container elementId="hdr-2" type="grid" gridColumn="1 / 25" gridRow="1 / 4"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Container elementId="logo-tile-2" type="grid" gridColumn="1 / 3" gridRow="1 / 3"
-               gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-      <Element elementId="logo-2" gridColumn="1 / 25" gridRow="1 / 2"/>
-    </Container>
+    <Element elementId="logo-2" gridColumn="1 / 3" gridRow="1 / 3"/>
     <Element elementId="word-2" gridColumn="3 / 8" gridRow="1 / 3"/>
     <Element elementId="nav-2-0" gridColumn="8 / 11" gridRow="1 / 3"/>
     <Element elementId="nav-2-1" gridColumn="11 / 14" gridRow="1 / 3"/>
@@ -2453,10 +2442,7 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-commission">
   <Container elementId="hdr-3" type="grid" gridColumn="1 / 25" gridRow="1 / 4"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Container elementId="logo-tile-3" type="grid" gridColumn="1 / 3" gridRow="1 / 3"
-               gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-      <Element elementId="logo-3" gridColumn="1 / 25" gridRow="1 / 2"/>
-    </Container>
+    <Element elementId="logo-3" gridColumn="1 / 3" gridRow="1 / 3"/>
     <Element elementId="word-3" gridColumn="3 / 8" gridRow="1 / 3"/>
     <Element elementId="nav-3-0" gridColumn="8 / 11" gridRow="1 / 3"/>
     <Element elementId="nav-3-1" gridColumn="11 / 14" gridRow="1 / 3"/>
@@ -2514,10 +2500,7 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-dispute">
   <Container elementId="hdr-4" type="grid" gridColumn="1 / 25" gridRow="1 / 4"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Container elementId="logo-tile-4" type="grid" gridColumn="1 / 3" gridRow="1 / 3"
-               gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-      <Element elementId="logo-4" gridColumn="1 / 25" gridRow="1 / 2"/>
-    </Container>
+    <Element elementId="logo-4" gridColumn="1 / 3" gridRow="1 / 3"/>
     <Element elementId="word-4" gridColumn="3 / 8" gridRow="1 / 3"/>
     <Element elementId="nav-4-0" gridColumn="8 / 11" gridRow="1 / 3"/>
     <Element elementId="nav-4-1" gridColumn="11 / 14" gridRow="1 / 3"/>
