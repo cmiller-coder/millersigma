@@ -1307,12 +1307,12 @@ add(kpi("k-dp-open", "Open disputes", "it-dispute",
         'CountDistinct(If([Commission Disputes/Workflow Status] <> "Resolved", '
         "[Commission Disputes/Dispute ID], Null))", INT, value_color=ALARM))
 add(kpi("k-dp-amount", "Amount in dispute", "it-dispute",
-        'SumIf([Commission Disputes/Amount in Dispute], '
-        '[Commission Disputes/Workflow Status] <> "Resolved")', MONEY,
+        'Coalesce(SumIf([Commission Disputes/Amount in Dispute], '
+        '[Commission Disputes/Workflow Status] <> "Resolved"), 0)', MONEY,
         value_color=ALARM))
 add(kpi("k-dp-age", "Avg open age (days)", "it-dispute",
-        'Avg(If([Commission Disputes/Workflow Status] <> "Resolved", '
-        "[Commission Disputes/Age (days)], Null))", HOURS1, value_color=INK))
+        'Coalesce(Avg(If([Commission Disputes/Workflow Status] <> "Resolved", '
+        "[Commission Disputes/Age (days)], Null)), 0)", HOURS1, value_color=INK))
 add(kpi("k-dp-esc", "Escalated", "it-dispute",
         'CountDistinct(If([Commission Disputes/Workflow Status] = "Escalated", '
         "[Commission Disputes/Dispute ID], Null))", INT, value_color=WARN))
