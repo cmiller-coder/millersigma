@@ -213,10 +213,11 @@ GROUP BY region, state, market, credential
 """.strip() % MARKET_SQL
 
 
-# One row per commission scenario x account manager. The current marketplace
-# economics are governed by MARKET_SQL; only plan assumptions vary. The linked
-# input table below carries editable overrides and Coalesce finals, matching the
-# proven Summit commission-model pattern without copying its opportunity terms.
+# One row per account manager. Governed marketplace economics come from
+# MARKET_SQL; the *scenarios* themselves are user-created rows in the
+# `it-scenario-reg` input table, cross-joined onto this baseline. That is what
+# makes "create a new scenario" a real user action instead of a fixed list
+# hard-coded in SQL. Defaults below only feed the empty-registry fallback.
 COMMISSION_SQL = """
 WITH activity AS (%s),
 facility_perf AS (
@@ -244,29 +245,19 @@ reps AS (
       facility_id, NULL)) AS critical_facilities
   FROM facility_perf
   GROUP BY account_owner
-),
-scenarios AS (
-  SELECT * FROM VALUES
-    ('Base Plan',1,1.00,0.030,0.050,0.080,1.00,'Balanced payout against governed gross profit'),
-    ('Retention Weighted',2,0.96,0.028,0.052,0.085,1.08,'Rewards fill quality and critical-account recovery'),
-    ('Growth Accelerator',3,1.08,0.035,0.060,0.100,0.96,'Raises quota and pays more above target')
-  AS s(scenario_name, scenario_order, quota_factor, tier_1_rate, tier_2_rate,
-       tier_3_rate, quality_modifier, scenario_comment)
 )
 SELECT
-  s.scenario_name || '|' || r.account_owner AS commission_key,
-  s.scenario_name, s.scenario_order, s.scenario_comment,
   r.account_owner, r.primary_region,
   r.commissionable_gross_profit, r.actual_revenue, r.fill_rate,
   r.facilities, r.critical_facilities,
-  ROUND((85000 + MOD(ABS(HASH(r.account_owner)),45000)) * s.quota_factor) AS base_quota,
+  ROUND(85000 + MOD(ABS(HASH(r.account_owner)),45000)) AS quota_basis,
   0.80 AS base_tier_1_limit,
-  s.tier_1_rate AS base_tier_1_rate,
   1.00 AS base_tier_2_limit,
-  s.tier_2_rate AS base_tier_2_rate,
-  s.tier_3_rate AS base_tier_3_rate,
-  s.quality_modifier AS base_quality_modifier
-FROM reps r CROSS JOIN scenarios s
+  0.030 AS default_tier_1_rate,
+  0.050 AS default_tier_2_rate,
+  0.080 AS default_tier_3_rate,
+  1.00 AS default_quality_modifier
+FROM reps r
 """.strip() % MARKET_SQL
 
 
@@ -381,11 +372,7 @@ _supply_table["conditionalFormats"] = [
 ]
 add(_supply_table)
 
-add(sql_table("sql-commission", "Commission Scenario Base", COMMISSION_SQL, [
-    col("cb-key", "Commission Key", "commission_key", hidden=True),
-    col("cb-scenario", "Scenario Name", "scenario_name"),
-    col("cb-order", "Scenario Order", "scenario_order", INT, hidden=True),
-    col("cb-comment", "Scenario Description", "scenario_comment"),
+add(sql_table("sql-commission", "Commission AM Base", COMMISSION_SQL, [
     col("cb-owner", "Account Manager", "account_owner"),
     col("cb-region", "Primary Region", "primary_region"),
     col("cb-gp", "Commissionable Gross Profit", "commissionable_gross_profit", MONEY),
@@ -393,14 +380,125 @@ add(sql_table("sql-commission", "Commission Scenario Base", COMMISSION_SQL, [
     col("cb-fill", "Fill Rate", "fill_rate", PCT1),
     col("cb-facs", "Facilities", "facilities", INT),
     col("cb-critical", "Critical Facilities", "critical_facilities", INT),
-    col("cb-quota", "Base Quota", "base_quota", MONEY),
+    col("cb-quota-basis", "Quota Basis", "quota_basis", MONEY),
     col("cb-t1lim", "Base Tier 1 Limit", "base_tier_1_limit", PCT1),
-    col("cb-t1rate", "Base Tier 1 Rate", "base_tier_1_rate", PCT1),
     col("cb-t2lim", "Base Tier 2 Limit", "base_tier_2_limit", PCT1),
-    col("cb-t2rate", "Base Tier 2 Rate", "base_tier_2_rate", PCT1),
-    col("cb-t3rate", "Base Tier 3 Rate", "base_tier_3_rate", PCT1),
-    col("cb-quality", "Base Quality Modifier", "base_quality_modifier"),
+    col("cb-t1rate-d", "Default Tier 1 Rate", "default_tier_1_rate", PCT1, hidden=True),
+    col("cb-t2rate-d", "Default Tier 2 Rate", "default_tier_2_rate", PCT1, hidden=True),
+    col("cb-t3rate-d", "Default Tier 3 Rate", "default_tier_3_rate", PCT1, hidden=True),
+    col("cb-quality-d", "Default Quality Modifier", "default_quality_modifier",
+        hidden=True),
 ]))
+
+
+# The scenario registry. This is an EMPTY input table, so rows only exist
+# because a user (or the copilot) created them — that is the "create a new
+# scenario" capability the demeng Sales Commission Modeling app has and a
+# SQL-seeded scenario list cannot. Scenario-level plan assumptions and the
+# finance lifecycle live here, one row per scenario.
+add({
+    "id": "it-scenario-reg", "kind": "input-table",
+    "name": "Commission Scenario Registry", "inputMode": "view",
+    "source": {"kind": "empty", "connectionId": CONN},
+    "columns": [
+        {"id": "rg-name", "type": "text", "name": "Scenario Name"},
+        {"id": "rg-desc", "type": "text", "name": "Scenario Description"},
+        {"id": "rg-order", "type": "number", "name": "Scenario Order"},
+        {"id": "rg-quota-factor", "type": "number", "name": "Quota Factor"},
+        {"id": "rg-t1rate", "type": "number", "name": "Tier 1 Rate"},
+        {"id": "rg-t2rate", "type": "number", "name": "Tier 2 Rate"},
+        {"id": "rg-t3rate", "type": "number", "name": "Tier 3 Rate"},
+        {"id": "rg-quality", "type": "number", "name": "Quality Modifier"},
+        {"id": "rg-status", "type": "text", "name": "Scenario Status",
+         "values": ["Draft", "Submitted", "Approved", "Adjust", "Rejected"],
+         "pills": "color-by-option"},
+        {"id": "rg-note", "type": "text", "name": "Finance Note"},
+        {"id": "rg-status-f", "name": "Workflow Status",
+         "formula": 'Coalesce([Scenario Status], "Draft")'},
+    ],
+    "sort": [{"columnId": "rg-order", "direction": "ascending", "nulls": "last"}],
+    "conditionalFormats": [
+        {"type": "single",
+         "columnIds": ["rg-name", "rg-desc", "rg-order", "rg-quota-factor",
+                       "rg-t1rate", "rg-t2rate", "rg-t3rate", "rg-quality",
+                       "rg-status", "rg-note"],
+         "condition": "formula", "formula": "True",
+         "style": {"backgroundColor": "#F2FFF3"}},
+    ],
+    "tableComponents": {"summaryBar": "hidden"},
+    "tableStyle": {"preset": "presentation", "cellSpacing": "small",
+                   "gridLines": "horizontal", "banding": "shown",
+                   "bandingColor": CARD_ALT},
+})
+
+
+# Cross join (1 = 1) of every account manager against every registered
+# scenario. `left-outer` plus Coalesce means an empty registry still renders a
+# usable "Base Plan" at governed defaults, so the page is never blank before the
+# first scenario is created. Union is NOT supported by the spec API, so the
+# registry has to be the single source of scenario rows.
+add({
+    "id": "jn-commission", "kind": "table", "name": "Commission Scenario Grid",
+    "visibleAsSource": True,
+    "source": {"kind": "join",
+               "joins": [{"left": {"elementId": "sql-commission", "kind": "table"},
+                          "right": {"elementId": "it-scenario-reg", "kind": "table"},
+                          "columns": [{"left": "1", "right": "1"}],
+                          "joinType": "left-outer"}],
+               "primarySource": {"elementId": "sql-commission", "kind": "table"}},
+    "columns": [
+        {"id": "jn-scenario", "name": "Scenario Name",
+         "formula": 'Coalesce([Commission Scenario Registry/Scenario Name], "Base Plan")'},
+        {"id": "jn-desc", "name": "Scenario Description",
+         "formula": 'Coalesce([Commission Scenario Registry/Scenario Description], '
+                    '"Governed default plan — create a scenario to model against it")'},
+        {"id": "jn-order", "name": "Scenario Order", "hidden": True,
+         "formula": "Coalesce([Commission Scenario Registry/Scenario Order], 0)",
+         "format": INT},
+        {"id": "jn-owner", "name": "Account Manager",
+         "formula": "[Commission AM Base/Account Manager]"},
+        {"id": "jn-region", "name": "Primary Region",
+         "formula": "[Commission AM Base/Primary Region]"},
+        {"id": "jn-gp", "name": "Commissionable Gross Profit",
+         "formula": "[Commission AM Base/Commissionable Gross Profit]", "format": MONEY},
+        {"id": "jn-rev", "name": "Actual Revenue",
+         "formula": "[Commission AM Base/Actual Revenue]", "format": MONEY},
+        {"id": "jn-fill", "name": "Fill Rate",
+         "formula": "[Commission AM Base/Fill Rate]", "format": PCT1},
+        {"id": "jn-facs", "name": "Facilities",
+         "formula": "[Commission AM Base/Facilities]", "format": INT},
+        {"id": "jn-critical", "name": "Critical Facilities",
+         "formula": "[Commission AM Base/Critical Facilities]", "format": INT},
+        # Scenario assumptions resolve registry value -> governed default.
+        {"id": "jn-quota", "name": "Base Quota",
+         "formula": "Round([Commission AM Base/Quota Basis] * "
+                    "Coalesce([Commission Scenario Registry/Quota Factor], 1.0))",
+         "format": MONEY},
+        {"id": "jn-t1lim", "name": "Base Tier 1 Limit",
+         "formula": "[Commission AM Base/Base Tier 1 Limit]", "format": PCT1},
+        {"id": "jn-t2lim", "name": "Base Tier 2 Limit",
+         "formula": "[Commission AM Base/Base Tier 2 Limit]", "format": PCT1},
+        {"id": "jn-t1rate", "name": "Base Tier 1 Rate",
+         "formula": "Coalesce([Commission Scenario Registry/Tier 1 Rate], "
+                    "[Commission AM Base/Default Tier 1 Rate])", "format": PCT1},
+        {"id": "jn-t2rate", "name": "Base Tier 2 Rate",
+         "formula": "Coalesce([Commission Scenario Registry/Tier 2 Rate], "
+                    "[Commission AM Base/Default Tier 2 Rate])", "format": PCT1},
+        {"id": "jn-t3rate", "name": "Base Tier 3 Rate",
+         "formula": "Coalesce([Commission Scenario Registry/Tier 3 Rate], "
+                    "[Commission AM Base/Default Tier 3 Rate])", "format": PCT1},
+        {"id": "jn-quality", "name": "Base Quality Modifier",
+         "formula": "Coalesce([Commission Scenario Registry/Quality Modifier], "
+                    "[Commission AM Base/Default Quality Modifier])"},
+        {"id": "jn-status", "name": "Scenario Workflow Status",
+         "formula": 'Coalesce([Commission Scenario Registry/Scenario Status], "Draft")'},
+        {"id": "jn-note", "name": "Scenario Finance Note",
+         "formula": "[Commission Scenario Registry/Finance Note]"},
+    ],
+    "order": ["jn-scenario", "jn-owner", "jn-gp", "jn-quota", "jn-status"],
+    "tableComponents": {"summaryBar": "hidden"},
+    "tableStyle": {"preset": "presentation", "cellSpacing": "small"},
+})
 
 
 # ------------------------------------------------------------- write-back app
@@ -464,26 +562,26 @@ add({
 add({
     "id": "it-commission", "kind": "input-table", "name": "Commission Scenarios",
     "inputMode": "view",
-    "source": {"kind": "linked", "from": "sql-commission"},
+    "source": {"kind": "linked", "from": "jn-commission"},
     "columns": [
-        {"id": "cm-key", "key": "cb-key", "name": "Commission Key", "hidden": True},
-        {"id": "cm-scenario", "key": "cb-scenario", "name": "Scenario Name"},
-        {"id": "cm-order", "key": "cb-order", "name": "Scenario Order", "hidden": True},
-        {"id": "cm-desc", "key": "cb-comment", "name": "Scenario Description"},
-        {"id": "cm-owner", "key": "cb-owner", "name": "Account Manager"},
-        {"id": "cm-region", "key": "cb-region", "name": "Primary Region"},
-        {"id": "cm-gp", "key": "cb-gp", "name": "Commissionable Gross Profit"},
-        {"id": "cm-rev", "key": "cb-rev", "name": "Actual Revenue"},
-        {"id": "cm-fill", "key": "cb-fill", "name": "Fill Rate"},
-        {"id": "cm-facs", "key": "cb-facs", "name": "Facilities"},
-        {"id": "cm-critical", "key": "cb-critical", "name": "Critical Facilities"},
-        {"id": "cm-quota0", "key": "cb-quota", "name": "Base Quota"},
-        {"id": "cm-t1lim0", "key": "cb-t1lim", "name": "Base Tier 1 Limit"},
-        {"id": "cm-t1rate0", "key": "cb-t1rate", "name": "Base Tier 1 Rate"},
-        {"id": "cm-t2lim0", "key": "cb-t2lim", "name": "Base Tier 2 Limit"},
-        {"id": "cm-t2rate0", "key": "cb-t2rate", "name": "Base Tier 2 Rate"},
-        {"id": "cm-t3rate0", "key": "cb-t3rate", "name": "Base Tier 3 Rate"},
-        {"id": "cm-quality0", "key": "cb-quality", "name": "Base Quality Modifier"},
+        {"id": "cm-scenario", "key": "jn-scenario", "name": "Scenario Name"},
+        {"id": "cm-order", "key": "jn-order", "name": "Scenario Order", "hidden": True},
+        {"id": "cm-desc", "key": "jn-desc", "name": "Scenario Description"},
+        {"id": "cm-owner", "key": "jn-owner", "name": "Account Manager"},
+        {"id": "cm-region", "key": "jn-region", "name": "Primary Region"},
+        {"id": "cm-gp", "key": "jn-gp", "name": "Commissionable Gross Profit"},
+        {"id": "cm-rev", "key": "jn-rev", "name": "Actual Revenue"},
+        {"id": "cm-fill", "key": "jn-fill", "name": "Fill Rate"},
+        {"id": "cm-facs", "key": "jn-facs", "name": "Facilities"},
+        {"id": "cm-critical", "key": "jn-critical", "name": "Critical Facilities"},
+        {"id": "cm-quota0", "key": "jn-quota", "name": "Base Quota"},
+        {"id": "cm-t1lim0", "key": "jn-t1lim", "name": "Base Tier 1 Limit"},
+        {"id": "cm-t1rate0", "key": "jn-t1rate", "name": "Base Tier 1 Rate"},
+        {"id": "cm-t2lim0", "key": "jn-t2lim", "name": "Base Tier 2 Limit"},
+        {"id": "cm-t2rate0", "key": "jn-t2rate", "name": "Base Tier 2 Rate"},
+        {"id": "cm-t3rate0", "key": "jn-t3rate", "name": "Base Tier 3 Rate"},
+        {"id": "cm-quality0", "key": "jn-quality", "name": "Base Quality Modifier"},
+        {"id": "cm-scen-status", "key": "jn-status", "name": "Scenario Status"},
         {"id": "cm-quota", "type": "number", "name": "Quota Override"},
         {"id": "cm-t1lim", "type": "number", "name": "Tier 1 Limit Override"},
         {"id": "cm-t1rate", "type": "number", "name": "Tier 1 Rate Override"},
@@ -527,10 +625,10 @@ add({
          "formula": "[Payout Before Quality] * [Quality Modifier Final] * "
                     "If([Fill Rate] >= 0.90, 1.05, [Fill Rate] < 0.82, 0.90, 1.00)",
          "format": MONEY},
-        {"id": "cm-status", "type": "text", "name": "Scenario Status",
-         "values": ["Draft", "Submitted", "Approved", "Adjust", "Rejected"],
-         "pills": "color-by-option"},
-        {"id": "cm-note", "type": "text", "name": "Finance Note"},
+        {"id": "cm-comment", "type": "text", "name": "AM Note"},
+        # Lifecycle status is a property of the SCENARIO, not of each account
+        # manager's row, so it is inherited from the registry through the join
+        # rather than duplicated per row.
         {"id": "cm-status-f", "name": "Workflow Status",
          "formula": 'Coalesce([Scenario Status], "Draft")'},
     ],
@@ -541,7 +639,7 @@ add({
     "conditionalFormats": [
         {"type": "single",
          "columnIds": ["cm-quota", "cm-t1lim", "cm-t1rate", "cm-t2lim",
-                       "cm-t2rate", "cm-t3rate", "cm-quality", "cm-status", "cm-note"],
+                       "cm-t2rate", "cm-t3rate", "cm-quality", "cm-comment"],
          "condition": "formula", "formula": "True",
          "style": {"backgroundColor": "#F2FFF3"}},
         {"type": "dataBars", "columnIds": ["cm-attain"], "scheme": [GREEN, CARD_ALT]},
@@ -693,12 +791,15 @@ add(control(
 add(control("ct-action-owner", "action_owner", "Action owner"))
 add(control("ct-action-note", "action_note", "Client note", "text-area"))
 add(control("ct-next-step", "next_step", "Next step"))
+# Sourced from the JOIN, not the registry: the join always yields at least the
+# Base Plan fallback, so the picker is never empty before the first scenario is
+# created. Filtering stays on the modeling grid, which is what the page reads.
 add(control(
     "ct-comm-scenario", "commission_scenario", "Commission scenario",
     "list", "Base Plan", mode="include", selectionMode="single", values=[],
     source={"kind": "source",
-            "source": {"kind": "table", "elementId": "it-commission"},
-            "columnId": "cm-scenario"},
+            "source": {"kind": "table", "elementId": "jn-commission"},
+            "columnId": "jn-scenario"},
     filters=[{"source": {"kind": "table", "elementId": "it-commission"},
               "columnId": "cm-scenario"}],
 ))
@@ -719,6 +820,16 @@ add(control(
             "labels": ["Approve", "Request changes", "Reject"]},
 ))
 add(control("ct-comm-note", "commission_note", "Finance note", "text-area"))
+# New-scenario form. These are TEXT controls on purpose: a number *parameter*
+# control is rejected by the spec API, so numeric assumptions come in as text and
+# are cast with Number([ctrl]) inside the insert-rows values.
+add(control("ct-new-name", "new_scenario_name", "Scenario name"))
+add(control("ct-new-desc", "new_scenario_desc", "What this plan tests"))
+add(control("ct-new-quota", "new_scenario_quota", "Quota factor (1.00 = plan)"))
+add(control("ct-new-t1", "new_scenario_t1", "Tier 1 rate (e.g. 0.030)"))
+add(control("ct-new-t2", "new_scenario_t2", "Tier 2 rate (e.g. 0.050)"))
+add(control("ct-new-t3", "new_scenario_t3", "Tier 3 rate (e.g. 0.080)"))
+add(control("ct-new-quality", "new_scenario_quality", "Fill-quality modifier (1.00 = neutral)"))
 
 
 # ------------------------------------------------------------------ KPIs
@@ -942,22 +1053,100 @@ add(button("b-save-action", "✓ Save account action", [
 ] + REFRESH_ACTIONS + [{"effect": "close-overlay"}], GREEN, INK))
 add(button("b-cancel-action", "Cancel", [{"effect": "close-overlay"}],
            CARD, INK, "outline"))
-add(button("b-comm-submit", "✓ Submit scenario", [
-    {"effect": "update-rows", "table": "it-commission",
-     "whichRows": {"type": "formula",
-                   "formula": "[Scenario Name] = [commission_scenario]"},
-     "values": {"cm-status": {"type": "constant",
-                              "value": {"type": "text", "value": "Submitted"}}}},
+# Every commission write refreshes the registry, the join and the modeling grid,
+# because a scenario-level change has to travel all three.
+COMM_REFRESH = [
+    {"effect": "refresh-element",
+     "target": {"type": "element", "element": "it-scenario-reg"}},
+    {"effect": "refresh-element",
+     "target": {"type": "element", "element": "jn-commission"}},
     {"effect": "refresh-element",
      "target": {"type": "element", "element": "it-commission"}},
+]
+SCENARIO_ROW = {"type": "formula", "formula": "[Scenario Name] = [commission_scenario]"}
+
+add(button("b-comm-create", "+ New scenario", [
+    {"effect": "open-overlay", "overlayId": "m-scenario"},
 ], GREEN, INK))
+
+
+def seed_scenario(name, desc, order, quota_factor, t1, t2, t3, quality):
+    """One governed starter scenario, inserted as a real registry row."""
+    def num(v):
+        return {"type": "constant", "value": {"type": "number", "value": v}}
+
+    def txt(v):
+        return {"type": "constant", "value": {"type": "text", "value": v}}
+
+    return {"effect": "insert-rows", "table": "it-scenario-reg",
+            "values": {"rg-name": txt(name), "rg-desc": txt(desc),
+                       "rg-order": num(order), "rg-quota-factor": num(quota_factor),
+                       "rg-t1rate": num(t1), "rg-t2rate": num(t2),
+                       "rg-t3rate": num(t3), "rg-quality": num(quality),
+                       "rg-status": txt("Draft")}}
+
+
+# Cold start: an empty registry renders only the Base Plan fallback. This loads
+# the three governed starter plans as real, editable, deletable rows.
+add(button("b-comm-seed", "⤓ Load governed plans", [
+    seed_scenario("Base Plan",
+                  "Balanced payout against governed gross profit",
+                  1, 1.00, 0.030, 0.050, 0.080, 1.00),
+    seed_scenario("Retention Weighted",
+                  "Rewards fill quality and critical-account recovery",
+                  2, 0.96, 0.028, 0.052, 0.085, 1.08),
+    seed_scenario("Growth Accelerator",
+                  "Raises quota and pays more above target",
+                  3, 1.08, 0.035, 0.060, 0.100, 0.96),
+] + COMM_REFRESH, CARD, INK, "outline"))
+
+add(button("b-scenario-create", "✓ Create scenario", [
+    {"effect": "insert-rows", "table": "it-scenario-reg",
+     "values": {
+         "rg-name": {"type": "control", "control": "new_scenario_name"},
+         "rg-desc": {"type": "control", "control": "new_scenario_desc"},
+         "rg-order": {"type": "formula", "formula": "99"},
+         "rg-quota-factor": {"type": "formula",
+                             "formula": "Coalesce(Number([new_scenario_quota]), 1.0)"},
+         "rg-t1rate": {"type": "formula",
+                       "formula": "Coalesce(Number([new_scenario_t1]), 0.030)"},
+         "rg-t2rate": {"type": "formula",
+                       "formula": "Coalesce(Number([new_scenario_t2]), 0.050)"},
+         "rg-t3rate": {"type": "formula",
+                       "formula": "Coalesce(Number([new_scenario_t3]), 0.080)"},
+         "rg-quality": {"type": "formula",
+                        "formula": "Coalesce(Number([new_scenario_quality]), 1.0)"},
+         "rg-status": {"type": "constant", "value": {"type": "text", "value": "Draft"}},
+     }},
+    # Select the scenario just created so the grid and KPIs land on it.
+    {"effect": "set-control-value", "control": "commission_scenario",
+     "value": {"type": "control", "control": "new_scenario_name"}},
+] + COMM_REFRESH + [
+    {"effect": "clear-control", "scope": {"type": "control", "control": "new_scenario_name"}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "new_scenario_desc"}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "new_scenario_quota"}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "new_scenario_t1"}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "new_scenario_t2"}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "new_scenario_t3"}},
+    {"effect": "clear-control", "scope": {"type": "control", "control": "new_scenario_quality"}},
+    {"effect": "close-overlay"},
+], GREEN, INK))
+add(button("b-scenario-cancel", "Cancel", [{"effect": "close-overlay"}],
+           CARD, INK, "outline"))
+
+add(button("b-comm-submit", "✓ Submit scenario", [
+    {"effect": "update-rows", "table": "it-scenario-reg",
+     "whichRows": SCENARIO_ROW,
+     "values": {"rg-status": {"type": "constant",
+                              "value": {"type": "text", "value": "Submitted"}}}},
+] + COMM_REFRESH, GREEN, INK))
 add(button("b-comm-review", "Finance review", [
     {"effect": "open-overlay", "overlayId": "m-commission"},
 ], INK))
 add(button("b-comm-reset", "↺ Reset selected scenario", [
+    # Per-AM overrides live on the modeling grid...
     {"effect": "update-rows", "table": "it-commission",
-     "whichRows": {"type": "formula",
-                   "formula": "[Scenario Name] = [commission_scenario]"},
+     "whichRows": SCENARIO_ROW,
      "values": {
          "cm-quota": {"type": "constant", "value": {"type": "number", "value": None}},
          "cm-t1lim": {"type": "constant", "value": {"type": "number", "value": None}},
@@ -966,24 +1155,24 @@ add(button("b-comm-reset", "↺ Reset selected scenario", [
          "cm-t2rate": {"type": "constant", "value": {"type": "number", "value": None}},
          "cm-t3rate": {"type": "constant", "value": {"type": "number", "value": None}},
          "cm-quality": {"type": "constant", "value": {"type": "number", "value": None}},
-         "cm-status": {"type": "constant", "value": {"type": "text", "value": None}},
-         "cm-note": {"type": "constant", "value": {"type": "text", "value": None}},
+         "cm-comment": {"type": "constant", "value": {"type": "text", "value": None}},
      }},
-    {"effect": "refresh-element",
-     "target": {"type": "element", "element": "it-commission"}},
-], CARD, INK, "outline"))
-add(button("b-comm-save", "✓ Save finance decision", [
-    {"effect": "update-rows", "table": "it-commission",
-     "whichRows": {"type": "formula",
-                   "formula": "[Scenario Name] = [commission_scenario]"},
+    # ...the lifecycle lives on the scenario itself.
+    {"effect": "update-rows", "table": "it-scenario-reg",
+     "whichRows": SCENARIO_ROW,
      "values": {
-         "cm-status": {"type": "control", "control": "commission_decision"},
-         "cm-note": {"type": "control", "control": "commission_note"},
+         "rg-status": {"type": "constant", "value": {"type": "text", "value": "Draft"}},
+         "rg-note": {"type": "constant", "value": {"type": "text", "value": None}},
      }},
-    {"effect": "refresh-element",
-     "target": {"type": "element", "element": "it-commission"}},
-    {"effect": "close-overlay"},
-], GREEN, INK))
+] + COMM_REFRESH, CARD, INK, "outline"))
+add(button("b-comm-save", "✓ Save finance decision", [
+    {"effect": "update-rows", "table": "it-scenario-reg",
+     "whichRows": SCENARIO_ROW,
+     "values": {
+         "rg-status": {"type": "control", "control": "commission_decision"},
+         "rg-note": {"type": "control", "control": "commission_note"},
+     }},
+] + COMM_REFRESH + [{"effect": "close-overlay"}], GREEN, INK))
 add(button("b-comm-cancel", "Cancel", [{"effect": "close-overlay"}],
            CARD, INK, "outline"))
 
@@ -1060,6 +1249,9 @@ add(text("sec-comm-model",
          % MUTED))
 add(text("sec-comm-outcome",
          '<span style="color:%s">**PAYOUT & ATTAINMENT OUTCOMES**</span>' % MUTED))
+add(text("sec-comm-registry",
+         '<span style="color:%s">**SCENARIO REGISTRY — EVERY PLAN A USER CREATED**</span>'
+         % MUTED))
 
 def region_fill_formula(region):
     return (
@@ -1162,7 +1354,7 @@ add({"id": "tabs-persona", "kind": "tabbed-container",
 
 for cid in ("kpi-pulse", "filters-pulse", "pivot-wrap",
             "kpi-action", "queue-wrap", "supply-wrap",
-            "kpi-commission", "comm-controls", "comm-grid"):
+            "kpi-commission", "comm-controls", "comm-grid", "comm-registry"):
     add({"id": cid, "kind": "container", "spacing": "small",
          "style": {"backgroundColor": CARD, "borderRadius": "round",
                    "borderColor": RULE, "borderWidth": 1}})
@@ -1179,8 +1371,16 @@ add(text(
 add(text(
     "commission-modal-copy",
     'Review **{{[commission_scenario]}}** against governed gross profit, attainment '
-    'and fill quality. The decision applies to every account-manager row in the '
-    'selected scenario and remains in the linked input table audit trail.',
+    'and fill quality. The decision is written to the scenario registry, so it '
+    'applies to every account-manager row in the scenario and stays in the audit trail.',
+    style={"backgroundColor": "transparent"},
+))
+add(text(
+    "scenario-modal-copy",
+    "### Model a new commission plan\n"
+    "Name the plan and set its assumptions. Blank fields inherit the governed "
+    "default. The new scenario is created as a real row, selected immediately, and "
+    "cross-joined onto every account manager — then tune per-AM overrides in the grid.",
     style={"backgroundColor": "transparent"},
 ))
 
@@ -1231,7 +1431,8 @@ agents = [{
                     {"kind": "table", "elementId": "sql-facility"},
                     {"kind": "table", "elementId": "sql-supply"},
                     {"kind": "table", "elementId": "it-actions"},
-                    {"kind": "table", "elementId": "it-commission"}],
+                    {"kind": "table", "elementId": "it-commission"},
+                    {"kind": "table", "elementId": "it-scenario-reg"}],
     "tools": [
         {"toolId": "t-region", "kind": "action", "name": "Focus a region",
          "description": "Filter the workbook to one or more marketplace regions.",
@@ -1281,34 +1482,72 @@ agents = [{
               "target": {"type": "element", "element": "tbl-action-view"}}]},
         {"toolId": "t-comm-scenario", "kind": "action",
          "name": "Focus a commission scenario",
-         "description": "Select Base Plan, Retention Weighted or Growth Accelerator.",
+         "description": "Select any scenario that exists in the scenario registry.",
          "steps": [{"kind": "effect", "effect": "set-control-value",
                     "control": "commission_scenario",
                     "value": {"type": "agent-input",
                               "inputName": "Commission scenario to select"}}]},
+        # The copilot can create a scenario, exactly like the New scenario modal.
+        # insert-rows values are scalar-only, so the numeric assumptions arrive as
+        # agent inputs and are cast with Number(); blanks fall back to the plan.
+        {"toolId": "t-comm-create", "kind": "action",
+         "name": "Create a commission scenario",
+         "description": ("Register a brand-new named commission scenario with its own "
+                         "quota factor, tier rates and fill-quality modifier, then "
+                         "select it. Use this whenever the user wants to model a plan "
+                         "that does not exist yet."),
+         "steps": [
+             {"kind": "effect", "effect": "insert-rows", "table": "it-scenario-reg",
+              "values": {
+                  "rg-name": {"type": "agent-input", "inputName": "New scenario name"},
+                  "rg-desc": {"type": "agent-input",
+                              "inputName": "What this scenario tests"},
+                  "rg-order": {"type": "formula", "formula": "99"},
+                  "rg-quota-factor": {"type": "agent-input",
+                                      "inputName": "Quota factor (1.0 = plan)"},
+                  "rg-t1rate": {"type": "agent-input", "inputName": "Tier 1 rate"},
+                  "rg-t2rate": {"type": "agent-input", "inputName": "Tier 2 rate"},
+                  "rg-t3rate": {"type": "agent-input", "inputName": "Tier 3 rate"},
+                  "rg-quality": {"type": "agent-input",
+                                 "inputName": "Fill-quality modifier"},
+                  "rg-status": {"type": "constant",
+                                "value": {"type": "text", "value": "Draft"}}}},
+             {"kind": "effect", "effect": "set-control-value",
+              "control": "commission_scenario",
+              "value": {"type": "agent-input", "inputName": "New scenario name"}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "it-scenario-reg"}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "jn-commission"}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "it-commission"}}]},
         {"toolId": "t-comm-submit", "kind": "action",
          "name": "Submit the selected commission scenario",
-         "description": "Set every account-manager row in the selected scenario to Submitted.",
+         "description": "Move the selected scenario to Submitted for finance review.",
          "steps": [
-             {"kind": "effect", "effect": "update-rows", "table": "it-commission",
+             {"kind": "effect", "effect": "update-rows", "table": "it-scenario-reg",
               "whichRows": {"type": "formula",
                             "formula": "[Scenario Name] = [commission_scenario]"},
-              "values": {"cm-status": {"type": "constant",
+              "values": {"rg-status": {"type": "constant",
                                        "value": {"type": "text", "value": "Submitted"}}}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "it-scenario-reg"}},
              {"kind": "effect", "effect": "refresh-element",
               "target": {"type": "element", "element": "it-commission"}}]},
         {"toolId": "t-comm-approve", "kind": "action",
          "name": "Approve the selected commission scenario",
          "description": "Finance-approve the scenario and write an audit note.",
          "steps": [
-             {"kind": "effect", "effect": "update-rows", "table": "it-commission",
+             {"kind": "effect", "effect": "update-rows", "table": "it-scenario-reg",
               "whichRows": {"type": "formula",
                             "formula": "[Scenario Name] = [commission_scenario]"},
               "values": {
-                  "cm-status": {"type": "constant",
+                  "rg-status": {"type": "constant",
                                 "value": {"type": "text", "value": "Approved"}},
-                  "cm-note": {"type": "agent-input",
+                  "rg-note": {"type": "agent-input",
                               "inputName": "Finance approval note"}}},
+             {"kind": "effect", "effect": "refresh-element",
+              "target": {"type": "element", "element": "it-scenario-reg"}},
              {"kind": "effect", "effect": "refresh-element",
               "target": {"type": "element", "element": "it-commission"}}]},
     ],
@@ -1370,6 +1609,12 @@ overlays = [
     {"id": "m-commission", "type": "modal", "name": "Finance review",
      "modal": {"width": "small",
                "header": {"title": "Commission scenario review",
+                          "showCloseIcon": "shown"},
+               "footer": {"primaryCta": {"visible": "hidden"},
+                          "secondaryCta": {"visible": "hidden"}}}},
+    {"id": "m-scenario", "type": "modal", "name": "New scenario",
+     "modal": {"width": "small",
+               "header": {"title": "New commission scenario",
                           "showCloseIcon": "shown"},
                "footer": {"primaryCta": {"visible": "hidden"},
                           "secondaryCta": {"visible": "hidden"}}}},
@@ -1470,32 +1715,39 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
     <Element elementId="title-3" gridColumn="1 / 18" gridRow="4 / 7"/>
     <Element elementId="sub-3" gridColumn="1 / 18" gridRow="7 / 9"/>
   </Container>
-  <Container elementId="comm-controls" type="grid" gridColumn="1 / 25" gridRow="10 / 14"
+  <Container elementId="comm-controls" type="grid" gridColumn="1 / 25" gridRow="10 / 17"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ct-comm-scenario" gridColumn="1 / 7" gridRow="1 / 4"/>
     <Element elementId="ct-comm-owner" gridColumn="7 / 12" gridRow="1 / 4"/>
-    <Element elementId="b-comm-submit" gridColumn="12 / 16" gridRow="1 / 4"/>
-    <Element elementId="b-comm-review" gridColumn="16 / 20" gridRow="1 / 4"/>
-    <Element elementId="b-comm-reset" gridColumn="20 / 25" gridRow="1 / 4"/>
+    <Element elementId="b-comm-create" gridColumn="12 / 18" gridRow="1 / 4"/>
+    <Element elementId="b-comm-seed" gridColumn="18 / 25" gridRow="1 / 4"/>
+    <Element elementId="b-comm-submit" gridColumn="1 / 9" gridRow="4 / 7"/>
+    <Element elementId="b-comm-review" gridColumn="9 / 17" gridRow="4 / 7"/>
+    <Element elementId="b-comm-reset" gridColumn="17 / 25" gridRow="4 / 7"/>
   </Container>
-  <Container elementId="kpi-commission" type="grid" gridColumn="1 / 25" gridRow="14 / 22"
+  <Container elementId="kpi-commission" type="grid" gridColumn="1 / 25" gridRow="17 / 25"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="k-comm-payout" gridColumn="1 / 7" gridRow="1 / 8"/>
     <Element elementId="k-comm-rate" gridColumn="7 / 13" gridRow="1 / 8"/>
     <Element elementId="k-comm-attain" gridColumn="13 / 19" gridRow="1 / 8"/>
     <Element elementId="k-comm-above" gridColumn="19 / 25" gridRow="1 / 8"/>
   </Container>
-  <Container elementId="c-comm-ai" type="grid" gridColumn="1 / 25" gridRow="22 / 26"
+  <Container elementId="c-comm-ai" type="grid" gridColumn="1 / 25" gridRow="25 / 29"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-comm-ai" gridColumn="1 / 25" gridRow="1 / 4"/>
   </Container>
-  <Element elementId="sec-comm-outcome" gridColumn="1 / 25" gridRow="26 / 27"/>
-  <Element elementId="ch-comm-owner" gridColumn="1 / 13" gridRow="27 / 41"/>
-  <Element elementId="ch-comm-attain" gridColumn="13 / 25" gridRow="27 / 41"/>
-  <Element elementId="sec-comm-model" gridColumn="1 / 25" gridRow="41 / 42"/>
-  <Container elementId="comm-grid" type="grid" gridColumn="1 / 25" gridRow="42 / 65"
+  <Element elementId="sec-comm-outcome" gridColumn="1 / 25" gridRow="29 / 30"/>
+  <Element elementId="ch-comm-owner" gridColumn="1 / 13" gridRow="30 / 44"/>
+  <Element elementId="ch-comm-attain" gridColumn="13 / 25" gridRow="30 / 44"/>
+  <Element elementId="sec-comm-model" gridColumn="1 / 25" gridRow="44 / 45"/>
+  <Container elementId="comm-grid" type="grid" gridColumn="1 / 25" gridRow="45 / 68"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="it-commission" gridColumn="1 / 25" gridRow="1 / 23"/>
+  </Container>
+  <Element elementId="sec-comm-registry" gridColumn="1 / 25" gridRow="68 / 69"/>
+  <Container elementId="comm-registry" type="grid" gridColumn="1 / 25" gridRow="69 / 82"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="it-scenario-reg" gridColumn="1 / 25" gridRow="1 / 13"/>
   </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-data">
@@ -1504,6 +1756,7 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Element elementId="it-actions" gridColumn="1 / 25" gridRow="16 / 34"/>
   <Element elementId="ct-selected" gridColumn="1 / 7" gridRow="34 / 37"/>
   <Element elementId="sql-commission" gridColumn="7 / 16" gridRow="34 / 48"/>
+  <Element elementId="jn-commission" gridColumn="16 / 25" gridRow="34 / 48"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-action">
   <Element elementId="modal-copy" gridColumn="1 / 25" gridRow="1 / 4"/>
@@ -1520,6 +1773,18 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Element elementId="ct-comm-note" gridColumn="1 / 25" gridRow="7 / 12"/>
   <Element elementId="b-comm-cancel" gridColumn="1 / 13" gridRow="12 / 15"/>
   <Element elementId="b-comm-save" gridColumn="13 / 25" gridRow="12 / 15"/>
+</Page>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-scenario">
+  <Element elementId="scenario-modal-copy" gridColumn="1 / 25" gridRow="1 / 5"/>
+  <Element elementId="ct-new-name" gridColumn="1 / 13" gridRow="5 / 8"/>
+  <Element elementId="ct-new-quota" gridColumn="13 / 25" gridRow="5 / 8"/>
+  <Element elementId="ct-new-desc" gridColumn="1 / 25" gridRow="8 / 11"/>
+  <Element elementId="ct-new-t1" gridColumn="1 / 9" gridRow="11 / 14"/>
+  <Element elementId="ct-new-t2" gridColumn="9 / 17" gridRow="11 / 14"/>
+  <Element elementId="ct-new-t3" gridColumn="17 / 25" gridRow="11 / 14"/>
+  <Element elementId="ct-new-quality" gridColumn="1 / 25" gridRow="14 / 17"/>
+  <Element elementId="b-scenario-cancel" gridColumn="1 / 13" gridRow="17 / 20"/>
+  <Element elementId="b-scenario-create" gridColumn="13 / 25" gridRow="17 / 20"/>
 </Page>"""
 
 
