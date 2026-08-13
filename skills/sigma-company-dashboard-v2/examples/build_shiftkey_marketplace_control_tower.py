@@ -1218,11 +1218,15 @@ agents = [{
         "credential, and always separate a demand-side account lever from a supply-side "
         "activation lever. Be concise and quantitative."
     ),
-    "greeting": {"mode": "generated",
-                 "prompt": "Greet the user in one short line, then offer exactly three "
-                           "specific questions you can answer from this data. Name a real "
-                           "critical facility and make one question about where "
-                           "credentialed supply can be activated."},
+    # Static greeting: generated-mode openings can hang on "Thinking..." in the
+    # chat shell and leave the demo with no prompt chips. A concrete opener that
+    # names a real critical facility is more reliable for a live prospect walk.
+    "greeting": {"mode": "static",
+                 "message": "Cedar Creek Skilled Nursing is the top critical "
+                            "account in Dallas–Fort Worth. Ask me:\n"
+                            "1) Why is fill below the 90% plan, and which region is worst?\n"
+                            "2) Focus Mountain and show the credential gap.\n"
+                            "3) Stage critical facilities for outreach."},
     "dataSources": [{"kind": "table", "elementId": "sql-market"},
                     {"kind": "table", "elementId": "sql-facility"},
                     {"kind": "table", "elementId": "sql-supply"},
