@@ -19,6 +19,7 @@ read-only and is used only to inspect inspiration workbooks.
 import base64
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -261,6 +262,33 @@ FROM reps r
 """.strip() % MARKET_SQL
 
 
+# Month grain of the same governed economics, for the "scenario impact over time"
+# surface. Monthly quota is the annual basis spread across the six months in the
+# window, so monthly attainment is comparable to the annual view.
+COMMISSION_MONTH_SQL = """
+WITH activity AS (%s),
+rep_month AS (
+  SELECT
+    account_owner,
+    DATE_TRUNC('month', month_start) AS month_start,
+    SUM(gross_profit) AS gross_profit,
+    SUM(actual_revenue) AS actual_revenue,
+    SUM(filled_shifts) / NULLIF(SUM(posted_shifts),0) AS fill_rate,
+    SUM(posted_shifts) AS posted_shifts,
+    SUM(filled_shifts) AS filled_shifts
+  FROM activity
+  GROUP BY account_owner, DATE_TRUNC('month', month_start)
+),
+months AS (SELECT COUNT(DISTINCT month_start) AS n FROM rep_month)
+SELECT
+  m.account_owner, m.month_start, m.gross_profit, m.actual_revenue,
+  m.fill_rate, m.posted_shifts, m.filled_shifts,
+  ROUND((85000 + MOD(ABS(HASH(m.account_owner)),45000)) / (SELECT n FROM months))
+    AS monthly_quota_basis
+FROM rep_month m
+""".strip() % MARKET_SQL
+
+
 elements = []
 add = elements.append
 
@@ -284,6 +312,56 @@ def sql_table(eid, name, statement, columns):
                        "gridLines": "horizontal",
                        "textStyles": {"header": {"fontWeight": "bold"}}},
     }
+
+
+# ------------------------------------------------------------------- theming
+# A section band: centered white bold title on a brand-coloured bar. This is how
+# the Summit commission app separates its outcome surfaces, and it reads far
+# better than a small-caps grey label floating above a table.
+#
+# ⚠️ A text element's own `style.backgroundColor` is NOT rendered — verified by
+# pixel-inspecting a PNG export, where the band rows came back as page
+# background and the white title was invisible. The colour has to come from a
+# CONTAINER wrapping the text (which is how the Summit app does it), so every
+# band records its colour here and gets a wrapper generated into the layout.
+BAND_COLORS = {}
+
+
+def band(eid, title, color=INK):
+    BAND_COLORS[eid] = color
+    return {
+        "id": eid, "kind": "text",
+        "body": '<p class="p-large" style="text-align: center">'
+                '<span style="color: #FFFFFF">**%s**</span></p>' % title,
+        "style": {"backgroundColor": "transparent", "padding": "none"},
+        "verticalAlign": "middle",
+    }
+
+
+def table_theme(header_bg=CARD_ALT, cell_align="right", divider=GREEN):
+    """Presentation table styling: tinted centered title, bold column headers,
+    a brand divider under the header, and banding for row tracking."""
+    return {
+        "preset": "presentation", "cellSpacing": "small", "banding": "shown",
+        "bandingColor": "#FAFBFA", "headerDividerColor": divider,
+        "textStyles": {
+            "header": {"fontSize": 14, "backgroundColor": header_bg,
+                       "align": "center", "fontWeight": "bold"},
+            "columnHeader": {"fontWeight": "bold", "backgroundColor": header_bg},
+            "rowHeader": {"fontWeight": "bold", "backgroundColor": header_bg},
+            "cell": {"fontSize": 13, "align": cell_align},
+        },
+    }
+
+
+# Nine-stop scale for rate/intensity columns (the Summit heatmap treatment).
+GREEN_SCALE = ["#EAF8EC", "#D2F0D8", "#B6E7C3", "#95DCAB", "#6FCE90",
+               "#48BE74", "#2AA95C", "#158C47", "#0B6E36"]
+
+
+def scale_cf(column_ids, scheme=None):
+    return {"type": "backgroundScale", "columnIds": column_ids,
+            "scheme": scheme or GREEN_SCALE, "includeValues": True}
 
 
 add(sql_table("sql-market", "Marketplace Activity", MARKET_SQL, [
@@ -390,6 +468,15 @@ add(sql_table("sql-commission", "Commission AM Base", COMMISSION_SQL, [
         hidden=True),
 ]))
 
+add(sql_table("sql-commission-month", "Commission AM Month", COMMISSION_MONTH_SQL, [
+    col("cn-owner", "Account Manager", "account_owner"),
+    col("cn-month", "Month", "month_start", MON),
+    col("cn-gp", "Monthly Gross Profit", "gross_profit", MONEY),
+    col("cn-rev", "Monthly Revenue", "actual_revenue", MONEY),
+    col("cn-fill", "Monthly Fill Rate", "fill_rate", PCT1),
+    col("cn-quota", "Monthly Quota Basis", "monthly_quota_basis", MONEY),
+]))
+
 
 # The scenario registry. This is an EMPTY input table, so rows only exist
 # because a user (or the copilot) created them — that is the "create a new
@@ -438,7 +525,7 @@ add({
 # first scenario is created. Union is NOT supported by the spec API, so the
 # registry has to be the single source of scenario rows.
 add({
-    "id": "jn-commission", "kind": "table", "name": "Commission Scenario Grid",
+    "id": "jn-comm-calc", "kind": "table", "name": "Commission Scenario Grid",
     "visibleAsSource": True,
     "source": {"kind": "join",
                "joins": [{"left": {"elementId": "sql-commission", "kind": "table"},
@@ -479,23 +566,106 @@ add({
         {"id": "jn-t2lim", "name": "Base Tier 2 Limit",
          "formula": "[Commission AM Base/Base Tier 2 Limit]", "format": PCT1},
         {"id": "jn-t1rate", "name": "Base Tier 1 Rate",
-         "formula": "Coalesce([Commission Scenario Registry/Tier 1 Rate], "
+         "formula": "Coalesce("
+                    "[Commission Scenario Registry/Tier 1 Rate], "
                     "[Commission AM Base/Default Tier 1 Rate])", "format": PCT1},
         {"id": "jn-t2rate", "name": "Base Tier 2 Rate",
-         "formula": "Coalesce([Commission Scenario Registry/Tier 2 Rate], "
+         "formula": "Coalesce("
+                    "[Commission Scenario Registry/Tier 2 Rate], "
                     "[Commission AM Base/Default Tier 2 Rate])", "format": PCT1},
         {"id": "jn-t3rate", "name": "Base Tier 3 Rate",
-         "formula": "Coalesce([Commission Scenario Registry/Tier 3 Rate], "
+         "formula": "Coalesce("
+                    "[Commission Scenario Registry/Tier 3 Rate], "
                     "[Commission AM Base/Default Tier 3 Rate])", "format": PCT1},
         {"id": "jn-quality", "name": "Base Quality Modifier",
-         "formula": "Coalesce([Commission Scenario Registry/Quality Modifier], "
+         "formula": "Coalesce("
+                    "[Commission Scenario Registry/Quality Modifier], "
                     "[Commission AM Base/Default Quality Modifier])"},
         {"id": "jn-status", "name": "Scenario Workflow Status",
          "formula": 'Coalesce([Commission Scenario Registry/Scenario Status], "Draft")'},
         {"id": "jn-note", "name": "Scenario Finance Note",
          "formula": "[Commission Scenario Registry/Finance Note]"},
+        # Payout math lives HERE, on the plain join — not on the linked input
+        # table. A linked input table's row identity is its key values, so when a
+        # user creates a scenario the scenario-name key changes and the grid goes
+        # stale (verified: source had 8 rows, the linked table returned 0). Every
+        # KPI, chart and outcome surface therefore reads this element, and the
+        # linked table is only where per-AM overrides are typed.
+        {"id": "jn-attain", "name": "Attainment",
+         "formula": "[Commissionable Gross Profit] / [Base Quota]", "format": PCT1},
+        {"id": "jn-tier", "name": "Tier Achieved",
+         "formula": 'If([Attainment] <= [Base Tier 1 Limit], "Tier 1", '
+                    '[Attainment] <= [Base Tier 2 Limit], "Tier 2", "Tier 3")'},
+        {"id": "jn-payout0", "name": "Payout Before Quality",
+         "formula": (
+             "If([Commissionable Gross Profit] <= [Base Quota] * [Base Tier 1 Limit], "
+             "[Commissionable Gross Profit] * [Base Tier 1 Rate], "
+             "[Base Quota] * [Base Tier 1 Limit] * [Base Tier 1 Rate] + "
+             "If([Commissionable Gross Profit] <= [Base Quota] * [Base Tier 2 Limit], "
+             "([Commissionable Gross Profit] - [Base Quota] * [Base Tier 1 Limit]) "
+             "* [Base Tier 2 Rate], "
+             "([Base Quota] * [Base Tier 2 Limit] - "
+             "[Base Quota] * [Base Tier 1 Limit]) * [Base Tier 2 Rate] + "
+             "([Commissionable Gross Profit] - [Base Quota] * [Base Tier 2 Limit]) "
+             "* [Base Tier 3 Rate]))"
+         ), "format": MONEY},
+        {"id": "jn-payout", "name": "Final Payout",
+         "formula": "[Payout Before Quality] * [Base Quality Modifier] * "
+                    "If([Fill Rate] >= 0.90, 1.05, [Fill Rate] < 0.82, 0.90, 1.00)",
+         "format": MONEY},
     ],
     "order": ["jn-scenario", "jn-owner", "jn-gp", "jn-quota", "jn-status"],
+    "tableComponents": {"summaryBar": "hidden"},
+    "tableStyle": {"preset": "presentation", "cellSpacing": "small"},
+})
+
+
+# Same cross join at month grain, so payout can be shown over time per scenario.
+# Monthly tiering compares the month's GP to the month's share of quota.
+add({
+    "id": "jn-comm-month", "kind": "table", "name": "Commission Month Grid",
+    "visibleAsSource": True,
+    "source": {"kind": "join",
+               "joins": [{"left": {"elementId": "sql-commission-month", "kind": "table"},
+                          "right": {"elementId": "it-scenario-reg", "kind": "table"},
+                          "columns": [{"left": "1", "right": "1"}],
+                          "joinType": "left-outer"}],
+               "primarySource": {"elementId": "sql-commission-month", "kind": "table"}},
+    "columns": [
+        {"id": "jm-scenario", "name": "Scenario Name",
+         "formula": 'Coalesce([Commission Scenario Registry/Scenario Name], "Base Plan")'},
+        {"id": "jm-owner", "name": "Account Manager",
+         "formula": "[Commission AM Month/Account Manager]"},
+        {"id": "jm-month", "name": "Month",
+         "formula": "[Commission AM Month/Month]", "format": MON},
+        {"id": "jm-gp", "name": "Monthly Gross Profit",
+         "formula": "[Commission AM Month/Monthly Gross Profit]", "format": MONEY},
+        {"id": "jm-fill", "name": "Monthly Fill Rate",
+         "formula": "[Commission AM Month/Monthly Fill Rate]", "format": PCT1},
+        {"id": "jm-quota", "name": "Monthly Quota",
+         "formula": "Round([Commission AM Month/Monthly Quota Basis] * "
+                    "Coalesce([Commission Scenario Registry/Quota Factor], 1.0))",
+         "format": MONEY},
+        {"id": "jm-attain", "name": "Monthly Attainment",
+         "formula": "[Monthly Gross Profit] / [Monthly Quota]", "format": PCT1},
+        {"id": "jm-tier", "name": "Tier Achieved",
+         "formula": 'If([Monthly Attainment] <= 0.80, "Tier 1", '
+                    '[Monthly Attainment] <= 1.00, "Tier 2", "Tier 3")'},
+        {"id": "jm-rate", "name": "Effective Rate",
+         "formula": 'If([Tier Achieved] = "Tier 1", '
+                    "Coalesce([Commission Scenario Registry/Tier 1 Rate], 0.030), "
+                    'If([Tier Achieved] = "Tier 2", '
+                    "Coalesce([Commission Scenario Registry/Tier 2 Rate], 0.050), "
+                    "Coalesce([Commission Scenario Registry/Tier 3 Rate], 0.080)))",
+         "format": PCT1},
+        {"id": "jm-payout", "name": "Monthly Payout",
+         "formula": "[Monthly Gross Profit] * [Effective Rate] * "
+                    "Coalesce([Commission Scenario Registry/Quality Modifier], 1.0) * "
+                    "If([Monthly Fill Rate] >= 0.90, 1.05, "
+                    "[Monthly Fill Rate] < 0.82, 0.90, 1.00)",
+         "format": MONEY},
+    ],
+    "order": ["jm-scenario", "jm-owner", "jm-month", "jm-gp", "jm-payout"],
     "tableComponents": {"summaryBar": "hidden"},
     "tableStyle": {"preset": "presentation", "cellSpacing": "small"},
 })
@@ -559,95 +729,141 @@ add({
                    "bandingColor": CARD_ALT},
 })
 
+# ------------------------------------------- commission outcome surfaces (3)
+# The Summit commission app reads as three stacked answers, not one grid:
+# totals per scenario, the same totals per rep, and the impact over time. Each
+# gets a heat-scaled rate column so the expensive plan is obvious at a glance.
 add({
-    "id": "it-comm-model", "kind": "input-table", "name": "Commission Scenarios",
-    "inputMode": "view",
-    "source": {"kind": "linked", "from": "jn-commission"},
+    "id": "tbl-comm-outcome", "kind": "table", "name": "Scenario Outcomes",
+    "visibleAsSource": True,
+    "source": {"kind": "table", "elementId": "jn-comm-calc"},
     "columns": [
-        {"id": "cm-scenario", "key": "jn-scenario", "name": "Scenario Name"},
-        {"id": "cm-order", "key": "jn-order", "name": "Scenario Order", "hidden": True},
-        {"id": "cm-desc", "key": "jn-desc", "name": "Scenario Description"},
-        {"id": "cm-owner", "key": "jn-owner", "name": "Account Manager"},
-        {"id": "cm-region", "key": "jn-region", "name": "Primary Region"},
-        {"id": "cm-gp", "key": "jn-gp", "name": "Commissionable Gross Profit"},
-        {"id": "cm-rev", "key": "jn-rev", "name": "Actual Revenue"},
-        {"id": "cm-fill", "key": "jn-fill", "name": "Fill Rate"},
-        {"id": "cm-facs", "key": "jn-facs", "name": "Facilities"},
-        {"id": "cm-critical", "key": "jn-critical", "name": "Critical Facilities"},
-        {"id": "cm-quota0", "key": "jn-quota", "name": "Base Quota"},
-        {"id": "cm-t1lim0", "key": "jn-t1lim", "name": "Base Tier 1 Limit"},
-        {"id": "cm-t1rate0", "key": "jn-t1rate", "name": "Base Tier 1 Rate"},
-        {"id": "cm-t2lim0", "key": "jn-t2lim", "name": "Base Tier 2 Limit"},
-        {"id": "cm-t2rate0", "key": "jn-t2rate", "name": "Base Tier 2 Rate"},
-        {"id": "cm-t3rate0", "key": "jn-t3rate", "name": "Base Tier 3 Rate"},
-        {"id": "cm-quality0", "key": "jn-quality", "name": "Base Quality Modifier"},
-        {"id": "cm-scen-status", "key": "jn-status", "name": "Scenario Status"},
-        {"id": "cm-quota", "type": "number", "name": "Quota Override"},
-        {"id": "cm-t1lim", "type": "number", "name": "Tier 1 Limit Override"},
-        {"id": "cm-t1rate", "type": "number", "name": "Tier 1 Rate Override"},
-        {"id": "cm-t2lim", "type": "number", "name": "Tier 2 Limit Override"},
-        {"id": "cm-t2rate", "type": "number", "name": "Tier 2 Rate Override"},
-        {"id": "cm-t3rate", "type": "number", "name": "Tier 3 Rate Override"},
-        {"id": "cm-quality", "type": "number", "name": "Quality Modifier Override"},
-        {"id": "cm-quota-f", "name": "Quota Final",
-         "formula": "Coalesce([Quota Override], [Base Quota])", "format": MONEY},
-        {"id": "cm-t1lim-f", "name": "Tier 1 Limit Final",
-         "formula": "Coalesce([Tier 1 Limit Override], [Base Tier 1 Limit])", "format": PCT1},
-        {"id": "cm-t1rate-f", "name": "Tier 1 Rate Final",
-         "formula": "Coalesce([Tier 1 Rate Override], [Base Tier 1 Rate])", "format": PCT1},
-        {"id": "cm-t2lim-f", "name": "Tier 2 Limit Final",
-         "formula": "Coalesce([Tier 2 Limit Override], [Base Tier 2 Limit])", "format": PCT1},
-        {"id": "cm-t2rate-f", "name": "Tier 2 Rate Final",
-         "formula": "Coalesce([Tier 2 Rate Override], [Base Tier 2 Rate])", "format": PCT1},
-        {"id": "cm-t3rate-f", "name": "Tier 3 Rate Final",
-         "formula": "Coalesce([Tier 3 Rate Override], [Base Tier 3 Rate])", "format": PCT1},
-        {"id": "cm-quality-f", "name": "Quality Modifier Final",
-         "formula": "Coalesce([Quality Modifier Override], [Base Quality Modifier])"},
-        {"id": "cm-attain", "name": "Attainment",
-         "formula": "[Commissionable Gross Profit] / [Quota Final]", "format": PCT1},
-        {"id": "cm-tier", "name": "Tier Achieved",
-         "formula": 'If([Attainment] <= [Tier 1 Limit Final], "Tier 1", '
-                    '[Attainment] <= [Tier 2 Limit Final], "Tier 2", "Tier 3")'},
-        {"id": "cm-payout0", "name": "Payout Before Quality",
-         "formula": (
-             "If([Commissionable Gross Profit] <= [Quota Final] * [Tier 1 Limit Final], "
-             "[Commissionable Gross Profit] * [Tier 1 Rate Final], "
-             "[Quota Final] * [Tier 1 Limit Final] * [Tier 1 Rate Final] + "
-             "If([Commissionable Gross Profit] <= [Quota Final] * [Tier 2 Limit Final], "
-             "([Commissionable Gross Profit] - [Quota Final] * [Tier 1 Limit Final]) "
-             "* [Tier 2 Rate Final], "
-             "([Quota Final] * [Tier 2 Limit Final] - "
-             "[Quota Final] * [Tier 1 Limit Final]) * [Tier 2 Rate Final] + "
-             "([Commissionable Gross Profit] - [Quota Final] * [Tier 2 Limit Final]) "
-             "* [Tier 3 Rate Final]))"
-         ), "format": MONEY},
-        {"id": "cm-payout", "name": "Final Payout",
-         "formula": "[Payout Before Quality] * [Quality Modifier Final] * "
-                    "If([Fill Rate] >= 0.90, 1.05, [Fill Rate] < 0.82, 0.90, 1.00)",
+        {"id": "so-scenario", "name": "Scenario Name",
+         "formula": "[Commission Scenario Grid/Scenario Name]"},
+        # Descriptive columns must be aggregates to sit in a grouping's
+        # calculations; Min() over a constant-per-group value is the idiom.
+        {"id": "so-desc", "name": "Scenario Description",
+         "formula": "Min([Commission Scenario Grid/Scenario Description])"},
+        {"id": "so-status", "name": "Workflow Status",
+         "formula": "Min([Commission Scenario Grid/Scenario Workflow Status])"},
+        {"id": "so-payout", "name": "Total Payout",
+         "formula": "Sum([Commission Scenario Grid/Final Payout])", "format": MONEY},
+        {"id": "so-gp", "name": "Total Commissionable GP",
+         "formula": "Sum([Commission Scenario Grid/Commissionable Gross Profit])",
          "format": MONEY},
-        {"id": "cm-comment", "type": "text", "name": "AM Note"},
-        # Lifecycle status is a property of the SCENARIO, not of each account
-        # manager's row, so it is inherited from the registry through the join
-        # rather than duplicated per row.
-        {"id": "cm-status-f", "name": "Workflow Status",
-         "formula": 'Coalesce([Scenario Status], "Draft")'},
+        {"id": "so-rate", "name": "Commission Payout Rate",
+         "formula": "Sum([Commission Scenario Grid/Final Payout]) / "
+                    "Sum([Commission Scenario Grid/Commissionable Gross Profit])",
+         "format": PCT1},
+        {"id": "so-attain", "name": "Avg Attainment",
+         "formula": "Avg([Commission Scenario Grid/Attainment])", "format": PCT1},
+        {"id": "so-above", "name": "AMs At or Above Quota",
+         "formula": 'CountDistinct(If([Commission Scenario Grid/Attainment] >= 1, '
+                    "[Commission Scenario Grid/Account Manager], Null))", "format": INT},
     ],
-    "sort": [
-        {"columnId": "cm-order", "direction": "ascending", "nulls": "last"},
-        {"columnId": "cm-owner", "direction": "ascending", "nulls": "last"},
-    ],
-    "conditionalFormats": [
-        {"type": "single",
-         "columnIds": ["cm-quota", "cm-t1lim", "cm-t1rate", "cm-t2lim",
-                       "cm-t2rate", "cm-t3rate", "cm-quality", "cm-comment"],
-         "condition": "formula", "formula": "True",
-         "style": {"backgroundColor": "#F2FFF3"}},
-        {"type": "dataBars", "columnIds": ["cm-attain"], "scheme": [GREEN, CARD_ALT]},
-    ],
+    "groupings": [{"id": "so-grp", "groupBy": ["so-scenario"],
+                   "calculations": ["so-desc", "so-status", "so-payout", "so-gp",
+                                    "so-rate", "so-attain", "so-above"]}],
+    "conditionalFormats": [scale_cf(["so-rate"]),
+                           {"type": "dataBars", "columnIds": ["so-payout"],
+                            "scheme": [GREEN, CARD_ALT]}],
     "tableComponents": {"summaryBar": "hidden"},
-    "tableStyle": {"preset": "presentation", "cellSpacing": "small",
-                   "gridLines": "horizontal", "banding": "shown",
-                   "bandingColor": CARD_ALT},
+    "tableStyle": table_theme(header_bg="#E4F7E8", cell_align="right"),
+    "noDrill": True,
+})
+
+add({
+    "id": "tbl-comm-owner", "kind": "table",
+    "name": "Scenario Outcomes by Account Manager",
+    "visibleAsSource": True,
+    "source": {"kind": "table", "elementId": "jn-comm-calc"},
+    "columns": [
+        {"id": "sw-owner", "name": "Account Manager",
+         "formula": "[Commission Scenario Grid/Account Manager]"},
+        {"id": "sw-scenario", "name": "Scenario Name",
+         "formula": "[Commission Scenario Grid/Scenario Name]"},
+        {"id": "sw-region", "name": "Primary Region",
+         "formula": "Min([Commission Scenario Grid/Primary Region])"},
+        {"id": "sw-payout", "name": "Total Payout",
+         "formula": "Sum([Commission Scenario Grid/Final Payout])", "format": MONEY},
+        {"id": "sw-gp", "name": "Commissionable GP",
+         "formula": "Sum([Commission Scenario Grid/Commissionable Gross Profit])",
+         "format": MONEY},
+        {"id": "sw-rate", "name": "Commission Payout Rate",
+         "formula": "Sum([Commission Scenario Grid/Final Payout]) / "
+                    "Sum([Commission Scenario Grid/Commissionable Gross Profit])",
+         "format": PCT1},
+        {"id": "sw-attain", "name": "Attainment",
+         "formula": "Avg([Commission Scenario Grid/Attainment])", "format": PCT1},
+        {"id": "sw-tier", "name": "Tier Achieved",
+         "formula": "Min([Commission Scenario Grid/Tier Achieved])"},
+        {"id": "sw-fill", "name": "Fill Rate",
+         "formula": "Avg([Commission Scenario Grid/Fill Rate])", "format": PCT1},
+    ],
+    "groupings": [{"id": "sw-grp", "groupBy": ["sw-owner", "sw-scenario"],
+                   "calculations": ["sw-region", "sw-payout", "sw-gp", "sw-rate",
+                                    "sw-attain", "sw-tier", "sw-fill"]}],
+    "conditionalFormats": [scale_cf(["sw-rate"]),
+                           {"type": "dataBars", "columnIds": ["sw-payout"],
+                            "scheme": [GREEN, CARD_ALT]}],
+    "tableComponents": {"summaryBar": "hidden"},
+    "tableStyle": table_theme(header_bg="#E4F7E8", cell_align="right"),
+    "noDrill": True,
+})
+
+add({
+    "id": "tbl-comm-time", "kind": "table", "name": "Scenario Impact Over Time",
+    "visibleAsSource": True,
+    "source": {"kind": "table", "elementId": "jn-comm-month"},
+    "columns": [
+        {"id": "st-scenario", "name": "Scenario Name",
+         "formula": "[Commission Month Grid/Scenario Name]"},
+        {"id": "st-owner", "name": "Account Manager",
+         "formula": "[Commission Month Grid/Account Manager]"},
+        {"id": "st-month", "name": "Month",
+         "formula": "[Commission Month Grid/Month]", "format": MON},
+        {"id": "st-gp", "name": "Commissionable GP",
+         "formula": "Sum([Commission Month Grid/Monthly Gross Profit])", "format": MONEY},
+        {"id": "st-quota", "name": "Monthly Quota",
+         "formula": "Sum([Commission Month Grid/Monthly Quota])", "format": MONEY},
+        {"id": "st-attain", "name": "Attainment",
+         "formula": "Sum([Commission Month Grid/Monthly Gross Profit]) / "
+                    "Sum([Commission Month Grid/Monthly Quota])", "format": PCT1},
+        {"id": "st-tier", "name": "Tier Achieved",
+         "formula": "Min([Commission Month Grid/Tier Achieved])"},
+        {"id": "st-rate", "name": "Payout Modifier %",
+         "formula": "Avg([Commission Month Grid/Effective Rate])", "format": PCT1},
+        {"id": "st-payout", "name": "Final Payout",
+         "formula": "Sum([Commission Month Grid/Monthly Payout])", "format": MONEY},
+    ],
+    "groupings": [{"id": "st-grp",
+                   "groupBy": ["st-scenario", "st-owner", "st-month"],
+                   "calculations": ["st-gp", "st-quota", "st-attain", "st-tier",
+                                    "st-rate", "st-payout"]}],
+    "conditionalFormats": [scale_cf(["st-rate"]),
+                           {"type": "dataBars", "columnIds": ["st-payout"],
+                            "scheme": [GREEN, CARD_ALT]}],
+    "tableComponents": {"summaryBar": "hidden"},
+    "tableStyle": table_theme(header_bg="#E4F7E8", cell_align="center"),
+    "noDrill": True,
+})
+
+add({
+    "id": "ch-comm-time", "kind": "line-chart", "name": "Payout by month and scenario",
+    "source": {"kind": "table", "elementId": "jn-comm-month"},
+    "columns": [
+        {"id": "ct-month", "name": "Month",
+         "formula": "[Commission Month Grid/Month]", "format": MON},
+        {"id": "ct-payout", "name": "Monthly Payout",
+         "formula": "Sum([Commission Month Grid/Monthly Payout])", "format": MONEY},
+        {"id": "ct-scen", "name": "Scenario",
+         "formula": "[Commission Month Grid/Scenario Name]"},
+    ],
+    "xAxis": {"columnId": "ct-month"},
+    "yAxis": {"columnIds": ["ct-payout"]},
+    "color": {"by": "category", "column": "ct-scen"},
+    "legend": {"position": "top"},
+    "noDrill": True,
 })
 
 add({
@@ -794,23 +1010,27 @@ add(control("ct-next-step", "next_step", "Next step"))
 # Sourced from the JOIN, not the registry: the join always yields at least the
 # Base Plan fallback, so the picker is never empty before the first scenario is
 # created. Filtering stays on the modeling grid, which is what the page reads.
+#
+# ⚠️ No default value on purpose. A hardcoded "Base Plan" default silently
+# emptied the whole page the moment a user created their first scenario: the
+# left-outer fallback label stops appearing once the registry has rows, so the
+# filter matched nothing and every KPI read null. Defaulting to no selection
+# means the page always shows all scenarios until the user picks one.
 add(control(
     "ct-comm-scenario", "commission_scenario", "Commission scenario",
-    "list", "Base Plan", mode="include", selectionMode="single", values=[],
+    "list", "", mode="include", selectionMode="single", values=[],
     source={"kind": "source",
-            "source": {"kind": "table", "elementId": "jn-commission"},
+            "source": {"kind": "table", "elementId": "jn-comm-calc"},
             "columnId": "jn-scenario"},
-    filters=[{"source": {"kind": "table", "elementId": "it-comm-model"},
-              "columnId": "cm-scenario"}],
+    filters=[],
 ))
 add(control(
     "ct-comm-owner", "commission_owner", "Account manager",
     "list", "", mode="include", selectionMode="multiple", values=[],
     source={"kind": "source",
-            "source": {"kind": "table", "elementId": "it-comm-model"},
-            "columnId": "cm-owner"},
-    filters=[{"source": {"kind": "table", "elementId": "it-comm-model"},
-              "columnId": "cm-owner"}],
+            "source": {"kind": "table", "elementId": "sql-commission"},
+            "columnId": "cb-owner"},
+    filters=[],
 ))
 add(control(
     "ct-comm-decision", "commission_decision", "Finance decision",
@@ -868,18 +1088,18 @@ add(kpi("k-action-fill", "Queue fill rate", "it-actions",
         PCT1, "plan",
         "Sum([Facility Action Plan/Plan Filled Shifts]) / "
         "Sum([Facility Action Plan/Posted Shifts])"))
-add(kpi("k-comm-payout", "Scenario payout", "it-comm-model",
-        "Sum([Commission Scenarios/Final Payout])", MONEY))
-add(kpi("k-comm-rate", "Payout / gross profit", "it-comm-model",
-        "Sum([Commission Scenarios/Final Payout]) / "
-        "Sum([Commission Scenarios/Commissionable Gross Profit])", PCT1,
+add(kpi("k-comm-payout", "Scenario payout", "jn-comm-calc",
+        "Sum([Commission Scenario Grid/Final Payout])", MONEY))
+add(kpi("k-comm-rate", "Payout / gross profit", "jn-comm-calc",
+        "Sum([Commission Scenario Grid/Final Payout]) / "
+        "Sum([Commission Scenario Grid/Commissionable Gross Profit])", PCT1,
         "operating guardrail", "0.055"))
-add(kpi("k-comm-attain", "Average attainment", "it-comm-model",
-        "Avg([Commission Scenarios/Attainment])", PCT1,
+add(kpi("k-comm-attain", "Average attainment", "jn-comm-calc",
+        "Avg([Commission Scenario Grid/Attainment])", PCT1,
         "target", "1.00"))
-add(kpi("k-comm-above", "AMs at or above quota", "it-comm-model",
-        'CountDistinct(If([Commission Scenarios/Attainment] >= 1, '
-        "[Commission Scenarios/Account Manager], Null))", INT))
+add(kpi("k-comm-above", "AMs at or above quota", "jn-comm-calc",
+        'CountDistinct(If([Commission Scenario Grid/Attainment] >= 1, '
+        "[Commission Scenario Grid/Account Manager], Null))", INT))
 
 
 # ---------------------------------------------------------------- visuals
@@ -984,19 +1204,19 @@ add({
 add({
     "id": "ch-comm-owner", "kind": "bar-chart",
     "name": "Projected payout by account manager",
-    "source": {"kind": "table", "elementId": "it-comm-model"},
+    "source": {"kind": "table", "elementId": "jn-comm-calc"},
     "columns": [
         {"id": "co-owner", "name": "Account Manager",
-         "formula": "[Commission Scenarios/Account Manager]"},
+         "formula": "[Commission Scenario Grid/Account Manager]"},
         {"id": "co-payout", "name": "Final Payout",
-         "formula": "Sum([Commission Scenarios/Final Payout])", "format": MONEY},
+         "formula": "Sum([Commission Scenario Grid/Final Payout])", "format": MONEY},
         {"id": "co-gp", "name": "Commissionable Gross Profit",
-         "formula": "Sum([Commission Scenarios/Commissionable Gross Profit])",
+         "formula": "Sum([Commission Scenario Grid/Commissionable Gross Profit])",
          "format": MONEY},
         {"id": "co-attain", "name": "Attainment",
-         "formula": "Avg([Commission Scenarios/Attainment])", "format": PCT1},
+         "formula": "Avg([Commission Scenario Grid/Attainment])", "format": PCT1},
         {"id": "co-tier", "name": "Tier Achieved",
-         "formula": "[Commission Scenarios/Tier Achieved]"},
+         "formula": "[Commission Scenario Grid/Tier Achieved]"},
     ],
     "xAxis": {"columnId": "co-owner"},
     "yAxis": {"columnIds": ["co-payout"]},
@@ -1006,12 +1226,12 @@ add({
 add({
     "id": "ch-comm-attain", "kind": "bar-chart",
     "name": "Attainment vs quota",
-    "source": {"kind": "table", "elementId": "it-comm-model"},
+    "source": {"kind": "table", "elementId": "jn-comm-calc"},
     "columns": [
         {"id": "ca-owner", "name": "Account Manager",
-         "formula": "[Commission Scenarios/Account Manager]"},
+         "formula": "[Commission Scenario Grid/Account Manager]"},
         {"id": "ca-attain", "name": "Attainment",
-         "formula": "Avg([Commission Scenarios/Attainment])", "format": PCT1},
+         "formula": "Avg([Commission Scenario Grid/Attainment])", "format": PCT1},
         {"id": "ca-target", "name": "Quota", "formula": "1.00", "format": PCT1},
     ],
     "xAxis": {"columnId": "ca-owner"},
@@ -1059,9 +1279,7 @@ COMM_REFRESH = [
     {"effect": "refresh-element",
      "target": {"type": "element", "element": "it-scenario-reg"}},
     {"effect": "refresh-element",
-     "target": {"type": "element", "element": "jn-commission"}},
-    {"effect": "refresh-element",
-     "target": {"type": "element", "element": "it-comm-model"}},
+     "target": {"type": "element", "element": "jn-comm-calc"}},
 ]
 SCENARIO_ROW = {"type": "formula", "formula": "[Scenario Name] = [commission_scenario]"}
 
@@ -1144,20 +1362,6 @@ add(button("b-comm-review", "Finance review", [
     {"effect": "open-overlay", "overlayId": "m-commission"},
 ], INK))
 add(button("b-comm-reset", "↺ Reset selected scenario", [
-    # Per-AM overrides live on the modeling grid...
-    {"effect": "update-rows", "table": "it-comm-model",
-     "whichRows": SCENARIO_ROW,
-     "values": {
-         "cm-quota": {"type": "constant", "value": {"type": "number", "value": None}},
-         "cm-t1lim": {"type": "constant", "value": {"type": "number", "value": None}},
-         "cm-t1rate": {"type": "constant", "value": {"type": "number", "value": None}},
-         "cm-t2lim": {"type": "constant", "value": {"type": "number", "value": None}},
-         "cm-t2rate": {"type": "constant", "value": {"type": "number", "value": None}},
-         "cm-t3rate": {"type": "constant", "value": {"type": "number", "value": None}},
-         "cm-quality": {"type": "constant", "value": {"type": "number", "value": None}},
-         "cm-comment": {"type": "constant", "value": {"type": "text", "value": None}},
-     }},
-    # ...the lifecycle lives on the scenario itself.
     {"effect": "update-rows", "table": "it-scenario-reg",
      "whichRows": SCENARIO_ROW,
      "values": {
@@ -1378,7 +1582,7 @@ add(control(
 add(control(
     "ct-nd-scenario", "nd_scenario", "Scenario", "list", "",
     mode="include", selectionMode="single", values=[],
-    source={"kind": "source", "source": {"kind": "table", "elementId": "jn-commission"},
+    source={"kind": "source", "source": {"kind": "table", "elementId": "jn-comm-calc"},
             "columnId": "jn-scenario"},
 ))
 add(control(
@@ -1598,24 +1802,19 @@ add(text(
     '<span style="color:%s">Where is credentialed supply failing to meet facility demand — '
     'and which client or professional conversation happens today?</span>' % (GREEN, INK),
 ))
-add(text("sec-trend", '<span style="color:%s">**MARKETPLACE LIQUIDITY**</span>' % MUTED))
-add(text("sec-gap", '<span style="color:%s">**WHERE COVERAGE BREAKS**</span>' % MUTED))
-add(text("sec-drill", '<span style="color:%s">**ACTUAL VS PLAN — EXPAND REGION → STATE → MARKET → FACILITY**</span>' % MUTED))
-add(text("sec-queue", '<span style="color:%s">**FACILITY ACTION QUEUE — SELECT A ROW FOR THE CALL BRIEF**</span>' % MUTED))
-add(text("sec-supply", '<span style="color:%s">**SUPPLY ACTIVATION — MARKET × CREDENTIAL**</span>' % MUTED))
-add(text("sec-comm-model",
-         '<span style="color:%s">**SCENARIO ASSUMPTIONS — GREEN CELLS ARE EDITABLE**</span>'
-         % MUTED))
-add(text("sec-comm-outcome",
-         '<span style="color:%s">**PAYOUT & ATTAINMENT OUTCOMES**</span>' % MUTED))
-add(text("sec-comm-registry",
-         '<span style="color:%s">**SCENARIO REGISTRY — EVERY PLAN A USER CREATED**</span>'
-         % MUTED))
-add(text("sec-dispute-queue",
-         '<span style="color:%s">**DISPUTE QUEUE — SELECT A ROW TO WORK THE CASE**</span>'
-         % MUTED))
-add(text("sec-dispute-mix",
-         '<span style="color:%s">**WHERE DISPUTES CONCENTRATE**</span>' % MUTED))
+add(band("sec-trend", "Marketplace liquidity", TEAL))
+add(band("sec-gap", "Where coverage breaks", TEAL))
+add(band("sec-drill", "Actual vs plan — expand region → state → market → facility", INK))
+add(band("sec-queue", "Facility action queue — select a row for the call brief", INK))
+add(band("sec-supply", "Supply activation — market × credential", TEAL))
+add(band("sec-comm-outcome", "Scenario outcomes", TEAL))
+add(band("sec-comm-owner", "Scenario outcomes by account manager", TEAL))
+add(band("sec-comm-time", "Scenario impact over time", TEAL))
+add(band("sec-comm-registry", "Scenario registry — plans users created", INK))
+add(band("sec-dispute-queue", "Dispute queue — select a row to work the case", INK))
+add(band("sec-dispute-mix", "Where disputes concentrate", TEAL))
+add(band("sec-pulse-credential", "Coverage gap by credential", TEAL))
+add(band("sec-pulse-analyst", "Ask the marketplace analyst", INK))
 add(text(
     "dispute-new-copy",
     "### File a commission dispute\n"
@@ -1715,14 +1914,14 @@ add({"id": "txt-comm-ai", "kind": "text",
              'assess the selected scenario for payout cost, attainment distribution '
              'and whether its quality modifier aligns account-manager incentives with '
              'facility fill. Be quantitative and do not invent metrics. Scenario " & '
-             '[commission_scenario] & ": total payout $" & '
-             'Text(Round(Sum([Commission Scenarios/Final Payout]),0)) & '
+             'Coalesce([commission_scenario], "all scenarios") & ": total payout $" & '
+             'Text(Round(Sum([Commission Scenario Grid/Final Payout]),0)) & '
              '", commissionable gross profit $" & '
-             'Text(Round(Sum([Commission Scenarios/Commissionable Gross Profit]),0)) & '
+             'Text(Round(Sum([Commission Scenario Grid/Commissionable Gross Profit]),0)) & '
              '", average attainment " & '
-             'Text(Round(Avg([Commission Scenarios/Attainment])*100,1)) & '
+             'Text(Round(Avg([Commission Scenario Grid/Attainment])*100,1)) & '
              '" percent, average fill " & '
-             'Text(Round(Avg([Commission Scenarios/Fill Rate])*100,1)) & " percent."'
+             'Text(Round(Avg([Commission Scenario Grid/Fill Rate])*100,1)) & " percent."'
              "), '\"', \"\")}}" % GOOD,
      "style": {"backgroundColor": "transparent", "padding": "none"},
      "verticalAlign": "middle"})
@@ -1734,8 +1933,9 @@ add({"id": "tabs-persona", "kind": "tabbed-container",
      "spacing": "small", "style": {"backgroundColor": PAPER}})
 
 for cid in ("kpi-pulse", "filters-pulse", "pivot-wrap", "analyst-wrap",
+            "comm-outcome-wrap", "comm-owner-wrap", "comm-time-wrap",
             "kpi-action", "queue-wrap", "supply-wrap",
-            "kpi-commission", "comm-controls", "comm-grid", "comm-registry",
+            "kpi-commission", "comm-controls", "comm-registry",
             "kpi-dispute", "dispute-controls", "dispute-queue-wrap", "dispute-mix"):
     add({"id": cid, "kind": "container", "spacing": "small",
          "style": {"backgroundColor": CARD, "borderRadius": "round",
@@ -1752,7 +1952,8 @@ add(text(
 ))
 add(text(
     "commission-modal-copy",
-    'Review **{{[commission_scenario]}}** against governed gross profit, attainment '
+    'Review **{{Coalesce([commission_scenario], "the selected scenario")}}** '
+    'against governed gross profit, attainment '
     'and fill quality. The decision is written to the scenario registry, so it '
     'applies to every account-manager row in the scenario and stays in the audit trail.',
     style={"backgroundColor": "transparent"},
@@ -1815,7 +2016,6 @@ agents = [{
                     {"kind": "table", "elementId": "sql-facility"},
                     {"kind": "table", "elementId": "sql-supply"},
                     {"kind": "table", "elementId": "it-actions"},
-                    {"kind": "table", "elementId": "it-comm-model"},
                     {"kind": "table", "elementId": "it-scenario-reg"},
                     {"kind": "table", "elementId": "it-dispute"}],
     "tools": [
@@ -1903,9 +2103,9 @@ agents = [{
              {"kind": "effect", "effect": "refresh-element",
               "target": {"type": "element", "element": "it-scenario-reg"}},
              {"kind": "effect", "effect": "refresh-element",
-              "target": {"type": "element", "element": "jn-commission"}},
+              "target": {"type": "element", "element": "jn-comm-calc"}},
              {"kind": "effect", "effect": "refresh-element",
-              "target": {"type": "element", "element": "it-comm-model"}}]},
+              "target": {"type": "element", "element": "jn-comm-calc"}}]},
         {"toolId": "t-comm-submit", "kind": "action",
          "name": "Submit the selected commission scenario",
          "description": "Move the selected scenario to Submitted for finance review.",
@@ -1918,7 +2118,7 @@ agents = [{
              {"kind": "effect", "effect": "refresh-element",
               "target": {"type": "element", "element": "it-scenario-reg"}},
              {"kind": "effect", "effect": "refresh-element",
-              "target": {"type": "element", "element": "it-comm-model"}}]},
+              "target": {"type": "element", "element": "jn-comm-calc"}}]},
         {"toolId": "t-comm-approve", "kind": "action",
          "name": "Approve the selected commission scenario",
          "description": "Finance-approve the scenario and write an audit note.",
@@ -1934,7 +2134,7 @@ agents = [{
              {"kind": "effect", "effect": "refresh-element",
               "target": {"type": "element", "element": "it-scenario-reg"}},
              {"kind": "effect", "effect": "refresh-element",
-              "target": {"type": "element", "element": "it-comm-model"}}]},
+              "target": {"type": "element", "element": "jn-comm-calc"}}]},
         # File a commission dispute on an AM's behalf. Dispute ID is generated on
         # insert; amount is cast from the agent's text input.
         {"toolId": "t-dispute-file", "kind": "action",
@@ -2144,16 +2344,18 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Element elementId="sec-gap" gridColumn="13 / 25" gridRow="28 / 29"/>
   <Element elementId="ch-fill" gridColumn="1 / 13" gridRow="29 / 43"/>
   <Element elementId="ch-region" gridColumn="13 / 25" gridRow="29 / 43"/>
-  <Element elementId="ch-credential" gridColumn="1 / 9" gridRow="43 / 56"/>
-  <Element elementId="sec-drill" gridColumn="9 / 25" gridRow="43 / 44"/>
-  <Container elementId="pivot-wrap" type="grid" gridColumn="9 / 25" gridRow="44 / 58"
+  <Element elementId="sec-pulse-credential" gridColumn="1 / 13" gridRow="43 / 44"/>
+  <Element elementId="sec-pulse-analyst" gridColumn="13 / 25" gridRow="43 / 44"/>
+  <Element elementId="ch-credential" gridColumn="1 / 13" gridRow="44 / 60"/>
+  <Container elementId="analyst-wrap" type="grid" gridColumn="13 / 25" gridRow="44 / 60"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="pvt-variance" gridColumn="1 / 25" gridRow="1 / 14"/>
+    <Element elementId="pulse-analyst-hd" gridColumn="1 / 25" gridRow="1 / 2"/>
+    <Element elementId="chat-pulse" gridColumn="1 / 25" gridRow="2 / 16"/>
   </Container>
-  <Element elementId="pulse-analyst-hd" gridColumn="1 / 25" gridRow="58 / 59"/>
-  <Container elementId="analyst-wrap" type="grid" gridColumn="1 / 25" gridRow="59 / 77"
+  <Element elementId="sec-drill" gridColumn="1 / 25" gridRow="60 / 61"/>
+  <Container elementId="pivot-wrap" type="grid" gridColumn="1 / 25" gridRow="61 / 76"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="chat-pulse" gridColumn="1 / 25" gridRow="1 / 18"/>
+    <Element elementId="pvt-variance" gridColumn="1 / 25" gridRow="1 / 15"/>
   </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-action">
@@ -2233,15 +2435,25 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
     <Element elementId="txt-comm-ai" gridColumn="1 / 25" gridRow="1 / 4"/>
   </Container>
   <Element elementId="sec-comm-outcome" gridColumn="1 / 25" gridRow="29 / 30"/>
-  <Element elementId="ch-comm-owner" gridColumn="1 / 13" gridRow="30 / 44"/>
-  <Element elementId="ch-comm-attain" gridColumn="13 / 25" gridRow="30 / 44"/>
-  <Element elementId="sec-comm-model" gridColumn="1 / 25" gridRow="44 / 45"/>
-  <Container elementId="comm-grid" type="grid" gridColumn="1 / 25" gridRow="45 / 68"
+  <Container elementId="comm-outcome-wrap" type="grid" gridColumn="1 / 25" gridRow="30 / 43"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="it-comm-model" gridColumn="1 / 25" gridRow="1 / 23"/>
+    <Element elementId="tbl-comm-outcome" gridColumn="1 / 25" gridRow="1 / 13"/>
   </Container>
-  <Element elementId="sec-comm-registry" gridColumn="1 / 25" gridRow="68 / 69"/>
-  <Container elementId="comm-registry" type="grid" gridColumn="1 / 25" gridRow="69 / 82"
+  <Element elementId="ch-comm-owner" gridColumn="1 / 13" gridRow="43 / 57"/>
+  <Element elementId="ch-comm-attain" gridColumn="13 / 25" gridRow="43 / 57"/>
+  <Element elementId="sec-comm-owner" gridColumn="1 / 25" gridRow="57 / 58"/>
+  <Container elementId="comm-owner-wrap" type="grid" gridColumn="1 / 25" gridRow="58 / 76"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="tbl-comm-owner" gridColumn="1 / 25" gridRow="1 / 18"/>
+  </Container>
+  <Element elementId="sec-comm-time" gridColumn="1 / 25" gridRow="76 / 77"/>
+  <Container elementId="comm-time-wrap" type="grid" gridColumn="1 / 25" gridRow="77 / 96"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ch-comm-time" gridColumn="1 / 25" gridRow="1 / 8"/>
+    <Element elementId="tbl-comm-time" gridColumn="1 / 25" gridRow="8 / 19"/>
+  </Container>
+  <Element elementId="sec-comm-registry" gridColumn="1 / 25" gridRow="96 / 97"/>
+  <Container elementId="comm-registry" type="grid" gridColumn="1 / 25" gridRow="97 / 110"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="it-scenario-reg" gridColumn="1 / 25" gridRow="1 / 13"/>
   </Container>
@@ -2287,10 +2499,12 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Element elementId="it-actions" gridColumn="1 / 25" gridRow="16 / 34"/>
   <Element elementId="ct-selected" gridColumn="1 / 7" gridRow="34 / 37"/>
   <Element elementId="sql-commission" gridColumn="7 / 16" gridRow="34 / 48"/>
-  <Element elementId="jn-commission" gridColumn="16 / 25" gridRow="34 / 48"/>
+  <Element elementId="jn-comm-calc" gridColumn="16 / 25" gridRow="34 / 48"/>
   <Element elementId="it-dispute" gridColumn="1 / 13" gridRow="48 / 64"/>
   <Element elementId="it-dispute-log" gridColumn="13 / 25" gridRow="48 / 64"/>
   <Element elementId="ct-dispute-selected" gridColumn="1 / 7" gridRow="64 / 67"/>
+  <Element elementId="sql-commission-month" gridColumn="1 / 13" gridRow="67 / 82"/>
+  <Element elementId="jn-comm-month" gridColumn="13 / 25" gridRow="67 / 82"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="m-action">
   <Element elementId="modal-copy" gridColumn="1 / 25" gridRow="1 / 4"/>
@@ -2345,6 +2559,38 @@ layout = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplate
   <Element elementId="b-scenario-cancel" gridColumn="1 / 13" gridRow="17 / 20"/>
   <Element elementId="b-scenario-create" gridColumn="13 / 25" gridRow="17 / 20"/>
 </Page>"""
+
+
+# Wrap every section band in a coloured container, since the colour cannot ride
+# on the text element itself. Rewrites
+#   <Element elementId="sec-x" gridColumn="A / B" gridRow="C / D"/>
+# into a container at the same grid slot holding the title text.
+def wrap_bands(layout_xml):
+    pattern = re.compile(
+        r'<Element elementId="(?P<eid>%s)" '
+        r'gridColumn="(?P<col>[^"]+)" gridRow="(?P<row>[^"]+)"\s*/>'
+        % "|".join(re.escape(k) for k in BAND_COLORS)
+    )
+
+    def repl(m):
+        eid = m.group("eid")
+        wrap_id = eid + "-bg"
+        # `spacing` only accepts the named sizes; "none" is rejected by the API.
+        add({"id": wrap_id, "kind": "container", "spacing": "small",
+             "style": {"backgroundColor": BAND_COLORS[eid],
+                       "borderRadius": "round",
+                       "borderColor": BAND_COLORS[eid], "borderWidth": 1}})
+        return (
+            '<Container elementId="%s" type="grid" gridColumn="%s" gridRow="%s" '
+            'gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">'
+            '<Element elementId="%s" gridColumn="1 / 25" gridRow="1 / 2"/>'
+            "</Container>" % (wrap_id, m.group("col"), m.group("row"), eid)
+        )
+
+    return pattern.sub(repl, layout_xml)
+
+
+layout = wrap_bands(layout)
 
 
 document = {
