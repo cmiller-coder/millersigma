@@ -866,6 +866,15 @@ Run your plugin locally and register `http://localhost:3000` (or your dev server
 
 Any static hosting works: Vercel, Netlify, S3 + CloudFront, GitHub Pages, etc. The plugin just needs to be a publicly accessible URL serving your HTML/JS/CSS.
 
+The response MIME type matters: the HTML entry point must be
+`Content-Type: text/html`. **Do not use jsDelivr for `index.html`** — it serves
+HTML files as `text/plain` with `nosniff`, so Sigma displays the source code in
+the plugin frame. Check before registration:
+
+```bash
+curl -sIL "$PLUGIN_URL" | grep -iE 'content-type|x-content-type'
+```
+
 ### Build Considerations
 
 - The plugin runs in an iframe — bundle everything needed (no reliance on the parent page)

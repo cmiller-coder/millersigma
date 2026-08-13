@@ -31,15 +31,20 @@ rail whenever Sigma changes the iframe size.
 
 ## Hosting and registration
 
-Use an immutable jsDelivr URL pinned to a commit SHA:
+The host **must return `Content-Type: text/html`**. jsDelivr is not a valid
+HTML-plugin host: it returns `.html` as `text/plain; charset=utf-8` plus
+`X-Content-Type-Options: nosniff`, so Sigma displays the plugin's source code.
+
+Preferred durable hosts: Netlify, Vercel, or GitHub Pages. For the immediate
+Honda demo, the workbook uses HTMLPreview over an immutable raw commit:
 
 ```text
-https://cdn.jsdelivr.net/gh/cmiller-coder/millersigma@<sha>/plugins/honda-allocation-pulse/index.html
+https://htmlpreview.github.io/?https://raw.githubusercontent.com/cmiller-coder/millersigma/<sha>/plugins/honda-allocation-pulse/index.html
 ```
 
-Set **both** production URL and development URL to that hosted URL. If devUrl is
-omitted, Sigma defaults it to localhost:5173 and remote author/edit sessions
-show an unreachable iframe.
+Set **both** production URL and development URL to the executable hosted URL.
+If devUrl is omitted, Sigma defaults it to localhost:5173 and remote
+author/edit sessions show an unreachable iframe.
 
 On demeng, `POST /v2/plugins` and `PATCH /v2/plugins/{id}` can apply the change
 and then return a masked 404. On 404, list/read the registration before retrying

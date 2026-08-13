@@ -517,38 +517,35 @@ categorical color #1), not in `company.py`.
 
 48 authored total; served two ways depending on age.
 
-### Hosting — FIXED for every plugin v2's companies actually use
-The old blocker ("plugins are localhost:8080-only, every workbook with a
-plugin looks broken from anyone else's machine") is **resolved for the 10
-plugins v2 companies reference** (sofi-flywheel, sofi-rates-ticker,
-payer-cost-flow, payer-cost-ticker, mcd-daypart, mcd-commodity-ticker,
-nuvia-arch-map, delta-hub-banks, alnylam-rnai-pathway, nvidia-gpu-heatmap).
-They are now registered against **jsDelivr URLs off the public `millersigma`
-repo**:
-```
-https://cdn.jsdelivr.net/gh/cmiller-coder/millersigma@main/plugins/<folder>/index.html
-```
-No local server, no launchd agent, works from any machine, permanently — the
-repo is already public, this just makes the plugin files reachable by URL.
-**Every new plugin should register this way by default** — see the updated
-registration line below. The Sigma Plugins API has **no update/PATCH
-endpoint** (confirmed empirically, 404), so an already-registered `pluginId`
-can never be repointed to a new URL in place — a hosting-URL change always
-means registering a *new* `pluginId` and updating every `company.py`
-reference to it (`PLUGINS[key]["hero"/"ticker"]`), then re-pushing every
-already-built workbook with `build_sofi.py update <id>` so the live spec picks
-up the new id. Verify the swap landed by `GET`-ing the live workbook's spec
-and checking the plugin element's `pluginId` directly — a successful `update`
-response does not by itself prove the new id is what's actually bound.
+### Hosting — executable HTML is non-negotiable
 
-The remaining 38 plugins (not used by any v2 company) are still
-localhost:8080-only, served by the launchd agent
-`com.millersigma.plugins` from `~/Library/Application Support/millersigma-plugins/`.
-Migrate one to jsDelivr the same way, on demand, the first time a v2 company
-needs it.
+**Correction (verified 2026-08-13): jsDelivr does not host executable HTML.**
+It returns `.html` as `text/plain; charset=utf-8` with
+`X-Content-Type-Options: nosniff`, so Sigma displays the plugin's source code
+inside the workbook. Any older registration that points at jsDelivr is
+potentially broken despite returning HTTP 200.
 
-**Known gap:** `nvidia-gpu-heatmap` is registered on jsDelivr but **not wired
-into `PLUGINS["nvidia"]`** — it needs a bespoke `hero_table` SQL source (node
+Use a host that returns `Content-Type: text/html`: Netlify, Vercel, GitHub
+Pages, S3/CloudFront, etc. Pin production builds to immutable assets. For an
+immediate demo when no authenticated host exists, HTMLPreview over an immutable
+raw GitHub commit executes correctly:
+
+```text
+https://htmlpreview.github.io/?https://raw.githubusercontent.com/<owner>/<repo>/<sha>/plugins/<folder>/index.html
+```
+
+Treat HTMLPreview as a demo bridge, not the durable production host.
+
+The Plugins API has `PATCH`, but the live schema only allows
+name/description/devUrl — **not** the production `url`. A production-host
+change therefore requires a new `pluginId`, updating `company.py`, and pushing
+every live workbook. Set `devUrl` to the same hosted production URL unless
+actively developing locally; omission defaults to localhost:5173 and breaks
+remote author/edit mode.
+
+**Known gap:** `nvidia-gpu-heatmap` is registered on the now-known-bad
+jsDelivr host and **not wired into `PLUGINS["nvidia"]`** — rehost it as
+executable HTML before use. It also needs a bespoke `hero_table` SQL source (node
 id / utilization % / temp / GPU model), the same pattern as Delta's
 `hub_banks.sql`, which doesn't exist yet. Don't wire the `pluginId` in without
 also building that table, or the plugin will render with no data.
@@ -573,12 +570,13 @@ Rules:
 - **No infinite animation loop** or headless PNG export never reaches idle.
 - Inline SVG needs an explicit `xmlns`.
 - Always ship a `synth()` fallback so the plugin looks right unbound.
-- **Register with `POST /v2/plugins` using the jsDelivr URL**, not localhost:
-  `{name, url: "https://cdn.jsdelivr.net/gh/cmiller-coder/millersigma@main/plugins/<folder>/index.html", description, type:"element"}`.
-  The file must already be pushed to `main` on the public repo before you
-  register it — jsDelivr serves whatever's on `main` right now, with its own
-  CDN cache (~12hr) on top, so a same-day edit-and-re-register cycle may still
-  serve the stale file for a while.
+- **Register with `POST /v2/plugins` using an executable hosted URL**, not
+  localhost or jsDelivr:
+  `{name, url: "<text/html URL>", devUrl: "<same URL>", description}`.
+  The current production schema does not include `type:"element"`.
+- demeng can apply POST/PATCH successfully and then return a masked 404. On
+  404, list/get and match the exact name + URL before retrying, or duplicates
+  are created.
 
 ### The hero-plugin generalization
 Most hero plugins bind to the product-card table with `product/balance/members/
