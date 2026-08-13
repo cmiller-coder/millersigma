@@ -28,18 +28,20 @@ make it real.
 The [`plugins/honda-allocation-pulse/index.html`](../../../plugins/honda-allocation-pulse/index.html)
 rail is **optional**. Registering a plugin needs the `canDevelopPlugins` org
 feature; when `HONDA_PULSE_PLUGIN_ID` is unset (or the account can't register
-plugins) the builder omits the plugin element and the app page reclaims its row —
-KPIs, personas, input tables, and the approval queue are unaffected. To include
-it, register the plugin once in the target org and pass its UUID through
+plugins) the builder renders a native data-bound Allocation Pulse in the same
+row — KPIs, personas, input tables, and the approval queue are unaffected. To
+include the iframe version, host it on a durable first-party static host,
+register the plugin once in the target org, and pass its UUID through
 `HONDA_PULSE_PLUGIN_ID`. The plugin is a compact rail above the persona tabs: BEV
 mix, electrified mix, network capacity, battery-cell commitment, and constraint
 count. It is bound to the linked allocation table and the grouped plant-load
 table, so edits move it immediately.
 
-Verified on two orgs against a Snowflake write-back connection: **demeng** (prod,
-with the plugin) and **staging** (`Sigma Sample Database` connection, without the
-plugin — that account lacks `canDevelopPlugins`). On staging both pages export to
-PNG cleanly because there is no plugin iframe for the exporter to wait on.
+The production rule is strict: **build only in papercranestaging; use demeng
+read-only to inspect examples.** Both the shared staging API helper and this
+builder verify the authenticated organization id before writes. The
+papercranestaging build uses the native rail because the available GitHub CDN
+bridges fail inside Sigma's plugin sandbox; both pages therefore export cleanly.
 
 ### The message the build is designed to carry
 

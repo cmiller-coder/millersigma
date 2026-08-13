@@ -525,18 +525,21 @@ It returns `.html` as `text/plain; charset=utf-8` with
 inside the workbook. Any older registration that points at jsDelivr is
 potentially broken despite returning HTTP 200.
 
-Use a host that returns `Content-Type: text/html`: Netlify, Vercel, GitHub
-Pages, S3/CloudFront, etc. Pin production builds to immutable assets. For an
-immediate demo when no authenticated host exists, raw.githack serves an
-immutable raw GitHub commit directly as executable HTML:
+Use a durable first-party host that returns `Content-Type: text/html`: Netlify,
+Vercel, GitHub Pages, S3/CloudFront, etc. Pin production builds to immutable
+assets.
 
-```text
-https://raw.githack.com/<owner>/<repo>/<sha>/plugins/<folder>/index.html
-```
+**There is no safe ad-hoc GitHub CDN bridge.** HTMLPreview performs a runtime
+fetch/rewrite that fails in Sigma's sandbox with `TypeError: Failed to fetch`.
+raw.githack intermittently returns Cloudflare `403` plus
+`X-Frame-Options: SAMEORIGIN`; a URL can return 200 during registration and
+fail in the workbook minutes later. A `data:` URL is accepted by the plugin
+registration API but Sigma's loader rejects it with `Failed to construct
+'URL': Invalid URL`.
 
-HTMLPreview is not a safe bridge inside Sigma: it performs a runtime fetch and
-rewrite that can fail in the sandbox with `TypeError: Failed to fetch`.
-Treat raw.githack as a demo bridge, not the durable production host.
+When durable hosting is unavailable, use a native data-bound element instead
+of shipping a broken iframe. The Honda builder's compact Allocation Pulse text
+rail is the reference fallback.
 
 The Plugins API has `PATCH`, but the live schema only allows
 name/description/devUrl — **not** the production `url`. A production-host

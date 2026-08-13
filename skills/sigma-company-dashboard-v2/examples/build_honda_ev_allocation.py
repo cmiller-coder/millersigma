@@ -889,6 +889,36 @@ if HAS_PULSE:
         },
         "style": {"backgroundColor": "#FFFFFF"},
     })
+else:
+    # Native fallback for orgs without a durable executable-HTML plugin host.
+    # It keeps the same high-value pulse in the header, is fully data-bound,
+    # exports cleanly, and has no iframe/CDN failure mode.
+    add({"id": "c-pulse-native", "kind": "container", "spacing": "small",
+         "style": {"backgroundColor": CARD, "borderRadius": "square",
+                   "borderColor": RULE, "borderWidth": 1}})
+    add(text(
+        "txt-pulse-native",
+        '<span style="color: %s">**◉ ALLOCATION PULSE**</span>　'
+        '<span style="color: %s">BEV MIX</span> '
+        '<span style="color: %s">**{{Sum(If([Allocation Plan/Powertrain] = "BEV", '
+        '[Allocation Plan/Effective Units], 0)) / '
+        'Sum([Allocation Plan/Effective Units]) | .1%%}}**</span>　'
+        '<span style="color: %s">ELECTRIFIED</span> '
+        '<span style="color: %s">**{{Sum(If([Allocation Plan/Powertrain] <> "ICE", '
+        '[Allocation Plan/Effective Units], 0)) / '
+        'Sum([Allocation Plan/Effective Units]) | .1%%}}**</span>　'
+        '<span style="color: %s">CELL COMMITMENT</span> '
+        '<span style="color: %s">**{{Sum([Plant Month Load/Cell kWh]) / '
+        'Sum([Plant Month Load/Cell Contract]) | .1%%}}**</span>　'
+        '<span style="color: %s">CELL CONSTRAINTS</span> '
+        '<span style="color: %s">**{{CountDistinct(If('
+        '[Plant Month Load/Cell Status] = "Over contract", '
+        '[Plant Month Load/Plant Month], Null)) | ,d}}**</span>'
+        % (HONDA, INK_SOFT, INK, INK_SOFT, INK, INK_SOFT, INK,
+           INK_SOFT, HONDA),
+        style={"backgroundColor": "transparent", "padding": "none"},
+        verticalAlign="middle",
+    ))
 add({
     "id": "tc-persona",
     "kind": "tabbed-container",
@@ -983,9 +1013,17 @@ _exec_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemp
   </Container>
 </Page>"""
 
-_pulse_slot = ('  <Element elementId="plg-pulse" gridColumn="1 / 25" gridRow="9 / 14"/>\n'
-               if HAS_PULSE else "")
-_kpi_row0 = 14 if HAS_PULSE else 9
+_pulse_slot = (
+    '  <Element elementId="plg-pulse" gridColumn="1 / 25" gridRow="9 / 14"/>\n'
+    if HAS_PULSE else
+    '  <Container elementId="c-pulse-native" type="grid" gridColumn="1 / 25" '
+    'gridRow="9 / 14" gridTemplateColumns="repeat(24, 1fr)" '
+    'gridTemplateRows="auto">\n'
+    '    <Element elementId="txt-pulse-native" gridColumn="1 / 25" '
+    'gridRow="1 / 5"/>\n'
+    '  </Container>\n'
+)
+_kpi_row0 = 14
 _kpi_row1 = _kpi_row0 + 8
 _ai_row0 = _kpi_row1
 _ai_row1 = _ai_row0 + 4

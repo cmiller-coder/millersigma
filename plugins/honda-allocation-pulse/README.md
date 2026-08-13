@@ -41,15 +41,16 @@ The host **must return `Content-Type: text/html`**. jsDelivr is not a valid
 HTML-plugin host: it returns `.html` as `text/plain; charset=utf-8` plus
 `X-Content-Type-Options: nosniff`, so Sigma displays the plugin's source code.
 
-Preferred durable hosts: Netlify, Vercel, or GitHub Pages. HTMLPreview can fail
-inside Sigma's sandbox because it fetches and rewrites another page at runtime
-(`TypeError: Failed to fetch`). For an immediate demo when no first-party host
-is available, raw.githack serves the immutable GitHub asset directly as
-`text/html`:
+Use a durable first-party host: Netlify, Vercel, GitHub Pages, or
+S3/CloudFront. HTMLPreview fails inside Sigma's sandbox because it fetches and
+rewrites another page at runtime (`TypeError: Failed to fetch`). raw.githack is
+also unsuitable: Cloudflare intermittently returns `403` and
+`X-Frame-Options: SAMEORIGIN`, so a URL that returns 200 during registration
+can fail in the workbook minutes later.
 
-```text
-https://raw.githack.com/cmiller-coder/millersigma/<sha>/plugins/honda-allocation-pulse/index.html
-```
+When no durable host is available, do **not** register a speculative CDN URL.
+Leave `HONDA_PULSE_PLUGIN_ID` unset; the Honda builder renders the same compact
+metrics as a native data-bound `text` rail with no iframe dependency.
 
 Set **both** production URL and development URL to the executable hosted URL.
 If devUrl is omitted, Sigma defaults it to localhost:5173 and remote
