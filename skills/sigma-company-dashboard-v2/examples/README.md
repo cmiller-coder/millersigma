@@ -41,6 +41,49 @@ with the plugin) and **staging** (`Sigma Sample Database` connection, without th
 plugin — that account lacks `canDevelopPlugins`). On staging both pages export to
 PNG cleanly because there is no plugin iframe for the exporter to wait on.
 
+### The message the build is designed to carry
+
+The app is built around one industry-specific insight, not a generic "edit your
+data" demo: **in a mix re-trade, assembly capacity is not the binding constraint —
+contracted battery cells are.** Swap an ICE unit for a BEV unit on the same line
+and you build exactly the same number of vehicles while adding 85 kWh of cell
+draw where there was zero.
+
+So the `Apply BEV shift` action is deliberately **volume-neutral**. BEV rises by
+the control percentage and ICE falls by the *unit-equivalent* amount, using a
+per-month `ice_offset_factor` (the BEV:ICE baseline ratio) computed in SQL rather
+than a flat percentage. Because every powertrain shares the same model/region
+expansion, that ratio is also the ratio of their unit totals, which makes the
+trade exact.
+
+Measured on the live staging build (20% shift, warehouse arithmetic via a
+simulation query, not algebra):
+
+| | Baseline | After shift |
+|---|---|---|
+| Net unit shift | 0 | **0** |
+| Cell commitment | 87.6% | **103.0%** |
+| Plant-months over cell contract | 0 of 30 | **24 of 30** |
+
+Six plant-months (Lincoln AL, the plant deliberately given the most cell
+headroom at `cell_util_target` 0.84) stay inside contract — so the app answers
+*where the volume can still go*, not just that the plan broke.
+
+Two design consequences worth reusing:
+
+- **Contracted supply is sized off the baseline's own draw** (`cell_kwh_contracted
+  = baseline cell used / cell_util_target`, target varying 0.84–0.92 by plant), so
+  the plan of record starts feasible with uneven headroom. A demo whose baseline
+  is already breached has no beat to show.
+- **The constraint KPI must be parented to the editable table**, not the baseline
+  SQL. Cell commitment lives on the grouped `tbl-load` (derived from the input
+  table) so it recomputes on edit. The exec page's `k-cell` reads the same
+  contracted basis from `sql-plant`, so both pages agree at 87.6%.
+
+For constraint KPIs where rising is bad, set `comparison.direction: "none"` —
+Sigma's default arrow treatment paints a breach green. That mode requires
+`colorNeutral` and rejects `colorGood`/`colorBad`.
+
 **Page 1 — Executive overview.** The decision question, then five KPIs (plan-of-record
 units, electrified mix, BEV mix vs target, plant capacity used, battery cell used),
 powertrain mix trajectory, allocation vs capacity by plant, and regional mix.
@@ -51,14 +94,16 @@ the regional chart's series through `Switch([ExecSeries], ...)`.
 **Page 2 — Allocation planner.** The Allocation Pulse rail stays fixed at the top,
 then a tabbed persona switch selects **Planner** or **Approver**. Planner gets the
 linked input table over the baseline where users type `Proposed Units`;
-`Effective Units = Coalesce(proposed, baseline)` with signed variance. KPIs and
-charts are parented to the input table so they move as cells change. Bulk actions
-copy the plan of record, use the warehouse demand signal, clear proposals, or
-shift volume between BEV and ICE by a control-driven percentage. Its own
-Month/Quarter segmented control changes the comparison chart grain. Approver
-gets the grouped plant-month capacity table
-with utilisation data bars / status pills plus the approval queue. That queue
-reuses the
+`Effective Units = Coalesce(proposed, baseline)` with signed variance. Five KPIs
+read left-to-right as the argument: proposed units (unchanged) → net unit shift
+(zero) → proposed BEV mix (up) → cell commitment (over contract) → plant-months
+breached. All are parented to the input table or the table derived from it, so
+they move as cells change. Bulk actions copy the plan of record, use the
+warehouse demand signal, clear proposals, or run the volume-neutral BEV shift.
+Its own Month/Quarter segmented control changes the comparison chart grain.
+Approver gets the grouped plant-month table carrying **both** constraints —
+assembly utilisation and cell commitment, each with data bars and over/within
+status pills — plus the approval queue. That queue reuses the
 Draft → Submitted → Approved / Adjust / Rejected lifecycle from
 `sigma-input-table-app`.
 

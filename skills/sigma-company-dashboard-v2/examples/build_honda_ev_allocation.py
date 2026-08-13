@@ -89,6 +89,31 @@ mix AS (
            ELSE              0.46 - 0.018 * mo.m_idx
          END AS mix_share
   FROM months mo CROSS JOIN powertrains p
+),
+-- Per-month BEV:ICE baseline ratio. Because every powertrain shares the same
+-- model/region expansion, this ratio is also the ratio of their unit totals --
+-- which is what makes a mix shift volume-neutral (see ice_offset_factor).
+shares AS (
+  SELECT m_idx,
+         MAX(CASE WHEN powertrain = 'BEV' THEN mix_share END) AS bev_share,
+         MAX(CASE WHEN powertrain = 'ICE' THEN mix_share END) AS ice_share
+  FROM mix GROUP BY m_idx
+),
+-- Contracted cell supply is sized off the baseline's own cell draw per
+-- plant-month, so the plan of record lands inside contract with real but
+-- uneven headroom. Mix moves are what consume the remainder.
+plant_factor AS (
+  SELECT * FROM VALUES
+    ('Marysville OH',0.88),('East Liberty OH',0.86),('Celaya MX',0.92),
+    ('Lincoln AL',0.84),('Ramos Arizpe MX',0.90)
+  AS pf(plant, cell_util_target)
+),
+plant_cells AS (
+  SELECT x.month_start, m.plant,
+         SUM(ROUND(30000 * (1 + 0.015 * x.m_idx) * m.model_weight * x.mix_share)
+             * x.kwh_per_unit) AS cell_used
+  FROM mix x CROSS JOIN models m
+  GROUP BY x.month_start, m.plant
 )
 SELECT
   m.model || '|' || x.powertrain || '|' || r.region || '|'
@@ -99,11 +124,16 @@ SELECT
   ROUND(30000 * (1 + 0.028 * x.m_idx) * m.model_weight
         * x.mix_share * r.region_share)                              AS demand_units,
   x.kwh_per_unit, c.capacity_units AS plant_capacity,
-  0.18 AS bev_mix_target
+  0.18 AS bev_mix_target,
+  s.bev_share / s.ice_share                                          AS ice_offset_factor,
+  ROUND(pc.cell_used / pf.cell_util_target)                          AS cell_kwh_contracted
 FROM mix x
 CROSS JOIN models m
 CROSS JOIN regions r
-JOIN plant_cap c ON c.plant = m.plant
+JOIN plant_cap c    ON c.plant = m.plant
+JOIN shares s       ON s.m_idx = x.m_idx
+JOIN plant_factor pf ON pf.plant = m.plant
+JOIN plant_cells pc ON pc.plant = m.plant AND pc.month_start = x.month_start
 """.strip()
 
 # Plant x month capacity/battery grain, aggregated in SQL so utilisation is honest.
@@ -130,6 +160,12 @@ powertrains AS (
   SELECT * FROM VALUES ('ICE',0.0),('HEV',1.5),('PHEV',17.0),('BEV',85.0)
   AS p(powertrain, kwh_per_unit)
 ),
+plant_factor AS (
+  SELECT * FROM VALUES
+    ('Marysville OH',0.88),('East Liberty OH',0.86),('Celaya MX',0.92),
+    ('Lincoln AL',0.84),('Ramos Arizpe MX',0.90)
+  AS pf(plant, cell_util_target)
+),
 mix AS (
   SELECT mo.m_idx, mo.month_start, p.powertrain, p.kwh_per_unit,
          CASE p.powertrain
@@ -150,8 +186,11 @@ alloc AS (
   GROUP BY x.month_start, m.plant
 )
 SELECT a.month_start, a.plant, a.allocated_units, c.capacity_units,
-       a.cell_kwh_used, ROUND(a.allocated_units * 20) AS cell_kwh_available
-FROM alloc a JOIN plant_cap c ON c.plant = a.plant
+       a.cell_kwh_used,
+       ROUND(a.cell_kwh_used / pf.cell_util_target) AS cell_kwh_available
+FROM alloc a
+JOIN plant_cap c     ON c.plant = a.plant
+JOIN plant_factor pf ON pf.plant = a.plant
 """.strip()
 
 
@@ -181,6 +220,8 @@ add(sql_table("sql-alloc", "Allocation Baseline", ALLOC_SQL, [
     c("ab-kwh", "kWh per Unit", "kwh_per_unit"),
     c("ab-cap", "Plant Capacity", "plant_capacity", INT),
     c("ab-target", "BEV Mix Target", "bev_mix_target", PCT1),
+    c("ab-offset", "ICE Offset Factor", "ice_offset_factor"),
+    c("ab-cellcap", "Cell kWh Contracted", "cell_kwh_contracted", INT),
 ]))
 add(sql_table("sql-plant", "Plant Capacity", PLANT_SQL, [
     c("pc-month", "Month", "month_start", MON), c("pc-plant", "Plant", "plant"),
@@ -204,6 +245,10 @@ add({"id": "it-alloc", "kind": "input-table", "name": "Allocation Plan",
          {"id": "al-demand", "key": "ab-demand", "name": "Demand Signal"},
          {"id": "al-kwh", "key": "ab-kwh", "name": "kWh per Unit", "hidden": True},
          {"id": "al-cap", "key": "ab-cap", "name": "Plant Capacity", "hidden": True},
+         {"id": "al-offset", "key": "ab-offset", "name": "ICE Offset Factor",
+          "hidden": True},
+         {"id": "al-cellcap", "key": "ab-cellcap", "name": "Cell kWh Contracted",
+          "hidden": True},
          {"id": "al-prop", "type": "number", "name": "Proposed Units"},
          {"id": "al-note", "type": "text", "name": "Planner Note"},
          {"id": "al-eff", "formula": "Coalesce([Proposed Units], [Baseline Units])",
@@ -256,21 +301,38 @@ add({"id": "tbl-load", "kind": "table", "name": "Plant Month Load",
           "format": INT},
          {"id": "pl-util", "name": "Utilisation", "formula": "[Allocated] / [Capacity]",
           "format": PCT1},
+         {"id": "pl-cells", "name": "Cell kWh",
+          "formula": "Sum([Allocation Plan/Cell kWh])", "format": INT},
+         {"id": "pl-cellcap", "name": "Cell Contract",
+          "formula": "Max([Allocation Plan/Cell kWh Contracted])", "format": INT},
+         {"id": "pl-cellutil", "name": "Cell Commitment",
+          "formula": "[Cell kWh] / [Cell Contract]", "format": PCT1},
          {"id": "pl-id", "name": "Plant Month", "hidden": True,
           "formula": '[Plant] & " · " & DateFormat([Month], "%b %Y")'},
          {"id": "pl-flag", "name": "Capacity Status",
           "formula": 'If([Allocated] > [Capacity], "Over capacity", "Within capacity")'},
+         {"id": "pl-cellflag", "name": "Cell Status",
+          "formula": 'If([Cell kWh] > [Cell Contract], "Over contract", "Within contract")'},
      ],
      "groupings": [{"id": "g-pl", "groupBy": ["pl-plant", "pl-month"],
-                    "calculations": ["pl-eff", "pl-cap", "pl-util", "pl-id", "pl-flag"]}],
+                    "calculations": ["pl-eff", "pl-cap", "pl-util", "pl-cells",
+                                     "pl-cellcap", "pl-cellutil", "pl-id",
+                                     "pl-flag", "pl-cellflag"]}],
      "tableComponents": {"summaryBar": "hidden"},
      "conditionalFormats": [
          {"type": "dataBars", "columnIds": ["pl-util"], "scheme": [GOOD, CARD_ALT]},
+         {"type": "dataBars", "columnIds": ["pl-cellutil"], "scheme": [HONDA, CARD_ALT]},
          {"type": "single", "columnIds": ["pl-flag"], "condition": "formula",
           "formula": '[Capacity Status] = "Over capacity"',
           "style": {"backgroundColor": "#FBE9E7", "color": ALARM}},
          {"type": "single", "columnIds": ["pl-flag"], "condition": "formula",
           "formula": '[Capacity Status] = "Within capacity"',
+          "style": {"backgroundColor": "#E9F5F1", "color": GOOD}},
+         {"type": "single", "columnIds": ["pl-cellflag"], "condition": "formula",
+          "formula": '[Cell Status] = "Over contract"',
+          "style": {"backgroundColor": "#FBE9E7", "color": ALARM}},
+         {"type": "single", "columnIds": ["pl-cellflag"], "condition": "formula",
+          "formula": '[Cell Status] = "Within contract"',
           "style": {"backgroundColor": "#E9F5F1", "color": GOOD}},
      ],
      "tableStyle": {"preset": "presentation", "cellSpacing": "small"},
@@ -278,7 +340,7 @@ add({"id": "tbl-load", "kind": "table", "name": "Plant Month Load",
 
 # --------------------------------------------------------------- KPIs
 def kpi(eid, label, source, formula, fmt, comparison=None, comp_formula=None,
-        comp_fmt=None, value_color=INK, size=34):
+        comp_fmt=None, value_color=INK, size=34, direction=None):
     cols = [{"id": eid + "-v", "name": label, "formula": formula, "format": fmt}]
     el = {"id": eid, "kind": "kpi-chart", "name": {"text": label, "color": INK_SOFT,
                                                    "fontSize": 12, "fontWeight": "bold"},
@@ -291,8 +353,17 @@ def kpi(eid, label, source, formula, fmt, comparison=None, comp_formula=None,
         cols.append({"id": eid + "-c", "name": comparison, "formula": comp_formula,
                      "format": comp_fmt or fmt})
         el["comparisonColumn"] = {"columnId": eid + "-c"}
-        el["comparison"] = {"display": "delta", "colorGood": GOOD, "colorBad": WARN,
-                            "fontSize": 12, "label": comparison}
+        el["comparison"] = {"display": "delta", "fontSize": 12, "label": comparison}
+        # For constraint KPIs (cell commitment) a rising number is bad, and Sigma's
+        # default arrow treatment would paint the breach green. `direction: none`
+        # shows the gap without asserting a good/bad sign -- and in that mode the
+        # API requires colorNeutral rather than colorGood/colorBad.
+        if direction == "none":
+            el["comparison"]["direction"] = "none"
+            el["comparison"]["colorNeutral"] = INK_SOFT
+        else:
+            el["comparison"]["colorGood"] = GOOD
+            el["comparison"]["colorBad"] = WARN
     return el
 
 
@@ -323,8 +394,14 @@ add(kpi("k-bev2", "Proposed BEV mix", "it-alloc",
         comparison="Target", comp_formula="Avg([Allocation Plan/BEV Mix Target])"
         if False else "0.18"))
 add(kpi("k-shift", "Net unit shift", "it-alloc", "Sum([Allocation Plan/Variance])", DLT))
-add(kpi("k-over", "Plant-months over capacity", "tbl-load",
-        'CountDistinct(If([Plant Month Load/Capacity Status] = "Over capacity", '
+# The constraint that actually binds when mix moves: assembly volume can be held
+# flat while cell draw runs past the contracted pool.
+add(kpi("k-cellprop", "Cell commitment", "tbl-load",
+        "Sum([Plant Month Load/Cell kWh]) / Sum([Plant Month Load/Cell Contract])",
+        PCT1, comparison="Contracted", comp_formula="1.0", comp_fmt=PCT1,
+        direction="none"))
+add(kpi("k-over", "Plant-months over cell contract", "tbl-load",
+        'CountDistinct(If([Plant Month Load/Cell Status] = "Over contract", '
         "[Plant Month Load/Plant Month], Null))", INT, value_color=ALARM))
 
 # --------------------------------------------------------------- charts
@@ -405,7 +482,7 @@ add(control("ct-pt", "c_powertrain", "Powertrain", "list", "",
                     "columnId": "al-pt"},
             filters=[{"source": {"kind": "table", "elementId": "it-alloc"},
                       "columnId": "al-pt"}]))
-add(control("ct-shift", "c_bev_shift", "BEV shift %", "number", 10))
+add(control("ct-shift", "c_bev_shift", "BEV shift %", "number", 20))
 add(control("ct-plan-id", "c_plan_id", "Plan ID"))
 add(control("ct-plan-name", "c_plan_name", "Plan name"))
 add(control("ct-plan-owner", "c_plan_owner", "Owner"))
@@ -436,6 +513,10 @@ add(button("b-clear", "Clear proposals", [
      "values": {"al-prop": {"type": "constant", "value": {"type": "number", "value": None}},
                 "al-note": {"type": "constant", "value": {"type": "text", "value": None}}}}]
     + REFRESH, CARD, INK, "outline"))
+# Volume-neutral mix trade: BEV goes up by the control percentage and ICE comes
+# down by the unit-equivalent amount (hence the per-month BEV:ICE offset factor,
+# not a flat percentage). Total build volume is unchanged, which is the point --
+# the constraint that moves is battery cell supply, not assembly capacity.
 add(button("b-shift", "Apply BEV shift", [
     {"effect": "update-rows", "table": "it-alloc",
      "whichRows": {"type": "formula", "formula": '[Powertrain] = "BEV"'},
@@ -444,7 +525,8 @@ add(button("b-shift", "Apply BEV shift", [
     {"effect": "update-rows", "table": "it-alloc",
      "whichRows": {"type": "formula", "formula": '[Powertrain] = "ICE"'},
      "values": {"al-prop": {"type": "formula",
-                            "formula": "Round([Baseline Units] * (1 - [c_bev_shift] / 100))"}}}]
+                            "formula": "Round([Baseline Units] * (1 - [c_bev_shift] / 100 "
+                                       "* [ICE Offset Factor]))"}}}]
     + REFRESH, HONDA))
 add(button("b-newplan", "Create plan", [
     {"effect": "open-overlay", "overlayId": "m-create"}], HONDA))
@@ -507,8 +589,12 @@ def text(eid, body, **extra):
 
 SERIF = 'font-family: Georgia'
 for idx, (head, sub) in enumerate([
-        ("Hybrid &amp; EV allocation", "Plan of record for the next six months — mix, capacity and battery supply."),
-        ("Allocation planner", "Shift volume between powertrains, then submit the plan for review.")], start=1):
+        ("Hybrid &amp; EV allocation",
+         "Six months of plan of record — and what it costs in assembly capacity and "
+         "contracted battery cells to change it."),
+        ("Allocation planner",
+         "Trade volume between powertrains at constant build, watch the cell contract "
+         "answer back, then submit for review.")], start=1):
     add({"id": "c-hdr%d" % idx, "kind": "container", "spacing": "small",
          "style": {"backgroundColor": CARD, "borderRadius": "square",
                    "borderColor": RULE, "borderWidth": 1}})
@@ -541,8 +627,9 @@ for idx, (head, sub) in enumerate([
              {"label": "Executive overview", "destination": {"type": "page", "pageId": "pg-exec"}},
              {"label": "Allocation planner", "destination": {"type": "page", "pageId": "pg-app"}}]})
 add(text("q-exec", '<span style="color: %s">**THE DECISION**</span>  '
-                   '<span style="color: %s">How much volume should move from ICE to hybrid and EV '
-                   'without breaching plant capacity or battery cell supply?</span>' % (HONDA, INK)))
+                   '<span style="color: %s">Buyers moved to hybrid faster than the EV plan assumed. '
+                   'How much volume do we re-trade — and what breaks when we do?</span>'
+                   % (HONDA, INK)))
 add({"id": "c-insight", "kind": "container", "spacing": "small",
      "style": {"backgroundColor": "#FFF8F7", "borderRadius": "square",
                "borderColor": "#F2D6D2", "borderWidth": 1}})
@@ -558,8 +645,9 @@ add(text("insight",
          '<span style="color: %s"> of build capacity and </span>'
          '<span style="color: %s">**{{Sum([Plant Capacity/Cell kWh Used]) '
          '/ Sum([Plant Capacity/Cell kWh Available]) | .1%%}}**</span>'
-         '<span style="color: %s"> of cell supply. Adding BEV volume therefore has to come '
-         'out of another powertrain at the same plant.</span>'
+         '<span style="color: %s"> of contracted cells. Trading ICE for BEV one-for-one '
+         'holds build volume flat and still consumes that cell headroom — so the mix '
+         'decision is really a battery decision.</span>'
          % (HONDA, INK_SOFT, INK, INK_SOFT, INK, INK_SOFT, INK, INK_SOFT),
          style={"backgroundColor": "transparent", "padding": "none"}))
 add(text("s-mix", '<span style="color: %s">**MIX TRAJECTORY**</span>' % INK_SOFT))
@@ -567,7 +655,8 @@ add(text("s-cap", '<span style="color: %s">**CAPACITY POSTURE**</span>' % INK_SO
 add(text("s-region", '<span style="color: %s">**REGIONAL MIX**</span>' % INK_SOFT))
 add(text("s-grid", '<span style="color: %s">**ALLOCATION GRID — EDIT PROPOSED UNITS**</span>' % INK_SOFT))
 add(text("s-queue", '<span style="color: %s">**APPROVAL QUEUE — SELECT A ROW TO DECIDE**</span>' % INK_SOFT))
-add(text("s-load", '<span style="color: %s">**PLANT-MONTH LOAD VS CAPACITY**</span>' % INK_SOFT))
+add(text("s-load", '<span style="color: %s">**PLANT-MONTH LOAD — ASSEMBLY CAPACITY AND '
+                   'CELL CONTRACT**</span>' % INK_SOFT))
 add(text("m-create-help", '### Create allocation plan\nA draft plan is registered, then submitted for review.'))
 add(text("m-review-help", '### Review allocation plan\nApprove, request changes, or reject the selected plan.'))
 
@@ -849,10 +938,11 @@ _app_page = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTempl
   </Container>
 """ + _pulse_slot + """  <Container elementId="c-app-kpi" type="grid" gridColumn="1 / 25" gridRow="{kpi0} / {kpi1}"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-prop" gridColumn="1 / 7" gridRow="1 / 8"/>
-    <Element elementId="k-bev2" gridColumn="7 / 13" gridRow="1 / 8"/>
-    <Element elementId="k-shift" gridColumn="13 / 19" gridRow="1 / 8"/>
-    <Element elementId="k-over" gridColumn="19 / 25" gridRow="1 / 8"/>
+    <Element elementId="k-prop" gridColumn="1 / 6" gridRow="1 / 8"/>
+    <Element elementId="k-shift" gridColumn="6 / 11" gridRow="1 / 8"/>
+    <Element elementId="k-bev2" gridColumn="11 / 16" gridRow="1 / 8"/>
+    <Element elementId="k-cellprop" gridColumn="16 / 20" gridRow="1 / 8"/>
+    <Element elementId="k-over" gridColumn="20 / 25" gridRow="1 / 8"/>
   </Container>
   <TabbedContainer elementId="tc-persona" gridColumn="1 / 25" gridRow="{tabs0} / {tabs1}">
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
