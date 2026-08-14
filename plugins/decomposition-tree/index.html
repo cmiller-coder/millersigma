@@ -120,12 +120,6 @@
       note.style.cssText='position:absolute;top:4px;right:8px;font-size:9px;color:#B7C0C9;letter-spacing:.04em;text-transform:uppercase;text-align:right;max-width:340px;line-height:1.5';
       note.textContent='illustrative';
       wrap.style.position='relative'; wrap.appendChild(note);
-      // Temporary on-canvas diagnostic (no devtools needed) — remove once the
-      // real config/data binding is confirmed working.
-      var dbg=document.createElement('div'); dbg.id='dbg';
-      dbg.style.cssText='position:absolute;top:0;left:0;right:0;background:#FFF3CD;color:#7A5C00;font-family:monospace;font-size:13px;font-weight:700;white-space:pre-wrap;text-align:left;padding:6px 10px;z-index:99;border-bottom:2px solid #E0B800';
-      dbg.textContent='DEBUG client:'+(!!client)+' cfgKeys:['+Object.keys(c).join(',')+'] hasData:'+(!!d)+' dataKeys:['+(d?Object.keys(d).join(','):'')+']';
-      wrap.appendChild(dbg);
     }
     var byCategory={}, order=[];
     for(var i=0;i<cats.length;i++){
