@@ -251,7 +251,13 @@ def kpi_card(key, label, cur, pri, fmt, ga, gb, spark):
                         "colorBad": "#FFCFC7", "fontSize": 13},
          "name": {"text": label, "color": "#FFFFFF", "fontSize": 12},
          "layout": {"anchor": "middle"},
-         "style": {"padding": "none"}})
+         # kpi-chart can't be made transparent -- backgroundColor:"transparent"
+         # is rejected (see build_sofi.py history), and omitting the field
+         # renders OPAQUE WHITE, not see-through. That silently hid the
+         # parent container's gradient behind two solid-white tiles on every
+         # company built with this generator. Give the tile its own solid
+         # fill instead of relying on transparency.
+         "style": {"padding": "none", "backgroundColor": ga}})
     add({"id": "kp-%s" % key, "kind": "kpi-chart",
          "source": {"elementId": "tbl-lb", "kind": "table"},
          "columns": [{"id": "vp-%s" % key, "formula": pri, "name": "Prior TTM",
@@ -259,7 +265,7 @@ def kpi_card(key, label, cur, pri, fmt, ga, gb, spark):
          "value": {"columnId": "vp-%s" % key, "color": "#FFFFFF", "fontSize": 22},
          "name": {"text": "Prior TTM", "color": "#FFFFFF", "fontSize": 13},
          "layout": {"anchor": "middle"},
-         "style": {"padding": "none"}})
+         "style": {"padding": "none", "backgroundColor": gb}})
     add({"id": "sp-%s" % key, "kind": "line-chart",
          "source": {"elementId": "tbl-lb", "kind": "table"},
          "columns": [{"id": "spx-%s" % key, "formula": "[%s/Period]" % LB, "name": "Period"},
@@ -677,17 +683,17 @@ add(dict(segmented_control("ctrl-colorby", "ColorBy", "Color by",
 kpi_card("rev", CO.lab(CFG, "kpi_revenue"), cur_("Net Revenue"), pri_("Net Revenue"),
          MONEY_M, B.NAVY, B.SOFI_BRIGHT, "Sum([%s/Net Revenue])" % LB)
 kpi_card("cp", CO.lab(CFG, "kpi_margin"), cur_("Contribution Profit"),
-         pri_("Contribution Profit"), MONEY_M, "#0B2740", B.SOFI_CYAN,
+         pri_("Contribution Profit"), MONEY_M, B.NAVY_DEEP, B.SOFI_CYAN,
          "Sum([%s/Contribution Profit])" % LB)
 kpi_card("bal", CO.lab(CFG, "kpi_volume"),
          'SumIf([{t}/Avg Balances], [{t}/Period Name] = "Current Period") / 12'.format(t=LB),
          'SumIf([{t}/Avg Balances], [{t}/Period Name] = "Prior Period") / 12'.format(t=LB),
-         MONEY_M, "#08324A", B.SOFI_BLUE,
+         MONEY_M, B.NAVY_DEEP, B.SOFI_BLUE,
          'SumIf([{t}/Avg Balances], [{t}/Balance Type] = "Loans")'.format(t=LB))
 kpi_card("mem", CO.lab(CFG, "kpi_units"),
          'MaxIf([{t}/Members (K)], [{t}/Period Name] = "Current Period")'.format(t=LB),
          'MaxIf([{t}/Members (K)], [{t}/Period Name] = "Prior Period")'.format(t=LB),
-         NUM0, "#123A2E", B.SOFI_MINT, "Sum([%s/Members (K)])" % LB)
+         NUM0, B.NAVY_DEEP, B.SOFI_MINT, "Sum([%s/Members (K)])" % LB)
 
 # --- AI insight
 # The AI insight lives in the rail beside the copilot -- it's an AI surface, and
