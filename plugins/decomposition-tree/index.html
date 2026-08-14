@@ -169,10 +169,22 @@
     wrap.appendChild(kids);
   }
 
+  function setVar(name, val){
+    // Docs disagree on where this lives: this repo's notes claim
+    // client.config.setVariable, but the upstream skill source (and the
+    // published SDK) show it as a top-level client.setVariable. Try both,
+    // whichever actually exists on this client instance.
+    var fn = (client && typeof client.setVariable === 'function') ? client.setVariable
+           : (client && client.config && typeof client.config.setVariable === 'function') ? client.config.setVariable
+           : null;
+    if(!fn) return;
+    try{ if(val==null) fn.call(client.config||client, name); else fn.call(client.config||client, name, val); }catch(e){}
+  }
+
   function setSel(k){
     st.selected = (st.selected===k) ? null : k;
     if(client && st.cfg && st.cfg.clickTarget){
-      try{ if(st.selected==null) client.config.setVariable('clickTarget'); else client.config.setVariable('clickTarget', st.selected); }catch(e){}
+      setVar('clickTarget', st.selected==null ? null : st.selected);
     }
     render();
   }
