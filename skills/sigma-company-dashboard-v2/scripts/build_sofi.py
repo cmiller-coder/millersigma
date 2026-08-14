@@ -1172,7 +1172,7 @@ add({"id": "btn-clear-cohorts", "kind": "button", "text": "Clear saved cohorts",
                                "whichRows": {"type": "formula", "formula": "True"}}]}]})
 
 add({"id": "c-secf", "kind": "container", "spacing": "small",
-     "style": {"backgroundColor": "transparent", "padding": "none"}})
+     "style": {"padding": "none"}})
 add({"id": "ico-filters", "kind": "image",
      "source": {"kind": "url", "url": B.icon(B.ICON_SLIDERS)},
      "style": {"fit": "contain", "padding": "none"}})

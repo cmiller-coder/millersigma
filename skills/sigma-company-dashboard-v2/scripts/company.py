@@ -2742,3 +2742,173 @@ PLUGINS["enumclaw"] = {"hero": "ae977e73-2d97-4fec-a505-a0eaaf7ba628",
                                        "lossRatio": "h2"}}
 
 COMPANIES["enumclaw"] = ENUMCLAW
+
+
+# ---------------------------------------------------------------------------
+# Smart home fragrance / DTC subscription hardware. Cold-run test #2 for the
+# funding_rate=0 "margin-only" pattern (same family as Veraset/NVIDIA/SoFi
+# Money) -- deliberately chosen to dodge the "Net Revenue is a spread, not
+# income" trap hit on Mutual of Enumclaw: with funding_rate pinned to 0,
+# "Net Revenue" (income - expense + fee) collapses to bal_base*yield_rate,
+# i.e. a genuine gross profit number, and "Avg Balances" (bal_base) is
+# genuine revenue -- both KPI bindings are honest without any relabeling.
+#
+#   products      -> product lines (Fragrance Subscriptions, Home
+#                    Diffusers, Car, Pura Air, Brand Marketplace, B2B)
+#   bal_base      -> annual revenue for the line, in $MM (sums to the real
+#                    ~$500M 2026 projected total)
+#   yield_rate    -> gross margin % (funding_rate always 0 -- no COGS-as-a-
+#                    rate-on-a-separate-exposure-base concept for a DTC
+#                    subscription/hardware business)
+#   provision     -> return/refund reserve rate (30-day risk-free trial)
+#   delinq/"risk" -> churn / return rate
+#   opex_ratio    -> variable opex (marketing, fulfillment) against gross
+#                    profit -> Contribution Profit is a real DTC unit-
+#                    economics number, not company-wide net income
+# ---------------------------------------------------------------------------
+PURA = {
+    "key": "pura",
+    "name": "Pura",
+    "title": "Subscription & Device Performance Command Center",
+    "domain": "smart home fragrance / DTC subscription hardware",
+    "unit_noun": "household",
+    "volume_noun": "revenue",
+    "logo_domain": "pura.com",
+    "base_table": "Subscription & Device Ledger",
+    # sampled from pura.com's own page CSS: ink #1D1B1B, warm gold #CFA363/
+    # #A6824F, deep brown #725A3E -- a warm minimal palette, not tech-navy
+    "palette": {
+        "navy": "#1D1B1B", "navy_deep": "#0F0E0E",
+        "primary": "#CFA363", "secondary": "#A6824F",
+        "accent": "#725A3E", "mint": "#8FA68E",
+    },
+    "products": [
+        # name, order, balance_type, bal_base($MM revenue), yield(gross
+        # margin %), funding(0 -- no separate exposure base), fee_base
+        # (MONTHLY $MM, 0), provision(return/refund rate), delinq(churn/
+        # return rate), opex_ratio(variable opex vs gross profit), growth,
+        # units_base(subscribers/units/partners, K), phase, tagline,
+        # rate_label, goal_pct, status
+        ("Fragrance Subscriptions", 1, "Subscription", 325, .72, 0.0, 0.0, .02, .055,
+         .38, .14, 1900, 0.0, "Recurring vial & refill subscriptions across the installed base",
+         "Gross Margin", .97, "On plan"),
+        ("Home Diffusers", 2, "Hardware", 80, .32, 0.0, 0.0, .03, .08,
+         .30, .08, 850, 1.1, "Home, Home Mini & Home Plus smart diffusers",
+         "Gross Margin", .93, "Behind"),
+        ("Car Diffusers", 3, "Hardware", 25, .38, 0.0, 0.0, .025, .07,
+         .28, .18, 300, 2.2, "Smart diffusers for vehicles",
+         "Gross Margin", 1.05, "Ahead"),
+        ("Pura Air", 4, "Hardware", 20, .40, 0.0, 0.0, .02, .05,
+         .34, .65, 180, 0.6, "HEPA-like filtration + fragrance, launched 2026",
+         "Gross Margin", 1.18, "Ahead"),
+        ("Brand Marketplace", 5, "Marketplace", 35, .42, 0.0, 0.0, .015, .04,
+         .26, .20, 410, 1.7, "300+ fragrances from NEST, Capri Blue, Disney, Anthropologie & 100+ brand partners",
+         "Gross Margin", 1.02, "On plan"),
+        ("B2B Licensing", 6, "Licensing", 15, .62, 0.0, 0.0, .01, .03,
+         .22, .35, 45, 2.8, "White-label smart-diffuser tech licensing to hospitality & other brands",
+         "Gross Margin", 1.09, "Ahead"),
+    ],
+    "alerts": [
+        ("critical", "Home Diffuser margin compression",
+         "Home hardware gross margin fell to 29.4%, below the 32% pricing plan amid component cost inflation",
+         "26m ago", "Supply Chain", 260, "bps under plan"),
+        ("warning", "Subscription churn drift",
+         "Fragrance Subscriptions churn ticked up to 6.1%, above the 5.5% target after the Q2 price adjustment",
+         "3h ago", "Retention", 60, "bps over target"),
+        ("warning", "Pura Air fulfillment backlog",
+         "2,400 Pura Air pre-orders past the 2-week ship SLA amid HEPA filter supply constraints",
+         "5h ago", "Operations", 2400, "orders past SLA"),
+        ("info", "New brand partner signed",
+         "Otherland joins the Marketplace, Pura's 100th+ active fragrance brand partnership",
+         "1d ago", "Partnerships", 100, "active brand partners"),
+        ("info", "Retail distribution expansion",
+         "Target expanded Pura's shelf placement to 380 additional stores this quarter",
+         "2d ago", "Retail", 380, "new stores"),
+    ],
+    "agent": ("You are a DTC/subscription analyst covering Pura's smart fragrance "
+              "diffusers, subscription vial economics, and brand-partner marketplace "
+              "across Home, Car, and Pura Air product lines. Answer with numbers from "
+              "the workbook."),
+}
+
+PURA["subs"] = {
+    "Fragrance Subscriptions": [("Monthly Vial Plan", .58, 20, 8.2, "Ahead"),
+                                ("Bi-Monthly Plan", .24, -15, 3.4, "On plan"),
+                                ("Gifting & One-Time", .12, 30, -4.2, "Behind"),
+                                ("Car Refill Add-on", .06, -10, 6.8, "On plan")],
+    "Home Diffusers": [("Home (Medium Room)", .48, 10, 2.2, "On plan"),
+                       ("Home Mini", .30, -20, 5.6, "Ahead"),
+                       ("Home Plus (Large Room)", .22, 15, -3.1, "Behind")],
+    "Car Diffusers": [("Car Standard", .68, -10, 4.4, "On plan"),
+                      ("Car Vent Clip", .32, 20, 8.1, "Ahead")],
+    "Pura Air": [("Pura Air Standard", .70, 25, 12.4, "Ahead"),
+                ("Pura Air Filter Refills", .30, -15, 18.6, "Ahead")],
+    "Brand Marketplace": [("NEST New York", .18, 10, 4.2, "On plan"),
+                          ("Capri Blue", .16, -10, 3.8, "On plan"),
+                          ("Disney Collection", .14, 30, 9.6, "Ahead"),
+                          ("Anthropologie", .12, -15, -2.4, "Behind"),
+                          ("Other 100+ Partners", .40, 5, 6.1, "On plan")],
+    "B2B Licensing": [("Hospitality Licensing", .55, 20, 14.2, "Ahead"),
+                      ("White-Label OEM", .45, -10, 8.4, "On plan")],
+}
+
+FOOTPRINTS["pura"] = [("CA", .142), ("TX", .098), ("FL", .086), ("NY", .071),
+                      ("IL", .052), ("TN", .048), ("UT", .045), ("GA", .041),
+                      ("AZ", .038), ("CO", .036), ("NC", .033), ("WA", .031),
+                      ("OH", .028), ("NJ", .024), ("MA", .021)]
+
+LABELS["pura"] = {
+    "personas": ["Executive", "Brand & Growth"],
+    "modeler_page": "Pricing & Growth",
+    "cohort_page": "Household Segments",
+    "modeler_title": "Pricing & Subscriber Growth Scenario Modeler",
+    "shock_label": "Subscription price change (%)",
+    "kpi_revenue": "Gross Profit ($M)",
+    "kpi_margin": "Contribution Profit ($M)",
+    "kpi_volume": "Revenue ($M)",
+    "kpi_units": "Active Subscribers (K)",
+    "driver_nim": "Contribution Margin %",
+    "driver_risk": "Churn / Return Rate",
+    "driver_cost": "Variable Opex Ratio",
+    "driver_eff": "Fulfillment Efficiency",
+    "seg_product": "Product Line",
+    "seg_credit": "Subscriber Tier",
+    "seg_type": "Fragrance Category",
+    "seg_dd": "Auto-Refill Enabled",
+    "seg_engage": "Usage Frequency",
+    "seg_held": "Devices per Household",
+    "seg_age": "Subscriber Tenure",
+    "cohort_name": "Household segment name",
+    "kpi_cohort_size": "Households in segment",
+    "kpi_cohort_vol": "Annual fragrance spend",
+    "kpi_cohort_rev": "Revenue per household",
+    "kpi_cohort_risk": "Avg churn risk",
+    "col_volume": "Revenue",
+    "col_growth": "Revenue Growth %",
+    "col_yield": "Margin Δ bps",
+    "col_cost": "Opex Δ bps",
+}
+
+SEGMENTS["pura"] = {"Near Prime": "New Subscriber", "Prime": "Growing Household",
+                    "Super Prime": "Loyal Multi-Room", "Exceptional": "VIP Whole-Home",
+                    "Daily": "Daily Use", "Weekly": "Weekly Use",
+                    "Monthly": "Monthly Use", "Dormant": "Inactive"}
+
+VOCAB["pura"] = {
+    "econ": ("Fragrance Subscriptions and Brand Marketplace vials earn a high gross "
+             "margin against modest fulfillment cost; Home, Car and Pura Air hardware "
+             "earn a thinner margin since devices are often priced near cost to drive "
+             "subscription attach. B2B Licensing earns the richest margin at the "
+             "lowest volume."),
+    "metrics": "revenue, gross profit, contribution profit and churn/return rate",
+    "bands": ("Subscriber tiers: New Subscriber, Growing Household, Loyal Multi-Room, "
+              "VIP Whole-Home. Usage frequency: Daily Use, Weekly Use, Monthly Use, Inactive."),
+    "cohort_report": "households in segment, annual fragrance spend and average churn risk",
+}
+
+POP["pura"] = {"bases": (80, 180, 350, 750), "rev_rate": 0.65, "fee_per_product": 25}
+
+# No bespoke plugin this build (explicit ask) -- native fallback wheel renders instead.
+PLUGINS["pura"] = {"hero": None, "hero_label": None, "ticker": None}
+
+COMPANIES["pura"] = PURA
