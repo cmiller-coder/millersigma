@@ -34,6 +34,12 @@
   .corner{font-size:9px;color:#8A94A0;line-height:1.3}
   .corner b{display:block;font-size:11px;font-weight:700;color:#3C4650}
   .corner.right{text-align:right}
+  .expand-hint{text-align:center;font-size:9px;color:#B7C0C9;margin-top:6px}
+  #grandkids{display:flex;gap:14px;margin-top:0}
+  .gdrop{width:2px;height:14px;background:#DCE1E6;margin:0 auto}
+  .gnode{width:130px;padding:8px 10px}
+  .gnode .lbl{font-size:9px}
+  .gnode .val{font-size:14px}
   #empty{font-size:12px;color:#8A94A0}
   #note{position:absolute;top:4px;right:8px;font-size:9px;color:#B7C0C9;letter-spacing:.04em;text-transform:uppercase}
 </style>
@@ -109,6 +115,8 @@
     var varTuple = SDK.useVariable(config.clickTarget || '');
     var selected = varTuple[0], setSelected = varTuple[1];
     var triggerOnSelect = SDK.useActionTrigger(config.onSelect || '');
+    var expandTuple = React.useState(null);
+    var expanded = expandTuple[0], setExpanded = expandTuple[1];
 
     var d = data, c = config;
     var live = d && c.category && c.value && d[c.category] && d[c.value];
@@ -136,8 +144,14 @@
     var totalV=agg(vals,mode), totalP=prior?agg(prior,'sum'):null;
 
     async function handleClick(k){
-      var next = (selected===k) ? '' : k;
-      setSelected(String(next));
+      if(k===''){
+        setSelected(''); setExpanded(null);
+        if(triggerOnSelect) await triggerOnSelect();
+        return;
+      }
+      var wasSelected = selected===k;
+      setSelected(wasSelected ? '' : String(k));
+      setExpanded(wasSelected ? null : k);
       if(triggerOnSelect) await triggerOnSelect();
     }
 
@@ -166,19 +180,35 @@
         h('div',{className:'val',key:'v'}, fmt(v,vf)),
         VarrEl(g.p.length?pctVar(v,p):null)
       ];
-      if(cl||cr){
+      var canExpand = !!(cl || cr);
+      if(canExpand){
         nodeChildren.push(h('div',{className:'corners',key:'corners'},[
           h('div',{className:'corner',key:'cl'},[cornerLeftLabel, h('b',{key:'b'}, l!=null?fmt(l,vf):'—')]),
           h('div',{className:'corner right',key:'cr'},[cornerRightLabel, h('b',{key:'b'}, r!=null?fmt(r,vf):'—')]),
         ]));
+        nodeChildren.push(h('div',{className:'expand-hint',key:'hint'}, expanded===k ? '▾ hide breakdown' : '▸ click to expand'));
       }
-      return h('div',{className:'branch',key:k},[
+      var branchChildren = [
         h('div',{className:'drop',key:'drop'}),
         h('div',{
           className:'node child'+(selected===k?' selected':(selected?' dim':'')),
           onClick: function(){ handleClick(k); }
         }, nodeChildren)
-      ]);
+      ];
+      if(canExpand && expanded===k){
+        branchChildren.push(h('div',{className:'gdrop',key:'gdrop'}));
+        branchChildren.push(h('div',{id:'grandkids',key:'grandkids'},[
+          h('div',{className:'node gnode',key:'gl'},[
+            h('div',{className:'lbl',key:'l'}, cornerLeftLabel),
+            h('div',{className:'val',key:'v'}, l!=null?fmt(l,vf):'—')
+          ]),
+          h('div',{className:'node gnode',key:'gr'},[
+            h('div',{className:'lbl',key:'l'}, cornerRightLabel),
+            h('div',{className:'val',key:'v'}, r!=null?fmt(r,vf):'—')
+          ])
+        ]));
+      }
+      return h('div',{className:'branch',key:k}, branchChildren);
     });
     children.push(h('div',{id:'children',key:'kids'}, kids));
 
