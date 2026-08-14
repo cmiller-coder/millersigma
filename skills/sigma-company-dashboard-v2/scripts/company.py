@@ -2593,27 +2593,32 @@ ENUMCLAW = {
     },
     "products": [
         # name, order, balance_type, bal_base($MM premium), yield(=1.00, premium
-        # at par), funding(loss ratio), fee_base(MONTHLY $MM), provision(LAE/
-        # reserve rate), delinq(claim frequency), opex_ratio(expense ratio),
-        # growth, units_base(policies in force, K), phase, tagline, rate_label,
+        # at par), funding(loss ratio + expense ratio combined -- the shared
+        # loan_book.sql computes Opex as a % of the SPREAD, not of premium, so
+        # folding the expense ratio into funding_rate directly against a yield
+        # of 1.00 is what makes funding_rate == combined ratio and the spread
+        # == underwriting margin, matching real P&C reporting), fee_base
+        # (MONTHLY $MM), provision(LAE/reserve rate), delinq(claim frequency),
+        # opex_ratio(0 -- already folded into funding above), growth,
+        # units_base(policies in force, K), phase, tagline, rate_label,
         # goal_pct, status
-        ("Homeowners", 1, "Property", 159, 1.00, .62, 1.2, .05, .06,
-         .32, .045, 62, 0.0, "Owner-occupied dwelling & property",
+        ("Homeowners", 1, "Property", 159, 1.00, .94, 1.2, .05, .06,
+         0.0, .045, 62, 0.0, "Owner-occupied dwelling & property",
          "Avg Premium/Policy", .96, "On plan"),
-        ("Personal Auto", 2, "Auto", 131, 1.00, .72, 0.9, .04, .09,
-         .28, .028, 74, 1.1, "Liability, collision & comprehensive",
+        ("Personal Auto", 2, "Auto", 131, 1.00, 1.00, 0.9, .04, .09,
+         0.0, .028, 74, 1.1, "Liability, collision & comprehensive",
          "Avg Premium/Policy", .91, "Behind"),
-        ("Farm & Ranch", 3, "Property", 75, 1.00, .57, 0.5, .06, .05,
-         .33, .052, 18, 2.2, "Farm dwelling, equipment & liability",
+        ("Farm & Ranch", 3, "Property", 75, 1.00, .90, 0.5, .06, .05,
+         0.0, .052, 18, 2.2, "Farm dwelling, equipment & liability",
          "Avg Premium/Policy", 1.04, "Ahead"),
-        ("Commercial Multi-Peril", 4, "Commercial", 65, 1.00, .64, 0.6, .07, .04,
-         .34, .061, 9, 0.6, "Small & mid-market business package",
+        ("Commercial Multi-Peril", 4, "Commercial", 65, 1.00, .98, 0.6, .07, .04,
+         0.0, .061, 9, 0.6, "Small & mid-market business package",
          "Avg Premium/Policy", .98, "On plan"),
-        ("Umbrella", 5, "Excess Liability", 19, 1.00, .47, 0.15, .03, .02,
-         .30, .038, 22, 1.7, "Personal excess liability",
+        ("Umbrella", 5, "Excess Liability", 19, 1.00, .77, 0.15, .03, .02,
+         0.0, .038, 22, 1.7, "Personal excess liability",
          "Avg Premium/Policy", 1.06, "Ahead"),
-        ("Specialty Lines", 6, "Specialty", 19, 1.00, .53, 0.15, .04, .03,
-         .31, .034, 11, 2.8, "Watercraft, RV & scheduled valuables",
+        ("Specialty Lines", 6, "Specialty", 19, 1.00, .84, 0.15, .04, .03,
+         0.0, .034, 11, 2.8, "Watercraft, RV & scheduled valuables",
          "Avg Premium/Policy", 1.01, "On plan"),
     ],
     "alerts": [
@@ -2639,6 +2644,30 @@ ENUMCLAW = {
               "Arizona. Answer with numbers from the workbook."),
 }
 
+ENUMCLAW["subs"] = {
+    "Homeowners": [("HO-3 Special Form", .58, 20, 4.1, "On plan"),
+                   ("HO-4 Renters", .14, -30, 8.2, "Ahead"),
+                   ("HO-6 Condo", .16, 10, 2.4, "On plan"),
+                   ("DP-3 Dwelling Fire", .12, -20, -1.8, "Behind")],
+    "Personal Auto": [("Liability", .42, 30, -2.1, "Behind"),
+                      ("Collision", .28, -15, 3.2, "On plan"),
+                      ("Comprehensive", .18, 10, 5.6, "Ahead"),
+                      ("UM/UIM", .12, -25, 1.1, "On plan")],
+    "Farm & Ranch": [("Farm Dwelling", .38, -10, 2.2, "On plan"),
+                     ("Farm Liability", .24, 15, 6.4, "Ahead"),
+                     ("Farm Equipment", .22, -20, -3.1, "Behind"),
+                     ("Livestock", .16, 25, 4.8, "Ahead")],
+    "Commercial Multi-Peril": [("Property", .34, 10, 1.6, "On plan"),
+                               ("General Liability", .30, -15, -2.4, "Behind"),
+                               ("BOP", .22, 20, 5.2, "Ahead"),
+                               ("Inland Marine", .14, -10, 3.0, "On plan")],
+    "Umbrella": [("Personal Umbrella", .72, 15, 7.8, "Ahead"),
+                ("Excess Liability", .28, -20, 2.4, "On plan")],
+    "Specialty Lines": [("Watercraft", .42, 10, 3.6, "On plan"),
+                        ("Recreational Vehicle", .34, -15, 5.2, "Ahead"),
+                        ("Scheduled Valuables", .24, 20, -1.4, "Behind")],
+}
+
 FOOTPRINTS["enumclaw"] = [("WA", .58), ("OR", .16), ("ID", .12),
                           ("UT", .09), ("AZ", .05)]
 
@@ -2648,13 +2677,22 @@ LABELS["enumclaw"] = {
     "cohort_page": "Book Segments",
     "modeler_title": "Rate & Underwriting Scenario Modeler",
     "shock_label": "Rate change shock (%)",
-    "kpi_revenue": "Earned Premium ($M)",
+    # kpi_revenue is ALWAYS bound to the shared "Net Revenue" column
+    # (income - expense + fees, i.e. the SPREAD), and kpi_volume is ALWAYS
+    # bound to "Avg Balances" (the raw bal_base, i.e. actual premium) --
+    # see build_sofi.py's kpi_card() call sites. For a lender that spread IS
+    # the headline number, but for an insurer with yield_rate pinned to 1.00
+    # (premium at par), "Net Revenue" is premium-minus-losses-plus-fees, not
+    # gross premium -- the same "Net Revenue is a spread, not income" trap
+    # HANDOFF.md documents for Delta/NVIDIA. Labelled honestly instead of
+    # relabelling the wrong number "Earned Premium".
+    "kpi_revenue": "Net Underwriting Revenue ($M)",
     "kpi_margin": "Underwriting Margin ($M)",
-    "kpi_volume": "Written Premium ($M)",
+    "kpi_volume": "Earned Premium ($M)",
     "kpi_units": "Policies in Force (K)",
     "driver_nim": "Underwriting Margin %",
     "driver_risk": "Claim Frequency",
-    "driver_cost": "Loss Ratio",
+    "driver_cost": "Combined Ratio",
     "driver_eff": "Expense Ratio",
     "seg_product": "Line of Business",
     "seg_credit": "Territory Risk Tier",
@@ -2671,7 +2709,7 @@ LABELS["enumclaw"] = {
     "col_volume": "Written Premium",
     "col_growth": "Premium Growth %",
     "col_yield": "Rate Δ bps",
-    "col_cost": "Loss Ratio Δ bps",
+    "col_cost": "Combined Ratio Δ bps",
 }
 
 SEGMENTS["enumclaw"] = {"Near Prime": "Standard", "Prime": "Preferred",
@@ -2691,8 +2729,10 @@ VOCAB["enumclaw"] = {
     "cohort_report": "book segment size, written premium and average claim frequency",
 }
 
-# Plugin wired in after registration -- see patch_register_enumclaw_plugin.py.
-PLUGINS["enumclaw"] = {"hero": None, "hero_label": "LOSS DEVELOPMENT TRIANGLE",
+# Registered 2026-08-14 on papercranestaging via POST /v2/plugins, GitHub
+# Pages host (cmiller-coder.github.io/millersigma/plugins/enumclaw-loss-triangle/).
+PLUGINS["enumclaw"] = {"hero": "ae977e73-2d97-4fec-a505-a0eaaf7ba628",
+                       "hero_label": "LOSS DEVELOPMENT TRIANGLE",
                        "ticker": None,
                        "hero_table": {"name": "Loss Triangle", "file": "loss_triangle.sql",
                                       "prefix": "h",

@@ -179,8 +179,11 @@ def header(idx, head, subtitle, buttons, titles=True):
     # requires the `source` envelope. Verified against staging 2026-08-08.
     add({"id": "logo%d" % idx, "kind": "image",
          "source": {"kind": "url", "url": B.logo_white()},
-         "style": {"fit": "contain", "align": "start",
-                   "backgroundColor": "transparent", "padding": "none"}})
+         # "backgroundColor": "transparent" is invalid on an image element's
+         # style (same restriction as plugin.style -- must be a real hex or
+         # omitted). Verified against staging 2026-08-14: "Invalid kind:
+         # 'image'" is the misleading error for this.
+         "style": {"fit": "contain", "align": "start", "padding": "none"}})
     # element-level style.color is ignored on text -- colour has to be inline
     # HTML inside the markdown body, or the text renders theme-dark on the
     # dark header and disappears.
@@ -203,8 +206,10 @@ def nav_el(idx):
     per page -- element ids are workbook-unique, so the nav can't be shared."""
     return {"id": "nav-main%d" % idx, "kind": "navigation", "mode": "manual",
             "showIcons": False,
-            # `style` carries no font colour; option text colour is on optionStyle
-            "style": {"backgroundColor": "transparent"},
+            # `backgroundColor: "transparent"` is invalid on a navigation
+            # element's style (same restriction as image/plugin). Verified
+            # against staging 2026-08-14: "Invalid kind: 'navigation'" is the
+            # misleading error. Omitting the field renders transparent anyway.
             "optionStyle": {"textColor": "#C7E4F7", "selectedColor": "#FFFFFF",
                             "style": "pill", "orientation": "horizontal"},
             "options": [
@@ -246,7 +251,7 @@ def kpi_card(key, label, cur, pri, fmt, ga, gb, spark):
                         "colorBad": "#FFCFC7", "fontSize": 13},
          "name": {"text": label, "color": "#FFFFFF", "fontSize": 12},
          "layout": {"anchor": "middle"},
-         "style": {"padding": "none", "backgroundColor": "transparent"}})
+         "style": {"padding": "none"}})
     add({"id": "kp-%s" % key, "kind": "kpi-chart",
          "source": {"elementId": "tbl-lb", "kind": "table"},
          "columns": [{"id": "vp-%s" % key, "formula": pri, "name": "Prior TTM",
@@ -254,7 +259,7 @@ def kpi_card(key, label, cur, pri, fmt, ga, gb, spark):
          "value": {"columnId": "vp-%s" % key, "color": "#FFFFFF", "fontSize": 22},
          "name": {"text": "Prior TTM", "color": "#FFFFFF", "fontSize": 13},
          "layout": {"anchor": "middle"},
-         "style": {"padding": "none", "backgroundColor": "transparent"}})
+         "style": {"padding": "none"}})
     add({"id": "sp-%s" % key, "kind": "line-chart",
          "source": {"elementId": "tbl-lb", "kind": "table"},
          "columns": [{"id": "spx-%s" % key, "formula": "[%s/Period]" % LB, "name": "Period"},
@@ -266,7 +271,7 @@ def kpi_card(key, label, cur, pri, fmt, ga, gb, spark):
                               "scale": {"type": "linear", "zero": False, "hideZeroLine": True}}},
          "color": {"by": "category", "column": "spc-%s" % key, "scheme": ["#FFFFFF"]},
          "name": {"visibility": "hidden"}, "legend": {"visibility": "hidden"},
-         "style": {"padding": "none", "backgroundColor": "transparent"},
+         "style": {"padding": "none"},
          "lineAreaStyle": {"interpolation": "monotone"}})
 
 
@@ -383,8 +388,7 @@ add({"id": "mc-band", "kind": "container",
      "backgroundImage": {"source": {"kind": "url", "url": B.header_bg()},
                          "style": {"fit": "cover"}}})
 add({"id": "mc-logo", "kind": "image", "source": {"kind": "url", "url": B.logo_white()},
-     "style": {"fit": "contain", "align": "start",
-               "backgroundColor": "transparent", "padding": "none"}})
+     "style": {"fit": "contain", "align": "start", "padding": "none"}})
 add({"id": "mc-title", "kind": "text",
      "body": '## **<span style="color: #FFFFFF">{{[Product SKUs/Product]}}</span>**',
      "style": {"backgroundColor": "transparent", "padding": "none"},
@@ -512,7 +516,7 @@ add({"id": "c-secn", "kind": "container", "spacing": "small",
                "borderColor": B.BORDER, "borderWidth": 1}})
 add({"id": "ico-notif", "kind": "image",
      "source": {"kind": "url", "url": B.icon(ICON_BELL)},
-     "style": {"fit": "contain", "backgroundColor": "transparent", "padding": "none"}})
+     "style": {"fit": "contain", "padding": "none"}})
 add({"id": "notif-heading", "kind": "text",
      "body": '<span style="color: %s">**NOTIFICATIONS**</span>' % B.SOFI_BRIGHT,
      "style": {"backgroundColor": "transparent", "padding": "none"},
@@ -528,8 +532,7 @@ for _o, _sev, _cap in ALERTS:
                    "borderColor": _bd, "borderWidth": 1}})
     add({"id": "nico-%s" % _k, "kind": "image",
          "source": {"kind": "url", "url": B.icon(_g, _c, 20)},
-         "style": {"fit": "contain", "align": "start",
-                   "backgroundColor": "transparent", "padding": "none"}})
+         "style": {"fit": "contain", "align": "start", "padding": "none"}})
     # static severity chip: guarantees the card has intrinsic height, which is
     # how the product cards get theirs (their heading is static too)
     add({"id": "nsev-%s" % _k, "kind": "text",
@@ -551,7 +554,7 @@ for _o, _sev, _cap in ALERTS:
          "value": {"columnId": "nkv-%s" % _k, "color": _c, "fontSize": 20},
          "name": {"text": _cap, "color": _meta, "fontSize": 10},
          "layout": {"anchor": "start"},
-         "style": {"backgroundColor": "transparent", "padding": "none"}})
+         "style": {"padding": "none"}})
     add({"id": "nmeta-%s" % _k, "kind": "text",
          "body": '<span style="color: %s">{{%s}} · {{%s}}</span>'
                  % (_meta, _nt("Owner", _o), _nt("Age", _o)),
@@ -693,7 +696,7 @@ add({"id": "c-strip", "kind": "container",
      "style": {"backgroundColor": B.CARD_ALT, "borderRadius": "round",
                "borderColor": B.BORDER, "borderWidth": 1}})
 add({"id": "ico-ai", "kind": "image", "source": {"kind": "url", "url": B.icon(B.ICON_SPARK)},
-     "style": {"fit": "contain", "backgroundColor": "transparent", "padding": "none"}})
+     "style": {"fit": "contain", "padding": "none"}})
 # NOTE: never build a {{...}} body with str.format() -- `{{` is format's escape
 # for a literal brace, so the dynamic-text markers collapse to `{...}` and Sigma
 # stores the whole thing as escaped literal text. Use %-substitution.
@@ -768,7 +771,7 @@ for key, product, tagline in PRODUCTS:
                                  "suffix": _sc["suffix"], "currencySymbol": "$"}}],
          "value": {"columnId": "pcv-%s" % key, "color": B.SOFI_BRIGHT, "fontSize": 24},
          "name": {"visibility": "hidden"},
-         "style": {"backgroundColor": "transparent", "padding": "none"},
+         "style": {"padding": "none"},
          "layout": {"anchor": "start"}})
     add({"id": "pc-ring-%s" % key, "kind": "progress",
          # `progress` needs an explicit source. It resolved without one while the
@@ -787,7 +790,7 @@ for key, product, tagline in PRODUCTS:
          # which is what every other company ships.
          "config": {"label": {"visibility": "hidden"},
                     "fillColor": B.SOFI_BRIGHT, "trackColor": "#E3EBF4"},
-         "style": {"backgroundColor": "transparent", "padding": "none"}})
+         "style": {"padding": "none"}})
     # one muted supporting line, not a stack of them
     add({"id": "pc-sub-%s" % key, "kind": "text",
          # inline HTML is limited to <u> <sub> <sup> <span> <a> -- <b> is
@@ -801,7 +804,7 @@ for key, product, tagline in PRODUCTS:
          "verticalAlign": "end"})
 
 add({"id": "c-secw", "kind": "container", "spacing": "small",
-     "style": {"backgroundColor": "transparent", "padding": "none"}})
+     "style": {"padding": "none"}})
 for _k, _prod, _tag in PRODUCTS:
     add({"id": "pc-open-%s" % _k, "kind": "button", "text": "View detail →",
          "appearance": "text",
@@ -814,7 +817,7 @@ for _k, _prod, _tag in PRODUCTS:
 
 add({"id": "ico-wheel", "kind": "image",
      "source": {"kind": "url", "url": B.icon(B.ICON_WHEEL)},
-     "style": {"fit": "contain", "backgroundColor": "transparent", "padding": "none"}})
+     "style": {"fit": "contain", "padding": "none"}})
 add({"id": "wheel-heading", "kind": "text",
      "body": '<span style="color: %s">**%s**</span>' % (B.SOFI_BRIGHT, CO.plugin(CFG, "hero_label") or "PORTFOLIO DETAIL"),
      "style": {"backgroundColor": "transparent", "padding": "none"},
@@ -822,7 +825,7 @@ add({"id": "wheel-heading", "kind": "text",
 
 add({"id": "ico-prod", "kind": "image",
      "source": {"kind": "url", "url": B.icon(B.ICON_TREND)},
-     "style": {"fit": "contain", "backgroundColor": "transparent", "padding": "none"}})
+     "style": {"fit": "contain", "padding": "none"}})
 add({"id": "pc-heading", "kind": "text",
      "body": '<span style="color: %s">**PRODUCT PERFORMANCE**</span>' % B.SOFI_BRIGHT,
      "style": {"backgroundColor": "transparent", "padding": "none"},
@@ -1172,7 +1175,7 @@ add({"id": "c-secf", "kind": "container", "spacing": "small",
      "style": {"backgroundColor": "transparent", "padding": "none"}})
 add({"id": "ico-filters", "kind": "image",
      "source": {"kind": "url", "url": B.icon(B.ICON_SLIDERS)},
-     "style": {"fit": "contain", "backgroundColor": "transparent", "padding": "none"}})
+     "style": {"fit": "contain", "padding": "none"}})
 add({"id": "sec-filters", "kind": "text",
      "body": '<span style="color: %s">**SEGMENT FILTERS**</span>' % B.SOFI_BRIGHT,
      "style": {"backgroundColor": "transparent", "padding": "none"},
@@ -1219,8 +1222,7 @@ add({"id": "m-band", "kind": "container",
                          "style": {"fit": "cover"}}})
 add({"id": "m-logo", "kind": "image",
      "source": {"kind": "url", "url": B.logo_white()},
-     "style": {"fit": "contain", "align": "start",
-               "backgroundColor": "transparent", "padding": "none"}})
+     "style": {"fit": "contain", "align": "start", "padding": "none"}})
 add({"id": "m-title", "kind": "text",
      "body": '<span style="color: #FFFFFF">**New scenario**</span>',
      "style": {"backgroundColor": "transparent", "padding": "none"},
