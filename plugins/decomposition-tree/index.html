@@ -86,15 +86,39 @@
 
   var st={cfg:{},data:null,unsub:null,selected:null};
 
+  // Illustrative fallback so the tree always shows a real-looking shape —
+  // before the config/data handshake resolves (headless export takes its
+  // snapshot before that round-trip completes) and while a user is still
+  // wiring up bindings — instead of an empty prompt.
+  function synth(){
+    return {
+      cats: ['Fuel','Merch','LFK','QSR'],
+      vals: [1306000, 1825000, 520000, 837000],
+      prior: [1220000, 1900000, 480000, 810000],
+      cl: [812000, 1180000, 322000, 566000],
+      cr: [494000, 645000, 198000, 271000],
+      cornerLeftLabel: 'Loyalty', cornerRightLabel: 'Non-Loyalty', totalLabel: 'Total'
+    };
+  }
+
   function render(){
     var c=st.cfg||{}, d=st.data, wrap=document.getElementById('wrap');
     wrap.innerHTML='';
-    if(!d || !c.category || !c.value || !d[c.category] || !d[c.value]){
-      var e=document.createElement('div'); e.id='empty'; e.textContent='Bind Category and Main value to see the breakdown.';
-      wrap.appendChild(e); return;
+    var live = d && c.category && c.value && d[c.category] && d[c.value];
+    var cats, vals, prior, cl, cr, cornerLeftLabel, cornerRightLabel, totalLabel;
+    if(live){
+      cats=d[c.category]; vals=d[c.value]; prior=c.priorValue?d[c.priorValue]:null;
+      cl=c.cornerLeft?d[c.cornerLeft]:null; cr=c.cornerRight?d[c.cornerRight]:null;
+      cornerLeftLabel=c.cornerLeftLabel||'Left'; cornerRightLabel=c.cornerRightLabel||'Right'; totalLabel=c.totalLabel||'Total';
+    } else {
+      var s=synth();
+      cats=s.cats; vals=s.vals; prior=s.prior; cl=s.cl; cr=s.cr;
+      cornerLeftLabel=s.cornerLeftLabel; cornerRightLabel=s.cornerRightLabel; totalLabel=s.totalLabel;
+      var note=document.createElement('div'); note.id='note';
+      note.style.cssText='position:absolute;top:4px;right:8px;font-size:9px;color:#B7C0C9;letter-spacing:.04em;text-transform:uppercase';
+      note.textContent='illustrative';
+      wrap.style.position='relative'; wrap.appendChild(note);
     }
-    var cats=d[c.category], vals=d[c.value], prior=c.priorValue?d[c.priorValue]:null;
-    var cl=c.cornerLeft?d[c.cornerLeft]:null, cr=c.cornerRight?d[c.cornerRight]:null;
     var byCategory={}, order=[];
     for(var i=0;i<cats.length;i++){
       var k=String(cats[i]);
@@ -110,9 +134,9 @@
 
     var totalNode=document.createElement('div');
     totalNode.className='node'+(st.selected==null?'':' dim'); totalNode.id='total';
-    totalNode.innerHTML='<div class="lbl">'+(c.totalLabel||'Total')+'</div><div class="val">'+fmt(totalV,vf)+'</div>';
+    totalNode.innerHTML='<div class="lbl">'+totalLabel+'</div><div class="val">'+fmt(totalV,vf)+'</div>';
     totalNode.appendChild(varrEl(prior?pctVar(totalV,totalP):null));
-    totalNode.addEventListener('click',function(){ setSel(null); });
+    totalNode.addEventListener('click',function(){ if(live) setSel(null); });
     wrap.appendChild(totalNode);
 
     var stem=document.createElement('div'); stem.id='stem'; wrap.appendChild(stem);
@@ -129,14 +153,14 @@
       node.className='node child'+(st.selected===k?' selected':(st.selected? ' dim':''));
       node.innerHTML='<div class="lbl">'+k+'</div><div class="val">'+fmt(v,vf)+'</div>';
       node.appendChild(varrEl(g.p.length?pctVar(v,p):null));
-      if(c.cornerLeft||c.cornerRight){
+      if(cl||cr){
         var corners=document.createElement('div'); corners.className='corners';
         corners.innerHTML=
-          '<div class="corner">'+(c.cornerLeftLabel||'Left')+'<b>'+(l!=null?fmt(l,vf):'—')+'</b></div>'+
-          '<div class="corner right">'+(c.cornerRightLabel||'Right')+'<b>'+(r!=null?fmt(r,vf):'—')+'</b></div>';
+          '<div class="corner">'+cornerLeftLabel+'<b>'+(l!=null?fmt(l,vf):'—')+'</b></div>'+
+          '<div class="corner right">'+cornerRightLabel+'<b>'+(r!=null?fmt(r,vf):'—')+'</b></div>';
         node.appendChild(corners);
       }
-      node.addEventListener('click',function(){ setSel(k); });
+      node.addEventListener('click',function(){ if(live) setSel(k); });
       branch.appendChild(node);
       kids.appendChild(branch);
     });
