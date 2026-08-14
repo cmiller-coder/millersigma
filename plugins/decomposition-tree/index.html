@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Decomposition Tree — Sigma Plugin</title>
-<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<script src="https://unpkg.com/@sigmacomputing/plugin@1.2.0/dist/umd/sigmacomputing-plugin.umd.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -39,7 +39,8 @@
 <div id="wrap"><div id="empty">Waiting for data…</div></div>
 <script>
 (function(){
-  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var SDK = window.SigmaPlugin || (window.sigmaComputing && window.sigmaComputing.plugin) || window["@sigmacomputing/plugin"];
+  var client = (SDK && SDK.client) || null;
   var defs=[
     {name:'source',type:'element'},
     {name:'category',type:'column',source:'source',label:'Category (breakdown dimension)'},
