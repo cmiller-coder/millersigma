@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Loss Development Triangle — Mutual of Enumclaw Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#e9f5ee;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:14px 16px;gap:10px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:14px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#4CA771}
+  #avg{font-size:12px;color:#9ab3a4}
+  #avg b{color:#fff;font-size:15px}
+  #stage{flex:1;min-height:0;position:relative}
+  #grid{position:absolute;inset:0;display:grid}
+  .hcell{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#9ab3a4;letter-spacing:.02em}
+  .rcell{display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:11px;font-weight:700;color:#cfe6d9}
+  .cell{border-radius:4px;position:relative;transition:transform .08s;cursor:default;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin:1.5px}
+  .cell:hover{transform:scale(1.1);z-index:5;outline:1px solid #fff}
+  .cell.ultimate{outline:1.5px dashed rgba(255,255,255,.55);outline-offset:-2px}
+  #legend{display:flex;align-items:center;gap:8px;font-size:10px;color:#9ab3a4;flex:0 0 auto}
+  #bar{height:8px;flex:1;max-width:160px;border-radius:4px;background:linear-gradient(90deg,#0b3a20,#1F7A44,#c9a227,#c0392b)}
+  #tip{position:fixed;pointer-events:none;background:#0a1a10;border:1px solid #1F7A44;border-radius:8px;padding:8px 10px;font-size:11px;color:#e9f5ee;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+  #tip b{color:#4CA771}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl">Loss Development Triangle</div>
+    <div id="avg">Ultimate loss ratio <b id="avgV">—</b> · <span id="cnt">0</span> accident years</div>
+  </div>
+  <div id="stage"><div id="grid"></div></div>
+  <div id="legend"><span>32%</span><div id="bar"></div><span>73%</span><span style="margin-left:8px">▨ latest diagonal (still developing)</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'accidentYear',type:'column',source:'source',label:'Accident Year'},
+    {name:'devPeriod',type:'column',source:'source',label:'Development Period (months)'},
+    {name:'lossRatio',type:'column',source:'source',allowedTypes:['number','integer'],label:'Cumulative Loss Ratio %'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hex(c){return ('0'+Math.round(Math.max(0,Math.min(255,c))).toString(16)).slice(-2);}
+  function ratioColor(v,lo,hi){
+    var t=Math.max(0,Math.min(1,(v-lo)/Math.max(1e-6,(hi-lo))));
+    var s=[[11,58,32],[31,122,68],[201,162,39],[192,57,43]];
+    var seg=t*3, i=Math.min(2,Math.floor(seg)), f=seg-i;
+    var r=lerp(s[i][0],s[i+1][0],f),g=lerp(s[i][1],s[i+1][1],f),b=lerp(s[i][2],s[i+1][2],f);
+    return '#'+hex(r)+hex(g)+hex(b);
+  }
+  var tip=document.getElementById('tip');
+
+  function draw(rows){
+    // rows: [{ay, dev, devOrder, ratio}]
+    var years=[],devs=[],devOrder={};
+    rows.forEach(function(r){
+      if(years.indexOf(r.ay)===-1) years.push(r.ay);
+      if(devs.indexOf(r.dev)===-1){devs.push(r.dev); devOrder[r.dev]=r.devOrder;}
+    });
+    years.sort();
+    devs.sort(function(a,b){return (devOrder[a]||0)-(devOrder[b]||0);});
+    var byKey={};
+    rows.forEach(function(r){byKey[r.ay+'|'+r.dev]=r.ratio;});
+    // the latest populated diagonal per row = "still developing" marker
+    var lastDevByYear={};
+    years.forEach(function(y){
+      var last=null;
+      devs.forEach(function(d){if(byKey[y+'|'+d]!=null) last=d;});
+      lastDevByYear[y]=last;
+    });
+
+    var vals=rows.map(function(r){return r.ratio;});
+    var lo=Math.min.apply(null,vals), hi=Math.max.apply(null,vals);
+
+    var grid=document.getElementById('grid');
+    grid.innerHTML='';
+    var cols=devs.length+1, rowsN=years.length+1;
+    grid.style.gridTemplateColumns='84px repeat('+devs.length+',1fr)';
+    grid.style.gridTemplateRows='24px repeat('+years.length+',1fr)';
+
+    var corner=document.createElement('div'); corner.className='hcell'; corner.textContent='AY \\ Mo';
+    grid.appendChild(corner);
+    devs.forEach(function(d){
+      var h=document.createElement('div'); h.className='hcell'; h.textContent=d+'mo';
+      grid.appendChild(h);
+    });
+    years.forEach(function(y){
+      var rh=document.createElement('div'); rh.className='rcell'; rh.textContent=y;
+      grid.appendChild(rh);
+      devs.forEach(function(d){
+        var v=byKey[y+'|'+d];
+        var c=document.createElement('div');
+        if(v==null){ grid.appendChild(c); return; }
+        c.className='cell'+(d===lastDevByYear[y] && d!==devs[devs.length-1]?' ultimate':'');
+        c.style.background=ratioColor(v,lo,hi);
+        c.textContent=v.toFixed(0)+'%';
+        c.addEventListener('mousemove',function(e){
+          tip.innerHTML='<b>AY '+y+'</b> @ '+d+' months<br>Cumulative loss ratio '+v.toFixed(1)+'%';
+          tip.style.opacity=1; tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY+12)+'px';
+        });
+        c.addEventListener('mouseleave',function(){tip.style.opacity=0;});
+        grid.appendChild(c);
+      });
+    });
+
+    var ultimate=years.map(function(y){var d=lastDevByYear[y]; return byKey[y+'|'+d];}).filter(function(v){return v!=null;});
+    var avgUlt=ultimate.reduce(function(a,b){return a+b;},0)/(ultimate.length||1);
+    document.getElementById('avgV').textContent=avgUlt.toFixed(1)+'%';
+    document.getElementById('cnt').textContent=years.length;
+  }
+
+  function synth(){
+    var years=['2020','2021','2022','2023','2024','2025'];
+    var devs=[['12',1],['24',2],['36',3],['48',4],['60',5],['72',6]];
+    var curves=[[32,48,58,61,62,62],[34,51,60,63,64,64],[36,54,63,66,67,67],
+                [40,59,69,72,73,73],[38,57,66,66,66,66],[35,51,51,51,51,51]];
+    var out=[];
+    years.forEach(function(y,yi){
+      devs.forEach(function(d,di){ out.push({ay:y,dev:d[0],devOrder:d[1],ratio:curves[yi][di]}); });
+    });
+    return out;
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){
+    var c=st.cfg||{};
+    if(st.data && c.accidentYear && c.devPeriod && c.lossRatio &&
+       st.data[c.accidentYear] && st.data[c.devPeriod] && st.data[c.lossRatio]){
+      var ay=st.data[c.accidentYear], dev=st.data[c.devPeriod], lr=st.data[c.lossRatio];
+      var rows=ay.map(function(y,i){
+        return {ay:String(y), dev:String(dev[i]), devOrder:Number(dev[i])||0, ratio:Number(lr[i])||0};
+      });
+      if(rows.length){draw(rows); return;}
+    }
+    draw(synth());
+  }
+  if(client){
+    client.config.subscribe(function(cfg){
+      st.cfg=cfg||{};
+      if(st.unsub){st.unsub(); st.unsub=null;}
+      if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d; recompute();});}
+      recompute();
+    });
+  } else { recompute(); }
+
+  var stage=document.getElementById('stage');
+  if(window.ResizeObserver){ new ResizeObserver(function(){ /* CSS grid reflows automatically */ }).observe(stage); }
+})();
+</script>
+</body>
+</html>

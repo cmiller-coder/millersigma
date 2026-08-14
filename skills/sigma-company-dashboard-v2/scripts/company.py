@@ -2555,3 +2555,150 @@ POP["veraset"] = {"bases": (18000, 85000, 420000, 1850000), "rev_rate": 0.62,
 PLUGINS["veraset"] = {"hero": None, "hero_label": None, "ticker": None}
 
 COMPANIES["veraset"] = VERASET
+
+
+# ---------------------------------------------------------------------------
+# P&C mutual insurer. Command-center-only build (no scenario modeler, no
+# cohort builder) plus a bespoke plugin and a bolt-on Underwriting Approval
+# Workflow page (see patch_enumclaw_approvals.py) instead. The mapping:
+#
+#   products      -> lines of business (Homeowners, Auto, Farm & Ranch...)
+#   bal_base      -> earned premium base ($MM) -- unlike a payer, premium
+#                    itself IS the volume, so yield_rate is pinned to 1.00
+#                    for every line (premium = exposure at par)
+#   funding_rate  -> loss ratio (the line's "cost of goods")
+#   opex_ratio    -> expense ratio (acquisition + G&A)
+#   spread + opex -> combined ratio = funding_rate + opex_ratio, target ~96%
+#   delinq/"risk" -> claim frequency
+#   fee_base      -> policy & endorsement fees (MONTHLY $MM)
+#
+# Real anchors (2024 report, web-verified): ~$467M gross premium, ~96-100%
+# combined ratio, ~66% loss ratio, 5-state footprint WA/OR/ID/UT/AZ. bal_base
+# sums to 468 by construction to land on the real premium figure directly.
+# ---------------------------------------------------------------------------
+ENUMCLAW = {
+    "key": "enumclaw",
+    "name": "Mutual of Enumclaw",
+    "title": "Book of Business & Underwriting Command Center",
+    "domain": "P&C mutual insurance",
+    "unit_noun": "policyholder",
+    "volume_noun": "earned premium",
+    "logo_domain": "mutualofenumclaw.com",
+    "base_table": "Policy Book",
+    # real evergreen off mutualofenumclaw.com, deepened for a dark header
+    "palette": {
+        "navy": "#0C2118", "navy_deep": "#061109",
+        "primary": "#005424", "secondary": "#1F7A44",
+        "accent": "#4CA771", "mint": "#00A69C",
+    },
+    "products": [
+        # name, order, balance_type, bal_base($MM premium), yield(=1.00, premium
+        # at par), funding(loss ratio), fee_base(MONTHLY $MM), provision(LAE/
+        # reserve rate), delinq(claim frequency), opex_ratio(expense ratio),
+        # growth, units_base(policies in force, K), phase, tagline, rate_label,
+        # goal_pct, status
+        ("Homeowners", 1, "Property", 159, 1.00, .62, 1.2, .05, .06,
+         .32, .045, 62, 0.0, "Owner-occupied dwelling & property",
+         "Avg Premium/Policy", .96, "On plan"),
+        ("Personal Auto", 2, "Auto", 131, 1.00, .72, 0.9, .04, .09,
+         .28, .028, 74, 1.1, "Liability, collision & comprehensive",
+         "Avg Premium/Policy", .91, "Behind"),
+        ("Farm & Ranch", 3, "Property", 75, 1.00, .57, 0.5, .06, .05,
+         .33, .052, 18, 2.2, "Farm dwelling, equipment & liability",
+         "Avg Premium/Policy", 1.04, "Ahead"),
+        ("Commercial Multi-Peril", 4, "Commercial", 65, 1.00, .64, 0.6, .07, .04,
+         .34, .061, 9, 0.6, "Small & mid-market business package",
+         "Avg Premium/Policy", .98, "On plan"),
+        ("Umbrella", 5, "Excess Liability", 19, 1.00, .47, 0.15, .03, .02,
+         .30, .038, 22, 1.7, "Personal excess liability",
+         "Avg Premium/Policy", 1.06, "Ahead"),
+        ("Specialty Lines", 6, "Specialty", 19, 1.00, .53, 0.15, .04, .03,
+         .31, .034, 11, 2.8, "Watercraft, RV & scheduled valuables",
+         "Avg Premium/Policy", 1.01, "On plan"),
+    ],
+    "alerts": [
+        ("critical", "Combined ratio breach",
+         "Personal Auto combined ratio hit 101.4%, above the 98% pricing plan",
+         "24m ago", "Actuarial", 140, "bps over plan"),
+        ("critical", "Catastrophe claim cluster",
+         "68 new wind/hail claims filed across Eastern Washington in the last 48 hours",
+         "3h ago", "Claims", 68, "claims filed"),
+        ("warning", "Renewal retention drift",
+         "Homeowners retention fell to 84.2%, below the 88% target",
+         "5h ago", "Underwriting", 84, "% retention"),
+        ("warning", "Rate filing pending",
+         "Idaho Personal Auto rate filing (+6.8%) awaiting DOI approval",
+         "1d ago", "Product", 7, "% filed increase"),
+        ("info", "Reinsurance renewal bound",
+         "2026 property cat-XL treaty renewed at expiring terms, $5M retention",
+         "2d ago", "Reinsurance", 5, "$M retention"),
+    ],
+    "agent": ("You are an underwriting analyst covering Mutual of Enumclaw's "
+              "Homeowners, Personal Auto, Farm & Ranch, Commercial, Umbrella "
+              "and Specialty lines across Washington, Oregon, Idaho, Utah and "
+              "Arizona. Answer with numbers from the workbook."),
+}
+
+FOOTPRINTS["enumclaw"] = [("WA", .58), ("OR", .16), ("ID", .12),
+                          ("UT", .09), ("AZ", .05)]
+
+LABELS["enumclaw"] = {
+    "personas": ["Executive", "Underwriting"],
+    "modeler_page": "Underwriting",
+    "cohort_page": "Book Segments",
+    "modeler_title": "Rate & Underwriting Scenario Modeler",
+    "shock_label": "Rate change shock (%)",
+    "kpi_revenue": "Earned Premium ($M)",
+    "kpi_margin": "Underwriting Margin ($M)",
+    "kpi_volume": "Written Premium ($M)",
+    "kpi_units": "Policies in Force (K)",
+    "driver_nim": "Underwriting Margin %",
+    "driver_risk": "Claim Frequency",
+    "driver_cost": "Loss Ratio",
+    "driver_eff": "Expense Ratio",
+    "seg_product": "Line of Business",
+    "seg_credit": "Territory Risk Tier",
+    "seg_type": "Coverage Type",
+    "seg_dd": "Independent Agency",
+    "seg_engage": "Policy Tenure",
+    "seg_held": "Policies per Household",
+    "seg_age": "Policy Age Band",
+    "cohort_name": "Book segment name",
+    "kpi_cohort_size": "Policies in segment",
+    "kpi_cohort_vol": "Written premium",
+    "kpi_cohort_rev": "Premium per policy",
+    "kpi_cohort_risk": "Avg claim frequency",
+    "col_volume": "Written Premium",
+    "col_growth": "Premium Growth %",
+    "col_yield": "Rate Δ bps",
+    "col_cost": "Loss Ratio Δ bps",
+}
+
+SEGMENTS["enumclaw"] = {"Near Prime": "Standard", "Prime": "Preferred",
+                        "Super Prime": "Select", "Exceptional": "Elite",
+                        "Daily": "Frequent Claimant", "Weekly": "Occasional Claimant",
+                        "Monthly": "Rare Claimant", "Dormant": "Claim-Free"}
+
+VOCAB["enumclaw"] = {
+    "econ": ("Each line of business earns premium against a loss rate and an "
+             "expense ratio -- the spread between premium and losses plus "
+             "expenses is the underwriting margin, and losses plus expenses "
+             "over premium is the combined ratio."),
+    "metrics": "earned premium, underwriting margin, loss ratio and combined ratio",
+    "bands": ("Territory risk tiers: Standard, Preferred, Select, Elite. Claim "
+              "frequency: Frequent Claimant, Occasional Claimant, Rare Claimant, "
+              "Claim-Free."),
+    "cohort_report": "book segment size, written premium and average claim frequency",
+}
+
+# Plugin wired in after registration -- see patch_register_enumclaw_plugin.py.
+PLUGINS["enumclaw"] = {"hero": None, "hero_label": "LOSS DEVELOPMENT TRIANGLE",
+                       "ticker": None,
+                       "hero_table": {"name": "Loss Triangle", "file": "loss_triangle.sql",
+                                      "prefix": "h",
+                                      "cols": ["Accident Year", "Development Period",
+                                               "Cumulative Loss Ratio Pct"]},
+                       "hero_config": {"accidentYear": "h0", "devPeriod": "h1",
+                                       "lossRatio": "h2"}}
+
+COMPANIES["enumclaw"] = ENUMCLAW
