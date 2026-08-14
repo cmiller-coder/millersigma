@@ -83,11 +83,54 @@ iterations searching for a field that doesn't exist.
 | `POST` | `/v2/workbooks/spec` | Create. Body is JSON or YAML. Required: `name`, `schemaVersion: 1`, `folderId`, `pages`. Optional: `layout`. POST defaults to YAML response — pass `Accept: application/json` for JSON. |
 | `GET`  | `/v2/workbooks/{workbookId}/spec` | **Defaults to YAML.** Pass `Accept: application/json` for JSON. |
 | `PUT`  | `/v2/workbooks/{workbookId}/spec` | Full-spec update; no partials. |
-| `DELETE` | _unknown_ | **Open issue:** both `DELETE /v2/workbooks/{id}` and `DELETE /v2/files/{id}` return 404 against staging for workbooks the same token just CREATEd. Until the right endpoint is found, test workbooks accumulate and need manual UI cleanup. Discover via Sigma docs / network tab on a UI delete. |
+| `DELETE` | _unknown against staging_ | Against a different org (CTE Global, `api.ca.azure.sigmacomputing.com`, 2026-08-14), `DELETE /v2/files/{urlId}` returned `200 {}` and cleanly archived a workbook the same token had just created via `POST /v2/workbooks/spec`. If staging still 404s, it may be host/org-specific rather than universally broken — retry `/v2/files/{urlId}` (not `/v2/workbooks/{id}`) before concluding it's unavailable. |
 
 `folderId` is the **internal UUID** (e.g. `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`),
 NOT the urlId (a short base62 string like `AbC123...`). Look up via
 `GET /v2/files/{urlId}` — both are returned.
+
+## PUT-ing to a workbook the user has open live: expect false "write failed" reports
+
+**Symptom:** the user reports that typing into an input-table cell (or clicking
+a button) silently fails to save — Sigma shows a generic toast like "A data
+platform issue is preventing resulting input table edits. Contact your admin
+for help." This looks exactly like a connection/warehouse/grants problem, and
+chasing that is a trap: on a real 2026-08-14 debugging session (CTE Global org)
+it burned a huge amount of time investigating Databricks writeback grants,
+connection health, malformed columns, and `inputMode` before the actual cause
+surfaced.
+
+**Root cause:** every `PUT /v2/workbooks/{id}/spec` bumps the server-side
+`documentVersion`. If the user has the workbook open in their browser
+(Draft/builder mode) *at the same time* you PUT a change via the API, their
+already-open tab keeps editing against the stale version it loaded with. The
+server rejects the resulting write as a version conflict; Sigma's UI surfaces
+that rejection as the same unhelpful generic error it uses for real platform
+failures, with no "this document changed, please refresh" messaging at all.
+
+**Diagnostic ladder (cheapest signal first):**
+1. Rule out a real spec bug first, since it's cheap and PUT-safe: `POST
+   /v2/workbooks/{id}/export {"elementId": "<id>", "format": {"type": "csv"}}`
+   then poll `GET /v2/query/{queryId}/download`. This reads live data and is
+   **unaffected by browser staleness** — if the export is clean (no `Invalid
+   Query` / `Argument N invalid for function` errors in the returned CSV
+   cells), the element's formulas/columns are fine.
+2. If reads are clean but the user still can't type into a cell, suspect
+   staleness before grants. Ask for a **hard refresh** (full reload, not a
+   tab-switch) of the browser tab, with no further PUTs from you in between.
+   This fixes it every time it's the real cause.
+3. Only pursue Databricks/connection-level causes (grants, warehouse state,
+   token expiry) if a hard refresh — with zero intervening PUTs — does NOT
+   fix it. In the referenced session it never came to this step: every single
+   "can't write" report resolved with nothing but a refresh, including for
+   brand-new input tables that had never been touched before.
+
+**The trap to avoid:** don't tell the user "refresh and test" and then
+immediately make another PUT yourself (e.g. "let me also clean up this test
+element") before they've confirmed the refresh worked. That PUT re-stales
+their session and produces a second false negative, which reads as "the fix
+didn't work" and sends you back to chasing the wrong cause. Make one change,
+wait for confirmation, and only make the next change after they've verified.
 
 ## Element source kinds
 
@@ -487,6 +530,23 @@ Critical field-shape rules:
 - Cell-color conditional formatting (the "heatmap" visual) is UI-side; the
   spec sets up the pivot structure but cell coloring is not in the code
   representation.
+
+**A 2026-08-13 build (ShiftKey Marketplace Control Tower) reported live
+`verify` rejecting `kind: "pivot-table"` outright** on a 4-level `rowsBy`
+(region/state/market/facility) with 4 `values` columns, and switched to a
+grouped `table` with an ordered `groupings.groupBy` array instead (see
+"Table groupings" above) — that substitute is confirmed working and is the
+safer choice for a multi-level drill hierarchy regardless.
+
+**This directly contradicts a live test run the same day**: a minimal
+single-level `pivot-table` (`rowsBy` with one column, `values` with one
+column, both with and without an empty `columnsBy: []`) verified fine on
+papercranestaging. So `pivot-table` is not blanket-rejected — something about
+that specific 4-level/4-value shape (or a transient issue) triggered it, not
+isolated. **Don't assume either report generalizes to your exact spec** —
+verify your own shape before relying on `pivot-table`, and prefer a grouped
+`table` with `groupings` for any multi-level hierarchy since that path is
+confirmed solid.
 
 ## Container element shape
 
