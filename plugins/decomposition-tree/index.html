@@ -5,12 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Decomposition Tree — Sigma Plugin</title>
 <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@sigmacomputing/plugin@1.2.0/dist/umd/sigmacomputing-plugin.umd.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#1F2933;overflow:hidden}
-  #wrap{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:0}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:0;position:relative}
   .node{background:#fff;border:1px solid #DCE1E6;border-radius:10px;box-shadow:0 1px 3px rgba(16,24,40,.08);cursor:pointer;user-select:none;transition:box-shadow .12s,border-color .12s;position:relative}
   .node:hover{box-shadow:0 4px 14px rgba(16,24,40,.16);border-color:#B7C0C9}
   .node.selected{border-color:#2E6FF2;box-shadow:0 0 0 2px rgba(46,111,242,.25)}
@@ -34,14 +35,20 @@
   .corner b{display:block;font-size:11px;font-weight:700;color:#3C4650}
   .corner.right{text-align:right}
   #empty{font-size:12px;color:#8A94A0}
+  #note{position:absolute;top:4px;right:8px;font-size:9px;color:#B7C0C9;letter-spacing:.04em;text-transform:uppercase}
 </style>
 </head>
 <body>
-<div id="wrap"><div id="empty">Waiting for data…</div></div>
+<div id="root"></div>
 <script>
 (function(){
   var SDK = window.SigmaPlugin || (window.sigmaComputing && window.sigmaComputing.plugin) || window["@sigmacomputing/plugin"];
-  var client = (SDK && SDK.client) || null;
+  if(!SDK || !SDK.client || !window.React || !window.ReactDOM){
+    document.getElementById('root').innerHTML = '<div id="wrap"><div id="empty">Plugin SDK failed to load. Reload the workbook; if it persists, check the plugin URL is publicly accessible.</div></div>';
+    return;
+  }
+  var h = React.createElement;
+
   var defs=[
     {name:'source',type:'element'},
     {name:'category',type:'column',source:'source',label:'Category (breakdown dimension)'},
@@ -54,9 +61,10 @@
     {name:'cornerRightLabel',type:'text',label:'Bottom-right corner label',defaultValue:'Non-Loyalty'},
     {name:'totalLabel',type:'text',label:'Total box label',defaultValue:'Total'},
     {name:'valueFormat',type:'dropdown',values:['currency','number'],defaultValue:'currency',label:'Value format'},
-    {name:'clickTarget',type:'variable',label:'Value sent on click (drill selection)'}
+    {name:'clickTarget',type:'variable',label:'Select → variable (drill selection)'},
+    {name:'onSelect',type:'action-trigger',label:'Select → action (optional)'}
   ];
-  if(client) client.config.configureEditorPanel(defs);
+  SDK.client.config.configureEditorPanel(defs);
 
   function fmt(v,f){
     if(v==null||isNaN(v)) return '—';
@@ -77,21 +85,6 @@
     if(prior==null||prior===0||isNaN(prior)) return null;
     return (cur-prior)/Math.abs(prior)*100;
   }
-  function varrEl(pv){
-    var d=document.createElement('div');
-    if(pv==null){ d.className='varr flat'; d.textContent='—'; return d; }
-    var up=pv>0.05, down=pv<-0.05;
-    d.className='varr '+(up?'up':down?'down':'flat');
-    d.textContent=(up?'▲ ':down?'▼ ':'▬ ')+Math.abs(pv).toFixed(1)+'%';
-    return d;
-  }
-
-  var st={cfg:{},data:null,unsub:null,selected:null};
-
-  // Illustrative fallback so the tree always shows a real-looking shape —
-  // before the config/data handshake resolves (headless export takes its
-  // snapshot before that round-trip completes) and while a user is still
-  // wiring up bindings — instead of an empty prompt.
   function synth(){
     return {
       cats: ['Fuel','Merch','LFK','QSR'],
@@ -103,9 +96,21 @@
     };
   }
 
-  function render(){
-    var c=st.cfg||{}, d=st.data, wrap=document.getElementById('wrap');
-    wrap.innerHTML='';
+  function VarrEl(pv){
+    if(pv==null) return h('div',{className:'varr flat'},'—');
+    var up=pv>0.05, down=pv<-0.05;
+    var arrow=up?'▲ ':down?'▼ ':'▬ ';
+    return h('div',{className:'varr '+(up?'up':down?'down':'flat')}, arrow+Math.abs(pv).toFixed(1)+'%');
+  }
+
+  function App(){
+    var config = SDK.useConfig();
+    var data = SDK.useElementData(config.source || '');
+    var varTuple = SDK.useVariable(config.clickTarget || '');
+    var selected = varTuple[0], setSelected = varTuple[1];
+    var triggerOnSelect = SDK.useActionTrigger(config.onSelect || '');
+
+    var d = data, c = config;
     var live = d && c.category && c.value && d[c.category] && d[c.value];
     var cats, vals, prior, cl, cr, cornerLeftLabel, cornerRightLabel, totalLabel;
     if(live){
@@ -116,11 +121,8 @@
       var s=synth();
       cats=s.cats; vals=s.vals; prior=s.prior; cl=s.cl; cr=s.cr;
       cornerLeftLabel=s.cornerLeftLabel; cornerRightLabel=s.cornerRightLabel; totalLabel=s.totalLabel;
-      var note=document.createElement('div'); note.id='note';
-      note.style.cssText='position:absolute;top:4px;right:8px;font-size:9px;color:#B7C0C9;letter-spacing:.04em;text-transform:uppercase;text-align:right;max-width:340px;line-height:1.5';
-      note.textContent='illustrative';
-      wrap.style.position='relative'; wrap.appendChild(note);
     }
+
     var byCategory={}, order=[];
     for(var i=0;i<cats.length;i++){
       var k=String(cats[i]);
@@ -131,72 +133,59 @@
       if(cr) byCategory[k].r.push(cr[i]);
     }
     var mode=c.aggregation||'sum', vf=c.valueFormat||'currency';
-    var totalV=agg(vals,mode), totalP=prior?agg(prior,mode==='avg'?'avg':'sum'):null;
-    if(mode==='sum' && prior) totalP=agg(prior,'sum');
+    var totalV=agg(vals,mode), totalP=prior?agg(prior,'sum'):null;
 
-    var totalNode=document.createElement('div');
-    totalNode.className='node'+(st.selected==null?'':' dim'); totalNode.id='total';
-    totalNode.innerHTML='<div class="lbl">'+totalLabel+'</div><div class="val">'+fmt(totalV,vf)+'</div>';
-    totalNode.appendChild(varrEl(prior?pctVar(totalV,totalP):null));
-    totalNode.addEventListener('click',function(){ if(live) setSel(null); });
-    wrap.appendChild(totalNode);
+    async function handleClick(k){
+      var next = (selected===k) ? '' : k;
+      setSelected(String(next));
+      if(triggerOnSelect) await triggerOnSelect();
+    }
 
-    var stem=document.createElement('div'); stem.id='stem'; wrap.appendChild(stem);
-    var rail=document.createElement('div'); rail.id='rail'; rail.style.width=(order.length*172-22)+'px'; wrap.appendChild(rail);
+    var children = [];
+    if(!live) children.push(h('div',{id:'note',key:'note'},'illustrative'));
 
-    var kids=document.createElement('div'); kids.id='children';
-    order.forEach(function(k){
+    var totalNode = h('div',{
+      key:'total', id:'total',
+      className:'node'+(selected?' dim':''),
+      onClick: function(){ handleClick(''); }
+    }, [
+      h('div',{className:'lbl',key:'l'}, totalLabel),
+      h('div',{className:'val',key:'v'}, fmt(totalV,vf)),
+      VarrEl(prior?pctVar(totalV,totalP):null)
+    ]);
+    children.push(totalNode);
+    children.push(h('div',{id:'stem',key:'stem'}));
+    children.push(h('div',{id:'rail',key:'rail',style:{width:(order.length*172-22)+'px'}}));
+
+    var kids = order.map(function(k){
       var g=byCategory[k];
       var v=agg(g.v,mode), p=g.p.length?agg(g.p,'sum'):null;
       var l=g.l.length?agg(g.l,'sum'):null, r=g.r.length?agg(g.r,'sum'):null;
-      var branch=document.createElement('div'); branch.className='branch';
-      var drop=document.createElement('div'); drop.className='drop'; branch.appendChild(drop);
-      var node=document.createElement('div');
-      node.className='node child'+(st.selected===k?' selected':(st.selected? ' dim':''));
-      node.innerHTML='<div class="lbl">'+k+'</div><div class="val">'+fmt(v,vf)+'</div>';
-      node.appendChild(varrEl(g.p.length?pctVar(v,p):null));
+      var nodeChildren = [
+        h('div',{className:'lbl',key:'l'}, k),
+        h('div',{className:'val',key:'v'}, fmt(v,vf)),
+        VarrEl(g.p.length?pctVar(v,p):null)
+      ];
       if(cl||cr){
-        var corners=document.createElement('div'); corners.className='corners';
-        corners.innerHTML=
-          '<div class="corner">'+cornerLeftLabel+'<b>'+(l!=null?fmt(l,vf):'—')+'</b></div>'+
-          '<div class="corner right">'+cornerRightLabel+'<b>'+(r!=null?fmt(r,vf):'—')+'</b></div>';
-        node.appendChild(corners);
+        nodeChildren.push(h('div',{className:'corners',key:'corners'},[
+          h('div',{className:'corner',key:'cl'},[cornerLeftLabel, h('b',{key:'b'}, l!=null?fmt(l,vf):'—')]),
+          h('div',{className:'corner right',key:'cr'},[cornerRightLabel, h('b',{key:'b'}, r!=null?fmt(r,vf):'—')]),
+        ]));
       }
-      node.addEventListener('click',function(){ if(live) setSel(k); });
-      branch.appendChild(node);
-      kids.appendChild(branch);
+      return h('div',{className:'branch',key:k},[
+        h('div',{className:'drop',key:'drop'}),
+        h('div',{
+          className:'node child'+(selected===k?' selected':(selected?' dim':'')),
+          onClick: function(){ handleClick(k); }
+        }, nodeChildren)
+      ]);
     });
-    wrap.appendChild(kids);
+    children.push(h('div',{id:'children',key:'kids'}, kids));
+
+    return h('div',{id:'wrap'}, children);
   }
 
-  function setVar(name, val){
-    // Docs disagree on where this lives: this repo's notes claim
-    // client.config.setVariable, but the upstream skill source (and the
-    // published SDK) show it as a top-level client.setVariable. Try both,
-    // whichever actually exists on this client instance.
-    var fn = (client && typeof client.setVariable === 'function') ? client.setVariable
-           : (client && client.config && typeof client.config.setVariable === 'function') ? client.config.setVariable
-           : null;
-    if(!fn) return;
-    try{ if(val==null) fn.call(client.config||client, name); else fn.call(client.config||client, name, val); }catch(e){}
-  }
-
-  function setSel(k){
-    st.selected = (st.selected===k) ? null : k;
-    if(client && st.cfg && st.cfg.clickTarget){
-      setVar('clickTarget', st.selected==null ? null : st.selected);
-    }
-    render();
-  }
-
-  if(client){
-    client.config.subscribe(function(cfg){
-      st.cfg=cfg||{};
-      if(st.unsub){ st.unsub(); st.unsub=null; }
-      if(cfg && cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(dd){ st.data=dd; render(); }); }
-      render();
-    });
-  } else { render(); }
+  ReactDOM.render(h(App), document.getElementById('root'));
 })();
 </script>
 </body>
