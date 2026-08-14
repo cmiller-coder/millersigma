@@ -94,10 +94,10 @@ CUR = {"kind": "number", "formatString": "$.3~s", "decimalSymbol": ".",
        "digitGroupingSymbol": ",", "digitGroupingSize": [3], "currencySymbol": "$"}
 
 drill_ctrl = {"kind": "control", "controlId": "drillCategory", "id": "ctrl-drill",
-              "name": "Drill Category", "controlType": "list", "mode": "include",
-              "selectionMode": "single", "includeNulls": "when-no-value-is-selected",
-              "filters": [{"source": {"kind": "table", "elementId": "cat_long"}, "columnId": "l-cat"}],
-              "source": {"kind": "source", "source": {"kind": "table", "elementId": "cat_long"}, "columnId": "l-cat"}}
+              "name": "Drill Category", "controlType": "text", "mode": "equals",
+              "case": "insensitive", "includeNulls": "when-no-value-is-selected",
+              "showOperators": False,
+              "filters": [{"source": {"kind": "table", "elementId": "cat_long"}, "columnId": "l-cat"}]}
 
 tree = {"id": "decomp", "kind": "plugin", "pluginId": PLUGIN_ID,
         "config": {"source": {"kind": "element", "elementId": "cat_wide"},
