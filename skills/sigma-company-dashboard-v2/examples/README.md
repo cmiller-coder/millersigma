@@ -1,0 +1,320 @@
+# v2 examples
+
+| Path | What it is |
+|---|---|
+| [`theme-gallery/`](theme-gallery/README.md) | Six selectable dashboard aesthetics with HTML previews and a Sigma token contract (`theme-presets.json`). Open `theme-gallery/index.html` to see all of them at once. |
+| [`build_honda_ev_allocation.py`](build_honda_ev_allocation.py) | A complete two-page prospect build: executive overview + allocation data app, themed with preset 6 ("Editorial Ops"). |
+| [`build_shiftkey_marketplace_control_tower.py`](build_shiftkey_marketplace_control_tower.py) | ShiftKey-specific four-surface app: marketplace pulse, facility/supply action workspace, commission scenario modeler with finance approval, and a commission-dispute ticketing workflow — Cortex, a Sigma agent, complete drill context and linked-input write-back. |
+
+## build_shiftkey_marketplace_control_tower.py
+
+Built from ShiftKey's prospect discovery call, not a generic healthcare
+template. The core question is: **where is credentialed supply failing to meet
+facility demand, and which client or professional conversation happens today?**
+
+```bash
+# print the spec
+python3 build_shiftkey_marketplace_control_tower.py
+
+# verify + create (papercranestaging only)
+python3 build_shiftkey_marketplace_control_tower.py \
+  "$SIGMA_BASE_URL" "$TOKEN" <WRITEBACK_CONNECTION_ID> <FOLDER_ID>
+```
+
+The script checks `/v2/whoami` and refuses to write anywhere except
+papercranestaging. demeng is read-only for inspecting exemplars.
+
+**Marketplace Pulse** carries the governed 15% unfilled story: actual vs plan
+fill, open-shift exposure, marketplace take, SAMI-assisted fills, regional and
+credential gaps, a Cortex action brief, and a grouped Actual-vs-Plan hierarchy
+(Region → State → Market → Facility). Every chart/KPI declares the full
+business source schema so Explore/Author users can continue drilling to
+credential and shift; public Viewer embeds do not expose Sigma's Drill menu.
+
+**Action Workspace** uses a linked facility input table under Account Team /
+Supply Ops personas. Account teams assign status/owner/notes/next step; supply
+ops sees market × credential activation needs. Row selection opens a small
+facility-action modal with Sigma's native footer CTAs hidden. Bulk actions only
+write constants, and modal actions only write control values—no per-row action
+formula bug.
+
+**Commission Modeling** adapts the demeng Sales Commission Modeling pattern into
+ShiftKey marketplace terms, including the part that makes it an *app*: users
+**create scenarios**, they are not a fixed list.
+
+- `sql-commission` is the governed AM baseline only (gross profit, revenue, fill,
+  facilities, quota basis, default tier rates) — no scenarios in the SQL.
+- `it-scenario-reg` is an **empty input table**: the scenario registry. One row
+  per scenario, holding that scenario's quota factor, tier rates, fill-quality
+  modifier, and the Draft → Submitted → Approved / Adjust / Rejected lifecycle.
+- `jn-commission` cross-joins (`1 = 1`, `left-outer`) every account manager
+  against every registered scenario, resolving each assumption as
+  `Coalesce([Registry/…], <governed default>)`. An empty registry still renders a
+  usable **Base Plan** at defaults, so the page is never blank.
+- `it-comm-model` (displayed as *Commission Scenarios*) is the linked grid over
+  the join: green per-AM overrides, hidden `Coalesce` finals, progressive
+  attainment tiers, and payout quality-adjusted by facility fill, so the plan
+  cannot reward growth while ignoring marketplace health.
+- **+ New scenario** opens a modal (name, description, quota factor, tier rates,
+  quality modifier) that `insert-rows` into the registry and immediately selects
+  the new scenario. **⤓ Load governed plans** seeds the three starter plans as
+  real editable rows — needed because no public API can seed input-table rows.
+  The copilot has the same power through a `create-scenario` tool.
+
+Lifecycle writes target the **registry**, not every AM row: status is a property
+of the scenario, so submit/approve/reset touch one row and the grid inherits the
+status through the join.
+
+**Commission Disputes** adapts the demeng *Commissions Dispute* POV — a full
+case-management workflow for the finance/commissions disputes the discovery call
+said live in spreadsheets today.
+
+- `it-dispute` is the dispute registry (empty input table). A **Dispute ID is
+  generated on insert**; the row carries AM, scenario, dispute type, priority,
+  amount, a status lifecycle (Submitted → In Review → Escalated → Resolved), one
+  `datetime` per stage, a resolution note, an age (`DateDiff` to now or resolved),
+  and a **threaded comment view** (`ListAgg` of the log, keyed by ticket).
+- `it-dispute-log` is an append-only comment log keyed by ticket id, with the
+  auto `CREATED_AT`/`CREATED_BY` system columns and a rendered `Entry Text` line.
+- `tbl-dispute` is the queue: selecting a row sets `dispute_selected` and opens
+  the detail modal, where **Start review / Escalate / Resolve** stamp the SLA
+  dates with a scalar `Now()`, and **Add comment** appends to the trail.
+- **+ File a dispute** opens a modal (AM + scenario from governed lists,
+  type/priority segmented, amount typed); the copilot has a matching
+  `file-dispute` tool.
+
+Full pattern in
+[`approval-workflow-pattern.md`](../../sigma-input-table-app/reference/approval-workflow-pattern.md)
+→ "Ticketing / case-management pattern". Two papercranestaging drifts shaped it:
+**pie/donut are rejected** (the by-type chart is a bar), and a bar column **cannot
+sit on both `xAxis` and `color`**; the aggregate by-type bar also opts out of the
+drill-passthrough pass (row-level columns break an aggregate chart).
+
+Two API constraints shaped this and are documented in
+[`approval-workflow-pattern.md`](../../sigma-input-table-app/reference/approval-workflow-pattern.md):
+a linked input table's **`key` bindings are frozen after creation** (repointing the
+grid onto the join required a new element id while keeping the display name so
+downstream formulas kept resolving), and while `kind: "union"` *would* let a SQL
+seed list stack with the user registry, **a list control cannot take its value
+source from a union-derived element** — the scenario picker has to work, so the
+registry stays the single source of scenario rows and a button seeds it.
+
+**Marketplace Copilot** is a real Sigma agent (`document.agents` + `chat`) grounded
+in all five governed demand/supply/action/commission tables. Eight tools drive
+real workbook state: region, credential, risk and commission-scenario controls;
+facility staging/reset; commission submit/approve. Agent action tools obey the
+same scalar-write rule as buttons.
+
+Three copilot rules this build encodes (see
+[`workbook-spec-api.md`](../../sigma-workbook-conventions/reference/workbook-spec-api.md)
+→ "Agents & chat (Sigma AI copilots)"):
+
+- **Static greeting, not generated.** A `greeting` of `mode: "generated"` was
+  observed hanging on "Thinking…" in the chat shell, leaving no prompt chips on
+  open. It is now `mode: "static"` with a concrete opener that names a real
+  critical facility (Cedar Creek) and lists the three questions the agent can
+  answer — it renders instantly and deterministically for a live walk.
+- **Definitions pinned in `instructions`.** Fill rate, unfilled shifts, the 90%
+  plan, take, and risk tiers are stated so the agent never re-derives a metric
+  the workbook already governs.
+- **Deterministic rankings are handed to the agent, not computed by it.** The
+  worst region / top critical account come from grounded elements; the agent
+  narrates the number rather than doing arithmetic over rows.
+
+All metrics come from one deterministic Snowflake activity contract plus
+facility, supply and commission rollups. The output is explicitly illustrative;
+replace the SQL sources with ShiftKey semantic views for a real POV.
+
+## build_honda_ev_allocation.py
+
+```bash
+# print the spec only
+python3 build_honda_ev_allocation.py
+
+# verify + create (plugin optional)
+python3 build_honda_ev_allocation.py "$SIGMA_BASE_URL" "$TOKEN" <CONNECTION_ID> <FOLDER_ID>
+
+# verify + create with the Allocation Pulse plugin
+HONDA_PULSE_PLUGIN_ID=<registered-plugin-uuid> \
+  python3 build_honda_ev_allocation.py "$SIGMA_BASE_URL" "$TOKEN" <CONNECTION_ID> <FOLDER_ID>
+```
+
+`CONNECTION_ID` must be a warehouse connection with Sigma **write-back enabled** —
+the linked input table and the plan registry both persist there. Baseline data is
+generated by a real warehouse query (Snowflake `GENERATOR` + `VALUES`), so the
+app is populated on first open; point those two `SELECT`s at production tables to
+make it real.
+
+The [`plugins/honda-allocation-pulse/index.html`](../../../plugins/honda-allocation-pulse/index.html)
+rail is **optional**. Registering a plugin needs the `canDevelopPlugins` org
+feature; when `HONDA_PULSE_PLUGIN_ID` is unset (or the account can't register
+plugins) the builder renders a native data-bound Allocation Pulse in the same
+row — KPIs, personas, input tables, and the approval queue are unaffected. To
+include the iframe version, host it on a durable first-party static host,
+register the plugin once in the target org, and pass its UUID through
+`HONDA_PULSE_PLUGIN_ID`. The plugin is a compact rail above the persona tabs: BEV
+mix, electrified mix, network capacity, battery-cell commitment, and constraint
+count. It is bound to the linked allocation table and the grouped plant-load
+table, so edits move it immediately.
+
+The production rule is strict: **build only in papercranestaging; use demeng
+read-only to inspect examples.** Both the shared staging API helper and this
+builder verify the authenticated organization id before writes. The
+papercranestaging build uses the native rail because the available GitHub CDN
+bridges fail inside Sigma's plugin sandbox; both pages therefore export cleanly.
+
+### The message the build is designed to carry
+
+The app is built around one industry-specific insight, not a generic "edit your
+data" demo: **in a mix re-trade, assembly capacity is not the binding constraint —
+contracted battery cells are.** Swap an ICE unit for a BEV unit on the same line
+and you build exactly the same number of vehicles while adding 85 kWh of cell
+draw where there was zero.
+
+So the BEV shift is deliberately **volume-neutral**. BEV rises by the control
+percentage and ICE falls by the *unit-equivalent* amount, using a per-month
+`ice_offset_factor` (the BEV:ICE baseline ratio) computed in SQL rather than a
+flat percentage. Because every powertrain shares the same model/region
+expansion, that ratio is also the ratio of their unit totals, which makes the
+trade exact.
+
+The scenario levers are **controls driving computed columns, not write actions**
+— see [`approval-workflow-pattern.md`](../../sigma-input-table-app/reference/approval-workflow-pattern.md)
+for why an `update-rows` value formula cannot reference the row's own columns
+when fired from a button. `Basis Units` and `Scenario Factor` are hidden computed
+columns on the linked input table, and `Effective Units =
+Coalesce([Proposed Units], [Scenario Units])` so a typed cell still overrides the
+scenario. The only write action on the grid is `Clear manual overrides`
+(constants only).
+
+Measured on the live staging build by exporting the elements to CSV, and
+cross-checked against an independent SQL simulation of the same arithmetic —
+both agree exactly:
+
+| Lever | Units | Net unit shift | Cell commitment | Plant-months over contract |
+|---|---|---|---|---|
+| Plan of record, 0% | 838,502 | +0 | 87.6% | 0 of 30 |
+| Plan of record, 20% | 838,502 | **+0** | **103.0%** | **24 of 30** |
+| Demand signal, 0% | 864,775 | +26,273 | 90.6% | 0 of 30 |
+
+The third row reinforces the message: simply meeting the demand signal adds
+26,273 units and still fits inside the cell contract. It is the *mix* trade, at
+flat volume, that breaks it.
+
+Six plant-months (Lincoln AL, the plant deliberately given the most cell
+headroom at `cell_util_target` 0.84) stay inside contract — so the app answers
+*where the volume can still go*, not just that the plan broke.
+
+Two design consequences worth reusing:
+
+- **Contracted supply is sized off the baseline's own draw** (`cell_kwh_contracted
+  = baseline cell used / cell_util_target`, target varying 0.84–0.92 by plant), so
+  the plan of record starts feasible with uneven headroom. A demo whose baseline
+  is already breached has no beat to show.
+- **The constraint KPI must be parented to the editable table**, not the baseline
+  SQL. Cell commitment lives on the grouped `tbl-load` (derived from the input
+  table) so it recomputes on edit. The exec page's `k-cell` reads the same
+  contracted basis from `sql-plant`, so both pages agree at 87.6%.
+
+For constraint KPIs where rising is bad, set `comparison.direction: "none"` —
+Sigma's default arrow treatment paints a breach green. That mode requires
+`colorNeutral` and rejects `colorGood`/`colorBad`.
+
+### Live AI insight (Snowflake Cortex)
+
+`txt-ai` is a `text` element whose `body` embeds a `{{formula}}` calling
+`CallText("SNOWFLAKE.CORTEX.COMPLETE", "CLAUDE-4-SONNET", <prompt>)`. It needs no
+`source`, and the formula may reference other elements.
+
+**Feed it per-entity numbers, not totals.** Handed only network aggregates it
+returns "cell commitment rose, watch capacity" — true, useless, and already on
+screen. There are only five plants, so the prompt passes each plant's own
+commitment via `SumIf` over `tbl-load`'s group-level calculations (the same
+aggregation `k-cellprop` uses, sliced per plant). With that, the model names the
+binding plant and the one with headroom, and gets the arithmetic right.
+
+Verified live on staging. At baseline it returned "Celaya Mexico leads cell
+commitment at 92% … Lincoln Alabama shows the most headroom at 84%"; at a 20%
+shift the same element returned "Celaya Mexico is 8 points over its battery cell
+contract … Lincoln Alabama has the most remaining cell headroom at 1% below
+contract." Both are correct against `cell_util_target` (0.92 and 0.84) scaled by
+the shift, which also proves the insight is bound to the live scenario rather
+than the baseline.
+
+Requires a connection whose warehouse has Cortex enabled and the model name
+available to the role. Confirm both strings for the target org — a wrong model
+name fails at render time, not at save time.
+
+### Modals
+
+Two rules, both learned the hard way:
+
+- **Hide the built-in footer CTAs.** Overlay-level actions cannot resolve
+  controls, so the working buttons have to be `button` elements placed inside the
+  modal page. Leaving the native CTAs visible shows a second, non-functional pair
+  of buttons next to the real ones. Set
+  `modal.footer.primaryCta.visible: "hidden"` and the same for `secondaryCta`.
+- **`width: "small"`** (or `x-small`) keeps it dialog-sized; `large` reads as a
+  full-width sheet for a three-field form.
+
+Do not ask the user for a record ID. The plan identifier is generated on insert
+with a scalar formula (`"PLAN-" & DateFormat(Now(), "%y%m%d-%H%M%S")`) and never
+surfaced; the approval queue's `on-select` handler supplies it downstream. Scalar
+formulas are legal in action values — only per-row expressions are not.
+
+**Page 1 — Executive overview.** The decision question, then five KPIs (plan-of-record
+units, electrified mix, BEV mix vs target, plant capacity used, battery cell used),
+powertrain mix trajectory, allocation vs capacity by plant, and regional mix.
+Two segmented controls drive formulas rather than UI-only state: Month/Quarter
+changes `DateTrunc([ExecDateGrain], ...)`, and Powertrain/Plant/Model changes
+the regional chart's series through `Switch([ExecSeries], ...)`.
+
+**Page 2 — Allocation planner.** The Allocation Pulse rail stays fixed at the top,
+then a tabbed persona switch selects **Planner** or **Approver**. Planner gets the
+linked input table over the baseline where users type `Proposed Units`;
+`Effective Units = Coalesce(proposed, baseline)` with signed variance. Five KPIs
+read left-to-right as the argument: proposed units (unchanged) → net unit shift
+(zero) → proposed BEV mix (up) → cell commitment (over contract) → plant-months
+breached. All are parented to the input table or the table derived from it, so
+they move as cells change. Plan basis (plan of record / demand signal) and BEV
+shift % are live controls; `Clear manual overrides` is the one write action.
+Its own Month/Quarter segmented control changes the comparison chart grain.
+Approver gets the grouped plant-month table carrying **both** constraints —
+assembly utilisation and cell commitment, each with data bars and over/within
+status pills — plus the approval queue. That queue reuses the
+Draft → Submitted → Approved / Adjust / Rejected lifecycle from
+`sigma-input-table-app`.
+
+### Visual techniques worth copying
+
+Everything below was verified to round-trip and render:
+
+| Technique | Shape |
+|---|---|
+| Real logo, no asset host | fetch the public-domain SVG at build time, inline as a `data:image/svg+xml;base64` URI on an `image` element's `source.url` |
+| Paper canvas instead of stark white | `pages[].backgroundColor` (a page-level field, not a theme colour) |
+| Editable-cell affordance | `conditionalFormats` `type: single`, `condition: formula`, `formula: "True"` on the editable columns with a warm tint |
+| In-cell magnitude | `conditionalFormats` `type: dataBars` with `scheme: [bar, track]` |
+| Status pills | two `type: single` rules on the status column, one per value, each with `style.backgroundColor` + `color` |
+| Every KPI comparative | `comparisonColumn` + `comparison: {display: "delta", colorGood, colorBad, label}` against a *named* baseline (demand signal, FY goal, operating ceiling) |
+| Live narrative callout | a `text` element whose body carries `{{Sum([Element/Col]) / Sum([Element/Col2]) | .1%}}` segments — cross-element references resolve inside text bodies |
+
+Two things that do **not** work: the `progress` gauge element is rejected
+(`Invalid kind: "progress"`), and adding a date column to a `kpi-chart` did not
+produce a sparkline — use an explicit comparison instead.
+
+### Two traps this example encodes
+
+1. **Linked input tables carry source columns as `key`, not `formula`.** A `formula`
+   passthrough silently returns a whole-table aggregate on every row. See
+   `sigma-input-table-app/reference/approval-workflow-pattern.md`.
+2. **A data-app page forces a light theme.** Dark themes render input tables and
+   dropdowns white-on-white, so the "Operations Control Room" look is expressed as
+   *density* on a light surface rather than a dark canvas.
+
+### Retheming for another prospect
+
+Swap the palette constants at the top of the file (`HONDA`, `HONDA_DEEP`, `INK`,
+`PAPER`, …) with a palette sampled from the prospect's own logo asset, and keep the
+semantic trio (`GOOD` teal / `WARN` amber / `ALARM`) distinct from the brand colour so
+a negative delta never reads as branding.

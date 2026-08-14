@@ -31,6 +31,14 @@ description: >-
 > formulas → comparison KPIs → bulk-edit buttons), every shape confirmed
 > round-tripping on 2026-08-08.
 >
+> **Adding submit/review/approve workflow?** Use
+> [reference/approval-workflow-pattern.md](reference/approval-workflow-pattern.md)
+> and its runnable
+> [`build_forecast_approval_workflow.py`](examples/build_forecast_approval_workflow.py)
+> example — Draft → Submitted → Approved / Adjust / Rejected, with plan
+> registry, review queue, modal decisions, comments, and insert/update/delete
+> actions.
+>
 > Two things in there cause most "it used to work" reports:
 > **`inputMode: "view"`** — the default `edit` makes a published modeler read-only
 > and silently kills every `update-rows` — and **`stacking: "none"`** on the

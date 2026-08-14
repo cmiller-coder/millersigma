@@ -87,6 +87,34 @@ def token():
     return _fetch_token()
 
 
+_ORG_CHECKED = False
+
+
+def assert_org():
+    """Fail loudly if staging.env does not point at papercranestaging.
+
+    BASE is shared by every org on the staging deployment, so credentials for a
+    different org authenticate fine and silently build in the wrong place. This
+    happened: staging.env was overwritten with another org's client id/secret and
+    a full app was created in that org before anyone noticed. Nothing in the
+    response distinguishes the two, so check the org explicitly.
+    """
+    global _ORG_CHECKED
+    if _ORG_CHECKED:
+        return
+    org = (call("GET", "/v2/whoami") or {}).get("organizationId")
+    if org != ORG_ID:
+        raise SigmaError(
+            0,
+            "staging.env resolves to org %s, not papercranestaging (%s). "
+            "We build ONLY in papercranestaging; demeng is read-only for "
+            "examples. Fix ~/.sigma-portals/staging.env before writing anything."
+            % (org, ORG_ID),
+            BASE,
+        )
+    _ORG_CHECKED = True
+
+
 def call(method, path, body=None, accept="application/json", retry_auth=True):
     """Issue an API call. Returns parsed JSON, or raw text when not JSON."""
     url = BASE + path
@@ -126,10 +154,12 @@ def verify_workbook(spec):
 
 
 def create_workbook(spec):
+    assert_org()
     return call("POST", "/v2/workbooks/spec", spec)
 
 
 def update_workbook(workbook_id, spec):
+    assert_org()
     return call("PUT", "/v2/workbooks/%s/spec" % workbook_id, spec)
 
 
@@ -148,10 +178,12 @@ def get_workbook_meta(workbook_id):
 
 
 def create_report(spec):
+    assert_org()
     return call("POST", "/v2/reports/spec", spec)
 
 
 def update_report(report_id, spec):
+    assert_org()
     return call("PUT", "/v2/reports/%s/spec" % report_id, spec)
 
 
@@ -163,11 +195,25 @@ def get_report(report_id):
 
 
 def register_plugin(name, url, description=""):
-    return call(
-        "POST",
-        "/v2/plugins",
-        {"name": name, "url": url, "description": description, "type": "element"},
-    )
+    assert_org()
+    try:
+        return call(
+            "POST",
+            "/v2/plugins",
+            {"name": name, "url": url, "devUrl": url,
+             "description": description},
+        )
+    except SigmaError as exc:
+        # demeng production can create successfully and then return a masked
+        # HTTP 404. Recover by matching the exact immutable URL.
+        if exc.status == 404:
+            matches = [
+                p for p in (list_plugins() or {}).get("entries", [])
+                if p.get("name") == name and p.get("url") == url
+            ]
+            if matches:
+                return matches[-1]
+        raise
 
 
 def list_plugins():
@@ -182,4 +228,9 @@ def describe(obj, limit=4000):
 
 if __name__ == "__main__":
     print("token ok, len", len(token()))
-    print(describe(call("GET", "/v2/whoami")))
+    who = call("GET", "/v2/whoami") or {}
+    print(describe(who))
+    org = who.get("organizationId")
+    print("org matches papercranestaging:", org == ORG_ID)
+    if org != ORG_ID:
+        print("WRONG ORG -- do not build. Expected %s" % ORG_ID)

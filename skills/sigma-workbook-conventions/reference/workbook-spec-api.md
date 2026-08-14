@@ -4,25 +4,74 @@ Canonical patterns for `POST/GET/PUT /v2/workbooks/spec`. These rules are the
 result of iteration loops where the create endpoint accepted broken specs that
 failed at render time. Read this before authoring any workbook spec.
 
+## ⚠️ The spec shape changed — start here (re-verified 2026-08-12)
+
+Sigma retired the flat spec shape this file originally documented. Every form
+below is now **rejected**, and most are rejected with a masked error, so a stale
+generator looks like a mystery `Invalid kind` bug:
+
+| Retired form | Current form | Error you get |
+|---|---|---|
+| `pages`/`layout`/`schemaVersion` at the body's top level | everything except `name`/`folderId` nested under `document` | a wall of `Expecting { schemaVersion: 1 } at 0.document...` |
+| elements nested under `pages[i].elements` | one flat `document.elements` array; `pages[]` entries carry only `id` + `name` | `document.pages[].elements is no longer supported. Move elements to document.elements instead.` |
+| `<GridContainer>` / `<LayoutElement>` layout tags | `<Container>` / `<Element>` (plus `<TabbedContainer>` / `<Tab>`) | bare HTTP 400 `An error has occurred` + incident-id |
+| `value: {id}` on a KPI | `value: {columnId}` | `Invalid kind: "kpi-chart"` |
+| `xAxis: {id}`, `yAxis: [{id}, ...]` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}` | `Invalid kind: "<chart-kind>"` |
+| omitting column `format` entirely | `format: {kind: "number", formatString: "$.3~s"}` is supported | (the old advice merely lost you formatting) |
+
+`document.kind: "workbook"` is required. A minimal current body:
+
+```json
+{
+  "name": "Retail Overview",
+  "folderId": "<folder-uuid>",
+  "document": {
+    "schemaVersion": 1,
+    "kind": "workbook",
+    "pages": [{ "id": "page-overview", "name": "Overview" }],
+    "elements": [ /* every element on every page, flat */ ],
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page ...>...</Page>\n"
+  }
+}
+```
+
+Two habits make this drift cheap to survive:
+
+1. **`POST /v2/workbooks/spec/verify` before you create.** It returns
+   `{"valid": true}` or the same error the create would raise, and creates
+   nothing — so shape probes cost no cleanup.
+2. **Treat a GET-back of a live UI-built workbook as the source of truth** for
+   any field shape, including the ones documented here. That is how each row of
+   the table above was found.
+
+`scripts/smoke-test-workbook.py` builds a small workbook end to end (verify →
+create → per-element SQL → PNG render → delete) and is the fastest way to tell
+whether the shape has drifted again.
+
+Sections further down were written against the older API and are corrected
+in place where verified. Where a section is *not* marked verified, prefer a
+GET-back over its wording. The example specs in `examples/` still use the
+retired shapes and would be rejected as-is —
+`scripts/validate-spec.py` flags every retired form in them by name.
+
 ## Layout rules — read before authoring multi-page
 
 Three rules that the POST validator does not enforce. Sigma silently rewrites
 the layout when any of them is broken, producing a workbook that opens but
 looks wrong:
 
-1. **`layout` is a top-level workbook field.** A `layout` placed under
-   `pages[i]` is **silently discarded** by the API (verified 2026-05-11).
-   The agent's expected output is one top-level `layout` string for the whole
+1. **`layout` belongs to the document** (`document.layout`), not to a page. A
+   `layout` placed under `pages[i]` is **silently discarded** by the API.
+   The agent's expected output is one `document.layout` string for the whole
    workbook.
 2. **Multi-page = one `<?xml>` declaration + multiple `<Page>` siblings.** No
    outer wrapper element. Sigma's XML parser tolerates the multi-root form;
    the GET-back preserves it.
-3. **Container children must be nested inside `<GridContainer>` in the XML.**
-   The order of entries in `pages[].elements` does NOT define visual
-   structure. A `<GridContainer>` with no nested `<LayoutElement>` /
-   `<GridContainer>` children renders as an empty box, and all the elements
-   you *thought* were inside it stack flat at the bottom of the page in a
-   1/13-wide single column.
+3. **Container children must be nested inside `<Container>` in the XML.**
+   The order of entries in `document.elements` does NOT define visual
+   structure. A `<Container>` with no nested `<Element>` / `<Container>`
+   children renders as an empty box, and all the elements you *thought* were
+   inside it stack flat at the bottom of the page in a 1/13-wide single column.
 
 Run `scripts/validate-spec.py <spec.json>` before every POST/PUT — it checks
 all three.
@@ -32,13 +81,13 @@ Example of the correct shape:
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-overview">
-  <GridContainer elementId="container-hdr" type="grid"
-                 gridColumn="1 / 25" gridRow="1 / 4"
-                 gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <LayoutElement elementId="text-title" gridColumn="1 / 9" gridRow="1 / 4"/>
-    <LayoutElement elementId="ctrl-date"  gridColumn="9 / 25" gridRow="1 / 4"/>
-  </GridContainer>
-  <LayoutElement elementId="chart-bar" gridColumn="1 / 25" gridRow="4 / 18"/>
+  <Container elementId="container-hdr" type="grid"
+             gridColumn="1 / 25" gridRow="1 / 4"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="text-title" gridColumn="1 / 9" gridRow="1 / 4"/>
+    <Element elementId="ctrl-date"  gridColumn="9 / 25" gridRow="1 / 4"/>
+  </Container>
+  <Element elementId="chart-bar" gridColumn="1 / 25" gridRow="4 / 18"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-detail">
   ...
@@ -80,10 +129,11 @@ iterations searching for a field that doesn't exist.
 
 | Method | Path | Notes |
 |--------|------|-------|
-| `POST` | `/v2/workbooks/spec` | Create. Body is JSON or YAML. Required: `name`, `schemaVersion: 1`, `folderId`, `pages`. Optional: `layout`. POST defaults to YAML response — pass `Accept: application/json` for JSON. |
-| `GET`  | `/v2/workbooks/{workbookId}/spec` | **Defaults to YAML.** Pass `Accept: application/json` for JSON. |
-| `PUT`  | `/v2/workbooks/{workbookId}/spec` | Full-spec update; no partials. |
-| `DELETE` | _unknown_ | **Open issue:** both `DELETE /v2/workbooks/{id}` and `DELETE /v2/files/{id}` return 404 against staging for workbooks the same token just CREATEd. Until the right endpoint is found, test workbooks accumulate and need manual UI cleanup. Discover via Sigma docs / network tab on a UI delete. |
+| `POST` | `/v2/workbooks/spec/verify` | **Dry run — use this first.** Same validation as create, creates nothing. Returns `{"valid": true}` or the create's error. |
+| `POST` | `/v2/workbooks/spec` | Create. Body is JSON or YAML. Required: `name`, `folderId`, `document` (with `schemaVersion: 1`, `kind: "workbook"`, `pages`, `elements`). Optional: `document.layout`. POST defaults to YAML response — pass `Accept: application/json` for JSON. |
+| `GET`  | `/v2/workbooks/{workbookId}/spec` | **Defaults to YAML.** Pass `Accept: application/json` for JSON. Returns the same `{document: ...}` envelope the create takes. |
+| `PUT`  | `/v2/workbooks/{workbookId}/spec` | Full-spec update; no partials. Same body shape as create. |
+| `DELETE` | `/v2/files/{workbookId}` | **Resolved 2026-08-12** (this file previously recorded it as an open issue). Returns `{}` and moves the workbook to trash; a subsequent `GET /v2/workbooks/{id}` returns 409. Note it is the **files** path — `DELETE /v2/workbooks/{id}` still 404s. Use it to clean up probe workbooks instead of leaving them for manual UI cleanup. |
 
 `folderId` is the **internal UUID** (e.g. `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`),
 NOT the urlId (a short base62 string like `AbC123...`). Look up via
@@ -104,21 +154,25 @@ Sigma staging API. For each, see the per-kind shape section further
 down for the full required-field layout and any gotchas. Reference
 example specs live in `examples/`.
 
+Axis fields take **column ids** (`{columnId}` / `{columnIds: [...]}`), not the
+`{id}` objects an older version of this file documented.
+
 | What you want | Spec `kind` | Encoding fields | Notes |
 |---------------|-------------|-----------------|-------|
-| Bar chart | `bar-chart` | `xAxis: {id}`, `yAxis: [{id}, ...]` | Single or grouped series. See "Bar / line / area / combo chart shape" below. |
-| Line chart | `line-chart` | `xAxis: {id}`, `yAxis: [{id}]`, optional `color: {by, column}` | Series breakout uses the `{by, column}` shape with `column` as a bare id string — NOT `{id}`. See "Series breakout / color-by on charts." |
-| Area chart | `area-chart` | `xAxis: {id}`, `yAxis: [{id}, ...]`, optional `stacking` | `stacking: "none"` = unstacked overlay, default = stacked, `"normalized"` = 100% stacked. |
-| Combo chart | `combo-chart` | `xAxis: {id}`, `yAxis: [{id}, {id, type: "line"}, ...]` | Per-series `type` field on yAxis entries overrides the bar default — that's how you mix bars + lines on the same chart. |
-| Scatter / bubble | `scatter-chart` | `xAxis: {id}`, `yAxis: [{id}]`, optional `size: {id}`, optional `color: {by, column}` | Both axes are metrics (not categorical). `size` makes it a bubble chart. |
-| Pie chart | `pie-chart` | `color: {id}` (categorical), `value: {id}` (metric) | No xAxis/yAxis. The categorical column drives slice identity; the metric column drives slice size. |
-| Donut chart | `donut-chart` | `color: {id}`, `value: {id}` | Same shape as pie-chart; render differs in the UI only. |
-| KPI / single-value tile | `kpi-chart` | `value: {id}` plus a date dimension in `columns` for sparkline/comparison | **Docs example says `kpi` — API rejects with `Invalid kind: "kpi"`. Use `kpi-chart`.** See "KPI element shape." |
-| Pivot table | `pivot-table` | `rowsBy: [{id}]`, `columnsBy: [{id}]`, `values: ["<col-id>", ...]` | **Only this exact shape — `rows`/`cols`/`values`-as-objects is rejected.** See "Pivot-table element shape." Cell-color conditional formatting is UI-only and breaks GET-spec when present. |
+| Bar chart | `bar-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}` | Single or grouped series. See "Bar / line / area / combo chart shape" below. |
+| Line chart | `line-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}`, optional `color: {by, column}` | Series breakout uses the `{by, column}` shape with `column` as a bare id string. See "Series breakout / color-by on charts." |
+| Area chart | `area-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}`, optional `stacking` | `stacking: "none"` = unstacked overlay, default = stacked, `"normalized"` = 100% stacked. |
+| Combo chart | `combo-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}` | Mixing bars + lines is a per-series `type` override; confirm its current shape from a GET-back. |
+| Scatter / bubble | `scatter-chart` | `xAxis: {columnId}`, `yAxis: {columnIds: [...]}`, optional `size`, optional `color: {by, column}` | Both axes are metrics (not categorical). `size` makes it a bubble chart. |
+| Pie chart | `pie-chart` | `color` (categorical), `value` (metric) | No xAxis/yAxis. **Rejected on papercranestaging (2026-08-13)** — use a `bar-chart` there. See "Pivot-table / pie / donut API drift." |
+| Donut chart | `donut-chart` | `color`, `value` | Same shape as pie-chart. **Also rejected on papercranestaging.** |
+| KPI / single-value tile | `kpi-chart` | `value: {columnId}`, optional `comparison` + `comparisonColumn` | **Docs example says `kpi` — API rejects with `Invalid kind: "kpi"`. Use `kpi-chart`.** See "KPI element shape." |
+| Pivot table | **Not accepted in papercranestaging** | — | Live `verify` rejects both `kind: "pivot-table"` and `kind: "pivot"` as invalid (2026-08-13). Use a grouped `table` with ordered `groupBy` columns for a drillable hierarchy. See "Pivot-table API drift." |
 | Table | `table` | `columns: [...]`, optional `groupings`, optional `order` | Plain detail table by default; multi-level aggregating table when `groupings` carries `groupBy` + `calculations`. See "Table groupings." |
 | Control | `control` (with `controlType: ...`) | `controlType` + type-specific fields | Catalog of `controlType` values in the "Control catalog" section. |
-| Layout container | `container` | (element body is `{id, kind}` only) | Child placement happens in the layout XML via `<GridContainer>`. |
+| Layout container | `container` | (element body is `{id, kind}` only) | Child placement happens in the layout XML via `<Container>`. |
 | Markdown text / heading | `text` | `body` (markdown), `verticalAlign` (`top \| middle \| bottom`) | Used for page titles, section headers, narrative blocks. |
+| AI copilot chat | `chat` | `agentId` (points at a `document.agents[].id`) | Embeds a Sigma AI agent as an on-page chat panel. Element body is `{id, kind: "chat", agentId}` only; the agent itself is defined in `document.agents`. See "Agents & chat (Sigma AI copilots)." |
 
 When the docs and the API disagree, trust the API error and update this table.
 
@@ -164,6 +218,14 @@ plan step and propose a substitute that IS supported (e.g. swap map →
 `line-chart` broken out by region, or → `bar-chart` ranked by location).
 
 ### GET-spec can 500 when UI features aren't representable
+
+> **Re-checked 2026-08-12 — this may be fixed.** A GET-spec of a live workbook
+> carrying pivot-table `conditionalFormats` (the heatmap cell coloring named
+> below as the confirmed trigger) returned 200, and the formatting came back as
+> a real `conditionalFormats` array on the element — i.e. it is now part of the
+> code representation, not UI-only state. Treat the workaround below as
+> historical until you actually see a 500, and re-test before designing around
+> it.
 
 The GET-spec endpoint can return HTTP 500 (`code: service_error`) on a
 workbook that's otherwise healthy — open-able in the UI, listed in
@@ -254,9 +316,10 @@ When you see `Invalid kind` on a kind you know is supported:
 Don't chase kind-name variants until you've ruled out an extraneous or
 misshapen field.
 
-## KPI element shape
+## KPI element shape (verified 2026-08-12)
 
-Minimal (number only):
+Minimal (number only). Note `value` is `{columnId}` — the older `{id}` form is
+rejected as `Invalid kind: "kpi-chart"`:
 
 ```json
 {
@@ -265,32 +328,42 @@ Minimal (number only):
   "name": "Total Revenue",
   "source": { "kind": "table", "elementId": "<sibling-table-id>" },
   "columns": [
-    { "id": "kpi-rev-value", "name": "Revenue", "formula": "[Metrics/Revenue]" }
+    { "id": "kpi-rev-value", "name": "Revenue", "formula": "[Metrics/Revenue]",
+      "format": { "kind": "number", "formatString": "$.3~s" } }
   ],
-  "value": { "id": "kpi-rev-value" }
+  "value": { "columnId": "kpi-rev-value" }
 }
 ```
 
-With timeline comparison (preferred — gives readers period-over-period
-context). Add a date-dimension column to the `columns` array. Sigma renders
-the comparison/sparkline automatically when both a `value` column and a date
-dimension are present:
+An explicit delta against a baseline uses a second column plus `comparison` /
+`comparisonColumn` (shape taken from a GET-back of a UI-built KPI):
 
 ```json
 {
-  "id": "kpi-revenue",
-  "kind": "kpi-chart",
-  "name": "Total Revenue",
-  "source": { "kind": "table", "elementId": "<sibling-table-id>" },
+  "value": { "columnId": "kpi-rev-value" },
+  "comparison": { "display": "relative", "direction": "none", "label": "of Total" },
+  "comparisonColumn": { "columnId": "kpi-rev-baseline" }
+}
+```
+
+`display: "relative"` renders the delta as a percentage of the comparison
+column; `direction` controls the up/down arrow treatment; `label` is the
+caption under the delta.
+
+Adding a date-dimension column to `columns` is what enables Sigma's own
+period-over-period comparison and sparkline:
+
+```json
+{
   "columns": [
     { "id": "kpi-rev-month", "formula": "DateTrunc(\"month\", [Date])" },
     { "id": "kpi-rev-value", "name": "Revenue", "formula": "[Metrics/Revenue]" }
   ],
-  "value": { "id": "kpi-rev-value" }
+  "value": { "columnId": "kpi-rev-value" }
 }
 ```
 
-`value.id` points at the column whose value is rendered as the tile number.
+`value.columnId` points at the column whose value is rendered as the tile number.
 The column's `formula` is typically `[Metrics/<Name>]` so currency/percent
 formatting carries through from the data model. A KPI with a time-series
 metric should always include the date-dimension column for the comparison.
@@ -333,15 +406,14 @@ To match an exact `kind`-error symptom to this fix: if the validator
 rejects `<chart-kind>` and your spec has a `color` field shaped like
 `{id: "..."}`, that's the cause — change to `{by, column}`.
 
-## Bar / line / area / combo chart shape
+## Bar / line / area / combo chart shape (verified 2026-08-12)
 
-These four share the xAxis/yAxis pattern. Differences:
+These four share the xAxis/yAxis pattern: `xAxis` is one `{columnId}` object and
+`yAxis` is one `{columnIds: [...]}` object holding every metric series. Passing
+the older `xAxis: {id}` / `yAxis: [{id}]` forms is rejected with the masked
+`Invalid kind: "<chart-kind>"`.
 
-- `bar-chart`, `line-chart`, `area-chart` accept a single y-axis array
-  of metric columns. Multi-series breakout uses `color: {by, column}`.
-- `combo-chart` mixes bar + line in the same chart by giving each
-  `yAxis` entry an optional `type` override (`"line"` for line-style,
-  default is bar-style for `combo-chart` / what the `kind` implies).
+- Multi-series breakout uses `color: {by, column}`.
 - `area-chart` accepts an optional `stacking` field:
   - default (omitted) — stacked
   - `"none"` — unstacked overlay (each series drawn from the baseline)
@@ -361,28 +433,42 @@ Minimal area-chart (stacked):
     { "id": "ar-revenue", "formula": "[Metrics/Revenue]" },
     { "id": "ar-cogs",    "formula": "[Metrics/COGS]" }
   ],
-  "xAxis": { "id": "ar-month" },
-  "yAxis": [ { "id": "ar-revenue" }, { "id": "ar-cogs" } ]
+  "xAxis": { "columnId": "ar-month" },
+  "yAxis": { "columnIds": ["ar-revenue", "ar-cogs"] }
 }
 ```
 
-Combo chart with one bar series + one line series:
+`xAxis` also carries sort and label formatting:
 
 ```json
-{
-  "kind": "combo-chart",
-  "xAxis": { "id": "month-col" },
-  "yAxis": [
-    { "id": "revenue-col" },
-    { "id": "profit-margin-col", "type": "line" }
-  ]
+"xAxis": {
+  "columnId": "br-region",
+  "sort": { "by": "br-revenue", "aggregation": "sum", "direction": "descending" },
+  "format": { "labels": { "labelAngle": -45 } }
 }
 ```
+
+The `sort.by` value is a column id and `sort.aggregation` names the aggregate
+to sort on — without it, a sort against an aggregated metric is ignored.
 
 Add `color: {by: "category", column: "<col-id>"}` to break either of
 these into multiple series (e.g. one line per region). The `column`
 value is a bare id string, not an `{id}` object — see "Series breakout
 / color-by on charts."
+
+⚠️ **A column may sit on only one channel.** Putting the same column on both
+`xAxis` and `color` is rejected: `Column '<id>' is referenced from both 'xAxis'
+and 'color'; a column can only be on one channel at a time`. When you replace a
+pie/donut with a single-dimension bar (metric by category), the category goes on
+`xAxis` only — do not also add a redundant `color` by that same column.
+
+⚠️ **Aggregate charts reject row-level drill passthrough.** If you run a
+drill-passthrough pass that copies every source column onto each chart (so
+right-click drill exposes them), skip aggregate-by-dimension charts like a
+metric-by-category bar or a pie/donut: adding row-level columns to a chart whose
+value is a `Sum()`/`Avg()` over a single grouping mixes grains and the element is
+rejected (again masked as `Invalid kind`). Give those charts an opt-out flag in
+the builder and strip it before POST.
 
 Reference example with all variants:
 `examples/additional-workbook-features-chart-and-control-catalog.json`.
@@ -392,9 +478,9 @@ Reference example with all variants:
 Pie and donut charts use a different encoding from xAxis/yAxis charts.
 They have two required fields:
 
-- `color: {id: "<categorical-col-id>"}` — the dimension whose values
+- `color: {columnId: "<categorical-col-id>"}` — the dimension whose values
   become slice identities.
-- `value: {id: "<metric-col-id>"}` — the metric whose values become
+- `value: {columnId: "<metric-col-id>"}` — the metric whose values become
   slice sizes.
 
 ```json
@@ -407,8 +493,8 @@ They have two required fields:
     { "id": "dn-family",  "formula": "[<table>/Product Family]" },
     { "id": "dn-revenue", "formula": "[Metrics/Revenue]" }
   ],
-  "color": { "id": "dn-family" },
-  "value": { "id": "dn-revenue" }
+  "color": { "columnId": "dn-family" },
+  "value": { "columnId": "dn-revenue" }
 }
 ```
 
@@ -420,7 +506,7 @@ spec-level difference between the two.
 Both axes are metrics (not categorical). Each row of the underlying
 data becomes one point. Optional encodings:
 
-- `size: {id: "<metric-col-id>"}` — bubble-sizes the point. Without
+- `size: {columnId: "<metric-col-id>"}` — bubble-sizes the point. Without
   this, all points are the same size (pure scatter).
 - `color: {by: "category", column: "<categorical-col-id>"}` — same
   shape as on line/area/bar; colors points by a categorical dimension.
@@ -437,9 +523,9 @@ data becomes one point. Optional encodings:
     { "id": "sc-margin",   "formula": "[Metrics/Profit Margin]" },
     { "id": "sc-region",   "formula": "[<table>/Store Region]" }
   ],
-  "xAxis": { "id": "sc-revenue" },
-  "yAxis": [ { "id": "sc-margin" } ],
-  "size":  { "id": "sc-revenue" },
+  "xAxis": { "columnId": "sc-revenue" },
+  "yAxis": { "columnIds": ["sc-margin"] },
+  "size":  { "columnId": "sc-revenue" },
   "color": { "by": "category", "column": "sc-region" }
 }
 ```
@@ -451,14 +537,24 @@ transaction), the underlying source element must do that aggregation
 first — either via `groupings` or by sourcing from a pre-aggregated
 sibling.
 
-## Pivot-table element shape
+## Pivot-table / pie / donut API drift
 
-Pivot tables ARE supported at POST (despite being absent from the "supported
-chart types" list in the docs page) — but the field shape is **not** the
-same as the chart elements' `xAxis`/`yAxis` pattern. Field names that look
-right but are wrong: `rows`, `cols`, `values: [{id: ...}]`.
+**Do not emit pivot, pie, or donut charts to papercranestaging.** On
+2026-08-13, live `POST /v2/workbooks/spec/verify` rejected `kind: "pivot-table"`,
+`kind: "pivot"`, `kind: "pie-chart"` and `kind: "donut-chart"` as invalid — even
+with the minimal documented shape. These are org/version-specific rejections, not
+spec errors, and they surface as the masked `Invalid kind: "…"`.
 
-The correct shape (matches
+- Pivot → use a grouped `table` with ordered `groupBy` columns (the ShiftKey
+  Region → State → Market → Facility Actual-vs-Plan hierarchy is the live
+  reference).
+- Pie / donut → use a `bar-chart` of the metric by the categorical dimension
+  (the ShiftKey "Disputed $ by type" bar is the live reference). Put the category
+  only on `xAxis`; see the color-channel rule under "Bar / line / area / combo."
+
+The archived pivot shape below exists in older GET-backs and representation docs,
+but is environment/version-specific and is **not accepted by the current
+papercranestaging write API** (matches
 <https://help.sigmacomputing.com/docs/example-representation-workbook-with-a-pivot-table>):
 
 ```json
@@ -480,13 +576,183 @@ The correct shape (matches
 
 Critical field-shape rules:
 
-- `rowsBy` (NOT `rows`) — array of `{id}` objects pointing at row-grouping columns.
+- `rowsBy` (NOT `rows`) — array of `{id}` objects pointing at row-grouping
+  columns. Each entry takes an optional `sort: {by: "<col-id>", direction}`.
 - `columnsBy` (NOT `cols`) — same shape, for column-grouping columns.
 - `values` — array of **id strings** (e.g. `["pvt-units"]`), NOT objects like
   `[{"id": "pvt-units"}]`. The objects-form is rejected.
-- Cell-color conditional formatting (the "heatmap" visual) is UI-side; the
-  spec sets up the pivot structure but cell coloring is not in the code
-  representation.
+- Cell-color conditional formatting rides on the element as a
+  `conditionalFormats` array (verified present in a GET-back 2026-08-12).
+  Earlier guidance here called it UI-only — see the re-check note under
+  "GET-spec can 500" above before assuming it can't be set from code.
+
+## Join and union sources
+
+A `table` element can source a join instead of a single element, which is how you
+cross-join a user-editable registry onto a governed baseline (the scenario-modeler
+pattern). Verified on papercranestaging 2026-08-13 — note it works on a plain
+`table`, which matters here because `pivot-table` is rejected in this org:
+
+```json
+"source": {
+  "kind": "join",
+  "joins": [{"left":  {"elementId": "sql-base",     "kind": "table"},
+             "right": {"elementId": "it-registry",  "kind": "table"},
+             "columns": [{"left": "1", "right": "1"}],
+             "joinType": "left-outer"}],
+  "primarySource": {"elementId": "sql-base", "kind": "table"}
+}
+```
+
+- `columns: [{"left": "1", "right": "1"}]` is the **cartesian** idiom (join on
+  `1 = 1`): every left row against every right row.
+- Column formulas address each side by display name —
+  `[Commission AM Base/Gross Profit]`, `[Commission Scenario Registry/Quota Factor]`.
+- With `left-outer` plus `Coalesce([Registry/Col], <default>)`, an empty right
+  side still renders the left rows at governed defaults — the empty-state guard.
+- A **linked input table can link from a join element** (`source: {kind: "linked",
+  from: "<join element>"}`) with normal `key` bindings.
+
+### `kind: "union"` — stack two elements
+
+`union` is a real source kind, sibling to `join`. It takes `sources` (2+ source
+refs, same three shapes `join` accepts: `table` / `warehouse-table` /
+`data-model`) and a **required `matches` array** that does the job a hand-written
+`UNION ALL`'s aligned SELECT lists would. Verified on papercranestaging
+2026-08-13:
+
+```json
+"source": {
+  "kind": "union",
+  "sources": [{"kind": "table", "elementId": "sql-scenario-seed"},
+              {"kind": "table", "elementId": "it-scenario-reg"}],
+  "matches": [
+    {"outputColumnName": "Scenario Name",
+     "sourceColumns": ["[Scenario Name]", "[Scenario Name]"]},
+    {"outputColumnName": "Scenario Status",
+     "sourceColumns": [null, "[Scenario Status]"]}
+  ]
+}
+```
+
+Two shape rules that are easy to get wrong (both cost a debugging cycle):
+
+1. **`sourceColumns` entries are bracketed column *references*, positional to
+   `sources` — not bare display names and not column ids.** `"Scenario Name"`
+   fails with `Unparseable formula: 'Scenario Name'`; `"sd-nm"` fails with
+   `Column reference not found`. Use `"[Scenario Name]"`. `null` means that
+   source has no matching column and those rows get null (the literal
+   `NULL AS col` side of a manual UNION ALL).
+2. **Union output columns are addressed BARE in the element's own `columns`.**
+   `{"formula": "[Scenario Name]"}` — *not* `[Union/Scenario Name]`, not the
+   element's own name, not a source's name. Getting this wrong yields
+   `Dependency not found: 'union/scenario name'`.
+
+⚠️ **A list control cannot take its value source from a union-derived element**
+(verified: `Invalid value source for list control: <id>`), and the restriction
+propagates downstream — a linked input table built over a join-over-union is also
+rejected as a control value source. Plain tables and input tables are fine. So a
+union is the right tool for *stacking data into a grid or chart*, but it cannot
+feed a dropdown's value list; if users must pick from the stacked set, either keep
+the pickable list in a plain element or drive selection by row `on-select` into a
+plain `text` control instead.
+
+This is why the ShiftKey commission modeler keeps its scenario **registry** as
+the single source of scenario rows rather than unioning a SQL seed list with the
+user registry: the scenario picker has to work. See
+`sigma-input-table-app/reference/approval-workflow-pattern.md` → "Scenario
+registries" for that pattern and the seed-button cold start, and "Key columns are
+FROZEN once a linked input table exists" before repointing an existing grid.
+
+> Do not confuse this element-level `kind: "union"` with hand-building a
+> `SELECT … UNION ALL SELECT …` string inside a custom-SQL element. Both stack
+> rows; use `kind: "union"` when the inputs are existing elements/tables.
+
+## Theming: bands, table styling, heat scales
+
+Verified live on papercranestaging 2026-08-13 by building the ShiftKey commission
+surfaces and pixel-inspecting PNG exports.
+
+### A text element's `style.backgroundColor` does NOT render
+
+This is the trap. A section title written as a `text` element with
+`style: {backgroundColor: "#4AAE9B"}` and white body text renders as **white text
+on the page background** — i.e. invisible. Confirmed by scanning an export: the
+band rows came back as the page colour, never the brand colour, while a table's
+`textStyles.header` tint *did* render.
+
+The colour has to come from a **container** wrapping the text:
+
+```json
+// container carries the colour…
+{"id": "sec-x-bg", "kind": "container", "spacing": "small",
+ "style": {"backgroundColor": "#4AAE9B", "borderRadius": "round",
+           "borderColor": "#4AAE9B", "borderWidth": 1}}
+// …the text just centers a white bold title
+{"id": "sec-x", "kind": "text", "verticalAlign": "middle",
+ "style": {"backgroundColor": "transparent", "padding": "none"},
+ "body": "<p class=\"p-large\" style=\"text-align: center\"><span style=\"color: #FFFFFF\">**Scenario outcomes**</span></p>"}
+```
+
+and in the layout the container occupies the band's grid slot with the text
+inside it. Centering comes from the inline `text-align` on a `<p>`; there is no
+`horizontalAlign` field on a text element.
+
+⚠️ Container `spacing` only accepts the named sizes — `"none"` is rejected with
+`spacing: Invalid value: string`.
+
+### Table styling vocabulary (all verified)
+
+```json
+"tableStyle": {
+  "preset": "presentation", "cellSpacing": "small",
+  "banding": "shown", "bandingColor": "#FAFBFA",
+  "headerDividerColor": "#0ABC28",
+  "textStyles": {
+    "header":       {"fontSize": 14, "backgroundColor": "#E4F7E8", "align": "center", "fontWeight": "bold"},
+    "columnHeader": {"fontWeight": "bold", "backgroundColor": "#E4F7E8"},
+    "rowHeader":    {"fontWeight": "bold", "backgroundColor": "#E4F7E8"},
+    "cell":         {"fontSize": 13, "align": "right"}
+  }
+}
+```
+
+`textStyles.header` is the element's own title bar — tinting it plus centering is
+what gives a table a themed cap without a separate band. `gridLines: "none"` is
+also accepted. ⚠️ `tableStyle.preset` values are constrained; `"plain"` is
+rejected (masked as `Invalid kind: "table"`) — use `"presentation"`.
+
+### Heat scales on a rate column
+
+```json
+{"type": "backgroundScale", "columnIds": ["so-rate"],
+ "scheme": ["#EAF8EC", "#D2F0D8", "#B6E7C3", "#95DCAB", "#6FCE90",
+            "#48BE74", "#2AA95C", "#158C47", "#0B6E36"],
+ "includeValues": true}
+```
+
+A nine-stop `scheme` light→dark is the convention (the Summit commission app uses
+a teal ramp of exactly this shape). Pair it with
+`{"type": "dataBars", "columnIds": [...], "scheme": [bar, track]}` on the money
+column so magnitude and intensity read together.
+
+## Grouped tables: one grouping, aggregate calculations
+
+A multi-level grouped table takes **one** grouping entry whose `groupBy` is the
+ordered list of dimensions — not one entry per level:
+
+```json
+"groupings": [{"id": "g", "groupBy": ["scenario", "owner", "month"],
+               "calculations": ["gp", "quota", "attainment", "payout"]}]
+```
+
+Passing `groupBy` as a bare string, or several grouping entries each with one
+`groupBy`, is rejected (masked as `Invalid kind: "table"`).
+
+**Everything in `calculations` must be an aggregate.** A descriptive passthrough
+like `[Source/Scenario Description]` is rejected; wrap it —
+`Min([Source/Scenario Description])` — which is safe when the value is constant
+within the group.
 
 ## Container element shape
 
@@ -498,7 +764,7 @@ container's own grid. The element body is intentionally minimal:
 { "id": "container-header", "kind": "container" }
 ```
 
-All child placement is in the layout XML using `<GridContainer>` — see
+All child placement is in the layout XML using `<Container>` — see
 Layout below.
 
 ## Text element shape (titles, headings, narrative)
@@ -784,20 +1050,31 @@ page — but it must exist on the page and be placed in the layout XML.
 Place it at the bottom under the detail table; users can scroll to it
 but it stays out of the headline view.
 
-## Column `format` — undocumented, omit at POST
+## Column `format` (verified 2026-08-12 — supersedes "omit at POST")
 
-Setting `format: { type: "number", format: "currency", currency: "USD" }`
-on a column is rejected:
+The missing `kind` value this file used to call undiscovered is `"number"`, and
+the format itself is a d3 format string:
 
+```json
+{ "id": "kpi-rev-value", "name": "Revenue", "formula": "Sum([Transactions/Revenue])",
+  "format": { "kind": "number", "formatString": "$.3~s" } }
 ```
-pages[0].elements[N].columns[M].format: Missing "kind" field
+
+Verified round-trip on a KPI row: `$.3~s` → `$2.64B`, `,d` → `9,045,210`,
+`.1%` → `19.5%`. Currency and grouping symbols can be pinned explicitly when
+the locale default isn't wanted:
+
+```json
+"format": {
+  "kind": "number", "formatString": "$.1S",
+  "decimalSymbol": ".", "digitGroupingSymbol": ",",
+  "digitGroupingSize": [3], "currencySymbol": "$"
+}
 ```
 
-The required `kind` value is not in the public docs. Until the shape is
-discovered (configure currency in the UI → `GET /v2/workbooks/{id}/spec`
-→ diff), **omit `format` from POST bodies entirely** and configure
-currency/percent formatting in the UI after CREATE. Replace this section
-with the discovered shape once known.
+Set formats in the spec rather than in the UI — a percentage metric that renders
+as `0.20` instead of `19.5%` is the most common "the numbers look wrong" report,
+and it survives no round-trip when configured by hand.
 
 ## Looking up Sigma functions
 
@@ -880,6 +1157,81 @@ workbook. Reasons:
 Discover available metrics with `jq '.. | objects | select(.metrics) | .metrics'`
 on `GET /v2/dataModels/{id}/spec`. They live on the node element's `metrics`
 array. Always check this BEFORE writing a custom calc.
+
+## Agents & chat (Sigma AI copilots)
+
+A Sigma AI agent is defined once in `document.agents` (a top-level array on the
+document, sibling to `elements`) and surfaced on a page with a `chat` element
+that points at it by `agentId`. This is how a data app gets an embedded copilot
+that can answer questions about the governed metrics *and* drive workbook state.
+
+```json
+// document.agents[i]
+{
+  "id": "ag-market",
+  "name": "Marketplace Copilot",
+  "description": "Answers fill/coverage/margin questions and drives the action queue.",
+  "instructions": "You are ... fill rate = filled / posted; the plan is 90 percent ...",
+  "greeting": {"mode": "static", "message": "Cedar Creek is the top critical account. Ask me:\n1) ...\n2) ...\n3) ..."},
+  "dataSources": [
+    {"kind": "table", "elementId": "sql-market"},
+    {"kind": "table", "elementId": "it-actions"}
+  ],
+  "tools": [
+    {"toolId": "t-region", "kind": "action", "name": "Focus a region",
+     "description": "Filter the workbook to one or more regions.",
+     "steps": [{"kind": "effect", "effect": "set-control-value",
+                "control": "region_filter",
+                "value": {"type": "agent-input", "inputName": "Region(s) to focus on"}}]}
+  ]
+}
+```
+
+```json
+// the on-page element that renders it
+{"id": "chat-copilot", "kind": "chat", "agentId": "ag-market"}
+```
+
+Rules learned building live copilots (verified on papercranestaging 2026-08-13):
+
+1. **Prefer a static greeting; `mode: "generated"` can hang on "Thinking…".**
+   A `greeting` of `{"mode": "generated", "prompt": "…"}` asks the model to
+   compose the opener at load time; in the chat shell this can stall
+   indefinitely on "Thinking…" and leave the panel with no prompt chips — the
+   worst possible first impression for a live demo. Use
+   `{"mode": "static", "message": "…"}` with a concrete opener that names a real
+   entity from the data and lists the exact questions the agent can answer. It
+   renders instantly and deterministically.
+
+2. **Pin every definition in `instructions`; never let the model redefine a
+   metric.** Spell out the governed formulas the agent must not restate
+   differently (e.g. "fill rate = filled / posted; the fill plan is 90 percent").
+   Finance-vs-sales definition drift is exactly the problem these apps exist to
+   kill, so the agent must inherit the one governed definition.
+
+3. **Feed the model deterministic rankings — don't ask it to compute them.**
+   When the agent needs "the worst region" or "the top critical facility",
+   compute the ranking in a grounded element (or in the prompt text handed to
+   the agent) and give the agent the answer to narrate. LLMs are unreliable at
+   arithmetic over row sets; they are reliable at explaining a number you hand
+   them. Same rule as the Cortex `CallText` pattern (feed per-entity numbers,
+   not raw tables).
+
+4. **Agent action tools obey the same scalar-only write rule as buttons.**
+   Tool `steps` are `{"kind": "effect", "effect": …}` entries. Common effects:
+   `set-control-value` (drive a filter/segmented control), `update-rows` (write
+   to a linked input table), and `refresh-element` (force the grid/queue to
+   re-read after a write). An `update-rows` step fired by an agent tool has **no
+   row context**, exactly like a button — its `values` may only use constants,
+   controls, or scalar formulas, never a per-row expression like
+   `[Baseline Units]`. See
+   `sigma-input-table-app/reference/approval-workflow-pattern.md` →
+   "`values` formulas have no row context when the trigger is a button."
+
+5. **`dataSources` reference elements, not warehouse tables.** Each entry is
+   `{"kind": "table", "elementId": "<element-id>"}` pointing at a SQL/table or
+   linked-input element already on the workbook, so the agent is grounded in the
+   exact governed data the user sees — not a fresh warehouse pull.
 
 ## Control catalog (`controlType` values)
 
@@ -1032,8 +1384,8 @@ control inside `DateTrunc`:
     },
     { "id": "col-revenue", "formula": "[Metrics/Revenue]" }
   ],
-  "xAxis": { "id": "col-trend-period" },
-  "yAxis": [ { "id": "col-revenue" } ]
+  "xAxis": { "columnId": "col-trend-period" },
+  "yAxis": { "columnIds": ["col-revenue"] }
 }
 ```
 
@@ -1414,8 +1766,8 @@ sibling namespace:
     { "id": "cm-margin", "formula": "[Store Aggregates/Total Profit Margin]" },
     { "id": "cm-cat",    "formula": "[Store Aggregates/cat margin]" }
   ],
-  "xAxis": { "id": "cm-store", "sort": { "by": "cm-margin", "direction": "descending" } },
-  "yAxis": [ { "id": "cm-margin" } ],
+  "xAxis": { "columnId": "cm-store", "sort": { "by": "cm-margin", "aggregation": "sum", "direction": "descending" } },
+  "yAxis": { "columnIds": ["cm-margin"] },
   "color": { "by": "category", "column": "cm-cat" }
 }
 ```
@@ -1493,45 +1845,49 @@ tbl-plugs-tx-raw  (warehouse-table, passthrough)
 
 ## Layout
 
-Layout is XML embedded as a string in the JSON `layout` field. 24-column grid.
+Layout is XML embedded as a string in `document.layout`. 24-column grid.
 Three node types:
 
 - `<Page>` — the root. `type="grid"`, `gridTemplateColumns="repeat(24, 1fr)"`,
   `gridTemplateRows="auto"`, `id="<page-id>"` (must equal the page id in the
   `pages` array).
-- `<GridContainer>` — wraps a container element's children. Has its OWN grid
+- `<Container>` — wraps a container element's children. Has its OWN grid
   (24 cols by default), so child positions inside a container are relative
   to the container, not the page. Required attrs: `elementId` (the container
   element's id), `type="grid"`, `gridColumn`, `gridRow`,
   `gridTemplateColumns`, `gridTemplateRows`.
-- `<LayoutElement>` — a leaf element placement. Required: `elementId`,
+- `<Element>` — a leaf element placement. Required: `elementId`,
   `gridColumn`, `gridRow`.
+
+A tabbed container is `<TabbedContainer elementId="..." type="tabbed-container" ...>`
+holding one `<Tab gridTemplateColumns="..." gridTemplateRows="...">` per tab, each
+with its own nested `<Element>` children.
 
 ```xml
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-overview">
 
   <!-- Header bar: title + filter controls in one row, wrapped in a container -->
-  <GridContainer elementId="container-header" type="grid"
-                 gridColumn="1 / 25" gridRow="1 / 4"
-                 gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <LayoutElement elementId="text-page-title"  gridColumn="1 / 10"  gridRow="1 / 4"/>
-    <LayoutElement elementId="ctrl-store-region" gridColumn="10 / 15" gridRow="1 / 4"/>
-    <LayoutElement elementId="ctrl-date-range"   gridColumn="15 / 20" gridRow="1 / 4"/>
-    <LayoutElement elementId="ctrl-product-family" gridColumn="20 / 25" gridRow="1 / 4"/>
-  </GridContainer>
+  <Container elementId="container-header" type="grid"
+             gridColumn="1 / 25" gridRow="1 / 4"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="text-page-title"  gridColumn="1 / 10"  gridRow="1 / 4"/>
+    <Element elementId="ctrl-store-region" gridColumn="10 / 15" gridRow="1 / 4"/>
+    <Element elementId="ctrl-date-range"   gridColumn="15 / 20" gridRow="1 / 4"/>
+    <Element elementId="ctrl-product-family" gridColumn="20 / 25" gridRow="1 / 4"/>
+  </Container>
 
   <!-- Body: 3 KPIs across the top, full-width chart below -->
-  <GridContainer elementId="container-body" type="grid"
-                 gridColumn="1 / 25" gridRow="4 / 25"
-                 gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <LayoutElement elementId="kpi-revenue"  gridColumn="1 / 9"   gridRow="1 / 10"/>
-    <LayoutElement elementId="kpi-cogs"     gridColumn="9 / 17"  gridRow="1 / 10"/>
-    <LayoutElement elementId="kpi-margin"   gridColumn="17 / 25" gridRow="1 / 10"/>
-    <LayoutElement elementId="chart-revenue-monthly" gridColumn="1 / 25" gridRow="10 / 22"/>
-  </GridContainer>
+  <Container elementId="container-body" type="grid"
+             gridColumn="1 / 25" gridRow="4 / 25"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="kpi-revenue"  gridColumn="1 / 9"   gridRow="1 / 10"/>
+    <Element elementId="kpi-cogs"     gridColumn="9 / 17"  gridRow="1 / 10"/>
+    <Element elementId="kpi-margin"   gridColumn="17 / 25" gridRow="1 / 10"/>
+    <Element elementId="chart-revenue-monthly" gridColumn="1 / 25" gridRow="10 / 22"/>
+  </Container>
 
   <!-- Bare leaf, no container -->
-  <LayoutElement elementId="tbl-plugs-tx" gridColumn="1 / 25" gridRow="25 / 45"/>
+  <Element elementId="tbl-plugs-tx" gridColumn="1 / 25" gridRow="25 / 45"/>
 </Page>
 ```
 
@@ -1542,12 +1898,149 @@ Layout rules:
   more vertical space (8–10 rows tall, not 3) so the sparkline reads.
 - Container children's coordinates are RELATIVE to the container's own grid,
   not the page. Inside the container you start a fresh `1 / 25` column space.
-- A container's element body in the JSON `pages[].elements` is just
+- A container's element body in `document.elements` is just
   `{id, kind: "container"}` — no children listed there. The XML is the
   source of truth for parent/child relationships.
 - The `id` attribute on `<Page>` MUST equal the page id in the `pages` array.
 - Sigma normalizes by prepending `<?xml version="1.0" encoding="utf-8"?>`
   and a trailing newline on save.
+
+## Page chrome: slim app bar, not a hero banner
+
+A branded header built as a tall dark container with an eyebrow, a 30px reversed
+title and a subtitle stacked inside it looks like a splash screen, not a
+dashboard — nine grid rows of mostly empty colour with the logo floating in the
+middle. The convention that reads correctly:
+
+1. **A three-row branded bar** carrying only logo, wordmark, and navigation.
+2. **Page title and subtitle on the canvas below it**, in ink at ~23px with a
+   ~13px muted subtitle beside (not under) the title.
+
+### There are no gradients — compose with solid blocks
+
+Verified by rendering a probe workbook and sampling pixels: a CSS string in
+`backgroundColor` (`"linear-gradient(90deg, #1D2227 0%, #0ABC28 100%)"`) passes
+verification and then renders **nothing** — the fill disappears entirely, so
+white text on it vanishes. A `backgroundGradient: {from, to, angle}` key is also
+accepted and silently ignored. `shadow` verifies but made no visible difference.
+
+So depth in an app bar has to come from composition. What works:
+
+- **Leave the logo bare on the bar.** Tiling it in a nested container — even a
+  raised neutral fill with a brand edge — was tried and rejected on review: most
+  brand marks are already a badge (a glyph inside a rounded square), so a tile
+  around them reads as an empty box nested in another box. Place the `image`
+  element directly in the bar at ~2 columns with
+  `style: {fit: "contain", align: "start"}` and let the asset be the asset.
+- **Give the bar a brand border** (`borderColor: GREEN, borderWidth: 1` over the
+  ink fill) for a defined edge.
+- **A live metric chip on the right**, right-aligned via
+  `<p style="text-align: right">`, with `{{formula}}` segments pulling the
+  headline number and its exposure. It makes the bar feel operational and puts
+  the top-line KPI on every page.
+
+### Text bodies: the allowed inline-HTML set is small
+
+`<u>`, `<sub>`, `<sup>`, `<span>`, `<a>` only. Two specific rejections worth
+knowing because they are the obvious ways to build a two-line wordmark:
+
+- `<br>` / `<br/>` → *"is not in the allowed inline-HTML set"*.
+- A bare `<p>...</p>` → *"carries no non-default block style or alignment; use a
+  plain paragraph or # heading"*. A `<p>` is only legal when it carries something
+  like `style="text-align: right"` or `class="p-large"`.
+
+To stack two lines, use a **blank line** between them (markdown paragraphs) and
+style each line with a `<span>`.
+
+### Navigation: use buttons, not the `navigation` element
+
+`kind: "navigation"` accepts exactly one `optionStyle.style` value — `"pill"`.
+`"tab"`, `"tabs"`, `"underline"`, `"button"`, `"link"`, `"text"`, `"segmented"`
+and `"minimal"` are all rejected (masked as `Invalid kind: "navigation"`), so the
+element cannot be restyled and cannot show which page you are on.
+
+Buttons can do both. Emit one button per destination and let each page render its
+own tab as active:
+
+```json
+{"id": "nav-3-2", "kind": "button", "text": "Commission modeling",
+ "appearance": "filled",
+ "style": {"backgroundColor": "#0ABC28", "color": "#1D2227"},
+ "actions": [{"id": "act-nav-3-2", "trigger": "on-click",
+              "effects": [{"effect": "navigate",
+                           "target": {"type": "page", "page": "pg-commission"}}]}]}
+```
+
+Note the navigate target key is `page` (not `pageId`, which is what an overlay's
+`destination` uses).
+
+`appearance` accepts only **`filled`**, **`outline`** and **`text`** — `ghost`,
+`link`, `subtle`, `plain`, `minimal` and `none` are all rejected. Use
+`appearance: "text"` for inactive tabs and `filled` for the active one: outline
+on every tab makes the row read as four buttons rather than a tab bar. Keep tab
+labels short ("Pulse", "Actions", "Commissions") so three grid columns each is
+enough; the page title below already states the full name.
+
+## Check the layout before you POST
+
+Two classes of layout bug the API will not catch for you, both worth a ten-line
+self-check in any generator:
+
+- **Collisions.** Overlapping grid rectangles on the same page fail the PUT with
+  the unhelpful `Element collisions found during layout edit` — no element names.
+  Parse your own layout, compare every pair of top-level boxes per page, and
+  report the offending ids. This caught a bulk row-shift that moved content on
+  modal pages which had no header to shift under.
+- **Column overflow.** The grid is 24 columns, so `gridColumn` must end at 25 or
+  less. A four-item nav laid out as `10/14, 14/18, 18/22, 22/26` silently runs off
+  the page.
+
+Also assert every layout `elementId` exists and every element is placed exactly
+once; an unplaced element simply never renders.
+
+⚠️ **Make the collision check scope-aware.** Each container establishes its own
+coordinate space, so only *siblings within the same parent* can collide. A
+checker that groups boxes by indentation depth (or compares everything on a page)
+reports a flood of false positives the moment you nest a container — e.g. a logo
+tile inside a header bar "colliding" with a KPI inside a different container.
+Walk the tags with a parent stack and compare within each scope.
+
+## Layout density — pair, don't stack (aesthetics first)
+
+The single most common way a code-built page looks amateurish: every section is
+given the full 24 columns and a generous row span, so the page becomes a vertical
+pile of full-width slabs that no end user will scroll through. A real build of the
+ShiftKey commission page hit **3,612px tall** with six stacked sections before
+being reworked to **~2,000px** with the same content.
+
+Default to pairing. Rules that produced the fix:
+
+1. **Two related surfaces share a row at `1 / 13` and `13 / 25`.** Outcome tables
+   go side by side (totals-by-entity next to totals-by-scenario), charts go side
+   by side, and a chart pairs with its detail table. Reference apps do exactly
+   this — the Summit commission page puts its two outcome pivots on one row.
+2. **The KPI row is full width, and the AI/narrative summary sits full width
+   DIRECTLY BENEATH IT.** This is house style — the "what is happening" number row
+   and the sentence explaining it read as one block at the top of the page. Do not
+   tuck the AI brief into a column beside the KPIs; it makes both cramped and
+   buries the narrative.
+3. **Budget row spans.** A table needs ~10–12 rows, a chart ~10–11, a KPI row 6–7,
+   a control bar 3–5, a section band 1. Anything larger is usually padding.
+4. **Only the widest artifact earns full width** — a drill table with 8+ columns,
+   or a queue that is the page's main worklist. Everything else pairs.
+5. **When a table goes half-width, cut its columns.** Long descriptive columns
+   are the space hog; drop them or shorten headers ("Commission Payout Rate" →
+   "Payout Rate") so headers stop truncating.
+6. **Chat/agent panels are tall side rails, never bottom slabs.** Give an agent a
+   genuine share of the page: put it at `15 / 25` and let it span the full height
+   of the charts stacked beside it (three ~10-row charts on the left, one rail on
+   the right). A chat squeezed into one chart's height reads as an afterthought,
+   and one dropped at the page bottom reads as leftover. Spanning the stacked
+   charts also leaves no dead column, which a 2-of-3 height would.
+
+Sanity check the result instead of trusting the spec: export the page to PNG and
+measure it (`Image.open(png).size`). If a page is much past ~2,000px at 1600 wide,
+it is stacked rather than composed.
 
 ## Page-structure pattern (apply by default)
 
@@ -1580,8 +2073,14 @@ and `examples/data-model-sourced-kpi-overview-with-containers.json`.
    Prefer `[Metrics/<Name>]` over hand-derived sums.
 5. Author the control with `filters[].columnId` = the column id you declared
    on the table.
-6. Layout XML wires elementIds to grid positions.
-7. POST → if HTTP 200, GET it back as the new source of truth (Sigma normalizes
+6. Layout XML (in `document.layout`) wires elementIds to grid positions.
+7. `POST /v2/workbooks/spec/verify` → fix anything it reports; this costs
+   nothing and creates nothing.
+8. POST → if HTTP 200, GET it back as the new source of truth (Sigma normalizes
    IDs, layout XML, etc.) — overwrite `spec.json`.
-8. **Open the workbook in the UI and visually verify** elements render — the
-   API will not catch broken cross-element column references.
+9. **Look at the result.** `GET /v2/workbooks/{id}/elements/{elementId}/query`
+   confirms each element compiles to the SQL you meant (real `GROUP BY`, no
+   defensive `iff(equal_null(...))`), and a PNG export renders the composed
+   page headlessly — see `skills/sigma-company-dashboard-v2/scripts/shot.py`.
+   Neither the create nor `verify` catches a broken cross-element column
+   reference.

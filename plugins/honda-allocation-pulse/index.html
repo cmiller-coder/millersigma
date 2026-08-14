@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Honda Allocation Pulse — Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script><!-- pragma: allowlist secret -->
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif;background:#fff;color:#16181a}
+  #rail{height:100%;min-height:74px;display:grid;grid-template-columns:minmax(170px,1.2fr) repeat(4,minmax(120px,1fr));
+        align-items:stretch;border:1px solid #dedfdb;background:#fff}
+  .intro{display:flex;gap:11px;align-items:center;padding:10px 16px;border-right:1px solid #dedfdb}
+  .pulseIcon{width:32px;height:32px;flex:none;display:grid;place-items:center;background:#cc0000;color:#fff}
+  .pulseIcon svg{width:18px;height:18px}
+  .eyebrow{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#cc0000}
+  .title{font-family:Georgia,"Times New Roman",serif;font-size:16px;font-weight:700;line-height:1.1;margin-top:3px}
+  .metric{padding:9px 13px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid #dedfdb;min-width:0}
+  .metric:last-child{border-right:0}
+  .mhead{display:flex;align-items:center;gap:6px;color:#5c6166;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .mhead svg{width:13px;height:13px;stroke:#5c6166}
+  .value{display:flex;align-items:baseline;gap:6px;margin-top:4px}
+  .value strong{font-size:20px;letter-spacing:-.04em}
+  .value span{font-size:9px;color:#5c6166;white-space:nowrap}
+  .bar{height:4px;margin-top:6px;background:#f1f2f0;overflow:hidden}
+  .bar>i{display:block;height:100%;background:#16181a;transition:width .5s ease}
+  .metric.bev .bar>i{background:#cc0000}
+  .metric.elec .bar>i{background:#8a9099}
+  .metric.capacity .bar>i{background:#0e7c66}
+  .metric.cells .bar>i{background:#b4761b}
+  .alarm{color:#cc0000!important;font-weight:800}
+  .good{color:#0e7c66!important;font-weight:800}
+  #empty{display:none;height:100%;align-items:center;justify-content:center;color:#5c6166;font-size:12px}
+  @media(max-width:720px){
+    #rail{grid-template-columns:1fr 1fr}.intro{grid-column:1/-1;border-right:0;border-bottom:1px solid #dedfdb}
+    .metric:nth-child(3){border-right:0}.metric{min-height:66px}
+  }
+</style>
+</head>
+<body>
+<div id="rail">
+  <div class="intro">
+    <div class="pulseIcon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h4l2-6 4 12 2-6h6"/>
+      </svg>
+    </div>
+    <div><div class="eyebrow">Live planning signal</div><div class="title">Allocation pulse</div></div>
+  </div>
+  <div class="metric bev">
+    <div class="mhead">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17h14l-1.5-5h-11z"/><circle cx="8" cy="18" r="1.5"/><circle cx="16" cy="18" r="1.5"/><path d="M9 12l2-4h4l2 4"/></svg>
+      BEV mix
+    </div>
+    <div class="value"><strong id="bev">—</strong><span id="bevSub">18% target</span></div>
+    <div class="bar"><i id="bevBar"></i></div>
+  </div>
+  <div class="metric elec">
+    <div class="mhead">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
+      Electrified
+    </div>
+    <div class="value"><strong id="elec">—</strong><span>HEV + PHEV + BEV</span></div>
+    <div class="bar"><i id="elecBar"></i></div>
+  </div>
+  <div class="metric capacity">
+    <div class="mhead">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5v17M12 10h7v11M8 13h1M8 17h1M15 13h1M15 17h1"/></svg>
+      Build capacity
+    </div>
+    <div class="value"><strong id="capacity">—</strong><span id="capacitySub">network used</span></div>
+    <div class="bar"><i id="capacityBar"></i></div>
+  </div>
+  <div class="metric cells">
+    <div class="mhead">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="17" height="12" rx="2"/><path d="M20 10h2v4h-2M7 9v6M11 9v6"/></svg>
+      Cell commitment
+    </div>
+    <div class="value"><strong id="cells">—</strong><span>battery pool</span></div>
+    <div class="bar"><i id="cellsBar"></i></div>
+  </div>
+</div>
+<div id="empty">Configure the allocation and capacity sources.</div>
+<script>
+(function(){
+  var client=window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client; // pragma: allowlist secret
+  var defs=[
+    {name:'mixSource',type:'element'},
+    {name:'powertrain',type:'column',source:'mixSource',label:'Powertrain'},
+    {name:'units',type:'column',source:'mixSource',allowedTypes:['number','integer'],label:'Effective units'},
+    {name:'capacitySource',type:'element'},
+    {name:'allocated',type:'column',source:'capacitySource',allowedTypes:['number','integer'],label:'Allocated units'},
+    {name:'capacity',type:'column',source:'capacitySource',allowedTypes:['number','integer'],label:'Capacity units'},
+    {name:'status',type:'column',source:'capacitySource',label:'Capacity status'},
+    {name:'cellUsed',type:'column',source:'capacitySource',allowedTypes:['number','integer'],label:'Cell kWh used'},
+    {name:'cellContract',type:'column',source:'capacitySource',allowedTypes:['number','integer'],label:'Cell kWh contracted'},
+    {name:'cellStatus',type:'column',source:'capacitySource',label:'Cell status'}
+  ];
+  if(client)client.config.configureEditorPanel(defs);
+  var st={cfg:{},mix:null,cap:null,unMix:null,unCap:null};
+  function nums(a){return (a||[]).map(Number).filter(function(x){return Number.isFinite(x)});}
+  function sum(a){return nums(a).reduce(function(x,y){return x+y},0);}
+  function pct(x){return (100*x).toFixed(1)+'%';}
+  function width(id,v){document.getElementById(id).style.width=Math.max(0,Math.min(100,v*100))+'%';}
+  function render(){
+    var c=st.cfg||{},m=st.mix||{},p=st.cap||{};
+    var pts=(c.powertrain&&m[c.powertrain])||[],units=(c.units&&m[c.units])||[];
+    var total=sum(units),by={ICE:0,HEV:0,PHEV:0,BEV:0};
+    for(var i=0;i<Math.min(pts.length,units.length);i++){var k=String(pts[i]||'').toUpperCase();if(by[k]!=null)by[k]+=Number(units[i])||0;}
+    var bev=total?by.BEV/total:0,elec=total?(by.HEV+by.PHEV+by.BEV)/total:0;
+    var a=sum(c.allocated&&p[c.allocated]),cap=sum(c.capacity&&p[c.capacity]),util=cap?a/cap:0;
+    var cellUsed=sum(c.cellUsed&&p[c.cellUsed]),cellAvail=sum(c.cellContract&&p[c.cellContract]);
+    var cell=cellAvail?cellUsed/cellAvail:0;
+    var statuses=(c.status&&p[c.status])||[],breaches=statuses.filter(function(x){return String(x)==='Over capacity'}).length;
+    var cellStatuses=(c.cellStatus&&p[c.cellStatus])||[];
+    var cellBreaches=cellStatuses.filter(function(x){return String(x)==='Over contract'}).length;
+    document.getElementById('bev').textContent=pct(bev);document.getElementById('elec').textContent=pct(elec);
+    document.getElementById('capacity').textContent=pct(util);document.getElementById('cells').textContent=pct(cell);
+    var cs=document.getElementById('capacitySub');
+    cs.textContent=breaches?breaches+' build constraints':'within build limits';cs.className=breaches?'alarm':'good';
+    var cellSub=document.querySelector('.metric.cells .value span');
+    cellSub.textContent=cellBreaches?cellBreaches+' cell constraints':'within contract';
+    cellSub.className=cellBreaches?'alarm':'good';
+    width('bevBar',bev/0.18);width('elecBar',elec);width('capacityBar',util);width('cellsBar',cell);
+    if(client)client.setLoadingState(false);
+  }
+  function bind(cfg){
+    st.cfg=cfg||{};if(st.unMix)st.unMix();if(st.unCap)st.unCap();st.unMix=st.unCap=null;
+    if(cfg.mixSource)st.unMix=client.elements.subscribeToElementData(cfg.mixSource,function(d){st.mix=d;render()});
+    if(cfg.capacitySource)st.unCap=client.elements.subscribeToElementData(cfg.capacitySource,function(d){st.cap=d;render()});
+    render();
+  }
+  if(client){client.config.subscribe(bind);}else{
+    st.cfg={powertrain:'p',units:'u',allocated:'a',capacity:'c',status:'s',
+      cellUsed:'cu',cellContract:'cc',cellStatus:'cs'};
+    st.mix={p:['ICE','HEV','PHEV','BEV'],u:[42,34,8,16]};
+    st.cap={a:[51600,16200],c:[56000,16000],s:['Within capacity','Over capacity'],
+      cu:[88000,22500],cc:[100000,25000],cs:['Within contract','Within contract']};render();
+  }
+  if(window.ResizeObserver)new ResizeObserver(render).observe(document.getElementById('rail'));
+  window.addEventListener('resize',render);
+})();
+</script>
+</body>
+</html>
