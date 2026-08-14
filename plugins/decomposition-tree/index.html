@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Decomposition Tree — Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#1F2933;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:0}
+  .node{background:#fff;border:1px solid #DCE1E6;border-radius:10px;box-shadow:0 1px 3px rgba(16,24,40,.08);cursor:pointer;user-select:none;transition:box-shadow .12s,border-color .12s;position:relative}
+  .node:hover{box-shadow:0 4px 14px rgba(16,24,40,.16);border-color:#B7C0C9}
+  .node.selected{border-color:#2E6FF2;box-shadow:0 0 0 2px rgba(46,111,242,.25)}
+  .node.dim{opacity:.45}
+  #total{width:220px;padding:12px 16px;margin-bottom:2px}
+  .lbl{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8A94A0}
+  .val{font-size:22px;font-weight:800;line-height:1.15;margin-top:2px}
+  .varr{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;margin-top:4px}
+  .varr.up{color:#0F9D58}
+  .varr.down{color:#D0342C}
+  .varr.flat{color:#8A94A0}
+  #stem{width:2px;height:20px;background:#DCE1E6}
+  #rail{height:2px;background:#DCE1E6}
+  #children{display:flex;align-items:flex-start;gap:22px}
+  .branch{display:flex;flex-direction:column;align-items:center}
+  .drop{width:2px;height:16px;background:#DCE1E6}
+  .child{width:150px;padding:10px 12px}
+  .child .val{font-size:16px}
+  .corners{display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px solid #EEF1F4;gap:8px}
+  .corner{font-size:9px;color:#8A94A0;line-height:1.3}
+  .corner b{display:block;font-size:11px;font-weight:700;color:#3C4650}
+  .corner.right{text-align:right}
+  #empty{font-size:12px;color:#8A94A0}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="empty">Waiting for data…</div></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'category',type:'column',source:'source',label:'Category (breakdown dimension)'},
+    {name:'value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Main value column'},
+    {name:'aggregation',type:'dropdown',values:['sum','avg'],defaultValue:'sum',label:'Aggregation'},
+    {name:'priorValue',type:'column',source:'source',allowedTypes:['number','integer'],label:'Comparison value (variance vs.)'},
+    {name:'cornerLeft',type:'column',source:'source',allowedTypes:['number','integer'],label:'Bottom-left corner metric'},
+    {name:'cornerLeftLabel',type:'text',label:'Bottom-left corner label',defaultValue:'Loyalty'},
+    {name:'cornerRight',type:'column',source:'source',allowedTypes:['number','integer'],label:'Bottom-right corner metric'},
+    {name:'cornerRightLabel',type:'text',label:'Bottom-right corner label',defaultValue:'Non-Loyalty'},
+    {name:'totalLabel',type:'text',label:'Total box label',defaultValue:'Total'},
+    {name:'valueFormat',type:'dropdown',values:['currency','number'],defaultValue:'currency',label:'Value format'},
+    {name:'clickTarget',type:'variable',label:'Value sent on click (drill selection)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  function fmt(v,f){
+    if(v==null||isNaN(v)) return '—';
+    var n=Number(v), sign=n<0?'-':'', a=Math.abs(n), s;
+    if(a>=1e9) s=(a/1e9).toFixed(2)+'B';
+    else if(a>=1e6) s=(a/1e6).toFixed(2)+'M';
+    else if(a>=1e3) s=(a/1e3).toFixed(1)+'k';
+    else s=a.toFixed(f==='currency'?0:1);
+    return sign+(f==='currency'?'$':'')+s;
+  }
+  function agg(arr,mode){
+    var vals=arr.map(Number).filter(function(x){return !isNaN(x);});
+    if(!vals.length) return 0;
+    var sum=vals.reduce(function(a,b){return a+b;},0);
+    return mode==='avg' ? sum/vals.length : sum;
+  }
+  function pctVar(cur,prior){
+    if(prior==null||prior===0||isNaN(prior)) return null;
+    return (cur-prior)/Math.abs(prior)*100;
+  }
+  function varrEl(pv){
+    var d=document.createElement('div');
+    if(pv==null){ d.className='varr flat'; d.textContent='—'; return d; }
+    var up=pv>0.05, down=pv<-0.05;
+    d.className='varr '+(up?'up':down?'down':'flat');
+    d.textContent=(up?'▲ ':down?'▼ ':'▬ ')+Math.abs(pv).toFixed(1)+'%';
+    return d;
+  }
+
+  var st={cfg:{},data:null,unsub:null,selected:null};
+
+  function render(){
+    var c=st.cfg||{}, d=st.data, wrap=document.getElementById('wrap');
+    wrap.innerHTML='';
+    if(!d || !c.category || !c.value || !d[c.category] || !d[c.value]){
+      var e=document.createElement('div'); e.id='empty'; e.textContent='Bind Category and Main value to see the breakdown.';
+      wrap.appendChild(e); return;
+    }
+    var cats=d[c.category], vals=d[c.value], prior=c.priorValue?d[c.priorValue]:null;
+    var cl=c.cornerLeft?d[c.cornerLeft]:null, cr=c.cornerRight?d[c.cornerRight]:null;
+    var byCategory={}, order=[];
+    for(var i=0;i<cats.length;i++){
+      var k=String(cats[i]);
+      if(!byCategory[k]){ byCategory[k]={v:[],p:[],l:[],r:[]}; order.push(k); }
+      byCategory[k].v.push(vals[i]);
+      if(prior) byCategory[k].p.push(prior[i]);
+      if(cl) byCategory[k].l.push(cl[i]);
+      if(cr) byCategory[k].r.push(cr[i]);
+    }
+    var mode=c.aggregation||'sum', vf=c.valueFormat||'currency';
+    var totalV=agg(vals,mode), totalP=prior?agg(prior,mode==='avg'?'avg':'sum'):null;
+    if(mode==='sum' && prior) totalP=agg(prior,'sum');
+
+    var totalNode=document.createElement('div');
+    totalNode.className='node'+(st.selected==null?'':' dim'); totalNode.id='total';
+    totalNode.innerHTML='<div class="lbl">'+(c.totalLabel||'Total')+'</div><div class="val">'+fmt(totalV,vf)+'</div>';
+    totalNode.appendChild(varrEl(prior?pctVar(totalV,totalP):null));
+    totalNode.addEventListener('click',function(){ setSel(null); });
+    wrap.appendChild(totalNode);
+
+    var stem=document.createElement('div'); stem.id='stem'; wrap.appendChild(stem);
+    var rail=document.createElement('div'); rail.id='rail'; rail.style.width=(order.length*172-22)+'px'; wrap.appendChild(rail);
+
+    var kids=document.createElement('div'); kids.id='children';
+    order.forEach(function(k){
+      var g=byCategory[k];
+      var v=agg(g.v,mode), p=g.p.length?agg(g.p,'sum'):null;
+      var l=g.l.length?agg(g.l,'sum'):null, r=g.r.length?agg(g.r,'sum'):null;
+      var branch=document.createElement('div'); branch.className='branch';
+      var drop=document.createElement('div'); drop.className='drop'; branch.appendChild(drop);
+      var node=document.createElement('div');
+      node.className='node child'+(st.selected===k?' selected':(st.selected? ' dim':''));
+      node.innerHTML='<div class="lbl">'+k+'</div><div class="val">'+fmt(v,vf)+'</div>';
+      node.appendChild(varrEl(g.p.length?pctVar(v,p):null));
+      if(c.cornerLeft||c.cornerRight){
+        var corners=document.createElement('div'); corners.className='corners';
+        corners.innerHTML=
+          '<div class="corner">'+(c.cornerLeftLabel||'Left')+'<b>'+(l!=null?fmt(l,vf):'—')+'</b></div>'+
+          '<div class="corner right">'+(c.cornerRightLabel||'Right')+'<b>'+(r!=null?fmt(r,vf):'—')+'</b></div>';
+        node.appendChild(corners);
+      }
+      node.addEventListener('click',function(){ setSel(k); });
+      branch.appendChild(node);
+      kids.appendChild(branch);
+    });
+    wrap.appendChild(kids);
+  }
+
+  function setSel(k){
+    st.selected = (st.selected===k) ? null : k;
+    if(client && st.cfg && st.cfg.clickTarget){
+      try{ if(st.selected==null) client.config.setVariable('clickTarget'); else client.config.setVariable('clickTarget', st.selected); }catch(e){}
+    }
+    render();
+  }
+
+  if(client){
+    client.config.subscribe(function(cfg){
+      st.cfg=cfg||{};
+      if(st.unsub){ st.unsub(); st.unsub=null; }
+      if(cfg && cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(dd){ st.data=dd; render(); }); }
+      render();
+    });
+  } else { render(); }
+})();
+</script>
+</body>
+</html>
