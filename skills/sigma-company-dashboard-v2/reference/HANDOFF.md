@@ -553,6 +553,41 @@ id / utilization % / temp / GPU model), the same pattern as Delta's
 `hub_banks.sql`, which doesn't exist yet. Don't wire the `pluginId` in without
 also building that table, or the plugin will render with no data.
 
+**Real bug found 2026-08-13, GitHub Pages is now the correct host (jsDelivr is
+not):** `cdn.jsdelivr.net/gh/...` serves `.html` files as `Content-Type:
+text/plain`, not `text/html` (confirmed via `curl -sD -`). This has two live
+consequences, both reproduced with **`sofi-rates-ticker`** — one of the 10
+plugins this doc calls "resolved" — not just a new plugin:
+1. Depending on how the embedding iframe/browser treats a `text/plain`
+   response, the plugin can render as literal HTML **source text** instead of
+   executing (confirmed live in a real Sigma workbook view).
+2. `POST /v2/workbooks/{id}/export {"format":{"type":"png"}}` **hangs
+   indefinitely** (never returns non-204 from `/v2/query/{id}/download`, even
+   after 100s+) for any page containing a jsDelivr-hosted plugin element —
+   reproduced with a brand-new workbook containing only `sofi-rates-ticker`
+   bound to a trivial table, isolated by first proving table-only exports on
+   the same workbook/connection complete in ~15-20s.
+
+**Fix: GitHub Pages, not jsDelivr.** Enabled on the public `millersigma` repo
+(`main` branch, root) via `gh api -X POST repos/cmiller-coder/millersigma/pages
+-f "source[branch]=main" -f "source[path]=/"` — one-time, already done. Host
+new plugins at:
+```
+https://cmiller-coder.github.io/millersigma/plugins/<folder>/index.html
+```
+This serves real `Content-Type: text/html`, fixing both the raw-source-text
+render bug and the export hang (verified — same workbook, same plugin config,
+export completed in ~15-20s after just swapping the registered URL and
+re-pointing the plugin element's `pluginId`). A GitHub Pages build takes
+30-60s after a push before the new URL is live — check
+`gh api repos/cmiller-coder/millersigma/pages/builds/latest` for
+`"status":"built"` before registering/testing. **The 10 plugins listed above as
+"resolved" via jsDelivr have not been re-verified against this finding** —
+treat them as suspect (likely fine in live interactive view, likely broken for
+PNG export and possibly for first-paint in some embed contexts) until each is
+re-hosted on GitHub Pages and re-registered with a fresh `pluginId` the same
+way `decomposition-tree` was.
+
 ### Authoring pattern
 ```html
 <script src="https://unpkg.com/@sigmacomputing/plugin"></script>

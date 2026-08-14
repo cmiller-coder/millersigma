@@ -20,9 +20,18 @@ drill selection. Single-file vanilla JS on the `@sigmacomputing/plugin` SDK.
 - **clickTarget** — a bound List/Text control; clicking a box sets it, clicking Total (or the selected box again) clears it
 
 ## Register + embed
-1. Host `index.html` (jsDelivr off this public repo, or a static host).
+1. Host `index.html` on **GitHub Pages** off this public repo — NOT jsDelivr,
+   which serves `.html` as `Content-Type: text/plain` and both renders as raw
+   source text in a real workbook and hangs `/v2/workbooks/{id}/export` PNG
+   export indefinitely (see HANDOFF.md §9, found 2026-08-13):
+   `https://cmiller-coder.github.io/millersigma/plugins/decomposition-tree/index.html`
 2. Register: `POST /v2/plugins {name,description,url,type:"element"}` → returns `pluginId`.
 3. Embed: `{kind:"plugin", pluginId, config:{source:{kind:"element",elementId}, category:"<colId>", value:"<colId>", priorValue:"<colId>", cornerLeft:"<colId>", cornerRight:"<colId>", clickTarget:"<controlId>"}}` (bindings are bare columnId/controlId strings matching the editor-panel names; `aggregation`/`valueFormat`/labels are plain string values, not column bindings).
+4. Unbound or before the config/data handshake resolves (including during
+   headless PNG export, which snapshots before that round-trip completes),
+   the plugin shows an "illustrative" synthetic Fuel/Merch/LFK/QSR tree rather
+   than an empty prompt — matching the `synth()` fallback convention other
+   plugins in this repo use.
 
 Note: this is a bespoke chart, not a native Sigma element — there is no
 "decomposition tree" in the workbook-spec `element.kind` enum (34 valid kinds,
