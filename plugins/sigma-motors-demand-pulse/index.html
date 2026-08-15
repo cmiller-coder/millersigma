@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Regional Demand Pulse — Sigma Motors Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#111114;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:6px 10px;gap:8px}
+  #grid{flex:1;display:grid;grid-auto-flow:column;gap:10px;place-items:stretch;min-height:0}
+  .region{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;gap:4px}
+  .region-name{font-size:12px;font-weight:700;color:#111114;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .cars{display:flex;align-items:flex-end;justify-content:center;gap:8px;flex:1;min-height:0;width:100%}
+  .car-wrap{position:relative;display:flex;align-items:flex-end;justify-content:center;}
+  .car-glow{position:absolute;left:50%;top:50%;border-radius:50%;background:radial-gradient(circle, rgba(26,112,241,.55), rgba(26,112,241,0) 70%);
+    transform:translate(-50%,-50%);animation:glowPulse 1.6s ease-out infinite;pointer-events:none;}
+  @keyframes glowPulse{
+    0%{opacity:.85;transform:translate(-50%,-50%) scale(.8);}
+    70%{opacity:0;transform:translate(-50%,-50%) scale(1.55);}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1.55);}
+  }
+  .badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;}
+  #legend{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:16px;font-size:11px;color:#5F5F66}
+  #legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="grid"></div>
+  <div id="legend">
+    <span><i class="dot" style="background:#1A70F1"></i>EV backlog</span>
+    <span><i class="dot" style="background:#8A8F9C"></i>Hybrid backlog</span>
+    <span>Glow = backlog growing &gt;25%/mo</span>
+  </div>
+</div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'region',type:'column',source:'source',label:'Region'},
+    {name:'ev_backlog',type:'column',source:'source',allowedTypes:['number','integer'],label:'EV Backlog (units)'},
+    {name:'hybrid_backlog',type:'column',source:'source',allowedTypes:['number','integer'],label:'Hybrid Backlog (units)'},
+    {name:'growth_pct',type:'column',source:'source',allowedTypes:['number','integer'],label:'EV Backlog Growth % (30d)'},
+    {name:'backlog_weeks',type:'column',source:'source',allowedTypes:['number','integer'],label:'Backlog (weeks)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  function orbDiameter(v, maxV, minD, maxD){
+    var frac = Math.sqrt(Math.max(0, Math.min(1, v/maxV)));
+    return minD + frac*(maxD-minD);
+  }
+
+  function badgeLevel(weeks){
+    if(weeks>=4) return {bg:'#FCEBEB', fg:'#D14343'};
+    if(weeks>=2) return {bg:'#FFF3E2', fg:'#C77A0A'};
+    return {bg:'#EAF7EE', fg:'#1F9D55'};
+  }
+
+  function carSVG(w, color, isEV, glowing){
+    var h = w*0.6;
+    var bolt = isEV ? '<path d="M52,4 L42,24 L50,24 L44,40 L64,18 L54,18 Z" fill="#FFD84D" stroke="#B8860B" stroke-width="1.2"/>' : '';
+    var glow = glowing ? '<div class="car-glow" style="width:'+(w*1.6)+'px;height:'+(w*1.6)+'px;"></div>' : '';
+    return '<div class="car-wrap" style="width:'+w+'px;height:'+(h+6)+'px;">'+glow+
+      '<svg width="'+w+'" height="'+h+'" viewBox="0 0 100 60" style="position:relative;z-index:1;overflow:visible;">'+
+      bolt+
+      '<path d="M8,38 L12,38 Q14,26 28,24 L36,12 Q40,6 50,6 L66,6 Q74,6 78,14 L86,24 Q92,26 92,38 L92,40 Q92,44 88,44 L10,44 Q6,44 6,40 Z" fill="'+color+'"/>'+
+      '<rect x="38" y="12" width="24" height="12" rx="2" fill="rgba(255,255,255,.35)"/>'+
+      '<circle cx="26" cy="44" r="8" fill="#2A2A2E"/><circle cx="26" cy="44" r="3.5" fill="#D6D6D6"/>'+
+      '<circle cx="74" cy="44" r="8" fill="#2A2A2E"/><circle cx="74" cy="44" r="3.5" fill="#D6D6D6"/>'+
+      '</svg></div>';
+  }
+
+  function draw(regions){
+    var grid=document.getElementById('grid');
+    grid.style.gridTemplateColumns='repeat('+(regions.length||1)+',1fr)';
+    grid.innerHTML='';
+    var maxEv=Math.max.apply(null,regions.map(function(r){return r.ev_backlog;}).concat([1]));
+    var maxHy=Math.max.apply(null,regions.map(function(r){return r.hybrid_backlog;}).concat([1]));
+    var maxScale=Math.max(maxEv,maxHy);
+
+    regions.forEach(function(r){
+      var evD=orbDiameter(r.ev_backlog, maxScale, 24, 84);
+      var hyD=orbDiameter(r.hybrid_backlog, maxScale, 20, 70);
+      var lvl=badgeLevel(r.backlog_weeks);
+      var wrap=document.createElement('div'); wrap.className='region';
+      wrap.innerHTML =
+        '<div class="region-name">'+r.region+'</div>'+
+        '<div class="cars">'+carSVG(evD,'#1A70F1',true,r.growth_pct>25)+carSVG(hyD,'#8A8F9C',false,false)+'</div>'+
+        '<span class="badge" style="background:'+lvl.bg+';color:'+lvl.fg+';">'+r.backlog_weeks.toFixed(1)+' wks</span>';
+      grid.appendChild(wrap);
+    });
+  }
+
+  function synth(){
+    return [
+      {region:'West', ev_backlog:1135, hybrid_backlog:110, growth_pct:42, backlog_weeks:6.2},
+      {region:'Southwest', ev_backlog:1373, hybrid_backlog:73, growth_pct:51, backlog_weeks:5.1},
+      {region:'Midwest', ev_backlog:657, hybrid_backlog:122, growth_pct:18, backlog_weeks:2.4},
+      {region:'South', ev_backlog:418, hybrid_backlog:146, growth_pct:6, backlog_weeks:1.1},
+      {region:'Northeast', ev_backlog:537, hybrid_backlog:159, growth_pct:9, backlog_weeks:1.6}
+    ];
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){
+    var c=st.cfg||{};
+    if(st.data && c.region && st.data[c.region]){
+      var region=st.data[c.region]||[],
+          ev=(c.ev_backlog&&st.data[c.ev_backlog])||[],
+          hy=(c.hybrid_backlog&&st.data[c.hybrid_backlog])||[],
+          growth=(c.growth_pct&&st.data[c.growth_pct])||[],
+          weeks=(c.backlog_weeks&&st.data[c.backlog_weeks])||[];
+      var out=region.map(function(name,i){return {
+        region:String(name),
+        ev_backlog:Number(ev[i])||0,
+        hybrid_backlog:Number(hy[i])||0,
+        growth_pct:Number(growth[i])||0,
+        backlog_weeks:Number(weeks[i])||0
+      };});
+      if(out.length){ draw(out); return; }
+    }
+    draw(synth());
+  }
+  if(client){
+    client.config.subscribe(function(cfg){
+      st.cfg=cfg||{};
+      if(st.unsub){st.unsub();st.unsub=null;}
+      if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();});}
+      recompute();
+    });
+  }else{ recompute(); }
+
+  // Sigma sizes the panel AFTER first paint -- redraw on any container resize.
+  var ro=new ResizeObserver(function(){ recompute(); });
+  ro.observe(document.getElementById('wrap'));
+})();
+</script>
+</body>
+</html>
