@@ -84,6 +84,12 @@
   }
 
   function draw(regions){
+    // Row order delivered via subscribeToElementData doesn't reliably follow
+    // the source query's ORDER BY -- sort here so the ranking is correct
+    // regardless of what order Sigma hands back.
+    regions = regions.slice().sort(function(a,b){
+      return (b.ev_backlog+b.hybrid_backlog) - (a.ev_backlog+a.hybrid_backlog);
+    });
     var grid=document.getElementById('grid');
     grid.style.gridTemplateColumns='repeat('+(regions.length||1)+',1fr)';
     grid.innerHTML='';
