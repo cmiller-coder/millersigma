@@ -14,6 +14,40 @@ description: >-
 Project-wide conventions for Sigma workbook/data-model specs. Read this before
 generating or editing any `spec.json` in `workbooks/` or `examples/`.
 
+> ## Where shapes come from
+>
+> **[reference/openapi-is-source-of-truth.md](reference/openapi-is-source-of-truth.md)**
+> — Sigma publishes the whole API as machine-readable JSON, generated from their
+> code. Query it with `jq` instead of trusting any hardcoded table (including the
+> ones in this repo, which rot between releases). When the OpenAPI and this repo
+> disagree, **the OpenAPI wins.** This repo's job is behaviour the spec can't
+> express: silently-dropped fields, masked errors, verify-vs-create gaps,
+> per-workspace feature flags.
+>
+> ## READ FIRST — the schema changed in August 2026
+>
+> **[reference/schema-2026-08-breaking-changes.md](reference/schema-2026-08-breaking-changes.md)**
+> is load-bearing and supersedes any conflicting shape in this file or in
+> `reference/workbook-spec-api.md`. Verified live on papercranestaging 2026-08-07.
+>
+> The four that will break an existing generator outright:
+>
+> 1. Everything except `name`/`folderId` moved inside a **`document{}`** envelope.
+> 2. **`document.pages[].elements` was removed** — elements are now a flat
+>    `document.elements` list; page membership comes only from the layout XML.
+> 3. Layout XML tags were **renamed**: `<LayoutElement>` → `<Element>`,
+>    `<GridContainer>` → `<Container>`. Using the old names returns a *masked 500*
+>    (`"An error has occurred"`), not a useful validation error.
+> 4. Modals — and the new **drawers** — moved to **`document.overlays`**.
+>
+> Also newly code-representable: `navigate`, `select-tab`, `update-rows`,
+> `delete-rows`, `open-document` (can target a **report**), conditional action
+> triggers, `successToast`, agents with MCP/warehouse-agent/search-service tools,
+> and **reports as code**.
+>
+> And the habit that saves the most time: **`POST /spec/verify` does not resolve
+> SQL or catch duplicate/dangling ids.** Only `create`/`update` fully validate.
+
 ## Inputs
 
 This skill is reference-only — no scripts. It assumes:
@@ -273,6 +307,38 @@ authoritative spec and use it as the new baseline.
 - When a fix recurs across 2+ iterations, promote the rule into this file or into
   a domain skill's `reference/`. See `docs/iteration-playbook.md`.
 
+### Mockup-to-build parity (when an HTML/CSS mockup was already approved)
+
+If the user approved a static HTML/CSS mockup before you touched the real
+Sigma API, the real build is graded against that mockup, not against "does it
+verify." Screenshot both side by side before calling it done — Sigma's native
+elements, plugin `style` restrictions (e.g. plugin-kind elements accept
+`backgroundColor` only), and text-markdown sanitizer (only `color`,
+`background-color`, `font-size`, `font-family` allowed inline — no
+`display:flex`, no alignment tricks) all constrain what's achievable, so
+"close" silently drifting into "looks nothing like it" is the default failure
+mode, not an edge case. When something in the mockup can't be replicated
+exactly, say so explicitly and show the closest real alternative — don't
+quietly substitute something else and let the user discover the gap later.
+
+### Don't trust cached capability claims — verify against the live product
+
+Docs in this repo (including this file's own gotcha lists) record what was
+true when someone last tested it. Sigma's product changes. Before telling a
+user "X isn't supported" based on a doc: if there's any live product UI you
+can screenshot or the user can screenshot for you (e.g. the control-type
+picker, the plugin editor panel), that observation outranks a written
+gotcha from a prior session. Concrete case: multiple docs asserted
+`controlType:"slider"` didn't exist; a user screenshot of the live control
+picker proved it does (`slider` + `range-slider`, verified 2026-08-15 with
+`low`/`high` — not `min`/`max` — as the range fields). Compounding lesson:
+`verify` and `create` both returned success with the wrong field names
+(`min`/`max`), silently falling back to a default 0-100 range instead of
+erroring — schema validation passing is not proof the fields you guessed are
+the real ones. **GET the spec back after every write and confirm the fields
+actually landed as intended**, especially for any property you're setting for
+the first time or inferring by analogy from a similar control type.
+
 ## Common pitfalls
 
 1. Generating fields the round-trip endpoint doesn't support (input tables, Python).
@@ -281,6 +347,10 @@ authoritative spec and use it as the new baseline.
 4. Embedding controls inside a single page when they should be model-level so
    they can drive multiple pages.
 5. Forgetting that columns must reference an existing source — declare sources first.
+6. Trusting a doc's "X is not supported" claim over a live screenshot of the
+   actual product UI — re-verify instead of repeating the stale claim.
+7. Treating `verify`/`create` success as proof a newly-guessed field name was
+   correct — GET the spec back and check what actually landed.
 
 ## Workbook spec gotchas (load `reference/workbook-spec-api.md` BEFORE authoring)
 

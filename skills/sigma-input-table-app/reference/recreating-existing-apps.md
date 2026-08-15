@@ -106,10 +106,26 @@ reject on write).
   `^[a-zA-Z0-9_-]{1,64}$`. Some UI-built production workbooks GET-back with
   dotted controlIds (`c.relative_month`) — that's legacy/UI-only naming; a
   fresh API-created control can't reuse that convention. Use underscores.
-- **`controlType:"slider"` does not exist.** Valid types (confirmed across
-  this skill's examples): `list`, `number`, `text`, `text-area`, `date`,
-  `segmented`, `checkbox`. For a bare numeric input, use
-  `controlType:"number", mode:"="`.
+- **Correction (2026-08-15): `controlType:"slider"` DOES exist** — the
+  earlier claim below was wrong, caught only because the user pasted a
+  screenshot of Sigma's live control-picker UI showing `Slider` and `Range
+  slider` as real options. Verified end-to-end (verify -> create -> real
+  Playwright screenshot of a live workbook, not just schema validation):
+  ```json
+  {"kind": "control", "controlId": "c_x", "controlType": "slider",
+   "mode": "=", "low": -20, "high": 20, "step": 1, "value": 0}
+  ```
+  The field names are **`low`/`high`, not `min`/`max`** — passing `min`/`max`
+  is silently ignored (no error) and Sigma falls back to a default `low:0,
+  high:100` range, which renders successfully but with the wrong bounds. This
+  is the dangerous failure mode: `verify` and `create` both return success
+  with the wrong field names, so the only way to catch it is to GET the spec
+  back and check what actually landed, or screenshot the live control.
+  `"range-slider"` is presumably the two-handle sibling (not yet verified).
+  ~~`controlType:"slider"` does not exist. Valid types (confirmed across this
+  skill's examples): `list`, `number`, `text`, `text-area`, `date`,
+  `segmented`, `checkbox`. For a bare numeric input, use `controlType:"number",
+  mode:"="`.~~ (superseded, kept struck through as a record of the mistake)
 - **A standalone control's live value is NOT bracket-referenceable from an
   arbitrary other element's formula.** There's no verified `[ControlName]`
   formula primitive for "read whatever this slider is currently set to" outside
