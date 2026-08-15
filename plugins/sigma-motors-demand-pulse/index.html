@@ -11,17 +11,17 @@
   body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#111114;overflow:hidden}
   #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:6px 10px;gap:8px}
   #grid{flex:1;display:grid;grid-auto-flow:column;gap:10px;place-items:stretch;min-height:0}
-  .region{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;gap:4px}
+  .region{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;gap:6px}
   .region-name{font-size:12px;font-weight:700;color:#111114;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-  .cars{display:flex;align-items:flex-end;justify-content:center;gap:8px;flex:1;min-height:0;width:100%}
-  .car-wrap{position:relative;display:flex;align-items:flex-end;justify-content:center;}
-  .car-glow{position:absolute;left:50%;top:50%;border-radius:50%;background:radial-gradient(circle, rgba(26,112,241,.55), rgba(26,112,241,0) 70%);
-    transform:translate(-50%,-50%);animation:glowPulse 1.6s ease-out infinite;pointer-events:none;}
+  .ring-wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;min-height:0;width:100%}
+  .ring-glow{position:absolute;left:50%;top:50%;border-radius:50%;background:radial-gradient(circle, rgba(26,112,241,.4), rgba(26,112,241,0) 72%);
+    transform:translate(-50%,-50%);animation:glowPulse 1.7s ease-out infinite;pointer-events:none;}
   @keyframes glowPulse{
-    0%{opacity:.85;transform:translate(-50%,-50%) scale(.8);}
-    70%{opacity:0;transform:translate(-50%,-50%) scale(1.55);}
-    100%{opacity:0;transform:translate(-50%,-50%) scale(1.55);}
+    0%{opacity:.9;transform:translate(-50%,-50%) scale(.82);}
+    70%{opacity:0;transform:translate(-50%,-50%) scale(1.4);}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1.4);}
   }
+  .ring-pct{font-weight:800;fill:#111114;}
   .badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;}
   #legend{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:16px;font-size:11px;color:#5F5F66}
   #legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;}
@@ -31,8 +31,8 @@
 <div id="wrap">
   <div id="grid"></div>
   <div id="legend">
-    <span><i class="dot" style="background:#1A70F1"></i>EV backlog</span>
-    <span><i class="dot" style="background:#8A8F9C"></i>Hybrid backlog</span>
+    <span><i class="dot" style="background:#1A70F1"></i>EV share of backlog</span>
+    <span><i class="dot" style="background:#8A8F9C"></i>Hybrid share</span>
     <span>Glow = backlog growing &gt;25%/mo</span>
   </div>
 </div>
@@ -49,8 +49,8 @@
   ];
   if(client) client.config.configureEditorPanel(defs);
 
-  function orbDiameter(v, maxV, minD, maxD){
-    var frac = Math.sqrt(Math.max(0, Math.min(1, v/maxV)));
+  function sizeFor(total, maxTotal, minD, maxD){
+    var frac = Math.sqrt(Math.max(0, Math.min(1, total/maxTotal)));
     return minD + frac*(maxD-minD);
   }
 
@@ -60,17 +60,26 @@
     return {bg:'#EAF7EE', fg:'#1F9D55'};
   }
 
-  function carSVG(w, color, isEV, glowing){
-    var h = w*0.6;
-    var bolt = isEV ? '<path d="M52,4 L42,24 L50,24 L44,40 L64,18 L54,18 Z" fill="#FFD84D" stroke="#B8860B" stroke-width="1.2"/>' : '';
-    var glow = glowing ? '<div class="car-glow" style="width:'+(w*1.6)+'px;height:'+(w*1.6)+'px;"></div>' : '';
-    return '<div class="car-wrap" style="width:'+w+'px;height:'+(h+6)+'px;">'+glow+
-      '<svg width="'+w+'" height="'+h+'" viewBox="0 0 100 60" style="position:relative;z-index:1;overflow:visible;">'+
-      bolt+
-      '<path d="M8,38 L12,38 Q14,26 28,24 L36,12 Q40,6 50,6 L66,6 Q74,6 78,14 L86,24 Q92,26 92,38 L92,40 Q92,44 88,44 L10,44 Q6,44 6,40 Z" fill="'+color+'"/>'+
-      '<rect x="38" y="12" width="24" height="12" rx="2" fill="rgba(255,255,255,.35)"/>'+
-      '<circle cx="26" cy="44" r="8" fill="#2A2A2E"/><circle cx="26" cy="44" r="3.5" fill="#D6D6D6"/>'+
-      '<circle cx="74" cy="44" r="8" fill="#2A2A2E"/><circle cx="74" cy="44" r="3.5" fill="#D6D6D6"/>'+
+  // Single split-ring per region: a donut split proportionally EV/Hybrid,
+  // with the EV share % centered, and a soft pulsing halo on fast growth.
+  function ringSVG(size, evPct, glowing){
+    var r = 15.5, c = 2*Math.PI*r;
+    var evLen = c*(evPct/100), gap = c-evLen;
+    var glow = glowing ? '<div class="ring-glow" style="width:'+(size*1.35)+'px;height:'+(size*1.35)+'px;"></div>' : '';
+    // NOTE: font-size here is in viewBox units (0-36 space), NOT output px --
+    // the svg's viewBox scaling stretches it to the real `size` automatically.
+    // A previous version computed this from the outer pixel `size`, which the
+    // viewBox then re-scaled a SECOND time, blowing the glyphs up ~3-4x past
+    // the ring's own boundary. Fixed value here; visual size still scales
+    // correctly with the ring because the whole SVG scales as one unit.
+    var fontSize = 11;
+    return '<div style="position:relative;width:'+size+'px;height:'+size+'px;">'+glow+
+      '<svg width="'+size+'" height="'+size+'" viewBox="0 0 36 36" style="position:relative;z-index:1;">'+
+      '<circle cx="18" cy="18" r="'+r+'" fill="none" stroke="#8A8F9C" stroke-width="4.2"/>'+
+      '<circle cx="18" cy="18" r="'+r+'" fill="none" stroke="#1A70F1" stroke-width="4.2" '+
+        'stroke-dasharray="'+evLen+' '+gap+'" stroke-dashoffset="'+(c*0.25)+'" stroke-linecap="round" transform="scale(-1,1) translate(-36,0)"/>'+
+      '<text x="18" y="18" text-anchor="middle" dominant-baseline="central" class="ring-pct" '+
+        'style="font-size:'+fontSize+'px;">'+Math.round(evPct)+'%</text>'+
       '</svg></div>';
   }
 
@@ -78,18 +87,17 @@
     var grid=document.getElementById('grid');
     grid.style.gridTemplateColumns='repeat('+(regions.length||1)+',1fr)';
     grid.innerHTML='';
-    var maxEv=Math.max.apply(null,regions.map(function(r){return r.ev_backlog;}).concat([1]));
-    var maxHy=Math.max.apply(null,regions.map(function(r){return r.hybrid_backlog;}).concat([1]));
-    var maxScale=Math.max(maxEv,maxHy);
+    var maxTotal=Math.max.apply(null,regions.map(function(r){return r.ev_backlog+r.hybrid_backlog;}).concat([1]));
 
     regions.forEach(function(r){
-      var evD=orbDiameter(r.ev_backlog, maxScale, 24, 84);
-      var hyD=orbDiameter(r.hybrid_backlog, maxScale, 20, 70);
+      var total = r.ev_backlog + r.hybrid_backlog;
+      var evPct = total>0 ? (r.ev_backlog/total*100) : 0;
+      var size = sizeFor(total, maxTotal*1.15, 64, 128);
       var lvl=badgeLevel(r.backlog_weeks);
       var wrap=document.createElement('div'); wrap.className='region';
       wrap.innerHTML =
         '<div class="region-name">'+r.region+'</div>'+
-        '<div class="cars">'+carSVG(evD,'#1A70F1',true,r.growth_pct>25)+carSVG(hyD,'#8A8F9C',false,false)+'</div>'+
+        '<div class="ring-wrap">'+ringSVG(size, evPct, r.growth_pct>25)+'</div>'+
         '<span class="badge" style="background:'+lvl.bg+';color:'+lvl.fg+';">'+r.backlog_weeks.toFixed(1)+' wks</span>';
       grid.appendChild(wrap);
     });
