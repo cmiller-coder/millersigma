@@ -45,6 +45,7 @@ BLUE_SOFT = "#E8F1FF"
 BLUE_MID = "#4C7DFF"
 CANVAS = "#F3F5F8"
 CARD = "#FFFFFF"
+SURFACE = "#F8FAFC"
 BORDER = "#E2E6EE"
 TEXT = "#0B1B3A"
 MUTED = "#5B6B7F"
@@ -52,6 +53,8 @@ GREEN = "#0F9F6E"
 RED = "#E11D48"
 GOLD = "#C9971A"
 HYBRID = "#94A3B8"
+EV_COLOR = BLUE
+HY_COLOR = "#64748B"
 
 NUM0 = {"kind": "number", "formatString": ",.0f",
         "digitGroupingSymbol": ",", "digitGroupingSize": [3]}
@@ -117,6 +120,13 @@ ICO_PIN = ('<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>'
            '<circle cx="12" cy="10" r="3"/>')
 ICO_SPARK = ('<path d="M12 3l1.6 4.8L18.5 9.5 13.6 11.2 12 16 10.4 11.2 5.5 9.5 10.4 7.8z"/>'
              '<path d="M19 14l.8 2.4L22 17.2l-2.2.8L19 20.4l-.8-2.4L16 17.2l2.2-.8z"/>')
+ICO_BATTERY = ('<rect x="2" y="7" width="16" height="10" rx="2"/><line x1="22" y1="11" x2="22" y2="13"/>'
+               '<line x1="6" y1="11" x2="6" y2="13"/><line x1="10" y1="11" x2="10" y2="13"/>')
+ICO_CHECK = '<polyline points="20 6 9 17 4 12"/>'
+ICO_X = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+ICO_PERCENT = ('<circle cx="12" cy="12" r="9"/><path d="M8 16l8-8"/>'
+               '<circle cx="9" cy="9" r="1.5" fill="currentColor"/>'
+               '<circle cx="15" cy="15" r="1.5" fill="currentColor"/>')
 
 
 def token() -> str:
@@ -260,6 +270,23 @@ def sql_table(eid: str, name: str, statement: str, colnames: list[str], prefix: 
 def card() -> dict:
     return {"backgroundColor": CARD, "borderRadius": "round",
             "borderColor": BORDER, "borderWidth": 1}
+
+
+def panel() -> dict:
+    return {"backgroundColor": SURFACE, "borderRadius": "round",
+            "borderColor": BORDER, "borderWidth": 1}
+
+
+def eyebrow(text: str) -> str:
+    return f'<span style="color: {BLUE}; font-size: 10px">**{text}**</span>'
+
+
+def section_title(text: str) -> str:
+    return f'**<span style="color: {TEXT}; font-size: 15px">{text}</span>**'
+
+
+def section_subtitle(text: str) -> str:
+    return f'<span style="color: {MUTED}; font-size: 12px">{text}</span>'
 
 
 def title(text: str, size=13) -> dict:
@@ -410,35 +437,62 @@ def kpi_card(key: str, label: str, current: str, prior: str, fmt: dict,
     })
 
 
-def simple_kpi(eid: str, label: str, formula: str, fmt: dict, *,
-               baseline: str | None = None, good: str = GREEN, bad: str = RED,
-               value_color: str = TEXT) -> None:
-    add({"id": f"c-{eid}", "kind": "container", "spacing": "small", "style": card()})
-    cols = [{"id": f"k-{eid}-v", "formula": formula, "name": label, "format": fmt}]
+def model_kpi(key: str, label: str, formula: str, fmt: dict, icon_url: str, *,
+              baseline: str | None = None, good: str = GREEN, bad: str = RED,
+              value_color: str = TEXT, spark_y: str | None = None,
+              spark_color: str = BLUE) -> None:
+    add({"id": f"c-{key}", "kind": "container", "spacing": "small", "style": card()})
+    img(f"ico-{key}", icon_url)
+    cols = [{"id": f"k-{key}-v", "formula": formula, "name": label, "format": fmt}]
     kpi: dict = {
-        "id": f"k-{eid}", "kind": "kpi-chart",
+        "id": f"k-{key}", "kind": "kpi-chart",
         "source": {"elementId": "tbl-fleet-scenario", "kind": "table"},
         "columns": cols,
-        "value": {"columnId": f"k-{eid}-v", "color": value_color, "fontSize": 24},
+        "value": {"columnId": f"k-{key}-v", "color": value_color, "fontSize": 28},
         "name": {"text": label, "color": MUTED, "fontSize": 11},
         "layout": {"anchor": "start"},
         "style": {"padding": "none", "backgroundColor": CARD},
     }
     if baseline is not None:
-        cols.append({"id": f"k-{eid}-c", "formula": baseline, "name": "Baseline", "format": fmt})
-        kpi["comparisonColumn"] = {"columnId": f"k-{eid}-c"}
+        cols.append({"id": f"k-{key}-c", "formula": baseline, "name": "Baseline", "format": fmt})
+        kpi["comparisonColumn"] = {"columnId": f"k-{key}-c"}
         kpi["comparison"] = {"display": "delta", "colorGood": good, "colorBad": bad, "fontSize": 12}
     add(kpi)
+    if spark_y:
+        add({
+            "id": f"sp-{key}", "kind": "line-chart",
+            "source": {"elementId": "sql-ramp", "kind": "table"},
+            "columns": [
+                {"id": f"spx-{key}", "formula": f"[{RM}/Month]", "name": "Month"},
+                {"id": f"spy-{key}", "formula": spark_y, "name": "Trend"},
+                {"id": f"spc-{key}", "formula": '"Trend"', "name": "Series"},
+            ],
+            "xAxis": {"columnId": f"spx-{key}",
+                      "format": {"labels": "hidden", "marks": "none"}},
+            "yAxis": {"columnIds": [f"spy-{key}"],
+                      "format": {"labels": "hidden", "marks": "none",
+                                 "scale": {"type": "linear", "zero": False, "hideZeroLine": True}}},
+            "color": {"by": "category", "column": f"spc-{key}", "scheme": [spark_color]},
+            "name": {"visibility": "hidden"},
+            "legend": {"visibility": "hidden"},
+            "style": {"padding": "none", "backgroundColor": CARD},
+            "lineAreaStyle": {"interpolation": "monotone"},
+        })
+    else:
+        add({"id": f"sp-{key}", "kind": "text", "body": " ",
+             "style": {"backgroundColor": CARD, "padding": "none"},
+             "verticalAlign": "middle"})
 
 
-def registry_kpi(eid: str, label: str, formula: str, fmt: dict, *,
-                 value_color: str = TEXT) -> None:
-    add({"id": f"c-{eid}", "kind": "container", "spacing": "small", "style": card()})
+def status_kpi(key: str, label: str, formula: str, fmt: dict, icon_url: str, *,
+               value_color: str = TEXT) -> None:
+    add({"id": f"c-{key}", "kind": "container", "spacing": "small", "style": card()})
+    img(f"ico-{key}", icon_url)
     add({
-        "id": f"k-{eid}", "kind": "kpi-chart",
+        "id": f"k-{key}", "kind": "kpi-chart",
         "source": {"elementId": "it-registry", "kind": "table"},
-        "columns": [{"id": f"k-{eid}-v", "formula": formula, "name": label, "format": fmt}],
-        "value": {"columnId": f"k-{eid}-v", "color": value_color, "fontSize": 24},
+        "columns": [{"id": f"k-{key}-v", "formula": formula, "name": label, "format": fmt}],
+        "value": {"columnId": f"k-{key}-v", "color": value_color, "fontSize": 28},
         "name": {"text": label, "color": MUTED, "fontSize": 11},
         "layout": {"anchor": "start"},
         "style": {"padding": "none", "backgroundColor": CARD},
@@ -474,6 +528,7 @@ add({
 
 # ---- title
 add({"id": "c-title", "kind": "container", "spacing": "small"})
+md("txt-eyebrow1", eyebrow("MARKET INTELLIGENCE"))
 md("txt-title",
    f'# **<span style="color: {TEXT}">Regional EV &amp; Hybrid Market Intelligence</span>**')
 md("txt-sub",
@@ -513,6 +568,7 @@ add({"id": "btn-scen", "kind": "button", "text": "Explore Scenarios →",
 
 # ---- quick questions + copilot
 add({"id": "c-qq", "kind": "container", "spacing": "small", "style": card()})
+img("ico-qq1", icon_badge(ICO_SPARK, BLUE_SOFT, BLUE, 40))
 md("txt-qq-h", f'<span style="color: {TEXT}">**Quick Questions**</span>')
 md("txt-qq-list",
    f'<span style="color: {MUTED}">'
@@ -526,7 +582,7 @@ add({"id": "chat1", "kind": "chat", "agentId": "ag-signal"})
 # cannot register plugins). Same composition as the mockup row.
 add({"id": "c-pulse", "kind": "container", "spacing": "small", "style": card()})
 md("txt-pulse",
-   f'<span style="color: {TEXT}">**Regional Demand Pulse**</span>  \n'
+   f'<span style="color: {TEXT}">**Regional Demand Pulse**</span> · '
    f'<span style="color: {MUTED}">EV share of regional backlog · weeks of wait</span>')
 for key, region, ev, hy, pct, wks in SHARES:
     add({"id": f"c-dn-{key}", "kind": "container", "spacing": "small",
@@ -540,14 +596,14 @@ for key, region, ev, hy, pct, wks in SHARES:
              "format": NUM0},
         ],
         "value": {"id": f"dnv-{key}"},
-        "color": {"id": f"dnc-{key}"},
+        "color": {"id": f"dnc-{key}", "scheme": [EV_COLOR, HY_COLOR]},
         "name": {"visibility": "hidden"},
         "legend": {"visibility": "hidden"},
         "style": {"backgroundColor": CARD, "padding": "none"},
     })
     md(f"cap-{key}",
-       f'<span style="color: {TEXT}">**{region}**</span>  \n'
-       f'<span style="color: {BLUE}">{pct} EV</span>  \n'
+       f'<span style="color: {TEXT}">**{region}**</span> · '
+       f'<span style="color: {EV_COLOR}">{pct} EV</span> · '
        f'<span style="color: {MUTED}">{wks}</span>')
 
 # ---- ranked bar + trend
@@ -559,9 +615,12 @@ add({
         {"id": "bx", "formula": f"[{RP}/Region]", "name": "Region"},
         {"id": "by", "formula": f"Sum([{RP}/EV Backlog])", "name": "EV Backlog", "format": NUM0},
         {"id": "bo", "formula": f"Min([{RP}/Region Order])", "name": "Order"},
+        {"id": "bser", "formula": '"EV Backlog"', "name": "Series"},
     ],
     "xAxis": {"columnId": "bx", "sort": {"by": "by", "direction": "descending"}},
     "yAxis": {"columnIds": ["by"]},
+    "color": {"by": "category", "column": "bser", "scheme": [EV_COLOR]},
+    "dataLabel": {"labels": "shown", "anchor": "end", "fontSize": 11},
     "name": title("EV Backlog by Region, Ranked"),
     "legend": {"visibility": "hidden"},
     "style": {"backgroundColor": CARD, "padding": "none"},
@@ -588,29 +647,37 @@ md("txt-foot",
 
 # ---- page 2 — interactive reallocation model
 add({"id": "c-title2", "kind": "container", "spacing": "small"})
+md("txt-eyebrow2", eyebrow("PRODUCTION PLANNING"))
 md("txt-title2",
    f'# **<span style="color: {TEXT}">EV &amp; Hybrid Reallocation</span>**')
 md("txt-sub2",
    f'<span style="color: {MUTED}">Model production mix shifts against plant capacity and battery-cell '
    f'supply. Adjust the EV-share lever to see margin, rollout, and feasibility update live.</span>')
 
-simple_kpi("rev", "EV UNITS",
-           f'SumIf([{FS}/Units], [{FS}/Powertrain] = "EV")', NUM0,
-           baseline="5600", good=GREEN, bad=RED)
-simple_kpi("rhy", "HYBRID UNITS",
-           f'SumIf([{FS}/Units], [{FS}/Powertrain] = "Hybrid")', NUM0,
-           baseline="7300", good=RED, bad=GREEN)
-simple_kpi("rmg", "MARGIN IMPACT", "42000 * [c_ev_shift]",
-           {"kind": "number", "formatString": "$,.3s", "currencySymbol": "$"},
-           value_color=GREEN)
-simple_kpi("rtot", "TOTAL CAPACITY", f"Sum([{FS}/Units])", NUM0)
-simple_kpi("rcap", "CAPACITY USED", f"Sum([{FS}/Units]) / 12900", PCT0)
-simple_kpi("rcel", "CELL USED",
-           f"Sum([{FS}/Row Cell Kwh]) / 581628", PCT0, value_color=GOLD)
+SPARK_EV = "5600 + 56 * [c_ev_shift] * [Rollout Months/Ramp Fraction]"
+SPARK_HY = "7300 - 56 * [c_ev_shift] * [Rollout Months/Ramp Fraction]"
+model_kpi("rev", "EV UNITS",
+          f'SumIf([{FS}/Units], [{FS}/Powertrain] = "EV")', NUM0,
+          icon_badge(ICO_ZAP, BLUE_SOFT, EV_COLOR), baseline="5600",
+          good=GREEN, bad=RED, spark_y=SPARK_EV, spark_color=EV_COLOR)
+model_kpi("rhy", "HYBRID UNITS",
+          f'SumIf([{FS}/Units], [{FS}/Powertrain] = "Hybrid")', NUM0,
+          icon_badge(ICO_LEAF, "#EEF2F6", HY_COLOR), baseline="7300",
+          good=RED, bad=GREEN, spark_y=SPARK_HY, spark_color=HY_COLOR)
+model_kpi("rmg", "MARGIN IMPACT", "42000 * [c_ev_shift]",
+          {"kind": "number", "formatString": "$,.3s", "currencySymbol": "$"},
+          icon_badge(ICO_DOLLAR, "#E8F8F0", GREEN), value_color=GREEN)
+model_kpi("rtot", "TOTAL CAPACITY", f"Sum([{FS}/Units])", NUM0,
+          icon_badge(ICO_PIN, BLUE_SOFT, NAVY))
+model_kpi("rcap", "CAPACITY USED", f"Sum([{FS}/Units]) / 12900", PCT0,
+          icon_badge(ICO_CLOCK, "#EEF0FF", "#4F46E5"))
+model_kpi("rcel", "CELL USED", f"Sum([{FS}/Row Cell Kwh]) / 581628", PCT0,
+          icon_badge(ICO_BATTERY, "#FFF6E0", GOLD), value_color=GOLD)
 
 add({"id": "c-qq2", "kind": "container", "spacing": "small", "style": card()})
-img("ico-qq2", icon_badge(ICO_SPARK, "#FFF0F3", RED, 40))
-md("txt-qq2-h", f'<span style="color: {TEXT}">**Quick Questions**</span>')
+img("ico-qq2", icon_badge(ICO_SPARK, BLUE_SOFT, BLUE, 40))
+md("txt-qq2-h", f'<span style="color: {TEXT}">**Reallocation Assistant**</span>')
+md("txt-qq2-sub", f'<span style="color: {MUTED}">Ask about mix, margin, or cell supply</span>')
 md("txt-qq2-list",
    f'<span style="color: {MUTED}">'
    f'What happens if we shift 10 points toward EV?  \n'
@@ -622,12 +689,15 @@ add({"id": "c-ai2", "kind": "container", "spacing": "small",
      "style": {"backgroundColor": BLUE_SOFT, "borderRadius": "round",
                "borderColor": "#C9DBFF", "borderWidth": 1}})
 img("ico-ai2", icon_badge(ICO_SPARK, "#FFFFFF", BLUE, 40))
+md("txt-ai2-label", f'<span style="color: {BLUE}; font-size: 11px">**AI INSIGHT**</span>')
 add({"id": "txt-ai2", "kind": "text", "body": AI_PG2_BODY,
      "style": {"backgroundColor": "transparent", "padding": "none", "color": TEXT},
      "verticalAlign": "middle"})
 
 add({"id": "c-workspace", "kind": "container", "spacing": "small", "style": card()})
-add({"id": "c-slider", "kind": "container", "spacing": "small"})
+md("txt-workspace-h", section_title("Scenario workspace"))
+md("txt-workspace-sub", section_subtitle("Adjust the lever and compare rollout paths"))
+add({"id": "c-slider", "kind": "container", "spacing": "small", "style": panel()})
 md("txt-slider-label", f'<span style="color: {TEXT}">**Reallocate production mix**</span>')
 md("txt-slider-hint", f'<span style="color: {MUTED}">EV-share shift (−20 to +20)</span>')
 add({
@@ -637,7 +707,7 @@ add({
 })
 add({
     "id": "btn-reset", "kind": "button", "text": "Reset",
-    "appearance": "outline", "fillColor": CARD, "fontColor": TEXT,
+    "appearance": "outline", "fillColor": CARD, "fontColor": TEXT, "fontWeight": "bold",
     "actions": [{"id": "a-reset", "trigger": "on-click", "effects": [{
         "effect": "set-control-value", "control": "c_ev_shift",
         "value": {"type": "constant", "value": {"type": "number", "value": 0}},
@@ -645,14 +715,14 @@ add({
 })
 add({
     "id": "btn-scenario", "kind": "button", "text": "+ New scenario",
-    "appearance": "outline", "fillColor": CARD, "fontColor": BLUE,
+    "appearance": "outline", "fillColor": CARD, "fontColor": BLUE, "fontWeight": "bold",
     "actions": [{"id": "a-scenario", "trigger": "on-click", "effects": [{
         "effect": "open-overlay", "overlayId": "m-scenarios",
     }]}],
 })
 add({
     "id": "btn-submit", "kind": "button", "text": "Save & submit for approval",
-    "appearance": "filled", "fillColor": NAVY, "fontColor": "#FFFFFF",
+    "appearance": "filled", "fillColor": NAVY, "fontColor": "#FFFFFF", "fontWeight": "bold",
     "actions": [{"id": "a-submit", "trigger": "on-click", "effects": [
         {"effect": "insert-rows", "table": "it-registry", "values": {
             "reg-id": {"type": "formula",
@@ -669,15 +739,15 @@ add({
         {"effect": "navigate", "target": {"type": "page", "page": "pg3"}},
     ]}],
 })
+add({"id": "c-chart-rollout", "kind": "container", "spacing": "small",
+     "style": {"backgroundColor": CARD, "padding": "none"}})
 add({
     "id": "ch-trend", "kind": "line-chart",
     "source": {"elementId": "sql-ramp", "kind": "table"},
     "columns": [
         {"id": "rt-label", "formula": f"[{RM}/Month]", "name": "Month"},
-        {"id": "rt-ev", "formula": "5600 + 56 * [c_ev_shift] * [Rollout Months/Ramp Fraction]",
-         "name": "EV units", "format": NUM0},
-        {"id": "rt-hy", "formula": "7300 - 56 * [c_ev_shift] * [Rollout Months/Ramp Fraction]",
-         "name": "Hybrid units", "format": NUM0},
+        {"id": "rt-ev", "formula": SPARK_EV, "name": "EV units", "format": NUM0},
+        {"id": "rt-hy", "formula": SPARK_HY, "name": "Hybrid units", "format": NUM0},
     ],
     "xAxis": {"columnId": "rt-label"},
     "yAxis": {"columnIds": ["rt-ev", "rt-hy"]},
@@ -690,28 +760,33 @@ add({
 
 # ---- page 3 — approvals with write-back registry
 add({"id": "c-title3", "kind": "container", "spacing": "small"})
+md("txt-eyebrow3", eyebrow("GOVERNANCE"))
 md("txt-title3", f'# **<span style="color: {TEXT}">Approvals</span>**')
 md("txt-sub3",
    f'<span style="color: {MUTED}">Review submitted reallocation scenarios. Select a row to approve '
    f'or reject with comments.</span>')
 
-registry_kpi("pend", "PENDING",
-             f'CountIf([{SR}/Status] = "Pending")', NUM0, value_color=GOLD)
-registry_kpi("appr", "APPROVED",
-             f'CountIf([{SR}/Status] = "Approved")', NUM0, value_color=GREEN)
-registry_kpi("rej", "REJECTED",
-             f'CountIf([{SR}/Status] = "Rejected")', NUM0, value_color=RED)
-registry_kpi("rate", "APPROVAL RATE",
-             ('If(CountIf([Scenario Registry/Status] = "Approved") + '
-              'CountIf([Scenario Registry/Status] = "Rejected") = 0, 0, '
-              'CountIf([Scenario Registry/Status] = "Approved") / '
-              '(CountIf([Scenario Registry/Status] = "Approved") + '
-              'CountIf([Scenario Registry/Status] = "Rejected")))'),
-             PCT0)
+status_kpi("pend", "PENDING",
+           f'CountIf([{SR}/Status] = "Pending")', NUM0,
+           icon_badge(ICO_CLOCK, "#FFF6E0", GOLD), value_color=GOLD)
+status_kpi("appr", "APPROVED",
+           f'CountIf([{SR}/Status] = "Approved")', NUM0,
+           icon_badge(ICO_CHECK, "#E8F8F0", GREEN), value_color=GREEN)
+status_kpi("rej", "REJECTED",
+           f'CountIf([{SR}/Status] = "Rejected")', NUM0,
+           icon_badge(ICO_X, "#FEE2E2", RED), value_color=RED)
+status_kpi("rate", "APPROVAL RATE",
+           ('If(CountIf([Scenario Registry/Status] = "Approved") + '
+            'CountIf([Scenario Registry/Status] = "Rejected") = 0, 0, '
+            'CountIf([Scenario Registry/Status] = "Approved") / '
+            '(CountIf([Scenario Registry/Status] = "Approved") + '
+            'CountIf([Scenario Registry/Status] = "Rejected")))'),
+           PCT0, icon_badge(ICO_PERCENT, BLUE_SOFT, BLUE))
 
 add({"id": "c-qq3", "kind": "container", "spacing": "small", "style": card()})
-img("ico-qq3", icon_badge(ICO_SPARK, "#FFF0F3", RED, 40))
-md("txt-qq3-h", f'<span style="color: {TEXT}">**Quick Questions**</span>')
+img("ico-qq3", icon_badge(ICO_SPARK, BLUE_SOFT, BLUE, 40))
+md("txt-qq3-h", f'<span style="color: {TEXT}">**Approvals Assistant**</span>')
+md("txt-qq3-sub", f'<span style="color: {MUTED}">Status, history, and open requests</span>')
 md("txt-qq3-list",
    f'<span style="color: {MUTED}">'
    f'How many scenarios are pending review?  \n'
@@ -719,6 +794,9 @@ md("txt-qq3-list",
    f'Summarize open requests for finance.</span>')
 add({"id": "chat3", "kind": "chat", "agentId": "ag-r3"})
 
+add({"id": "c-registry", "kind": "container", "spacing": "small", "style": card()})
+md("txt-registry-h", section_title("Submission queue"))
+md("txt-registry-sub", section_subtitle("Select a row to review and decide"))
 add({
     "id": "it-registry", "kind": "input-table", "name": SR,
     "source": {"kind": "empty", "connectionId": CONN},
@@ -971,55 +1049,57 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
     <Element elementId="nav1" gridColumn="8 / 20" gridRow="2 / 5"/>
     <Element elementId="ctrl-date" gridColumn="20 / 25" gridRow="2 / 5"/>
   </Container>
-  <Container elementId="c-title" type="grid" gridColumn="1 / 25" gridRow="5 / 9"
+  <Container elementId="c-title" type="grid" gridColumn="1 / 25" gridRow="5 / 10"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="txt-title" gridColumn="1 / 18" gridRow="1 / 3"/>
-    <Element elementId="txt-sub" gridColumn="1 / 18" gridRow="3 / 5"/>
-    <Element elementId="ctrl-region" gridColumn="18 / 25" gridRow="2 / 5"/>
+    <Element elementId="txt-eyebrow1" gridColumn="1 / 18" gridRow="1 / 2"/>
+    <Element elementId="txt-title" gridColumn="1 / 18" gridRow="2 / 4"/>
+    <Element elementId="txt-sub" gridColumn="1 / 18" gridRow="4 / 6"/>
+    <Element elementId="ctrl-region" gridColumn="18 / 25" gridRow="2 / 6"/>
   </Container>
-  <Container elementId="c-ev" type="grid" gridColumn="1 / 6" gridRow="9 / 20"
+  <Container elementId="c-ev" type="grid" gridColumn="1 / 6" gridRow="10 / 21"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-ev" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-ev" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-ev" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-hy" type="grid" gridColumn="6 / 11" gridRow="9 / 20"
+  <Container elementId="c-hy" type="grid" gridColumn="6 / 11" gridRow="10 / 21"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-hy" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-hy" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-hy" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-bk" type="grid" gridColumn="11 / 16" gridRow="9 / 20"
+  <Container elementId="c-bk" type="grid" gridColumn="11 / 16" gridRow="10 / 21"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-bk" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-bk" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-bk" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-mg" type="grid" gridColumn="16 / 21" gridRow="9 / 20"
+  <Container elementId="c-mg" type="grid" gridColumn="16 / 21" gridRow="10 / 21"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-mg" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-mg" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-mg" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rk" type="grid" gridColumn="21 / 25" gridRow="9 / 20"
+  <Container elementId="c-rk" type="grid" gridColumn="21 / 25" gridRow="10 / 21"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-rk" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-rk" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-rk" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="20 / 26"
+  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="21 / 27"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-ai" gridColumn="1 / 3" gridRow="2 / 5"/>
     <Element elementId="txt-ai" gridColumn="3 / 20" gridRow="1 / 6"/>
     <Element elementId="btn-scen" gridColumn="20 / 25" gridRow="2 / 5"/>
   </Container>
-  <Container elementId="c-qq" type="grid" gridColumn="1 / 8" gridRow="26 / 52"
+  <Container elementId="c-qq" type="grid" gridColumn="1 / 8" gridRow="27 / 53"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="txt-qq-h" gridColumn="1 / 13" gridRow="1 / 3"/>
+    <Element elementId="ico-qq1" gridColumn="1 / 3" gridRow="1 / 3"/>
+    <Element elementId="txt-qq-h" gridColumn="3 / 13" gridRow="1 / 3"/>
     <Element elementId="txt-qq-list" gridColumn="1 / 13" gridRow="3 / 10"/>
     <Element elementId="chat1" gridColumn="1 / 13" gridRow="10 / 24"/>
   </Container>
-  <Container elementId="c-pulse" type="grid" gridColumn="8 / 25" gridRow="26 / 40"
+  <Container elementId="c-pulse" type="grid" gridColumn="8 / 25" gridRow="27 / 41"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-pulse" gridColumn="1 / 25" gridRow="1 / 3"/>
     <Container elementId="c-dn-sw" type="grid" gridColumn="1 / 6" gridRow="3 / 16"
@@ -1048,15 +1128,15 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
       <Element elementId="cap-so" gridColumn="1 / 13" gridRow="9 / 13"/>
     </Container>
   </Container>
-  <Container elementId="c-bar" type="grid" gridColumn="8 / 17" gridRow="40 / 52"
+  <Container elementId="c-bar" type="grid" gridColumn="8 / 17" gridRow="41 / 53"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="bar-ev" gridColumn="1 / 13" gridRow="1 / 12"/>
   </Container>
-  <Container elementId="c-trend" type="grid" gridColumn="17 / 25" gridRow="40 / 52"
+  <Container elementId="c-trend" type="grid" gridColumn="17 / 25" gridRow="41 / 53"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="line-trend" gridColumn="1 / 13" gridRow="1 / 12"/>
   </Container>
-  <Element elementId="txt-foot" gridColumn="1 / 25" gridRow="52 / 54"/>
+  <Element elementId="txt-foot" gridColumn="1 / 25" gridRow="53 / 55"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg2">
   <Container elementId="c-hdr2" type="grid" gridColumn="1 / 25" gridRow="1 / 5"
@@ -1064,50 +1144,67 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
     <Element elementId="logo2" gridColumn="1 / 8" gridRow="1 / 5"/>
     <Element elementId="nav2" gridColumn="8 / 25" gridRow="2 / 5"/>
   </Container>
-  <Container elementId="c-title2" type="grid" gridColumn="1 / 25" gridRow="5 / 9"
+  <Container elementId="c-title2" type="grid" gridColumn="1 / 25" gridRow="5 / 10"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="txt-title2" gridColumn="1 / 25" gridRow="1 / 3"/>
-    <Element elementId="txt-sub2" gridColumn="1 / 25" gridRow="3 / 5"/>
+    <Element elementId="txt-eyebrow2" gridColumn="1 / 25" gridRow="1 / 2"/>
+    <Element elementId="txt-title2" gridColumn="1 / 25" gridRow="2 / 4"/>
+    <Element elementId="txt-sub2" gridColumn="1 / 25" gridRow="4 / 6"/>
   </Container>
-  <Container elementId="c-rev" type="grid" gridColumn="1 / 5" gridRow="9 / 20"
+  <Container elementId="c-rev" type="grid" gridColumn="1 / 5" gridRow="10 / 22"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-rev" gridColumn="1 / 13" gridRow="1 / 10"/>
+    <Element elementId="ico-rev" gridColumn="1 / 4" gridRow="1 / 3"/>
+    <Element elementId="k-rev" gridColumn="1 / 13" gridRow="3 / 8"/>
+    <Element elementId="sp-rev" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rhy" type="grid" gridColumn="5 / 9" gridRow="9 / 20"
+  <Container elementId="c-rhy" type="grid" gridColumn="5 / 9" gridRow="10 / 22"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-rhy" gridColumn="1 / 13" gridRow="1 / 10"/>
+    <Element elementId="ico-rhy" gridColumn="1 / 4" gridRow="1 / 3"/>
+    <Element elementId="k-rhy" gridColumn="1 / 13" gridRow="3 / 8"/>
+    <Element elementId="sp-rhy" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rmg" type="grid" gridColumn="9 / 13" gridRow="9 / 20"
+  <Container elementId="c-rmg" type="grid" gridColumn="9 / 13" gridRow="10 / 22"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-rmg" gridColumn="1 / 13" gridRow="1 / 10"/>
+    <Element elementId="ico-rmg" gridColumn="1 / 4" gridRow="1 / 3"/>
+    <Element elementId="k-rmg" gridColumn="1 / 13" gridRow="3 / 8"/>
+    <Element elementId="sp-rmg" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rtot" type="grid" gridColumn="13 / 17" gridRow="9 / 20"
+  <Container elementId="c-rtot" type="grid" gridColumn="13 / 17" gridRow="10 / 22"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-rtot" gridColumn="1 / 13" gridRow="1 / 10"/>
+    <Element elementId="ico-rtot" gridColumn="1 / 4" gridRow="1 / 3"/>
+    <Element elementId="k-rtot" gridColumn="1 / 13" gridRow="3 / 8"/>
+    <Element elementId="sp-rtot" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rcap" type="grid" gridColumn="17 / 21" gridRow="9 / 20"
+  <Container elementId="c-rcap" type="grid" gridColumn="17 / 21" gridRow="10 / 22"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-rcap" gridColumn="1 / 13" gridRow="1 / 10"/>
+    <Element elementId="ico-rcap" gridColumn="1 / 4" gridRow="1 / 3"/>
+    <Element elementId="k-rcap" gridColumn="1 / 13" gridRow="3 / 8"/>
+    <Element elementId="sp-rcap" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rcel" type="grid" gridColumn="21 / 25" gridRow="9 / 20"
+  <Container elementId="c-rcel" type="grid" gridColumn="21 / 25" gridRow="10 / 22"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-rcel" gridColumn="1 / 13" gridRow="1 / 10"/>
+    <Element elementId="ico-rcel" gridColumn="1 / 4" gridRow="1 / 3"/>
+    <Element elementId="k-rcel" gridColumn="1 / 13" gridRow="3 / 8"/>
+    <Element elementId="sp-rcel" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-qq2" type="grid" gridColumn="1 / 8" gridRow="20 / 44"
+  <Container elementId="c-qq2" type="grid" gridColumn="1 / 8" gridRow="22 / 48"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-qq2" gridColumn="1 / 3" gridRow="1 / 3"/>
-    <Element elementId="txt-qq2-h" gridColumn="1 / 13" gridRow="1 / 3"/>
-    <Element elementId="txt-qq2-list" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="chat2" gridColumn="1 / 13" gridRow="8 / 22"/>
+    <Element elementId="txt-qq2-h" gridColumn="3 / 13" gridRow="1 / 3"/>
+    <Element elementId="txt-qq2-sub" gridColumn="1 / 13" gridRow="3 / 4"/>
+    <Element elementId="txt-qq2-list" gridColumn="1 / 13" gridRow="4 / 10"/>
+    <Element elementId="chat2" gridColumn="1 / 13" gridRow="10 / 26"/>
   </Container>
-  <Container elementId="c-ai2" type="grid" gridColumn="8 / 25" gridRow="20 / 28"
+  <Container elementId="c-ai2" type="grid" gridColumn="8 / 25" gridRow="22 / 30"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-ai2" gridColumn="1 / 3" gridRow="1 / 4"/>
-    <Element elementId="txt-ai2" gridColumn="3 / 25" gridRow="1 / 6"/>
+    <Element elementId="txt-ai2-label" gridColumn="3 / 25" gridRow="1 / 2"/>
+    <Element elementId="txt-ai2" gridColumn="3 / 25" gridRow="2 / 7"/>
   </Container>
-  <Container elementId="c-workspace" type="grid" gridColumn="8 / 25" gridRow="28 / 44"
+  <Container elementId="c-workspace" type="grid" gridColumn="8 / 25" gridRow="30 / 48"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Container elementId="c-slider" type="grid" gridColumn="1 / 8" gridRow="1 / 14"
+    <Element elementId="txt-workspace-h" gridColumn="1 / 25" gridRow="1 / 2"/>
+    <Element elementId="txt-workspace-sub" gridColumn="1 / 25" gridRow="2 / 3"/>
+    <Container elementId="c-slider" type="grid" gridColumn="1 / 8" gridRow="3 / 16"
                gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
       <Element elementId="txt-slider-label" gridColumn="1 / 13" gridRow="1 / 2"/>
       <Element elementId="txt-slider-hint" gridColumn="1 / 13" gridRow="2 / 3"/>
@@ -1116,7 +1213,10 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
       <Element elementId="btn-scenario" gridColumn="1 / 13" gridRow="7 / 9"/>
       <Element elementId="btn-submit" gridColumn="1 / 13" gridRow="9 / 11"/>
     </Container>
-    <Element elementId="ch-trend" gridColumn="9 / 25" gridRow="1 / 14"/>
+    <Container elementId="c-chart-rollout" type="grid" gridColumn="9 / 25" gridRow="3 / 16"
+               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <Element elementId="ch-trend" gridColumn="1 / 13" gridRow="1 / 13"/>
+    </Container>
   </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg3">
@@ -1125,35 +1225,46 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
     <Element elementId="logo3" gridColumn="1 / 8" gridRow="1 / 5"/>
     <Element elementId="nav3" gridColumn="8 / 25" gridRow="2 / 5"/>
   </Container>
-  <Container elementId="c-title3" type="grid" gridColumn="1 / 25" gridRow="5 / 9"
+  <Container elementId="c-title3" type="grid" gridColumn="1 / 25" gridRow="5 / 10"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="txt-title3" gridColumn="1 / 25" gridRow="1 / 3"/>
-    <Element elementId="txt-sub3" gridColumn="1 / 25" gridRow="3 / 5"/>
+    <Element elementId="txt-eyebrow3" gridColumn="1 / 25" gridRow="1 / 2"/>
+    <Element elementId="txt-title3" gridColumn="1 / 25" gridRow="2 / 4"/>
+    <Element elementId="txt-sub3" gridColumn="1 / 25" gridRow="4 / 6"/>
   </Container>
-  <Container elementId="c-pend" type="grid" gridColumn="1 / 7" gridRow="9 / 17"
+  <Container elementId="c-pend" type="grid" gridColumn="1 / 7" gridRow="10 / 19"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-pend" gridColumn="1 / 13" gridRow="1 / 8"/>
+    <Element elementId="ico-pend" gridColumn="1 / 4" gridRow="1 / 3"/>
+    <Element elementId="k-pend" gridColumn="1 / 13" gridRow="3 / 9"/>
   </Container>
-  <Container elementId="c-appr" type="grid" gridColumn="7 / 13" gridRow="9 / 17"
+  <Container elementId="c-appr" type="grid" gridColumn="7 / 13" gridRow="10 / 19"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-appr" gridColumn="1 / 13" gridRow="1 / 8"/>
+    <Element elementId="ico-appr" gridColumn="1 / 4" gridRow="1 / 3"/>
+    <Element elementId="k-appr" gridColumn="1 / 13" gridRow="3 / 9"/>
   </Container>
-  <Container elementId="c-rej" type="grid" gridColumn="13 / 19" gridRow="9 / 17"
+  <Container elementId="c-rej" type="grid" gridColumn="13 / 19" gridRow="10 / 19"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-rej" gridColumn="1 / 13" gridRow="1 / 8"/>
+    <Element elementId="ico-rej" gridColumn="1 / 4" gridRow="1 / 3"/>
+    <Element elementId="k-rej" gridColumn="1 / 13" gridRow="3 / 9"/>
   </Container>
-  <Container elementId="c-rate" type="grid" gridColumn="19 / 25" gridRow="9 / 17"
+  <Container elementId="c-rate" type="grid" gridColumn="19 / 25" gridRow="10 / 19"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="k-rate" gridColumn="1 / 13" gridRow="1 / 8"/>
+    <Element elementId="ico-rate" gridColumn="1 / 4" gridRow="1 / 3"/>
+    <Element elementId="k-rate" gridColumn="1 / 13" gridRow="3 / 9"/>
   </Container>
-  <Container elementId="c-qq3" type="grid" gridColumn="1 / 8" gridRow="17 / 40"
+  <Container elementId="c-qq3" type="grid" gridColumn="1 / 8" gridRow="19 / 44"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-qq3" gridColumn="1 / 3" gridRow="1 / 3"/>
-    <Element elementId="txt-qq3-h" gridColumn="1 / 13" gridRow="1 / 3"/>
-    <Element elementId="txt-qq3-list" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="chat3" gridColumn="1 / 13" gridRow="8 / 22"/>
+    <Element elementId="txt-qq3-h" gridColumn="3 / 13" gridRow="1 / 3"/>
+    <Element elementId="txt-qq3-sub" gridColumn="1 / 13" gridRow="3 / 4"/>
+    <Element elementId="txt-qq3-list" gridColumn="1 / 13" gridRow="4 / 10"/>
+    <Element elementId="chat3" gridColumn="1 / 13" gridRow="10 / 26"/>
   </Container>
-  <Element elementId="it-registry" gridColumn="8 / 25" gridRow="17 / 40"/>
+  <Container elementId="c-registry" type="grid" gridColumn="8 / 25" gridRow="19 / 44"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="txt-registry-h" gridColumn="1 / 13" gridRow="1 / 2"/>
+    <Element elementId="txt-registry-sub" gridColumn="1 / 13" gridRow="2 / 3"/>
+    <Element elementId="it-registry" gridColumn="1 / 13" gridRow="3 / 22"/>
+  </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pgData">
   <Element elementId="tbl-month" gridColumn="1 / 13" gridRow="1 / 10"/>
@@ -1205,12 +1316,13 @@ SETTINGS = {"theme": {"overrides": {
     "colors": {"text": TEXT, "highlight": BLUE, "success": GREEN,
                "warning": GOLD, "danger": RED, "darkMode": "hidden"},
     "colorOverrides": {"backgroundCanvas": CANVAS, "canvasBackground": CANVAS},
-    "categoricalScheme": [BLUE, HYBRID, NAVY, BLUE_MID, GREEN, GOLD, "#7C9CFF", "#0A4E8B"],
+    "categoricalScheme": [EV_COLOR, HY_COLOR, NAVY, BLUE_MID, GREEN, GOLD, "#7C9CFF", "#0A4E8B"],
     "backgroundColor": CANVAS,
     "elementBackgroundColor": CARD,
     "borderColor": BORDER,
     "borderRadius": "round",
-    "space": {"unit": "small", "showElementPadding": "shown"},
+    "pageWidth": "full",
+    "space": {"unit": "medium", "showElementPadding": "shown"},
     "fonts": {"dataFont": "Inter", "textFont": "Inter"},
 }}}
 
