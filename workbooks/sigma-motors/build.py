@@ -87,13 +87,41 @@ def header_bg(width=1600, height=160) -> str:
     return datauri_svg(svg)
 
 
+def svg_escape(s: str) -> str:
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def wordmark() -> str:
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="320" height="56" viewBox="0 0 320 56">
-  <rect x="0" y="8" width="40" height="40" rx="10" fill="{BLUE}"/>
-  <path d="M12 36 L20 16 L28 36 Z" fill="#FFFFFF"/>
-  <rect x="17" y="28" width="6" height="3" fill="{BLUE}"/>
-  <text x="52" y="26" fill="#FFFFFF" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" letter-spacing="2.4">SIGMA MOTORS</text>
-  <text x="52" y="44" fill="#9DB4D8" font-family="Arial,Helvetica,sans-serif" font-size="9" letter-spacing="1.6">SUSTAINABLE. SCALABLE. AHEAD.</text>
+    """Sigma Motors wordmark — Σ monogram + split-weight logotype for the navy header."""
+    tag = svg_escape("Drive forward.")
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="380" height="64" viewBox="0 0 380 64">
+  <defs>
+    <linearGradient id="mk" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="{BLUE_MID}"/>
+      <stop offset="55%" stop-color="{BLUE}"/>
+      <stop offset="100%" stop-color="#12306A"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="4" width="56" height="56" rx="15" fill="url(#mk)"/>
+  <rect x="0" y="4" width="56" height="56" rx="15" fill="url(#shine)"/>
+  <rect x="3" y="7" width="50" height="50" rx="13" fill="none" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1"/>
+  <g transform="translate(14, 18)" fill="none" stroke="#FFFFFF" stroke-linecap="round">
+    <path d="M0 4 H28" stroke-width="3.6"/>
+    <path d="M0 14 H22" stroke-width="3.6"/>
+    <path d="M0 24 H16" stroke-width="3.6"/>
+  </g>
+  <circle cx="46" cy="14" r="3.2" fill="{GREEN}"/>
+  <circle cx="46" cy="14" r="5.5" fill="{GREEN}" fill-opacity="0.18"/>
+  <text x="72" y="29" fill="#FFFFFF" font-family="Inter, Arial, Helvetica, sans-serif"
+        font-size="21" font-weight="700">SIGMA</text>
+  <text x="154" y="29" fill="#E6EEFF" font-family="Inter, Arial, Helvetica, sans-serif"
+        font-size="21" font-weight="400">MOTORS</text>
+  <text x="72" y="48" fill="#8BA4C8" font-family="Inter, Arial, Helvetica, sans-serif"
+        font-size="10.5" font-weight="500">{tag}</text>
 </svg>"""
     return datauri_svg(svg)
 
