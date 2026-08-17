@@ -33,7 +33,8 @@ BASE = os.environ.get("SIGMA_BASE_URL") or os.environ.get("SIGMA_API_HOST")
 if not BASE:
     raise SystemExit("SIGMA_BASE_URL is required")
 FOLDER = os.environ.get("SIGMA_FOLDER_ID", "5fc0b75e-b736-4389-b7b1-0a265f0db5cc")
-CONN = os.environ.get("SIGMA_CONNECTION_ID", "e0a14c77-3b70-453b-b8a3-00dd6974aebc")
+# Snowflake connection used by the original Sigma Motors app (input tables + VALUES SQL).
+CONN = os.environ.get("SIGMA_CONNECTION_ID", "a9d45cfe-ff65-4515-8193-a7072602a1ee")
 TOKEN_CACHE = pathlib.Path("/tmp/.sigma_token")
 HERE = pathlib.Path(__file__).resolve().parent
 
@@ -198,14 +199,44 @@ UNION ALL SELECT 'Northeast', 468, 430, -38, 'Reallocate hybrid-heavy leftover t
 UNION ALL SELECT 'South', 340, 310, -30, 'Reallocate; EV share and wait are both lowest'
 """
 
-APPROVAL_SQL = """
-SELECT 'REQ-1841' AS "Request", 'Southwest' AS "Region", 268 AS "Units",
-       'Pending' AS "Status", 'A. Chen' AS "Owner", DATE '2025-06-24' AS "Submitted"
-UNION ALL SELECT 'REQ-1837', 'West', 240, 'Pending', 'J. Patel', DATE '2025-06-23'
-UNION ALL SELECT 'REQ-1822', 'Northeast', -38, 'Approved', 'M. Ortiz', DATE '2025-06-18'
-UNION ALL SELECT 'REQ-1811', 'South', -30, 'Approved', 'M. Ortiz', DATE '2025-06-16'
-UNION ALL SELECT 'REQ-1794', 'Midwest', -20, 'Rejected', 'S. Kim', DATE '2025-06-12'
+FLEET_SQL = """
+SELECT * FROM VALUES
+    ('EV', 5600, 75),
+    ('Hybrid', 7300, 14)
+  AS f(powertrain, baseline_units, cell_kwh_per_unit)
 """
+
+RAMP_SQL = """
+SELECT * FROM VALUES
+    (0, 'M0', 0.0),
+    (1, 'M1', 0.16666666666666666),
+    (2, 'M2', 0.3333333333333333),
+    (3, 'M3', 0.5),
+    (4, 'M4', 0.6666666666666666),
+    (5, 'M5', 0.8333333333333334),
+    (6, 'M6', 1.0)
+  AS r(month_idx, month_label, ramp_fraction)
+  ORDER BY month_idx ASC
+"""
+
+FS = "Fleet Scenario"
+FB = "Fleet Baseline"
+RM = "Rollout Months"
+SR = "Scenario Registry"
+
+AI_PG2_BODY = (
+    '{{Replace(CallText("SNOWFLAKE.CORTEX.COMPLETE", "CLAUDE-4-SONNET", '
+    '"You are a manufacturing operations analyst advising an automaker\'\'s executive team. '
+    'Baseline production is 5,600 EV units and 7,300 Hybrid units. A planner is evaluating a " '
+    '& Text([c_ev_shift]) & "-point EV-share shift, which moves margin by roughly $" '
+    '& Text(Round([c_ev_shift] * 42)) & "K and changes production to " '
+    '& Text(Sum([Fleet Scenario/Units]) / 2 + 56 * [c_ev_shift]) & " EV units and " '
+    '& Text(7300 - 56 * [c_ev_shift]) & " Hybrid units. At that level, battery-cell '
+    'supply-contract commitment would be " & Text(Round(100 * (522200 + 3416 * [c_ev_shift]) / 581628, 1)) '
+    '& "%. In 2-3 sentences, tell the executive team whether this shift is feasible given battery-cell '
+    'supply, and name the binding constraint if it is at risk of being breached. If the shift is 0, '
+    'just describe the baseline position."), \'"\', "")}}'
+)
 
 
 elements: list[dict] = []
@@ -269,8 +300,24 @@ sql_table("tbl-region", "Regional Pulse", REGION_SQL,
            "EV Share", "Backlog Weeks", "Delta Weeks", "At Risk", "EV Growth Pct"], "r")
 sql_table("tbl-realloc", "Reallocation Plan", REALLOC_SQL,
           ["Region", "Current EV", "Recommended EV", "Units to Shift", "Rationale"], "x")
-sql_table("tbl-approvals", "Approval Queue", APPROVAL_SQL,
-          ["Request", "Region", "Units", "Status", "Owner", "Submitted"], "q")
+add({
+    "id": "sql-fleet", "kind": "table", "name": FB,
+    "source": {"connectionId": CONN, "kind": "sql", "statement": FLEET_SQL},
+    "columns": [
+        {"id": "fl-pt", "formula": "[Custom SQL/POWERTRAIN]", "name": "Powertrain"},
+        {"id": "fl-base", "formula": "[Custom SQL/BASELINE_UNITS]", "name": "Baseline Units"},
+        {"id": "fl-cellkwh", "formula": "[Custom SQL/CELL_KWH_PER_UNIT]", "name": "Cell Kwh Per Unit"},
+    ],
+})
+add({
+    "id": "sql-ramp", "kind": "table", "name": RM,
+    "source": {"connectionId": CONN, "kind": "sql", "statement": RAMP_SQL},
+    "columns": [
+        {"id": "rm-idx", "formula": "[Custom SQL/MONTH_IDX]", "name": "Month Index"},
+        {"id": "rm-label", "formula": "[Custom SQL/MONTH_LABEL]", "name": "Month"},
+        {"id": "rm-frac", "formula": "[Custom SQL/RAMP_FRACTION]", "name": "Ramp Fraction"},
+    ],
+})
 
 SHARES = [
     ("sw", "Southwest", 1412, 74, "95%", "↑ 5.1 wks"),
@@ -285,6 +332,24 @@ for key, region, ev, hy, _pct, _wks in SHARES:
         f"SELECT 'EV' AS \"Category\", {ev} AS \"Units\" UNION ALL SELECT 'Hybrid', {hy}",
         ["Category", "Units"], key,
     )
+
+add({
+    "id": "tbl-fleet-scenario", "kind": "table", "name": FS,
+    "source": {"elementId": "sql-fleet", "kind": "table"},
+    "columns": [
+        {"id": "fs-pt", "formula": f"[{FB}/Powertrain]", "name": "Powertrain", "hidden": True},
+        {"id": "fs-factor", "formula": (
+            'If([Powertrain] = "EV", 1 + [c_ev_shift] * 56 / [Fleet Baseline/Baseline Units], '
+            '1 - [c_ev_shift] * 56 / [Fleet Baseline/Baseline Units])'
+        ), "name": "Factor", "hidden": True},
+        {"id": "fs-units", "formula": "Round([Fleet Baseline/Baseline Units] * [Factor])",
+         "name": "Units", "format": NUM0},
+        {"id": "fs-cells", "formula": "[Units] * [Fleet Baseline/Cell Kwh Per Unit]",
+         "name": "Row Cell Kwh", "hidden": True},
+    ],
+    "style": card(),
+    "tableComponents": {"summaryBar": "hidden"},
+})
 
 MP = "Monthly Pulse"
 RP = "Regional Pulse"
@@ -345,6 +410,41 @@ def kpi_card(key: str, label: str, current: str, prior: str, fmt: dict,
     })
 
 
+def simple_kpi(eid: str, label: str, formula: str, fmt: dict, *,
+               baseline: str | None = None, good: str = GREEN, bad: str = RED,
+               value_color: str = TEXT) -> None:
+    add({"id": f"c-{eid}", "kind": "container", "spacing": "small", "style": card()})
+    cols = [{"id": f"k-{eid}-v", "formula": formula, "name": label, "format": fmt}]
+    kpi: dict = {
+        "id": f"k-{eid}", "kind": "kpi-chart",
+        "source": {"elementId": "tbl-fleet-scenario", "kind": "table"},
+        "columns": cols,
+        "value": {"columnId": f"k-{eid}-v", "color": value_color, "fontSize": 24},
+        "name": {"text": label, "color": MUTED, "fontSize": 11},
+        "layout": {"anchor": "start"},
+        "style": {"padding": "none", "backgroundColor": CARD},
+    }
+    if baseline is not None:
+        cols.append({"id": f"k-{eid}-c", "formula": baseline, "name": "Baseline", "format": fmt})
+        kpi["comparisonColumn"] = {"columnId": f"k-{eid}-c"}
+        kpi["comparison"] = {"display": "delta", "colorGood": good, "colorBad": bad, "fontSize": 12}
+    add(kpi)
+
+
+def registry_kpi(eid: str, label: str, formula: str, fmt: dict, *,
+                 value_color: str = TEXT) -> None:
+    add({"id": f"c-{eid}", "kind": "container", "spacing": "small", "style": card()})
+    add({
+        "id": f"k-{eid}", "kind": "kpi-chart",
+        "source": {"elementId": "it-registry", "kind": "table"},
+        "columns": [{"id": f"k-{eid}-v", "formula": formula, "name": label, "format": fmt}],
+        "value": {"columnId": f"k-{eid}-v", "color": value_color, "fontSize": 24},
+        "name": {"text": label, "color": MUTED, "fontSize": 11},
+        "layout": {"anchor": "start"},
+        "style": {"padding": "none", "backgroundColor": CARD},
+    })
+
+
 # ---- page chrome
 for i in (1, 2, 3):
     add({"id": f"c-hdr{i}", "kind": "container", "spacing": "small",
@@ -366,7 +466,6 @@ add({
     "filters": [
         {"source": {"kind": "table", "elementId": "tbl-region"}, "columnId": "r0"},
         {"source": {"kind": "table", "elementId": "tbl-realloc"}, "columnId": "x0"},
-        {"source": {"kind": "table", "elementId": "tbl-approvals"}, "columnId": "q1"},
     ],
     "source": {"kind": "source",
                "source": {"kind": "table", "elementId": "tbl-region"},
@@ -487,82 +586,312 @@ md("txt-foot",
    f'<span style="color: {MUTED}">Sigma Motors · Sustainable Mobility · Smarter Supply · Stronger Margins'
    f'&nbsp;&nbsp;·&nbsp;&nbsp;Data · Insight · Action</span>')
 
-# ---- page 2 reallocation
+# ---- page 2 — interactive reallocation model
 add({"id": "c-title2", "kind": "container", "spacing": "small"})
 md("txt-title2",
    f'# **<span style="color: {TEXT}">EV &amp; Hybrid Reallocation</span>**')
 md("txt-sub2",
-   f'<span style="color: {MUTED}">Shift units toward the two regions above the 5-week threshold. '
-   f'Net move: +508 units into Southwest and West.</span>')
-add({"id": "c-plan", "kind": "container", "spacing": "small", "style": card()})
+   f'<span style="color: {MUTED}">Model production mix shifts against plant capacity and battery-cell '
+   f'supply. Adjust the EV-share lever to see margin, rollout, and feasibility update live.</span>')
+
+simple_kpi("rev", "EV UNITS",
+           f'SumIf([{FS}/Units], [{FS}/Powertrain] = "EV")', NUM0,
+           baseline="5600", good=GREEN, bad=RED)
+simple_kpi("rhy", "HYBRID UNITS",
+           f'SumIf([{FS}/Units], [{FS}/Powertrain] = "Hybrid")', NUM0,
+           baseline="7300", good=RED, bad=GREEN)
+simple_kpi("rmg", "MARGIN IMPACT", "42000 * [c_ev_shift]",
+           {"kind": "number", "formatString": "$,.3s", "currencySymbol": "$"},
+           value_color=GREEN)
+simple_kpi("rtot", "TOTAL CAPACITY", f"Sum([{FS}/Units])", NUM0)
+simple_kpi("rcap", "CAPACITY USED", f"Sum([{FS}/Units]) / 12900", PCT0)
+simple_kpi("rcel", "CELL USED",
+           f"Sum([{FS}/Row Cell Kwh]) / 581628", PCT0, value_color=GOLD)
+
+add({"id": "c-qq2", "kind": "container", "spacing": "small", "style": card()})
+img("ico-qq2", icon_badge(ICO_SPARK, "#FFF0F3", RED, 40))
+md("txt-qq2-h", f'<span style="color: {TEXT}">**Quick Questions**</span>')
+md("txt-qq2-list",
+   f'<span style="color: {MUTED}">'
+   f'What happens if we shift 10 points toward EV?  \n'
+   f'Are we near the battery-cell supply limit?  \n'
+   f'How does margin change per point of EV share?</span>')
+add({"id": "chat2", "kind": "chat", "agentId": "ag-r2"})
+
+add({"id": "c-ai2", "kind": "container", "spacing": "small",
+     "style": {"backgroundColor": BLUE_SOFT, "borderRadius": "round",
+               "borderColor": "#C9DBFF", "borderWidth": 1}})
+img("ico-ai2", icon_badge(ICO_SPARK, "#FFFFFF", BLUE, 40))
+add({"id": "txt-ai2", "kind": "text", "body": AI_PG2_BODY,
+     "style": {"backgroundColor": "transparent", "padding": "none", "color": TEXT},
+     "verticalAlign": "middle"})
+
+add({"id": "c-workspace", "kind": "container", "spacing": "small", "style": card()})
+add({"id": "c-slider", "kind": "container", "spacing": "small"})
+md("txt-slider-label", f'<span style="color: {TEXT}">**Reallocate production mix**</span>')
+md("txt-slider-hint", f'<span style="color: {MUTED}">EV-share shift (−20 to +20)</span>')
 add({
-    "id": "tbl-plan-view", "kind": "table", "name": "Recommended shifts",
-    "source": {"elementId": "tbl-realloc", "kind": "table"},
-    "columns": [
-        {"id": "pv0", "formula": "[Reallocation Plan/Region]", "name": "Region"},
-        {"id": "pv1", "formula": "[Reallocation Plan/Current EV]", "name": "Current EV", "format": NUM0},
-        {"id": "pv2", "formula": "[Reallocation Plan/Recommended EV]", "name": "Recommended EV", "format": NUM0},
-        {"id": "pv3", "formula": "[Reallocation Plan/Units to Shift]", "name": "Units to Shift", "format": NUM0},
-        {"id": "pv4", "formula": "[Reallocation Plan/Rationale]", "name": "Rationale"},
-    ],
+    "id": "ctrl-ev-shift", "kind": "control", "controlId": "c_ev_shift",
+    "name": "EV-share shift", "controlType": "number", "mode": "=",
+    "value": 0, "includeNulls": "when-no-value-is-selected",
 })
-add({"id": "c-shift", "kind": "container", "spacing": "small", "style": card()})
 add({
-    "id": "bar-shift", "kind": "bar-chart",
-    "source": {"elementId": "tbl-realloc", "kind": "table"},
+    "id": "btn-reset", "kind": "button", "text": "Reset",
+    "appearance": "outline", "fillColor": CARD, "fontColor": TEXT,
+    "actions": [{"id": "a-reset", "trigger": "on-click", "effects": [{
+        "effect": "set-control-value", "control": "c_ev_shift",
+        "value": {"type": "constant", "value": {"type": "number", "value": 0}},
+    }]}],
+})
+add({
+    "id": "btn-scenario", "kind": "button", "text": "+ New scenario",
+    "appearance": "outline", "fillColor": CARD, "fontColor": BLUE,
+    "actions": [{"id": "a-scenario", "trigger": "on-click", "effects": [{
+        "effect": "open-overlay", "overlayId": "m-scenarios",
+    }]}],
+})
+add({
+    "id": "btn-submit", "kind": "button", "text": "Save & submit for approval",
+    "appearance": "filled", "fillColor": NAVY, "fontColor": "#FFFFFF",
+    "actions": [{"id": "a-submit", "trigger": "on-click", "effects": [
+        {"effect": "insert-rows", "table": "it-registry", "values": {
+            "reg-id": {"type": "formula",
+                       "formula": '"SCN-" & DateFormat(Now(), "%y%m%d-%H%M%S")'},
+            "reg-name": {"type": "formula",
+                         "formula": '"Reallocation scenario – " & DateFormat(Now(), "%b %d, %H:%M")'},
+            "reg-type": {"type": "formula",
+                         "formula": ('"EV-Share Shift " & If([c_ev_shift] >= 0, "+" & Text([c_ev_shift]), '
+                                     'Text([c_ev_shift]))')},
+            "reg-shift": {"type": "control", "control": "c_ev_shift"},
+            "reg-owner": {"type": "constant", "value": {"type": "text", "value": "C. Miller"}},
+            "reg-status": {"type": "constant", "value": {"type": "text", "value": "Pending"}},
+        }},
+        {"effect": "navigate", "target": {"type": "page", "page": "pg3"}},
+    ]}],
+})
+add({
+    "id": "ch-trend", "kind": "line-chart",
+    "source": {"elementId": "sql-ramp", "kind": "table"},
     "columns": [
-        {"id": "sx", "formula": "[Reallocation Plan/Region]", "name": "Region"},
-        {"id": "sy1", "formula": "Sum([Reallocation Plan/Current EV])", "name": "Current", "format": NUM0},
-        {"id": "sy2", "formula": "Sum([Reallocation Plan/Recommended EV])", "name": "Recommended", "format": NUM0},
+        {"id": "rt-label", "formula": f"[{RM}/Month]", "name": "Month"},
+        {"id": "rt-ev", "formula": "5600 + 56 * [c_ev_shift] * [Rollout Months/Ramp Fraction]",
+         "name": "EV units", "format": NUM0},
+        {"id": "rt-hy", "formula": "7300 - 56 * [c_ev_shift] * [Rollout Months/Ramp Fraction]",
+         "name": "Hybrid units", "format": NUM0},
     ],
-    "xAxis": {"columnId": "sx"},
-    "yAxis": {"columnIds": ["sy1", "sy2"]},
-    "name": title("Current vs recommended EV allocation"),
+    "xAxis": {"columnId": "rt-label"},
+    "yAxis": {"columnIds": ["rt-ev", "rt-hy"]},
+    "name": title("Production rollout"),
+    "description": {"text": "EV vs Hybrid units, ramping to the modeled shift over 6 months"},
     "legend": {"visibility": "shown"},
     "style": {"backgroundColor": CARD, "padding": "none"},
+    "lineAreaStyle": {"interpolation": "monotone"},
 })
 
-# ---- page 3 approvals
+# ---- page 3 — approvals with write-back registry
 add({"id": "c-title3", "kind": "container", "spacing": "small"})
 md("txt-title3", f'# **<span style="color: {TEXT}">Approvals</span>**')
 md("txt-sub3",
-   f'<span style="color: {MUTED}">Allocation change requests waiting on planning and finance.</span>')
-add({"id": "c-pend", "kind": "container", "spacing": "small", "style": card()})
+   f'<span style="color: {MUTED}">Review submitted reallocation scenarios. Select a row to approve '
+   f'or reject with comments.</span>')
+
+registry_kpi("pend", "PENDING",
+             f'CountIf([{SR}/Status] = "Pending")', NUM0, value_color=GOLD)
+registry_kpi("appr", "APPROVED",
+             f'CountIf([{SR}/Status] = "Approved")', NUM0, value_color=GREEN)
+registry_kpi("rej", "REJECTED",
+             f'CountIf([{SR}/Status] = "Rejected")', NUM0, value_color=RED)
+registry_kpi("rate", "APPROVAL RATE",
+             ('If(CountIf([Scenario Registry/Status] = "Approved") + '
+              'CountIf([Scenario Registry/Status] = "Rejected") = 0, 0, '
+              'CountIf([Scenario Registry/Status] = "Approved") / '
+              '(CountIf([Scenario Registry/Status] = "Approved") + '
+              'CountIf([Scenario Registry/Status] = "Rejected")))'),
+             PCT0)
+
+add({"id": "c-qq3", "kind": "container", "spacing": "small", "style": card()})
+img("ico-qq3", icon_badge(ICO_SPARK, "#FFF0F3", RED, 40))
+md("txt-qq3-h", f'<span style="color: {TEXT}">**Quick Questions**</span>')
+md("txt-qq3-list",
+   f'<span style="color: {MUTED}">'
+   f'How many scenarios are pending review?  \n'
+   f'What was the last approved shift?  \n'
+   f'Summarize open requests for finance.</span>')
+add({"id": "chat3", "kind": "chat", "agentId": "ag-r3"})
+
 add({
-    "id": "kc-pend", "kind": "kpi-chart",
-    "source": {"elementId": "tbl-approvals", "kind": "table"},
-    "columns": [{"id": "vc-pend",
-                 "formula": 'CountIf([Approval Queue/Status] = "Pending")',
-                 "name": "Pending", "format": NUM0}],
-    "value": {"columnId": "vc-pend", "color": TEXT, "fontSize": 28},
-    "name": {"text": "PENDING REQUESTS", "color": MUTED, "fontSize": 11},
-    "layout": {"anchor": "start"},
-    "style": {"padding": "none", "backgroundColor": CARD},
-})
-add({"id": "c-units", "kind": "container", "spacing": "small", "style": card()})
-add({
-    "id": "kc-units", "kind": "kpi-chart",
-    "source": {"elementId": "tbl-approvals", "kind": "table"},
-    "columns": [{"id": "vc-units",
-                 "formula": 'SumIf([Approval Queue/Units], [Approval Queue/Status] = "Pending")',
-                 "name": "Units pending", "format": NUM0}],
-    "value": {"columnId": "vc-units", "color": TEXT, "fontSize": 28},
-    "name": {"text": "UNITS PENDING APPROVAL", "color": MUTED, "fontSize": 11},
-    "layout": {"anchor": "start"},
-    "style": {"padding": "none", "backgroundColor": CARD},
-})
-add({"id": "c-queue", "kind": "container", "spacing": "small", "style": card()})
-add({
-    "id": "tbl-queue-view", "kind": "table", "name": "Approval queue",
-    "source": {"elementId": "tbl-approvals", "kind": "table"},
+    "id": "it-registry", "kind": "input-table", "name": SR,
+    "source": {"kind": "empty", "connectionId": CONN},
+    "inputMode": "view", "style": card(),
+    "tableComponents": {"summaryBar": "hidden"},
+    "sort": [{"columnId": "CREATED_AT", "direction": "descending", "nulls": "last"}],
     "columns": [
-        {"id": "qv0", "formula": "[Approval Queue/Request]", "name": "Request"},
-        {"id": "qv1", "formula": "[Approval Queue/Region]", "name": "Region"},
-        {"id": "qv2", "formula": "[Approval Queue/Units]", "name": "Units", "format": NUM0},
-        {"id": "qv3", "formula": "[Approval Queue/Status]", "name": "Status"},
-        {"id": "qv4", "formula": "[Approval Queue/Owner]", "name": "Owner"},
-        {"id": "qv5", "formula": "[Approval Queue/Submitted]", "name": "Submitted"},
+        {"id": "reg-id", "type": "text", "name": "Scenario ID"},
+        {"id": "reg-name", "type": "text", "name": "Scenario"},
+        {"id": "reg-type", "type": "text", "name": "Type"},
+        {"id": "reg-shift", "type": "number", "name": "Reg Shift"},
+        {"id": "reg-owner", "type": "text", "name": "Submitted by"},
+        {"id": "reg-status", "type": "text", "name": "Status",
+         "values": ["Pending", "Approved", "Rejected"]},
+        {"id": "reg-comments", "type": "text", "name": "Reviewer comments"},
+        {"id": "ID", "name": "Row ID", "hidden": True},
+        {"id": "CREATED_AT", "name": "Created At"},
+        {"id": "UPDATED_AT", "name": "Updated At", "hidden": True},
+        {"id": "CREATED_BY", "name": "Created By", "hidden": True},
     ],
+    "conditionalFormats": [
+        {"type": "single", "columnIds": ["reg-status"], "condition": "=",
+         "value": "Approved", "style": {"backgroundColor": "#E3F5EC", "color": GREEN, "bold": True}},
+        {"type": "single", "columnIds": ["reg-status"], "condition": "=",
+         "value": "Rejected", "style": {"backgroundColor": "#FCE8E6", "color": RED, "bold": True}},
+        {"type": "single", "columnIds": ["reg-status"], "condition": "=",
+         "value": "Pending", "style": {"backgroundColor": "#FDF3DA", "color": GOLD, "bold": True}},
+    ],
+    "actions": [{
+        "id": "act-select-reg", "trigger": "on-select", "effects": [
+            {"effect": "set-control-value", "control": "c_selected_scenario",
+             "value": {"type": "column", "column": "reg-id"}},
+            {"effect": "open-overlay", "overlayId": "m-review"},
+        ],
+    }],
+})
+
+# ---- hidden controls + scenario overlay elements
+add({
+    "id": "ctrl-selected-scenario", "kind": "control", "controlId": "c_selected_scenario",
+    "name": "Selected scenario", "controlType": "text", "mode": "equals",
+    "case": "insensitive", "includeNulls": "when-no-value-is-selected",
+    "showOperators": False,
+})
+img("ms-icon", icon_badge(ICO_SPARK, BLUE_SOFT, BLUE, 40))
+md("ms-title", f'<span style="color: {TEXT}">**New scenario**</span>')
+md("ms-sub",
+   f'<span style="color: {MUTED}">Snapshot the current lever value and save it for comparison '
+   f'before submitting.</span>')
+add({"id": "c-ms-form", "kind": "container", "spacing": "small", "style": card()})
+add({
+    "id": "ctrl-scenario-name", "kind": "control", "controlId": "c_scenario_name",
+    "name": "Scenario name", "controlType": "text", "mode": "contains",
+    "case": "insensitive", "includeNulls": "when-no-value-is-selected",
+    "showOperators": False,
+})
+add({
+    "id": "btn-create-scenario", "kind": "button", "text": "Save scenario",
+    "appearance": "filled", "fillColor": NAVY, "fontColor": "#FFFFFF",
+    "actions": [{"id": "a-create-scenario", "trigger": "on-click", "effects": [
+        {"effect": "insert-rows", "table": "it-scenarios", "values": {
+            "sc-id": {"type": "formula", "formula": '"SC-" & DateFormat(Now(), "%y%m%d-%H%M%S")'},
+            "sc-name": {"type": "formula",
+                        "formula": ('Coalesce(NullIf([c_scenario_name], ""), "Scenario") & '
+                                    '" (" & Text([c_ev_shift]) & ")"')},
+            "sc-shift": {"type": "control", "control": "c_ev_shift"},
+        }},
+        {"effect": "clear-control",
+         "scope": {"type": "control", "control": "c_scenario_name"}},
+    ]}],
+})
+add({"id": "c-ms-table", "kind": "container", "spacing": "small", "style": card()})
+md("ms-table-title", f'<span style="color: {TEXT}">**Saved scenarios**</span>')
+add({
+    "id": "it-scenarios", "kind": "input-table", "name": " ",
+    "source": {"kind": "empty", "connectionId": CONN},
+    "inputMode": "view", "style": {"padding": "none", "backgroundColor": CARD},
+    "tableComponents": {"summaryBar": "hidden"},
+    "sort": [{"columnId": "CREATED_AT", "direction": "ascending", "nulls": "last"}],
+    "columns": [
+        {"id": "sc-id", "type": "text", "name": "Scenario ID"},
+        {"id": "sc-name", "type": "text", "name": "Scenario"},
+        {"id": "sc-shift", "type": "number", "name": "EV shift"},
+        {"id": "ID", "name": "Row ID", "hidden": True},
+        {"id": "CREATED_AT", "name": "Created At", "hidden": True},
+        {"id": "UPDATED_AT", "name": "Updated At", "hidden": True},
+        {"id": "CREATED_BY", "name": "Created By", "hidden": True},
+        {"id": "sc-margin", "formula": "42000 * [EV shift]", "name": "Margin impact",
+         "format": {"kind": "number", "formatString": "$,.3s", "currencySymbol": "$"}},
+        {"id": "sc-cellused", "formula": "(522200 + 3416 * [EV shift]) / 581628",
+         "name": "Cell used", "format": PCT0},
+    ],
+    "conditionalFormats": [
+        {"type": "dataBars", "columnIds": ["sc-margin"],
+         "scheme": [BLUE_SOFT, GREEN]},
+        {"type": "single", "columnIds": ["sc-cellused"], "condition": ">",
+         "value": 1, "style": {"backgroundColor": "#FCE8E6", "color": RED, "bold": True}},
+    ],
+})
+add({
+    "id": "btn-close-compare", "kind": "button", "text": "Cancel",
+    "appearance": "outline", "fillColor": CARD, "fontColor": MUTED,
+    "actions": [{"id": "a-close-compare", "trigger": "on-click",
+                 "effects": [{"effect": "close-overlay"}]}],
+})
+
+# ---- review overlay elements
+add({
+    "id": "review-selected", "kind": "kpi-chart",
+    "source": {"elementId": "it-registry", "kind": "table"},
+    "columns": [{
+        "id": "rs-v",
+        "formula": f'MaxIf([{SR}/Scenario], [{SR}/Scenario ID] = [c_selected_scenario])',
+        "name": "Reviewing",
+    }],
+    "value": {"columnId": "rs-v", "color": TEXT, "fontSize": 16},
+    "name": {"text": "REVIEWING", "color": MUTED, "fontSize": 11},
+    "style": {"padding": "none", "backgroundColor": CARD},
+})
+add({"id": "c-kpi-review", "kind": "container", "spacing": "small", "style": card()})
+for rid, rlabel, rform in [
+    ("review-ev", "EV UNITS",
+     f'5600 + 56 * MaxIf([{SR}/Reg Shift], [{SR}/Scenario ID] = [c_selected_scenario])'),
+    ("review-hy", "HYBRID UNITS",
+     f'7300 - 56 * MaxIf([{SR}/Reg Shift], [{SR}/Scenario ID] = [c_selected_scenario])'),
+    ("review-margin", "MARGIN IMPACT",
+     f'42000 * MaxIf([{SR}/Reg Shift], [{SR}/Scenario ID] = [c_selected_scenario])'),
+    ("review-cell", "CELL USED",
+     f'(522200 + 3416 * MaxIf([{SR}/Reg Shift], [{SR}/Scenario ID] = [c_selected_scenario])) / 581628'),
+]:
+    fmt = NUM0 if "UNITS" in rlabel else (
+        {"kind": "number", "formatString": "$,.3s", "currencySymbol": "$"}
+        if "MARGIN" in rlabel else PCT0)
+    vcol = GREEN if "MARGIN" in rlabel else (GOLD if "CELL" in rlabel else TEXT)
+    add({
+        "id": rid, "kind": "kpi-chart",
+        "source": {"elementId": "it-registry", "kind": "table"},
+        "columns": [{"id": f"{rid}-v", "formula": rform, "name": rlabel, "format": fmt}],
+        "value": {"columnId": f"{rid}-v", "color": vcol, "fontSize": 15},
+        "name": {"text": rlabel, "color": MUTED, "fontSize": 10},
+        "style": {"padding": "none", "backgroundColor": CARD},
+    })
+add({
+    "id": "ctrl-review-decision", "kind": "control", "controlId": "c_review_decision",
+    "name": "Decision", "controlType": "segmented", "value": "Approved",
+    "source": {"kind": "manual", "valueType": "text", "values": ["Approved", "Rejected"]},
+})
+add({
+    "id": "ctrl-review-comments", "kind": "control", "controlId": "c_review_comments",
+    "name": "Reviewer comments", "controlType": "text", "mode": "contains",
+    "case": "insensitive", "includeNulls": "when-no-value-is-selected",
+    "showOperators": False,
+})
+add({
+    "id": "btn-save-decision", "kind": "button", "text": "Save",
+    "appearance": "filled", "fillColor": NAVY, "fontColor": "#FFFFFF",
+    "actions": [{"id": "a-save-decision", "trigger": "on-click", "effects": [
+        {"effect": "update-rows", "table": "it-registry",
+         "whichRows": {"type": "formula", "formula": "[Scenario ID] = [c_selected_scenario]"},
+         "values": {
+             "reg-status": {"type": "control", "control": "c_review_decision"},
+             "reg-comments": {"type": "control", "control": "c_review_comments"},
+         }},
+        {"effect": "clear-control",
+         "scope": {"type": "control", "control": "c_review_comments"}},
+        {"effect": "close-overlay"},
+    ]}],
+})
+add({
+    "id": "btn-cancel-review", "kind": "button", "text": "Cancel",
+    "appearance": "outline", "fillColor": CARD, "fontColor": MUTED,
+    "actions": [{"id": "a-cancel-review", "trigger": "on-click",
+                 "effects": [{"effect": "close-overlay"}]}],
 })
 
 agents.append({
@@ -591,6 +920,46 @@ agents.append({
         {"kind": "table", "elementId": "tbl-region"},
         {"kind": "table", "elementId": "tbl-realloc"},
     ],
+    "tools": [],
+})
+agents.append({
+    "id": "ag-r2",
+    "name": "Reallocation Assistant",
+    "description": "Models EV/Hybrid production mix shifts and battery-cell usage.",
+    "instructions": (
+        "Answer questions about the EV/Hybrid production mix, margin impact, and battery-cell "
+        "supply usage using the Fleet Scenario and Rollout Months data sources. Be concise — 2-3 "
+        "sentences. Whenever the user mentions a specific shift amount, in either direction — "
+        "'shift 15 points toward EV', 'move 10 points toward Hybrid', 'try a 5-point shift' — "
+        "ALWAYS call the Set EV-share shift tool immediately with that value (negative for a "
+        "Hybrid-direction shift) before replying. Apply it, then summarize EV units, Hybrid units, "
+        "margin impact, and battery-cell usage."
+    ),
+    "dataSources": [
+        {"kind": "table", "elementId": "tbl-fleet-scenario"},
+        {"kind": "table", "elementId": "sql-ramp"},
+    ],
+    "tools": [{
+        "toolId": "t-set-shift", "kind": "action", "name": "Set EV-share shift",
+        "description": (
+            "Move the EV-share shift lever to a specific point value (-20 to +20)."
+        ),
+        "steps": [{
+            "kind": "effect", "effect": "set-control-value", "control": "c_ev_shift",
+            "value": {"type": "agent-input",
+                      "inputName": "The EV-share shift point value, as a number from -20 to 20"},
+        }],
+    }],
+})
+agents.append({
+    "id": "ag-r3",
+    "name": "Approvals Assistant",
+    "description": "Answers questions about submitted reallocation scenarios.",
+    "instructions": (
+        "Answer questions about scenario submissions, their status (Pending/Approved/Rejected), "
+        "and reviewer comments using the Scenario Registry data source. Be concise — 2-3 sentences."
+    ),
+    "dataSources": [{"kind": "table", "elementId": "it-registry"}],
     "tools": [],
 })
 
@@ -700,13 +1069,54 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
     <Element elementId="txt-title2" gridColumn="1 / 25" gridRow="1 / 3"/>
     <Element elementId="txt-sub2" gridColumn="1 / 25" gridRow="3 / 5"/>
   </Container>
-  <Container elementId="c-plan" type="grid" gridColumn="1 / 25" gridRow="9 / 22"
+  <Container elementId="c-rev" type="grid" gridColumn="1 / 5" gridRow="9 / 20"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="tbl-plan-view" gridColumn="1 / 13" gridRow="1 / 13"/>
+    <Element elementId="k-rev" gridColumn="1 / 13" gridRow="1 / 10"/>
   </Container>
-  <Container elementId="c-shift" type="grid" gridColumn="1 / 25" gridRow="22 / 40"
+  <Container elementId="c-rhy" type="grid" gridColumn="5 / 9" gridRow="9 / 20"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="bar-shift" gridColumn="1 / 13" gridRow="1 / 16"/>
+    <Element elementId="k-rhy" gridColumn="1 / 13" gridRow="1 / 10"/>
+  </Container>
+  <Container elementId="c-rmg" type="grid" gridColumn="9 / 13" gridRow="9 / 20"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="k-rmg" gridColumn="1 / 13" gridRow="1 / 10"/>
+  </Container>
+  <Container elementId="c-rtot" type="grid" gridColumn="13 / 17" gridRow="9 / 20"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="k-rtot" gridColumn="1 / 13" gridRow="1 / 10"/>
+  </Container>
+  <Container elementId="c-rcap" type="grid" gridColumn="17 / 21" gridRow="9 / 20"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="k-rcap" gridColumn="1 / 13" gridRow="1 / 10"/>
+  </Container>
+  <Container elementId="c-rcel" type="grid" gridColumn="21 / 25" gridRow="9 / 20"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="k-rcel" gridColumn="1 / 13" gridRow="1 / 10"/>
+  </Container>
+  <Container elementId="c-qq2" type="grid" gridColumn="1 / 8" gridRow="20 / 44"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ico-qq2" gridColumn="1 / 3" gridRow="1 / 3"/>
+    <Element elementId="txt-qq2-h" gridColumn="1 / 13" gridRow="1 / 3"/>
+    <Element elementId="txt-qq2-list" gridColumn="1 / 13" gridRow="3 / 8"/>
+    <Element elementId="chat2" gridColumn="1 / 13" gridRow="8 / 22"/>
+  </Container>
+  <Container elementId="c-ai2" type="grid" gridColumn="8 / 25" gridRow="20 / 28"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ico-ai2" gridColumn="1 / 3" gridRow="1 / 4"/>
+    <Element elementId="txt-ai2" gridColumn="3 / 25" gridRow="1 / 6"/>
+  </Container>
+  <Container elementId="c-workspace" type="grid" gridColumn="8 / 25" gridRow="28 / 44"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Container elementId="c-slider" type="grid" gridColumn="1 / 8" gridRow="1 / 14"
+               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <Element elementId="txt-slider-label" gridColumn="1 / 13" gridRow="1 / 2"/>
+      <Element elementId="txt-slider-hint" gridColumn="1 / 13" gridRow="2 / 3"/>
+      <Element elementId="ctrl-ev-shift" gridColumn="1 / 13" gridRow="3 / 5"/>
+      <Element elementId="btn-reset" gridColumn="1 / 13" gridRow="5 / 7"/>
+      <Element elementId="btn-scenario" gridColumn="1 / 13" gridRow="7 / 9"/>
+      <Element elementId="btn-submit" gridColumn="1 / 13" gridRow="9 / 11"/>
+    </Container>
+    <Element elementId="ch-trend" gridColumn="9 / 25" gridRow="1 / 14"/>
   </Container>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg3">
@@ -722,27 +1132,72 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
   </Container>
   <Container elementId="c-pend" type="grid" gridColumn="1 / 7" gridRow="9 / 17"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="kc-pend" gridColumn="1 / 13" gridRow="1 / 8"/>
+    <Element elementId="k-pend" gridColumn="1 / 13" gridRow="1 / 8"/>
   </Container>
-  <Container elementId="c-units" type="grid" gridColumn="7 / 13" gridRow="9 / 17"
+  <Container elementId="c-appr" type="grid" gridColumn="7 / 13" gridRow="9 / 17"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="kc-units" gridColumn="1 / 13" gridRow="1 / 8"/>
+    <Element elementId="k-appr" gridColumn="1 / 13" gridRow="1 / 8"/>
   </Container>
-  <Container elementId="c-queue" type="grid" gridColumn="1 / 25" gridRow="17 / 36"
+  <Container elementId="c-rej" type="grid" gridColumn="13 / 19" gridRow="9 / 17"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="tbl-queue-view" gridColumn="1 / 13" gridRow="1 / 16"/>
+    <Element elementId="k-rej" gridColumn="1 / 13" gridRow="1 / 8"/>
   </Container>
+  <Container elementId="c-rate" type="grid" gridColumn="19 / 25" gridRow="9 / 17"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="k-rate" gridColumn="1 / 13" gridRow="1 / 8"/>
+  </Container>
+  <Container elementId="c-qq3" type="grid" gridColumn="1 / 8" gridRow="17 / 40"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ico-qq3" gridColumn="1 / 3" gridRow="1 / 3"/>
+    <Element elementId="txt-qq3-h" gridColumn="1 / 13" gridRow="1 / 3"/>
+    <Element elementId="txt-qq3-list" gridColumn="1 / 13" gridRow="3 / 8"/>
+    <Element elementId="chat3" gridColumn="1 / 13" gridRow="8 / 22"/>
+  </Container>
+  <Element elementId="it-registry" gridColumn="8 / 25" gridRow="17 / 40"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pgData">
   <Element elementId="tbl-month" gridColumn="1 / 13" gridRow="1 / 10"/>
   <Element elementId="tbl-region" gridColumn="13 / 25" gridRow="1 / 10"/>
   <Element elementId="tbl-realloc" gridColumn="1 / 13" gridRow="10 / 18"/>
-  <Element elementId="tbl-approvals" gridColumn="13 / 25" gridRow="10 / 18"/>
-  <Element elementId="tbl-sw" gridColumn="1 / 6" gridRow="18 / 24"/>
-  <Element elementId="tbl-we" gridColumn="6 / 11" gridRow="18 / 24"/>
-  <Element elementId="tbl-mw" gridColumn="11 / 16" gridRow="18 / 24"/>
-  <Element elementId="tbl-ne" gridColumn="16 / 21" gridRow="18 / 24"/>
-  <Element elementId="tbl-so" gridColumn="21 / 25" gridRow="18 / 24"/>
+  <Element elementId="sql-fleet" gridColumn="13 / 25" gridRow="10 / 18"/>
+  <Element elementId="tbl-fleet-scenario" gridColumn="1 / 13" gridRow="18 / 26"/>
+  <Element elementId="sql-ramp" gridColumn="13 / 25" gridRow="18 / 26"/>
+  <Element elementId="ctrl-selected-scenario" gridColumn="1 / 7" gridRow="26 / 28"/>
+  <Element elementId="tbl-sw" gridColumn="7 / 12" gridRow="26 / 32"/>
+  <Element elementId="tbl-we" gridColumn="12 / 17" gridRow="26 / 32"/>
+  <Element elementId="tbl-mw" gridColumn="17 / 22" gridRow="26 / 32"/>
+  <Element elementId="tbl-ne" gridColumn="1 / 6" gridRow="32 / 38"/>
+  <Element elementId="tbl-so" gridColumn="6 / 11" gridRow="32 / 38"/>
+</Page>
+<Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="m-scenarios">
+  <Element elementId="ms-icon" gridColumn="1 / 2" gridRow="1 / 2"/>
+  <Element elementId="ms-title" gridColumn="2 / 13" gridRow="1 / 2"/>
+  <Element elementId="ms-sub" gridColumn="1 / 13" gridRow="2 / 3"/>
+  <Container elementId="c-ms-form" type="grid" gridColumn="1 / 13" gridRow="4 / 7"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ctrl-scenario-name" gridColumn="1 / 8" gridRow="1 / 3"/>
+    <Element elementId="btn-create-scenario" gridColumn="8 / 13" gridRow="1 / 3"/>
+  </Container>
+  <Container elementId="c-ms-table" type="grid" gridColumn="1 / 13" gridRow="8 / 19"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ms-table-title" gridColumn="1 / 13" gridRow="1 / 2"/>
+    <Element elementId="it-scenarios" gridColumn="1 / 13" gridRow="2 / 11"/>
+  </Container>
+  <Element elementId="btn-close-compare" gridColumn="1 / 13" gridRow="20 / 22"/>
+</Page>
+<Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="m-review">
+  <Element elementId="review-selected" gridColumn="1 / 13" gridRow="1 / 3"/>
+  <Container elementId="c-kpi-review" type="grid" gridColumn="1 / 13" gridRow="3 / 6"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="review-ev" gridColumn="1 / 4" gridRow="1 / 4"/>
+    <Element elementId="review-hy" gridColumn="4 / 7" gridRow="1 / 4"/>
+    <Element elementId="review-margin" gridColumn="7 / 10" gridRow="1 / 4"/>
+    <Element elementId="review-cell" gridColumn="10 / 13" gridRow="1 / 4"/>
+  </Container>
+  <Element elementId="ctrl-review-decision" gridColumn="1 / 13" gridRow="6 / 8"/>
+  <Element elementId="ctrl-review-comments" gridColumn="1 / 13" gridRow="8 / 10"/>
+  <Element elementId="btn-save-decision" gridColumn="1 / 7" gridRow="10 / 12"/>
+  <Element elementId="btn-cancel-review" gridColumn="7 / 13" gridRow="10 / 12"/>
 </Page>
 '''
 
@@ -769,7 +1224,26 @@ DOCUMENT = {
         {"id": "pg3", "name": "Approvals", "backgroundColor": CANVAS},
         {"id": "pgData", "name": "Data", "visibility": "hidden"},
     ],
-    "overlays": [],
+    "overlays": [
+        {
+            "id": "m-scenarios", "type": "modal", "name": "Scenario studio",
+            "modal": {
+                "width": "large",
+                "header": {"title": " ", "showCloseIcon": "shown"},
+                "footer": {"primaryCta": {"visible": "hidden"},
+                           "secondaryCta": {"visible": "hidden"}},
+            },
+        },
+        {
+            "id": "m-review", "type": "modal", "name": "Review scenario",
+            "modal": {
+                "width": "small",
+                "header": {"title": " ", "showCloseIcon": "shown"},
+                "footer": {"primaryCta": {"visible": "hidden"},
+                           "secondaryCta": {"visible": "hidden"}},
+            },
+        },
+    ],
     "agents": agents,
     "settings": SETTINGS,
     "layout": LAYOUT,
