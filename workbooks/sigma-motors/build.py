@@ -228,7 +228,7 @@ def sql_table(eid: str, name: str, statement: str, colnames: list[str], prefix: 
 
 def card() -> dict:
     return {"backgroundColor": CARD, "borderRadius": "round",
-            "borderColor": BORDER, "borderWidth": 1, "padding": "medium"}
+            "borderColor": BORDER, "borderWidth": 1}
 
 
 def title(text: str, size=13) -> dict:
@@ -271,6 +271,20 @@ sql_table("tbl-realloc", "Reallocation Plan", REALLOC_SQL,
           ["Region", "Current EV", "Recommended EV", "Units to Shift", "Rationale"], "x")
 sql_table("tbl-approvals", "Approval Queue", APPROVAL_SQL,
           ["Request", "Region", "Units", "Status", "Owner", "Submitted"], "q")
+
+SHARES = [
+    ("sw", "Southwest", 1412, 74, "95%", "↑ 5.1 wks"),
+    ("we", "West", 1120, 110, "91%", "↑ 6.2 wks"),
+    ("mw", "Midwest", 780, 148, "84%", "↑ 3.8 wks"),
+    ("ne", "Northeast", 468, 140, "77%", "↓ 2.9 wks"),
+    ("so", "South", 340, 138, "71%", "↓ 2.4 wks"),
+]
+for key, region, ev, hy, _pct, _wks in SHARES:
+    sql_table(
+        f"tbl-{key}", f"Share {region}",
+        f"SELECT 'EV' AS \"Category\", {ev} AS \"Units\" UNION ALL SELECT 'Hybrid', {hy}",
+        ["Category", "Units"], key,
+    )
 
 MP = "Monthly Pulse"
 RP = "Regional Pulse"
@@ -384,7 +398,7 @@ kpi_card("rk", "REGIONS AT RISK", cur_max("Regions at Risk"),
 # ---- AI insight
 add({"id": "c-ai", "kind": "container", "spacing": "small",
      "style": {"backgroundColor": BLUE_SOFT, "borderRadius": "round",
-               "borderColor": "#C9DBFF", "borderWidth": 1, "padding": "medium"}})
+               "borderColor": "#C9DBFF", "borderWidth": 1}})
 img("ico-ai", icon_badge(ICO_SPARK, "#FFFFFF", BLUE, 40))
 md("txt-ai",
    f'<span style="color: {BLUE}; font-size: 11px">**AI INSIGHT**</span>\n\n'
@@ -409,26 +423,33 @@ md("txt-qq-list",
    f'What should we reallocate away from the South?</span>')
 add({"id": "chat1", "kind": "chat", "agentId": "ag-signal"})
 
-# ---- regional pulse (bespoke split-ring plugin — matches the mockup donuts)
+# ---- regional pulse — five native donuts (plugin is optional; this org
+# cannot register plugins). Same composition as the mockup row.
 add({"id": "c-pulse", "kind": "container", "spacing": "small", "style": card()})
 md("txt-pulse",
    f'<span style="color: {TEXT}">**Regional Demand Pulse**</span>  \n'
    f'<span style="color: {MUTED}">EV share of regional backlog · weeks of wait</span>')
-PLUGIN_ID = os.environ.get("SIGMA_PLUGIN_ID")  # filled at create if unset
-add({
-    "id": "plg-pulse", "kind": "plugin",
-    "pluginId": PLUGIN_ID or "00000000-0000-0000-0000-000000000000",
-    "displayName": "Regional Demand Pulse",
-    "config": {
-        "source": {"kind": "element", "elementId": "tbl-region"},
-        "region": "r0",
-        "ev_backlog": "r2",
-        "hybrid_backlog": "r3",
-        "growth_pct": "r8",
-        "backlog_weeks": "r5",
-    },
-    "style": {"backgroundColor": CARD},
-})
+for key, region, ev, hy, pct, wks in SHARES:
+    add({"id": f"c-dn-{key}", "kind": "container", "spacing": "small",
+         "style": {"backgroundColor": CARD, "padding": "none"}})
+    add({
+        "id": f"dn-{key}", "kind": "donut-chart",
+        "source": {"elementId": f"tbl-{key}", "kind": "table"},
+        "columns": [
+            {"id": f"dnc-{key}", "formula": f"[Share {region}/Category]", "name": "Category"},
+            {"id": f"dnv-{key}", "formula": f"Sum([Share {region}/Units])", "name": "Units",
+             "format": NUM0},
+        ],
+        "value": {"id": f"dnv-{key}"},
+        "color": {"id": f"dnc-{key}"},
+        "name": {"visibility": "hidden"},
+        "legend": {"visibility": "hidden"},
+        "style": {"backgroundColor": CARD, "padding": "none"},
+    })
+    md(f"cap-{key}",
+       f'<span style="color: {TEXT}">**{region}**</span>  \n'
+       f'<span style="color: {BLUE}">{pct} EV</span>  \n'
+       f'<span style="color: {MUTED}">{wks}</span>')
 
 # ---- ranked bar + trend
 add({"id": "c-bar", "kind": "container", "spacing": "small", "style": card()})
@@ -440,7 +461,7 @@ add({
         {"id": "by", "formula": f"Sum([{RP}/EV Backlog])", "name": "EV Backlog", "format": NUM0},
         {"id": "bo", "formula": f"Min([{RP}/Region Order])", "name": "Order"},
     ],
-    "xAxis": {"columnId": "bx"},
+    "xAxis": {"columnId": "bx", "sort": {"by": "by", "direction": "descending"}},
     "yAxis": {"columnIds": ["by"]},
     "name": title("EV Backlog by Region, Ranked"),
     "legend": {"visibility": "hidden"},
@@ -511,7 +532,7 @@ add({
     "id": "kc-pend", "kind": "kpi-chart",
     "source": {"elementId": "tbl-approvals", "kind": "table"},
     "columns": [{"id": "vc-pend",
-                 "formula": 'CountIf([Approval Queue/Request], [Approval Queue/Status] = "Pending")',
+                 "formula": 'CountIf([Approval Queue/Status] = "Pending")',
                  "name": "Pending", "format": NUM0}],
     "value": {"columnId": "vc-pend", "color": TEXT, "fontSize": 28},
     "name": {"text": "PENDING REQUESTS", "color": MUTED, "fontSize": 11},
@@ -632,7 +653,31 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
   <Container elementId="c-pulse" type="grid" gridColumn="8 / 25" gridRow="26 / 40"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-pulse" gridColumn="1 / 25" gridRow="1 / 3"/>
-    <Element elementId="plg-pulse" gridColumn="1 / 25" gridRow="3 / 16"/>
+    <Container elementId="c-dn-sw" type="grid" gridColumn="1 / 6" gridRow="3 / 16"
+               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <Element elementId="dn-sw" gridColumn="1 / 13" gridRow="1 / 9"/>
+      <Element elementId="cap-sw" gridColumn="1 / 13" gridRow="9 / 13"/>
+    </Container>
+    <Container elementId="c-dn-we" type="grid" gridColumn="6 / 11" gridRow="3 / 16"
+               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <Element elementId="dn-we" gridColumn="1 / 13" gridRow="1 / 9"/>
+      <Element elementId="cap-we" gridColumn="1 / 13" gridRow="9 / 13"/>
+    </Container>
+    <Container elementId="c-dn-mw" type="grid" gridColumn="11 / 16" gridRow="3 / 16"
+               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <Element elementId="dn-mw" gridColumn="1 / 13" gridRow="1 / 9"/>
+      <Element elementId="cap-mw" gridColumn="1 / 13" gridRow="9 / 13"/>
+    </Container>
+    <Container elementId="c-dn-ne" type="grid" gridColumn="16 / 21" gridRow="3 / 16"
+               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <Element elementId="dn-ne" gridColumn="1 / 13" gridRow="1 / 9"/>
+      <Element elementId="cap-ne" gridColumn="1 / 13" gridRow="9 / 13"/>
+    </Container>
+    <Container elementId="c-dn-so" type="grid" gridColumn="21 / 25" gridRow="3 / 16"
+               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <Element elementId="dn-so" gridColumn="1 / 13" gridRow="1 / 9"/>
+      <Element elementId="cap-so" gridColumn="1 / 13" gridRow="9 / 13"/>
+    </Container>
   </Container>
   <Container elementId="c-bar" type="grid" gridColumn="8 / 17" gridRow="40 / 52"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
@@ -693,6 +738,11 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
   <Element elementId="tbl-region" gridColumn="13 / 25" gridRow="1 / 10"/>
   <Element elementId="tbl-realloc" gridColumn="1 / 13" gridRow="10 / 18"/>
   <Element elementId="tbl-approvals" gridColumn="13 / 25" gridRow="10 / 18"/>
+  <Element elementId="tbl-sw" gridColumn="1 / 6" gridRow="18 / 24"/>
+  <Element elementId="tbl-we" gridColumn="6 / 11" gridRow="18 / 24"/>
+  <Element elementId="tbl-mw" gridColumn="11 / 16" gridRow="18 / 24"/>
+  <Element elementId="tbl-ne" gridColumn="16 / 21" gridRow="18 / 24"/>
+  <Element elementId="tbl-so" gridColumn="21 / 25" gridRow="18 / 24"/>
 </Page>
 '''
 
@@ -749,44 +799,6 @@ def _lint() -> None:
         )
 
 
-PLUGIN_JSDELIVR = (
-    "https://cdn.jsdelivr.net/gh/cmiller-coder/millersigma@"
-    "{ref}/plugins/sigma-motors-demand-pulse/index.html"
-)
-
-
-def ensure_plugin() -> str:
-    """Reuse SIGMA_PLUGIN_ID, else register the demand-pulse plugin from jsDelivr."""
-    existing = os.environ.get("SIGMA_PLUGIN_ID")
-    if existing:
-        return existing
-    listed = call("GET", "/v2/plugins") or {}
-    entries = listed.get("entries") or listed.get("plugins") or []
-    if isinstance(entries, list):
-        for e in entries:
-            if (e.get("name") or "") == "Sigma Motors Demand Pulse":
-                pid = e.get("pluginId") or e.get("id")
-                if pid:
-                    return pid
-    ref = os.environ.get("SIGMA_PLUGIN_REF", "main")
-    url = PLUGIN_JSDELIVR.format(ref=ref)
-    created = call("POST", "/v2/plugins", {
-        "name": "Sigma Motors Demand Pulse",
-        "url": url,
-        "description": "Split-ring regional EV/hybrid backlog pulse for Sigma Motors.",
-        "type": "element",
-    })
-    pid = created.get("pluginId") or created.get("id")
-    print("registered plugin", pid, "from", url)
-    return pid
-
-
-def bind_plugin(plugin_id: str) -> None:
-    for el in elements:
-        if el.get("id") == "plg-pulse":
-            el["pluginId"] = plugin_id
-
-
 def _write_iteration(tag: str, payload: dict) -> None:
     out = HERE / "iterations"
     out.mkdir(parents=True, exist_ok=True)
@@ -797,8 +809,6 @@ def _write_iteration(tag: str, payload: dict) -> None:
 def main() -> None:
     _lint()
     action = sys.argv[1] if len(sys.argv) > 1 else "verify"
-    if action in ("verify", "create", "update"):
-        bind_plugin(ensure_plugin())
     if action == "verify":
         try:
             call("POST", "/v2/workbooks/spec/verify", SPEC)
