@@ -714,8 +714,7 @@ add({
         "ev_share": "r4", "backlog_weeks": "r5", "growth_pct": "r8",
         "at_risk": "r7",
     },
-    "style": {"backgroundColor": CARD, "padding": "none",
-              "borderColor": BORDER, "borderWidth": 1, "borderRadius": "round"},
+    "style": {"backgroundColor": CARD},
 })
 
 # ---- mix bar + grain-driven trend + regional scorecard
@@ -738,8 +737,7 @@ add({
     "dataLabel": {"labels": "shown", "anchor": "end", "fontSize": 10},
     "name": title("EV vs Hybrid backlog by region"),
     "legend": {"visibility": "shown"},
-    "style": {"backgroundColor": CARD, "padding": "none",
-              "borderColor": BORDER, "borderWidth": 1, "borderRadius": "round"},
+    "style": {"backgroundColor": CARD, "padding": "none"},
 })
 add({"id": "c-trend", "kind": "container", "spacing": "small", "style": card()})
 add({
@@ -756,8 +754,7 @@ add({
     "color": {"by": "category", "column": "tc", "scheme": [BLUE]},
     "name": title("Selected value by date grain"),
     "legend": {"visibility": "shown"},
-    "style": {"backgroundColor": CARD, "padding": "none",
-              "borderColor": BORDER, "borderWidth": 1, "borderRadius": "round"},
+    "style": {"backgroundColor": CARD, "padding": "none"},
     "lineAreaStyle": {"interpolation": "monotone"},
 })
 add({"id": "c-score", "kind": "container", "spacing": "small", "style": card()})
@@ -776,8 +773,7 @@ add({
         {"id": "sc6", "formula": f"[{RP}/EV Growth Pct] / 100", "name": "30d growth",
          "format": {"kind": "number", "formatString": "+,.0%"}},
     ],
-    "style": {"padding": "none", "backgroundColor": CARD,
-              "borderColor": BORDER, "borderWidth": 1, "borderRadius": "round"},
+    "style": {"padding": "none", "backgroundColor": CARD},
     "tableComponents": {"summaryBar": "hidden"},
     "conditionalFormats": [
         {"type": "single", "columnIds": ["sc4"], "condition": ">", "value": 5,
