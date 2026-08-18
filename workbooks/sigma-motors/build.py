@@ -528,62 +528,39 @@ def kpi_card(key: str, label: str, current: str, prior: str, fmt: dict,
 
 def model_kpi(key: str, label: str, formula: str, fmt: dict, icon_url: str, *,
               baseline: str | None = None, good: str = GREEN, bad: str = RED,
-              value_color: str = TEXT, spark_y: str | None = None,
-              spark_color: str = BLUE) -> None:
-    add({"id": f"c-{key}", "kind": "container", "spacing": "small", "style": card()})
+              value_color: str = TEXT) -> None:
+    add({"id": f"c-{key}", "kind": "container", "spacing": "small", "style": card(strong=True)})
     img(f"ico-{key}", icon_url)
     cols = [{"id": f"k-{key}-v", "formula": formula, "name": label, "format": fmt}]
     kpi: dict = {
         "id": f"k-{key}", "kind": "kpi-chart",
         "source": {"elementId": "tbl-fleet-scenario", "kind": "table"},
         "columns": cols,
-        "value": {"columnId": f"k-{key}-v", "color": value_color, "fontSize": 28},
+        "value": {"columnId": f"k-{key}-v", "color": value_color, "fontSize": 32},
         "name": {"text": label, "color": MUTED, "fontSize": 11},
         "layout": {"anchor": "start"},
+        "trend": {"visibility": "hidden"},
         "style": {"padding": "none", "backgroundColor": CARD},
     }
     if baseline is not None:
-        cols.append({"id": f"k-{key}-c", "formula": baseline, "name": "Baseline", "format": fmt})
+        cols.append({"id": f"k-{key}-c", "formula": baseline, "name": "vs baseline", "format": fmt})
         kpi["comparisonColumn"] = {"columnId": f"k-{key}-c"}
-        kpi["comparison"] = {"display": "delta", "colorGood": good, "colorBad": bad, "fontSize": 12}
+        kpi["comparison"] = {"display": "delta", "colorGood": good, "colorBad": bad, "fontSize": 13}
     add(kpi)
-    if spark_y:
-        add({
-            "id": f"sp-{key}", "kind": "line-chart",
-            "source": {"elementId": "sql-ramp", "kind": "table"},
-            "columns": [
-                {"id": f"spx-{key}", "formula": f"[{RM}/Month]", "name": "Month"},
-                {"id": f"spy-{key}", "formula": spark_y, "name": "Trend"},
-                {"id": f"spc-{key}", "formula": '"Trend"', "name": "Series"},
-            ],
-            "xAxis": {"columnId": f"spx-{key}",
-                      "format": {"labels": "hidden", "marks": "none"}},
-            "yAxis": {"columnIds": [f"spy-{key}"],
-                      "format": {"labels": "hidden", "marks": "none",
-                                 "scale": {"type": "linear", "zero": False, "hideZeroLine": True}}},
-            "color": {"by": "category", "column": f"spc-{key}", "scheme": [spark_color]},
-            "name": {"visibility": "hidden"},
-            "legend": {"visibility": "hidden"},
-            "style": {"padding": "none", "backgroundColor": CARD},
-            "lineAreaStyle": {"interpolation": "monotone"},
-        })
-    else:
-        add({"id": f"sp-{key}", "kind": "text", "body": " ",
-             "style": {"backgroundColor": CARD, "padding": "none"},
-             "verticalAlign": "middle"})
 
 
 def status_kpi(key: str, label: str, formula: str, fmt: dict, icon_url: str, *,
                value_color: str = TEXT) -> None:
-    add({"id": f"c-{key}", "kind": "container", "spacing": "small", "style": card()})
+    add({"id": f"c-{key}", "kind": "container", "spacing": "small", "style": card(strong=True)})
     img(f"ico-{key}", icon_url)
     add({
         "id": f"k-{key}", "kind": "kpi-chart",
         "source": {"elementId": "it-registry", "kind": "table"},
         "columns": [{"id": f"k-{key}-v", "formula": formula, "name": label, "format": fmt}],
-        "value": {"columnId": f"k-{key}-v", "color": value_color, "fontSize": 28},
+        "value": {"columnId": f"k-{key}-v", "color": value_color, "fontSize": 32},
         "name": {"text": label, "color": MUTED, "fontSize": 11},
         "layout": {"anchor": "start"},
+        "trend": {"visibility": "hidden"},
         "style": {"padding": "none", "backgroundColor": CARD},
     })
 
@@ -806,11 +783,11 @@ SPARK_HY = "7300 - 56 * [c_ev_shift] * [Rollout Months/Ramp Fraction]"
 model_kpi("rev", "EV UNITS",
           f'SumIf([{FS}/Units], [{FS}/Powertrain] = "EV")', NUM0,
           icon_badge(ICO_ZAP, BLUE_SOFT, EV_COLOR), baseline="5600",
-          good=GREEN, bad=RED, spark_y=SPARK_EV, spark_color=EV_COLOR)
+          good=GREEN, bad=RED)
 model_kpi("rhy", "HYBRID UNITS",
           f'SumIf([{FS}/Units], [{FS}/Powertrain] = "Hybrid")', NUM0,
           icon_badge(ICO_LEAF, "#EEF2F6", HY_COLOR), baseline="7300",
-          good=RED, bad=GREEN, spark_y=SPARK_HY, spark_color=HY_COLOR)
+          good=RED, bad=GREEN)
 model_kpi("rmg", "MARGIN IMPACT", "42000 * [c_ev_shift]",
           {"kind": "number", "formatString": "$,.3s", "currencySymbol": "$"},
           icon_badge(ICO_DOLLAR, "#E8F8F0", GREEN), value_color=GREEN)
@@ -886,8 +863,7 @@ add({
         {"effect": "navigate", "target": {"type": "page", "page": "pg3"}},
     ]}],
 })
-add({"id": "c-chart-rollout", "kind": "container", "spacing": "small",
-     "style": {"backgroundColor": CARD, "padding": "none"}})
+add({"id": "c-chart-rollout", "kind": "container", "spacing": "small", "style": card()})
 add({
     "id": "ch-trend", "kind": "line-chart",
     "source": {"elementId": "sql-ramp", "kind": "table"},
@@ -1318,43 +1294,37 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
     <Element elementId="txt-title2" gridColumn="1 / 25" gridRow="2 / 4"/>
     <Element elementId="txt-sub2" gridColumn="1 / 25" gridRow="4 / 6"/>
   </Container>
-  <Container elementId="c-rev" type="grid" gridColumn="1 / 5" gridRow="10 / 22"
+  <Container elementId="c-rev" type="grid" gridColumn="1 / 5" gridRow="10 / 18"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-rev" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="k-rev" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-rev" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rhy" type="grid" gridColumn="5 / 9" gridRow="10 / 22"
+  <Container elementId="c-rhy" type="grid" gridColumn="5 / 9" gridRow="10 / 18"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-rhy" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="k-rhy" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-rhy" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rmg" type="grid" gridColumn="9 / 13" gridRow="10 / 22"
+  <Container elementId="c-rmg" type="grid" gridColumn="9 / 13" gridRow="10 / 18"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-rmg" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="k-rmg" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-rmg" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rtot" type="grid" gridColumn="13 / 17" gridRow="10 / 22"
+  <Container elementId="c-rtot" type="grid" gridColumn="13 / 17" gridRow="10 / 18"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-rtot" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="k-rtot" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-rtot" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rcap" type="grid" gridColumn="17 / 21" gridRow="10 / 22"
+  <Container elementId="c-rcap" type="grid" gridColumn="17 / 21" gridRow="10 / 18"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-rcap" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="k-rcap" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-rcap" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rcel" type="grid" gridColumn="21 / 25" gridRow="10 / 22"
+  <Container elementId="c-rcel" type="grid" gridColumn="21 / 25" gridRow="10 / 18"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-rcel" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="k-rcel" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-rcel" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-qq2" type="grid" gridColumn="1 / 8" gridRow="22 / 48"
+  <Container elementId="c-qq2" type="grid" gridColumn="1 / 8" gridRow="18 / 44"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-qq2" gridColumn="1 / 3" gridRow="1 / 3"/>
     <Element elementId="txt-qq2-h" gridColumn="3 / 13" gridRow="1 / 3"/>
@@ -1362,13 +1332,13 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
     <Element elementId="txt-qq2-list" gridColumn="1 / 13" gridRow="4 / 10"/>
     <Element elementId="chat2" gridColumn="1 / 13" gridRow="10 / 26"/>
   </Container>
-  <Container elementId="c-ai2" type="grid" gridColumn="8 / 25" gridRow="22 / 30"
+  <Container elementId="c-ai2" type="grid" gridColumn="8 / 25" gridRow="18 / 26"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-ai2" gridColumn="1 / 3" gridRow="1 / 4"/>
     <Element elementId="txt-ai2-label" gridColumn="3 / 25" gridRow="1 / 2"/>
     <Element elementId="txt-ai2" gridColumn="3 / 25" gridRow="2 / 7"/>
   </Container>
-  <Container elementId="c-workspace" type="grid" gridColumn="8 / 25" gridRow="30 / 48"
+  <Container elementId="c-workspace" type="grid" gridColumn="8 / 25" gridRow="26 / 44"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-workspace-h" gridColumn="1 / 25" gridRow="1 / 2"/>
     <Element elementId="txt-workspace-sub" gridColumn="1 / 25" gridRow="2 / 3"/>
