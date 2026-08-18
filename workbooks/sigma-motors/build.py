@@ -463,16 +463,57 @@ def pri_max(col: str) -> str:
     return f'MaxIf([{MP}/{col}], [{MP}/Period Name] = "Prior")'
 
 
+ADJ = "(1 + Coalesce([ValueAdjust], 0) / 100)"
+GRAIN_X = (
+    'Switch([DateGrain], '
+    '"Quarter", DateTrunc("quarter", [Demand Pulse/Week]), '
+    '"Month", DateTrunc("month", [Demand Pulse/Week]), '
+    'DateTrunc("week", [Demand Pulse/Week]))'
+)
+TREND_Y = (
+    'Switch([Metric], '
+    f'"Hybrid Waitlist", Max([{MP}/Hybrid Waitlist]), '
+    f'"Backlog Weeks", Max([{MP}/Longest Backlog Wks]), '
+    f'"Margin at Risk", Max([{MP}/Margin at Risk]) * {ADJ}, '
+    f'Max([{MP}/EV Waitlist]) * {ADJ})'
+)
+COMPACT = {"kind": "number", "formatString": ",.3s"}
+
+
+def _set_col_formula(eid: str, cid: str, formula: str) -> None:
+    for el in elements:
+        if el["id"] == eid:
+            for col in el["columns"]:
+                if col["id"] == cid:
+                    col["formula"] = formula
+                    return
+    raise KeyError(f"{eid}.{cid}")
+
+
+# ValueAdjust is an EV-demand what-if: radar, scorecard, and mix bars move with it.
+_set_col_formula("tbl-region", "r2", f"[Custom SQL/EV Backlog] * {ADJ}")
+_set_col_formula(
+    "tbl-region", "r4",
+    f"([Custom SQL/EV Backlog] * {ADJ}) / "
+    f"(([Custom SQL/EV Backlog] * {ADJ}) + [Custom SQL/Hybrid Backlog])",
+)
+
+
 def kpi_card(key: str, label: str, current: str, prior: str, fmt: dict,
-             icon_url: str, spark_col: str) -> None:
+             icon_url: str, spark_col: str, *, scale: bool = False) -> None:
+    adj_cur = f"({current}) * {ADJ}" if scale else current
+    adj_pri = f"({prior}) * {ADJ}" if scale else prior
+    spark_y = f"Max([{MP}/{spark_col}])"
+    if scale:
+        spark_y = f"({spark_y}) * {ADJ}"
     add({"id": f"c-{key}", "kind": "container", "spacing": "small", "style": card()})
     img(f"ico-{key}", icon_url)
     add({
         "id": f"kc-{key}", "kind": "kpi-chart",
         "source": {"elementId": "tbl-month", "kind": "table"},
         "columns": [
-            {"id": f"vc-{key}", "formula": current, "name": label, "format": fmt},
-            {"id": f"vk-{key}", "formula": prior, "name": "4 weeks ago", "format": fmt},
+            {"id": f"vc-{key}", "formula": adj_cur, "name": label, "format": fmt},
+            {"id": f"vk-{key}", "formula": adj_pri, "name": "4 weeks ago", "format": fmt},
         ],
         "value": {"columnId": f"vc-{key}", "color": TEXT, "fontSize": 28},
         "comparisonColumn": {"columnId": f"vk-{key}"},
@@ -485,9 +526,9 @@ def kpi_card(key: str, label: str, current: str, prior: str, fmt: dict,
         "id": f"sp-{key}", "kind": "line-chart",
         "source": {"elementId": "tbl-month", "kind": "table"},
         "columns": [
-            {"id": f"spx-{key}", "formula": f"[{MP}/Week]", "name": "Week",
+            {"id": f"spx-{key}", "formula": GRAIN_X, "name": "Period",
              "format": {"kind": "datetime", "formatString": "%b %d"}},
-            {"id": f"spy-{key}", "formula": f"Sum([{MP}/{spark_col}])", "name": "Trend"},
+            {"id": f"spy-{key}", "formula": spark_y, "name": "Trend"},
             {"id": f"spc-{key}", "formula": '"Trend"', "name": "Series"},
         ],
         "xAxis": {"columnId": f"spx-{key}",
@@ -599,6 +640,31 @@ add({
                "values": ["Week", "Month", "Quarter"],
                "labels": ["Week", "Month", "Quarter"]},
 })
+add({
+    "id": "ctrl-metric", "kind": "control", "controlId": "Metric",
+    "name": "Value", "controlType": "segmented", "value": "EV Waitlist",
+    "source": {"kind": "manual", "valueType": "text",
+               "values": ["EV Waitlist", "Hybrid Waitlist", "Backlog Weeks", "Margin at Risk"],
+               "labels": ["EV waitlist", "Hybrid waitlist", "Backlog wks", "Margin at risk"]},
+})
+add({
+    "id": "ctrl-adjust", "kind": "control", "controlId": "ValueAdjust",
+    "name": "Value adjust %", "controlType": "number", "mode": "=",
+    "value": 0, "includeNulls": "when-no-value-is-selected",
+})
+add({
+    "id": "btn-adjust-reset", "kind": "button", "text": "Reset values",
+    "appearance": "outline", "fillColor": CARD, "fontColor": TEXT, "fontWeight": "bold",
+    "actions": [{"id": "a-adj-reset", "trigger": "on-click", "effects": [{
+        "effect": "set-control-value", "control": "ValueAdjust",
+        "value": {"type": "constant", "value": {"type": "number", "value": 0}},
+    }]}],
+})
+add({"id": "c-filters", "kind": "container", "spacing": "small", "style": card()})
+md("txt-filters",
+   f'<span style="color: {MUTED}; font-size: 12px">'
+   f'**Grain** recuts the trend. **Value** picks the series. **Adjust %** is an EV-demand what-if '
+   f'(waitlist, backlog, radar, and margin).</span>')
 
 # ---- title
 add({"id": "c-title", "kind": "container", "spacing": "small"})
@@ -607,18 +673,18 @@ md("txt-title",
    f'# **<span style="color: {TEXT}">Regional EV &amp; Hybrid Market Intelligence</span>**')
 md("txt-sub",
    f'<span style="color: {MUTED}">Waitlist, backlog weeks, and margin at risk across five U.S. regions. '
-   f'Weekly history through Jun 23, 2025 · toggle grain to re-cut the trend.</span>')
+   f'Use grain, value, and adjust % to recut the charts.</span>')
 
 # ---- KPI row
 kpi_card("ev", "EV WAITLIST", cur("EV Waitlist"), pri("EV Waitlist"), NUM0,
-         icon_badge(ICO_ZAP, "#E8F1FF", BLUE), "EV Waitlist")
+         icon_badge(ICO_ZAP, "#E8F1FF", BLUE), "EV Waitlist", scale=True)
 kpi_card("hy", "HYBRID WAITLIST", cur("Hybrid Waitlist"), pri("Hybrid Waitlist"), NUM0,
          icon_badge(ICO_LEAF, "#E8F8F0", GREEN), "Hybrid Waitlist")
 kpi_card("bk", "LONGEST BACKLOG (WKS)", cur_max("Longest Backlog Wks"),
          pri_max("Longest Backlog Wks"), NUM1,
          icon_badge(ICO_CLOCK, "#EEF0FF", "#4F46E5"), "Longest Backlog Wks")
 kpi_card("mg", "MARGIN AT RISK", cur("Margin at Risk"), pri("Margin at Risk"), MONEY_M,
-         icon_badge(ICO_DOLLAR, "#FFF6E0", GOLD), "Margin at Risk")
+         icon_badge(ICO_DOLLAR, "#FFF6E0", GOLD), "Margin at Risk", scale=True)
 kpi_card("rk", "REGIONS AT RISK", cur_max("Regions at Risk"),
          pri_max("Regions at Risk"), NUM0,
          icon_badge(ICO_PIN, "#E8F1FF", NAVY), "Regions at Risk")
@@ -676,7 +742,9 @@ add({
     "source": {"elementId": "tbl-mix", "kind": "table"},
     "columns": [
         {"id": "bx", "formula": f"[{MX}/Region]", "name": "Region"},
-        {"id": "by", "formula": f"Sum([{MX}/Units])", "name": "Units", "format": NUM0},
+        {"id": "by", "formula": (
+            f'Sum(If([{MX}/Powertrain] = "EV", [{MX}/Units] * {ADJ}, [{MX}/Units]))'
+        ), "name": "Units", "format": NUM0},
         {"id": "bc", "formula": f"[{MX}/Powertrain]", "name": "Powertrain"},
         {"id": "bo", "formula": f"Min([{MX}/Region Order])", "name": "Order"},
     ],
@@ -690,24 +758,19 @@ add({
     "style": {"backgroundColor": CARD, "padding": "none"},
 })
 add({"id": "c-trend", "kind": "container", "spacing": "small", "style": card()})
-GRAIN_X = (
-    'Switch([DateGrain], '
-    '"Quarter", DateTrunc("quarter", [Demand Pulse/Week]), '
-    '"Month", DateTrunc("month", [Demand Pulse/Week]), '
-    'DateTrunc("week", [Demand Pulse/Week]))'
-)
 add({
     "id": "line-trend", "kind": "line-chart",
     "source": {"elementId": "tbl-month", "kind": "table"},
     "columns": [
         {"id": "tx", "formula": GRAIN_X, "name": "Period",
          "format": {"kind": "datetime", "formatString": "%b %d, %Y"}},
-        {"id": "ty1", "formula": f"Max([{MP}/EV Waitlist])", "name": "EV", "format": NUM0},
-        {"id": "ty2", "formula": f"Max([{MP}/Hybrid Waitlist])", "name": "Hybrid", "format": NUM0},
+        {"id": "ty1", "formula": TREND_Y, "name": "Selected value", "format": COMPACT},
+        {"id": "tc", "formula": "[Metric]", "name": "Series"},
     ],
     "xAxis": {"columnId": "tx"},
-    "yAxis": {"columnIds": ["ty1", "ty2"]},
-    "name": title("Waitlist trend"),
+    "yAxis": {"columnIds": ["ty1"]},
+    "color": {"by": "category", "column": "tc", "scheme": [BLUE]},
+    "name": title("Selected value by date grain"),
     "legend": {"visibility": "shown"},
     "style": {"backgroundColor": CARD, "padding": "none"},
     "lineAreaStyle": {"interpolation": "monotone"},
@@ -1080,19 +1143,22 @@ agents.append({
     "description": "Answers questions about Sigma Motors EV and hybrid backlog.",
     "instructions": (
         "You are the Market Signal copilot for Sigma Motors. Use only the workbook data. "
-        "EV waitlist is 4,120 (June), hybrid 610. Longest backlog is 6.2 weeks in the West. "
-        "Margin at risk is $1.80M. Southwest (95% EV, 5.1 weeks) and West (91% EV, 6.2 weeks) "
-        "are the two regions at risk. Recommend shifting ~508 EV units into SW and West from "
-        "Northeast, South, and a small Midwest trim. Be concise and quantitative. "
-        "Cite region names and units."
+        "Baseline (adjust % = 0): EV waitlist 4,120 (June), hybrid 610. Longest backlog is "
+        "6.2 weeks in the West. Margin at risk is $1.80M. Southwest (95% EV, 5.1 weeks) and "
+        "West (91% EV, 6.2 weeks) are the two regions at risk. Recommend shifting ~508 EV units "
+        "into SW and West from Northeast, South, and a small Midwest trim. "
+        "When the user asks to view a grain (week/month/quarter), a value (EV waitlist, hybrid "
+        "waitlist, backlog weeks, margin at risk), or a what-if adjust %, ALWAYS call the matching "
+        "tool before replying. Be concise and quantitative. Cite region names and units."
     ),
     "greeting": {
         "mode": "static",
         "message": (
             "Ask about regional backlog, waitlist trend, or where to reallocate. "
-            "Try: Which regions have the highest EV backlogs? "
-            "Where is margin most at risk? "
-            "How has the EV waitlist changed over the last 6 months?"
+            "You can also change grain, value, or adjust %. "
+            "Try: Show margin at risk by quarter. "
+            "What if EV demand is 15% higher? "
+            "Which regions have the highest EV backlogs?"
         ),
     },
     "dataSources": [
@@ -1101,7 +1167,40 @@ agents.append({
         {"kind": "table", "elementId": "tbl-mix"},
         {"kind": "table", "elementId": "tbl-realloc"},
     ],
-    "tools": [],
+    "tools": [
+        {
+            "toolId": "t-set-grain", "kind": "action", "name": "Set date grain",
+            "description": "Set the Market Signal date grain to Week, Month, or Quarter.",
+            "steps": [{
+                "kind": "effect", "effect": "set-control-value", "control": "DateGrain",
+                "value": {"type": "agent-input",
+                          "inputName": "Date grain: Week, Month, or Quarter"},
+            }],
+        },
+        {
+            "toolId": "t-set-metric", "kind": "action", "name": "Set value series",
+            "description": (
+                "Set the Market Signal value toggle to EV Waitlist, Hybrid Waitlist, "
+                "Backlog Weeks, or Margin at Risk."
+            ),
+            "steps": [{
+                "kind": "effect", "effect": "set-control-value", "control": "Metric",
+                "value": {"type": "agent-input",
+                          "inputName": "Value: EV Waitlist, Hybrid Waitlist, Backlog Weeks, or Margin at Risk"},
+            }],
+        },
+        {
+            "toolId": "t-set-adjust", "kind": "action", "name": "Set value adjust %",
+            "description": (
+                "Set the EV-demand what-if percent that scales EV waitlist, EV backlog, and margin."
+            ),
+            "steps": [{
+                "kind": "effect", "effect": "set-control-value", "control": "ValueAdjust",
+                "value": {"type": "agent-input",
+                          "inputName": "Adjust percent as a number, e.g. 15 for +15% or -10 for -10%"},
+            }],
+        },
+    ],
 })
 agents.append({
     "id": "ag-r2",
@@ -1149,79 +1248,86 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
   <Container elementId="c-hdr1" type="grid" gridColumn="1 / 25" gridRow="1 / 5"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="logo1" gridColumn="1 / 7" gridRow="1 / 5"/>
-    <Element elementId="nav1" gridColumn="7 / 16" gridRow="2 / 5"/>
-    <Element elementId="ctrl-grain" gridColumn="16 / 21" gridRow="2 / 5"/>
-    <Element elementId="ctrl-date" gridColumn="21 / 25" gridRow="2 / 5"/>
+    <Element elementId="nav1" gridColumn="7 / 25" gridRow="2 / 5"/>
   </Container>
   <Container elementId="c-title" type="grid" gridColumn="1 / 25" gridRow="5 / 10"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="txt-eyebrow1" gridColumn="1 / 18" gridRow="1 / 2"/>
-    <Element elementId="txt-title" gridColumn="1 / 18" gridRow="2 / 4"/>
-    <Element elementId="txt-sub" gridColumn="1 / 18" gridRow="4 / 6"/>
-    <Element elementId="ctrl-region" gridColumn="18 / 25" gridRow="2 / 6"/>
+    <Element elementId="txt-eyebrow1" gridColumn="1 / 25" gridRow="1 / 2"/>
+    <Element elementId="txt-title" gridColumn="1 / 25" gridRow="2 / 4"/>
+    <Element elementId="txt-sub" gridColumn="1 / 25" gridRow="4 / 6"/>
   </Container>
-  <Container elementId="c-ev" type="grid" gridColumn="1 / 6" gridRow="10 / 21"
+  <Container elementId="c-filters" type="grid" gridColumn="1 / 25" gridRow="10 / 16"
+             gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="txt-filters" gridColumn="1 / 25" gridRow="1 / 2"/>
+    <Element elementId="ctrl-grain" gridColumn="1 / 6" gridRow="2 / 5"/>
+    <Element elementId="ctrl-metric" gridColumn="6 / 13" gridRow="2 / 5"/>
+    <Element elementId="ctrl-adjust" gridColumn="13 / 16" gridRow="2 / 5"/>
+    <Element elementId="btn-adjust-reset" gridColumn="16 / 18" gridRow="3 / 5"/>
+    <Element elementId="ctrl-region" gridColumn="18 / 22" gridRow="2 / 5"/>
+    <Element elementId="ctrl-date" gridColumn="22 / 25" gridRow="2 / 5"/>
+  </Container>
+  <Container elementId="c-ev" type="grid" gridColumn="1 / 6" gridRow="16 / 27"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-ev" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-ev" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-ev" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-hy" type="grid" gridColumn="6 / 11" gridRow="10 / 21"
+  <Container elementId="c-hy" type="grid" gridColumn="6 / 11" gridRow="16 / 27"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-hy" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-hy" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-hy" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-bk" type="grid" gridColumn="11 / 16" gridRow="10 / 21"
+  <Container elementId="c-bk" type="grid" gridColumn="11 / 16" gridRow="16 / 27"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-bk" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-bk" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-bk" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-mg" type="grid" gridColumn="16 / 21" gridRow="10 / 21"
+  <Container elementId="c-mg" type="grid" gridColumn="16 / 21" gridRow="16 / 27"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-mg" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-mg" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-mg" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rk" type="grid" gridColumn="21 / 25" gridRow="10 / 21"
+  <Container elementId="c-rk" type="grid" gridColumn="21 / 25" gridRow="16 / 27"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-rk" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-rk" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-rk" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="22 / 28"
+  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="28 / 34"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-ai" gridColumn="1 / 3" gridRow="2 / 5"/>
     <Element elementId="txt-ai" gridColumn="3 / 20" gridRow="1 / 6"/>
     <Element elementId="btn-scen" gridColumn="20 / 25" gridRow="2 / 5"/>
   </Container>
-  <Container elementId="c-qq" type="grid" gridColumn="1 / 8" gridRow="28 / 63"
+  <Container elementId="c-qq" type="grid" gridColumn="1 / 8" gridRow="34 / 69"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-qq1" gridColumn="1 / 3" gridRow="1 / 3"/>
     <Element elementId="txt-qq-h" gridColumn="3 / 13" gridRow="1 / 3"/>
     <Element elementId="txt-qq-list" gridColumn="1 / 13" gridRow="3 / 10"/>
     <Element elementId="chat1" gridColumn="1 / 13" gridRow="10 / 24"/>
   </Container>
-  <Container elementId="c-pulse" type="grid" gridColumn="8 / 25" gridRow="28 / 48"
+  <Container elementId="c-pulse" type="grid" gridColumn="8 / 25" gridRow="34 / 54"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-pulse" gridColumn="1 / 25" gridRow="1 / 3"/>
     <Element elementId="plg-demand" gridColumn="1 / 25" gridRow="3 / 21"/>
   </Container>
-  <Container elementId="c-score" type="grid" gridColumn="8 / 17" gridRow="48 / 63"
+  <Container elementId="c-score" type="grid" gridColumn="8 / 17" gridRow="54 / 69"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-score" gridColumn="1 / 13" gridRow="1 / 2"/>
     <Element elementId="tbl-score" gridColumn="1 / 13" gridRow="2 / 14"/>
   </Container>
-  <Container elementId="c-trend" type="grid" gridColumn="17 / 25" gridRow="48 / 56"
+  <Container elementId="c-trend" type="grid" gridColumn="17 / 25" gridRow="54 / 62"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="line-trend" gridColumn="1 / 13" gridRow="1 / 10"/>
   </Container>
-  <Container elementId="c-bar" type="grid" gridColumn="17 / 25" gridRow="56 / 63"
+  <Container elementId="c-bar" type="grid" gridColumn="17 / 25" gridRow="62 / 69"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="bar-ev" gridColumn="1 / 13" gridRow="1 / 10"/>
   </Container>
-  <Element elementId="txt-foot" gridColumn="1 / 25" gridRow="63 / 65"/>
+  <Element elementId="txt-foot" gridColumn="1 / 25" gridRow="69 / 71"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg2">
   <Container elementId="c-hdr2" type="grid" gridColumn="1 / 25" gridRow="1 / 5"
