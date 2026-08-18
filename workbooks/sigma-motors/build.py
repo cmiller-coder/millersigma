@@ -2,7 +2,7 @@
 """Build the Sigma Motors Market Signal workbook.
 
 Visual target: the light, card-based EV/hybrid intelligence mockups
-(navy chrome, white KPI tiles with icon + delta + sparkline, tinted AI
+(navy chrome, bordered KPI tiles with icon + period comparison, tinted AI
 band, quick-questions rail, regional donuts + ranked bar + trend).
 
 Usage:
@@ -49,7 +49,7 @@ BLUE_MID = "#4C7DFF"
 CANVAS = "#F3F5F8"
 CARD = "#FFFFFF"
 SURFACE = "#F8FAFC"
-BORDER = "#E2E6EE"
+BORDER = "#C9D1DC"
 TEXT = "#0B1B3A"
 MUTED = "#5B6B7F"
 GREEN = "#0F9F6E"
@@ -343,9 +343,13 @@ def sql_table(eid: str, name: str, statement: str, colnames: list[str], prefix: 
     })
 
 
-def card() -> dict:
-    return {"backgroundColor": CARD, "borderRadius": "round",
-            "borderColor": BORDER, "borderWidth": 1}
+def card(*, strong: bool = False) -> dict:
+    return {
+        "backgroundColor": CARD,
+        "borderRadius": "round",
+        "borderColor": "#9AA8BA" if strong else BORDER,
+        "borderWidth": 2 if strong else 1,
+    }
 
 
 def panel() -> dict:
@@ -500,47 +504,25 @@ _set_col_formula(
 
 
 def kpi_card(key: str, label: str, current: str, prior: str, fmt: dict,
-             icon_url: str, spark_col: str, *, scale: bool = False) -> None:
+             icon_url: str, *, scale: bool = False) -> None:
     adj_cur = f"({current}) * {ADJ}" if scale else current
     adj_pri = f"({prior}) * {ADJ}" if scale else prior
-    spark_y = f"Max([{MP}/{spark_col}])"
-    if scale:
-        spark_y = f"({spark_y}) * {ADJ}"
-    add({"id": f"c-{key}", "kind": "container", "spacing": "small", "style": card()})
+    add({"id": f"c-{key}", "kind": "container", "spacing": "small", "style": card(strong=True)})
     img(f"ico-{key}", icon_url)
     add({
         "id": f"kc-{key}", "kind": "kpi-chart",
         "source": {"elementId": "tbl-month", "kind": "table"},
         "columns": [
             {"id": f"vc-{key}", "formula": adj_cur, "name": label, "format": fmt},
-            {"id": f"vk-{key}", "formula": adj_pri, "name": "4 weeks ago", "format": fmt},
+            {"id": f"vk-{key}", "formula": adj_pri, "name": "vs 4 weeks ago", "format": fmt},
         ],
-        "value": {"columnId": f"vc-{key}", "color": TEXT, "fontSize": 28},
+        "value": {"columnId": f"vc-{key}", "color": TEXT, "fontSize": 32},
         "comparisonColumn": {"columnId": f"vk-{key}"},
-        "comparison": {"display": "delta", "colorGood": GREEN, "colorBad": RED, "fontSize": 12},
+        "comparison": {"display": "delta", "colorGood": GREEN, "colorBad": RED, "fontSize": 13},
         "name": {"text": label, "color": MUTED, "fontSize": 11},
         "layout": {"anchor": "start"},
+        "trend": {"visibility": "hidden"},
         "style": {"padding": "none", "backgroundColor": CARD},
-    })
-    add({
-        "id": f"sp-{key}", "kind": "line-chart",
-        "source": {"elementId": "tbl-month", "kind": "table"},
-        "columns": [
-            {"id": f"spx-{key}", "formula": GRAIN_X, "name": "Period",
-             "format": {"kind": "datetime", "formatString": "%b %d"}},
-            {"id": f"spy-{key}", "formula": spark_y, "name": "Trend"},
-            {"id": f"spc-{key}", "formula": '"Trend"', "name": "Series"},
-        ],
-        "xAxis": {"columnId": f"spx-{key}",
-                  "format": {"labels": "hidden", "marks": "none"}},
-        "yAxis": {"columnIds": [f"spy-{key}"],
-                  "format": {"labels": "hidden", "marks": "none",
-                             "scale": {"type": "linear", "zero": False, "hideZeroLine": True}}},
-        "color": {"by": "category", "column": f"spc-{key}", "scheme": [BLUE]},
-        "name": {"visibility": "hidden"},
-        "legend": {"visibility": "hidden"},
-        "style": {"padding": "none", "backgroundColor": CARD},
-        "lineAreaStyle": {"interpolation": "monotone"},
     })
 
 
@@ -677,17 +659,17 @@ md("txt-sub",
 
 # ---- KPI row
 kpi_card("ev", "EV WAITLIST", cur("EV Waitlist"), pri("EV Waitlist"), NUM0,
-         icon_badge(ICO_ZAP, "#E8F1FF", BLUE), "EV Waitlist", scale=True)
+         icon_badge(ICO_ZAP, "#E8F1FF", BLUE), scale=True)
 kpi_card("hy", "HYBRID WAITLIST", cur("Hybrid Waitlist"), pri("Hybrid Waitlist"), NUM0,
-         icon_badge(ICO_LEAF, "#E8F8F0", GREEN), "Hybrid Waitlist")
+         icon_badge(ICO_LEAF, "#E8F8F0", GREEN))
 kpi_card("bk", "LONGEST BACKLOG (WKS)", cur_max("Longest Backlog Wks"),
          pri_max("Longest Backlog Wks"), NUM1,
-         icon_badge(ICO_CLOCK, "#EEF0FF", "#4F46E5"), "Longest Backlog Wks")
+         icon_badge(ICO_CLOCK, "#EEF0FF", "#4F46E5"))
 kpi_card("mg", "MARGIN AT RISK", cur("Margin at Risk"), pri("Margin at Risk"), MONEY_M,
-         icon_badge(ICO_DOLLAR, "#FFF6E0", GOLD), "Margin at Risk", scale=True)
+         icon_badge(ICO_DOLLAR, "#FFF6E0", GOLD), scale=True)
 kpi_card("rk", "REGIONS AT RISK", cur_max("Regions at Risk"),
          pri_max("Regions at Risk"), NUM0,
-         icon_badge(ICO_PIN, "#E8F1FF", NAVY), "Regions at Risk")
+         icon_badge(ICO_PIN, "#E8F1FF", NAVY))
 
 # ---- AI insight
 add({"id": "c-ai", "kind": "container", "spacing": "small",
@@ -732,7 +714,8 @@ add({
         "ev_share": "r4", "backlog_weeks": "r5", "growth_pct": "r8",
         "at_risk": "r7",
     },
-    "style": {"backgroundColor": CARD},
+    "style": {"backgroundColor": CARD, "padding": "none",
+              "borderColor": BORDER, "borderWidth": 1, "borderRadius": "round"},
 })
 
 # ---- mix bar + grain-driven trend + regional scorecard
@@ -755,7 +738,8 @@ add({
     "dataLabel": {"labels": "shown", "anchor": "end", "fontSize": 10},
     "name": title("EV vs Hybrid backlog by region"),
     "legend": {"visibility": "shown"},
-    "style": {"backgroundColor": CARD, "padding": "none"},
+    "style": {"backgroundColor": CARD, "padding": "none",
+              "borderColor": BORDER, "borderWidth": 1, "borderRadius": "round"},
 })
 add({"id": "c-trend", "kind": "container", "spacing": "small", "style": card()})
 add({
@@ -772,7 +756,8 @@ add({
     "color": {"by": "category", "column": "tc", "scheme": [BLUE]},
     "name": title("Selected value by date grain"),
     "legend": {"visibility": "shown"},
-    "style": {"backgroundColor": CARD, "padding": "none"},
+    "style": {"backgroundColor": CARD, "padding": "none",
+              "borderColor": BORDER, "borderWidth": 1, "borderRadius": "round"},
     "lineAreaStyle": {"interpolation": "monotone"},
 })
 add({"id": "c-score", "kind": "container", "spacing": "small", "style": card()})
@@ -791,7 +776,8 @@ add({
         {"id": "sc6", "formula": f"[{RP}/EV Growth Pct] / 100", "name": "30d growth",
          "format": {"kind": "number", "formatString": "+,.0%"}},
     ],
-    "style": {"padding": "none", "backgroundColor": CARD},
+    "style": {"padding": "none", "backgroundColor": CARD,
+              "borderColor": BORDER, "borderWidth": 1, "borderRadius": "round"},
     "tableComponents": {"summaryBar": "hidden"},
     "conditionalFormats": [
         {"type": "single", "columnIds": ["sc4"], "condition": ">", "value": 5,
@@ -1266,64 +1252,59 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
     <Element elementId="ctrl-region" gridColumn="18 / 22" gridRow="2 / 5"/>
     <Element elementId="ctrl-date" gridColumn="22 / 25" gridRow="2 / 5"/>
   </Container>
-  <Container elementId="c-ev" type="grid" gridColumn="1 / 6" gridRow="16 / 27"
+  <Container elementId="c-ev" type="grid" gridColumn="1 / 6" gridRow="16 / 24"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-ev" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-ev" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-ev" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-hy" type="grid" gridColumn="6 / 11" gridRow="16 / 27"
+  <Container elementId="c-hy" type="grid" gridColumn="6 / 11" gridRow="16 / 24"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-hy" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-hy" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-hy" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-bk" type="grid" gridColumn="11 / 16" gridRow="16 / 27"
+  <Container elementId="c-bk" type="grid" gridColumn="11 / 16" gridRow="16 / 24"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-bk" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-bk" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-bk" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-mg" type="grid" gridColumn="16 / 21" gridRow="16 / 27"
+  <Container elementId="c-mg" type="grid" gridColumn="16 / 21" gridRow="16 / 24"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-mg" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-mg" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-mg" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-rk" type="grid" gridColumn="21 / 25" gridRow="16 / 27"
+  <Container elementId="c-rk" type="grid" gridColumn="21 / 25" gridRow="16 / 24"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-rk" gridColumn="1 / 4" gridRow="1 / 3"/>
     <Element elementId="kc-rk" gridColumn="1 / 13" gridRow="3 / 8"/>
-    <Element elementId="sp-rk" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="28 / 34"
+  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="25 / 31"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-ai" gridColumn="1 / 3" gridRow="2 / 5"/>
     <Element elementId="txt-ai" gridColumn="3 / 20" gridRow="1 / 6"/>
     <Element elementId="btn-scen" gridColumn="20 / 25" gridRow="2 / 5"/>
   </Container>
-  <Container elementId="c-qq" type="grid" gridColumn="1 / 8" gridRow="34 / 69"
+  <Container elementId="c-qq" type="grid" gridColumn="1 / 8" gridRow="31 / 67"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-qq1" gridColumn="1 / 3" gridRow="1 / 3"/>
     <Element elementId="txt-qq-h" gridColumn="3 / 13" gridRow="1 / 3"/>
     <Element elementId="txt-qq-list" gridColumn="1 / 13" gridRow="3 / 10"/>
     <Element elementId="chat1" gridColumn="1 / 13" gridRow="10 / 24"/>
   </Container>
-  <Container elementId="c-pulse" type="grid" gridColumn="8 / 25" gridRow="34 / 54"
+  <Container elementId="c-pulse" type="grid" gridColumn="8 / 25" gridRow="31 / 51"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-pulse" gridColumn="1 / 25" gridRow="1 / 3"/>
     <Element elementId="plg-demand" gridColumn="1 / 25" gridRow="3 / 21"/>
   </Container>
-  <Container elementId="c-score" type="grid" gridColumn="8 / 17" gridRow="54 / 69"
+  <Container elementId="c-score" type="grid" gridColumn="8 / 17" gridRow="51 / 67"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-score" gridColumn="1 / 13" gridRow="1 / 2"/>
     <Element elementId="tbl-score" gridColumn="1 / 13" gridRow="2 / 14"/>
   </Container>
-  <Container elementId="c-trend" type="grid" gridColumn="17 / 25" gridRow="54 / 62"
+  <Container elementId="c-trend" type="grid" gridColumn="17 / 25" gridRow="51 / 60"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="line-trend" gridColumn="1 / 13" gridRow="1 / 10"/>
   </Container>
-  <Container elementId="c-bar" type="grid" gridColumn="17 / 25" gridRow="62 / 69"
+  <Container elementId="c-bar" type="grid" gridColumn="17 / 25" gridRow="60 / 69"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="bar-ev" gridColumn="1 / 13" gridRow="1 / 10"/>
   </Container>
