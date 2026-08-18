@@ -14,7 +14,9 @@ Usage:
 from __future__ import annotations
 
 import base64
+import datetime as dt
 import json
+import math
 import os
 import pathlib
 import sys
@@ -35,6 +37,7 @@ if not BASE:
 FOLDER = os.environ.get("SIGMA_FOLDER_ID", "5fc0b75e-b736-4389-b7b1-0a265f0db5cc")
 # Snowflake connection used by the original Sigma Motors app (input tables + VALUES SQL).
 CONN = os.environ.get("SIGMA_CONNECTION_ID", "a9d45cfe-ff65-4515-8193-a7072602a1ee")
+PLUGIN_ID = os.environ.get("SIGMA_PLUGIN_ID", "6719c8dc-b591-4b3a-b31e-380d1cd2b17d")
 TOKEN_CACHE = pathlib.Path("/tmp/.sigma_token")
 HERE = pathlib.Path(__file__).resolve().parent
 
@@ -202,21 +205,53 @@ def call(method: str, path: str, body=None, retry=True):
 
 
 # ---------------------------------------------------------------------------
-# Data — one monthly grain + one regional grain + per-region donut slices.
-# Numbers are the mockup's: 4,120 EV / 610 hybrid / 6.2 wk / $1.80M / 2 regions.
-# Regional EV units sum to 4,120 so the ranked bar and the headline KPI agree.
+# Data — weekly grain for 12 months (Jul 2024–Jun 2025) so date-grain and
+# sparklines have real movement. Latest week still lands on the mockup
+# headlines: 4,120 EV / 610 hybrid / 6.2 wk / $1.80M / 2 regions.
 # ---------------------------------------------------------------------------
 
-MONTH_SQL = """
-SELECT DATE '2025-01-01' AS "Month", 2140 AS "EV Waitlist", 380 AS "Hybrid Waitlist",
-       4.1 AS "Longest Backlog Wks", 950000 AS "Margin at Risk", 1 AS "Regions at Risk",
-       'History' AS "Period Name"
-UNION ALL SELECT DATE '2025-02-01', 2480, 420, 4.4, 1100000, 1, 'History'
-UNION ALL SELECT DATE '2025-03-01', 2860, 470, 4.8, 1250000, 1, 'History'
-UNION ALL SELECT DATE '2025-04-01', 3280, 520, 5.3, 1450000, 2, 'History'
-UNION ALL SELECT DATE '2025-05-01', 3720, 570, 5.8, 1620000, 2, 'Prior'
-UNION ALL SELECT DATE '2025-06-01', 4120, 610, 6.2, 1800000, 2, 'Current'
-"""
+def _weekly_sql() -> str:
+    start = dt.date(2024, 7, 1)  # Monday
+    current = dt.date(2025, 6, 23)
+    prior = dt.date(2025, 5, 26)
+    rows = []
+    d = start
+    i = 0
+    while d <= current:
+        t = i / 51
+        ev = 1680 + 2100 * (t ** 1.12)
+        ev += 70 * math.sin(i * 0.55) + 40 * math.sin(i * 1.3)
+        if 24 <= i <= 27:  # year-end pause
+            ev -= 160
+        if i >= 36:  # spring model-year surge
+            ev += (i - 36) * 16
+        hy = 290 + 280 * t + 18 * math.sin(i * 0.4)
+        if i >= 40:
+            hy += 8
+        weeks = 2.7 + 3.1 * (t ** 1.05) + 0.18 * math.sin(i * 0.8)
+        margin = 620000 + 1080000 * (t ** 1.1) + 40000 * math.sin(i * 0.5)
+        risk = 0 if weeks < 4.6 else (1 if weeks < 5.6 else 2)
+        if d == current:
+            ev, hy, weeks, margin, risk, period = 4120, 610, 6.2, 1800000, 2, "Current"
+        elif d == prior:
+            ev, hy, weeks, margin, risk, period = 3720, 570, 5.8, 1620000, 2, "Prior"
+        else:
+            period = "History"
+            ev, hy = round(ev), round(hy)
+            weeks = round(weeks, 1)
+            margin = round(margin, -3)
+        rows.append(
+            f"SELECT DATE '{d.isoformat()}' AS \"Week\", {int(ev)} AS \"EV Waitlist\", "
+            f"{int(hy)} AS \"Hybrid Waitlist\", {weeks} AS \"Longest Backlog Wks\", "
+            f"{int(margin)} AS \"Margin at Risk\", {risk} AS \"Regions at Risk\", "
+            f"'{period}' AS \"Period Name\""
+        )
+        d += dt.timedelta(days=7)
+        i += 1
+    return "\nUNION ALL ".join(rows)
+
+
+WEEK_SQL = "\n" + _weekly_sql() + "\n"
 
 REGION_SQL = """
 SELECT 'Southwest' AS "Region", 1 AS "Region Order", 1412 AS "EV Backlog", 74 AS "Hybrid Backlog",
@@ -226,6 +261,19 @@ UNION ALL SELECT 'West', 2, 1120, 110, 0.91, 6.2, 2.1, 1, 42
 UNION ALL SELECT 'Midwest', 3, 780, 148, 0.84, 3.8, 0.8, 0, 18
 UNION ALL SELECT 'Northeast', 4, 468, 140, 0.77, 2.9, -0.3, 0, 9
 UNION ALL SELECT 'South', 5, 340, 138, 0.71, 2.4, -0.6, 0, 6
+"""
+
+MIX_SQL = """
+SELECT 'Southwest' AS "Region", 1 AS "Region Order", 'EV' AS "Powertrain", 1412 AS "Units"
+UNION ALL SELECT 'Southwest', 1, 'Hybrid', 74
+UNION ALL SELECT 'West', 2, 'EV', 1120
+UNION ALL SELECT 'West', 2, 'Hybrid', 110
+UNION ALL SELECT 'Midwest', 3, 'EV', 780
+UNION ALL SELECT 'Midwest', 3, 'Hybrid', 148
+UNION ALL SELECT 'Northeast', 4, 'EV', 468
+UNION ALL SELECT 'Northeast', 4, 'Hybrid', 140
+UNION ALL SELECT 'South', 5, 'EV', 340
+UNION ALL SELECT 'South', 5, 'Hybrid', 138
 """
 
 REALLOC_SQL = """
@@ -347,12 +395,14 @@ def nav(idx: int) -> dict:
 
 
 # ---- sources
-sql_table("tbl-month", "Monthly Pulse", MONTH_SQL,
-          ["Month", "EV Waitlist", "Hybrid Waitlist", "Longest Backlog Wks",
+sql_table("tbl-month", "Demand Pulse", WEEK_SQL,
+          ["Week", "EV Waitlist", "Hybrid Waitlist", "Longest Backlog Wks",
            "Margin at Risk", "Regions at Risk", "Period Name"], "m")
 sql_table("tbl-region", "Regional Pulse", REGION_SQL,
           ["Region", "Region Order", "EV Backlog", "Hybrid Backlog",
            "EV Share", "Backlog Weeks", "Delta Weeks", "At Risk", "EV Growth Pct"], "r")
+sql_table("tbl-mix", "Powertrain Mix", MIX_SQL,
+          ["Region", "Region Order", "Powertrain", "Units"], "mx")
 sql_table("tbl-realloc", "Reallocation Plan", REALLOC_SQL,
           ["Region", "Current EV", "Recommended EV", "Units to Shift", "Rationale"], "x")
 add({
@@ -374,20 +424,6 @@ add({
     ],
 })
 
-SHARES = [
-    ("sw", "Southwest", 1412, 74, "95%", "↑ 5.1 wks"),
-    ("we", "West", 1120, 110, "91%", "↑ 6.2 wks"),
-    ("mw", "Midwest", 780, 148, "84%", "↑ 3.8 wks"),
-    ("ne", "Northeast", 468, 140, "77%", "↓ 2.9 wks"),
-    ("so", "South", 340, 138, "71%", "↓ 2.4 wks"),
-]
-for key, region, ev, hy, _pct, _wks in SHARES:
-    sql_table(
-        f"tbl-{key}", f"Share {region}",
-        f"SELECT 'EV' AS \"Category\", {ev} AS \"Units\" UNION ALL SELECT 'Hybrid', {hy}",
-        ["Category", "Units"], key,
-    )
-
 add({
     "id": "tbl-fleet-scenario", "kind": "table", "name": FS,
     "source": {"elementId": "sql-fleet", "kind": "table"},
@@ -406,8 +442,9 @@ add({
     "tableComponents": {"summaryBar": "hidden"},
 })
 
-MP = "Monthly Pulse"
+MP = "Demand Pulse"
 RP = "Regional Pulse"
+MX = "Powertrain Mix"
 
 
 def cur(col: str) -> str:
@@ -435,7 +472,7 @@ def kpi_card(key: str, label: str, current: str, prior: str, fmt: dict,
         "source": {"elementId": "tbl-month", "kind": "table"},
         "columns": [
             {"id": f"vc-{key}", "formula": current, "name": label, "format": fmt},
-            {"id": f"vk-{key}", "formula": prior, "name": "Prior month", "format": fmt},
+            {"id": f"vk-{key}", "formula": prior, "name": "4 weeks ago", "format": fmt},
         ],
         "value": {"columnId": f"vc-{key}", "color": TEXT, "fontSize": 28},
         "comparisonColumn": {"columnId": f"vk-{key}"},
@@ -448,7 +485,8 @@ def kpi_card(key: str, label: str, current: str, prior: str, fmt: dict,
         "id": f"sp-{key}", "kind": "line-chart",
         "source": {"elementId": "tbl-month", "kind": "table"},
         "columns": [
-            {"id": f"spx-{key}", "formula": f"[{MP}/Month]", "name": "Month"},
+            {"id": f"spx-{key}", "formula": f"[{MP}/Week]", "name": "Week",
+             "format": {"kind": "datetime", "formatString": "%b %d"}},
             {"id": f"spy-{key}", "formula": f"Sum([{MP}/{spark_col}])", "name": "Trend"},
             {"id": f"spc-{key}", "formula": '"Trend"', "name": "Series"},
         ],
@@ -548,10 +586,18 @@ add({
     "filters": [
         {"source": {"kind": "table", "elementId": "tbl-region"}, "columnId": "r0"},
         {"source": {"kind": "table", "elementId": "tbl-realloc"}, "columnId": "x0"},
+        {"source": {"kind": "table", "elementId": "tbl-mix"}, "columnId": "mx0"},
     ],
     "source": {"kind": "source",
                "source": {"kind": "table", "elementId": "tbl-region"},
                "columnId": "r0"},
+})
+add({
+    "id": "ctrl-grain", "kind": "control", "controlId": "DateGrain",
+    "name": "Date grain", "controlType": "segmented", "value": "Week",
+    "source": {"kind": "manual", "valueType": "text",
+               "values": ["Week", "Month", "Quarter"],
+               "labels": ["Week", "Month", "Quarter"]},
 })
 
 # ---- title
@@ -561,7 +607,7 @@ md("txt-title",
    f'# **<span style="color: {TEXT}">Regional EV &amp; Hybrid Market Intelligence</span>**')
 md("txt-sub",
    f'<span style="color: {MUTED}">Waitlist, backlog weeks, and margin at risk across five U.S. regions. '
-   f'Updated Jun 27, 2025 · Last 6 months.</span>')
+   f'Weekly history through Jun 23, 2025 · toggle grain to re-cut the trend.</span>')
 
 # ---- KPI row
 kpi_card("ev", "EV WAITLIST", cur("EV Waitlist"), pri("EV Waitlist"), NUM0,
@@ -606,68 +652,96 @@ md("txt-qq-list",
    f'What should we reallocate away from the South?</span>')
 add({"id": "chat1", "kind": "chat", "agentId": "ag-signal"})
 
-# ---- regional pulse — five native donuts (plugin is optional; this org
-# cannot register plugins). Same composition as the mockup row.
+# ---- regional pulse — live plugin (Regional Signal Radar)
 add({"id": "c-pulse", "kind": "container", "spacing": "small", "style": card()})
 md("txt-pulse",
    f'<span style="color: {TEXT}">**Regional Demand Pulse**</span> · '
    f'<span style="color: {MUTED}">EV share of regional backlog · weeks of wait</span>')
-for key, region, ev, hy, pct, wks in SHARES:
-    add({"id": f"c-dn-{key}", "kind": "container", "spacing": "small",
-         "style": {"backgroundColor": CARD, "padding": "none"}})
-    add({
-        "id": f"dn-{key}", "kind": "donut-chart",
-        "source": {"elementId": f"tbl-{key}", "kind": "table"},
-        "columns": [
-            {"id": f"dnc-{key}", "formula": f"[Share {region}/Category]", "name": "Category"},
-            {"id": f"dnv-{key}", "formula": f"Sum([Share {region}/Units])", "name": "Units",
-             "format": NUM0},
-        ],
-        "value": {"id": f"dnv-{key}"},
-        "color": {"id": f"dnc-{key}", "scheme": [EV_COLOR, HY_COLOR]},
-        "name": {"visibility": "hidden"},
-        "legend": {"visibility": "hidden"},
-        "style": {"backgroundColor": CARD, "padding": "none"},
-    })
-    md(f"cap-{key}",
-       f'<span style="color: {TEXT}">**{region}**</span> · '
-       f'<span style="color: {EV_COLOR}">{pct} EV</span> · '
-       f'<span style="color: {MUTED}">{wks}</span>')
+add({
+    "id": "plg-demand", "kind": "plugin",
+    "pluginId": PLUGIN_ID, "displayName": "Regional Signal Radar",
+    "config": {
+        "source": {"kind": "element", "elementId": "tbl-region"},
+        "region": "r0", "ev_backlog": "r2", "hybrid_backlog": "r3",
+        "ev_share": "r4", "backlog_weeks": "r5", "growth_pct": "r8",
+        "at_risk": "r7",
+    },
+    "style": {"backgroundColor": CARD},
+})
 
-# ---- ranked bar + trend
+# ---- mix bar + grain-driven trend + regional scorecard
 add({"id": "c-bar", "kind": "container", "spacing": "small", "style": card()})
 add({
     "id": "bar-ev", "kind": "bar-chart",
-    "source": {"elementId": "tbl-region", "kind": "table"},
+    "source": {"elementId": "tbl-mix", "kind": "table"},
     "columns": [
-        {"id": "bx", "formula": f"[{RP}/Region]", "name": "Region"},
-        {"id": "by", "formula": f"Sum([{RP}/EV Backlog])", "name": "EV Backlog", "format": NUM0},
-        {"id": "bo", "formula": f"Min([{RP}/Region Order])", "name": "Order"},
-        {"id": "bser", "formula": '"EV Backlog"', "name": "Series"},
+        {"id": "bx", "formula": f"[{MX}/Region]", "name": "Region"},
+        {"id": "by", "formula": f"Sum([{MX}/Units])", "name": "Units", "format": NUM0},
+        {"id": "bc", "formula": f"[{MX}/Powertrain]", "name": "Powertrain"},
+        {"id": "bo", "formula": f"Min([{MX}/Region Order])", "name": "Order"},
     ],
-    "xAxis": {"columnId": "bx", "sort": {"by": "by", "direction": "descending"}},
+    "xAxis": {"columnId": "bx", "sort": {"by": "bo", "direction": "ascending"}},
     "yAxis": {"columnIds": ["by"]},
-    "color": {"by": "category", "column": "bser", "scheme": [EV_COLOR]},
-    "dataLabel": {"labels": "shown", "anchor": "end", "fontSize": 11},
-    "name": title("EV Backlog by Region, Ranked"),
-    "legend": {"visibility": "hidden"},
+    "color": {"by": "category", "column": "bc", "scheme": [EV_COLOR, HY_COLOR]},
+    "stacking": "none",
+    "dataLabel": {"labels": "shown", "anchor": "end", "fontSize": 10},
+    "name": title("EV vs Hybrid backlog by region"),
+    "legend": {"visibility": "shown"},
     "style": {"backgroundColor": CARD, "padding": "none"},
 })
 add({"id": "c-trend", "kind": "container", "spacing": "small", "style": card()})
+GRAIN_X = (
+    'Switch([DateGrain], '
+    '"Quarter", DateTrunc("quarter", [Demand Pulse/Week]), '
+    '"Month", DateTrunc("month", [Demand Pulse/Week]), '
+    'DateTrunc("week", [Demand Pulse/Week]))'
+)
 add({
     "id": "line-trend", "kind": "line-chart",
     "source": {"elementId": "tbl-month", "kind": "table"},
     "columns": [
-        {"id": "tx", "formula": f"[{MP}/Month]", "name": "Month"},
-        {"id": "ty1", "formula": f"Sum([{MP}/EV Waitlist])", "name": "EV", "format": NUM0},
-        {"id": "ty2", "formula": f"Sum([{MP}/Hybrid Waitlist])", "name": "Hybrid", "format": NUM0},
+        {"id": "tx", "formula": GRAIN_X, "name": "Period",
+         "format": {"kind": "datetime", "formatString": "%b %d, %Y"}},
+        {"id": "ty1", "formula": f"Max([{MP}/EV Waitlist])", "name": "EV", "format": NUM0},
+        {"id": "ty2", "formula": f"Max([{MP}/Hybrid Waitlist])", "name": "Hybrid", "format": NUM0},
     ],
     "xAxis": {"columnId": "tx"},
     "yAxis": {"columnIds": ["ty1", "ty2"]},
-    "name": title("Backlog Trend"),
+    "name": title("Waitlist trend"),
     "legend": {"visibility": "shown"},
     "style": {"backgroundColor": CARD, "padding": "none"},
     "lineAreaStyle": {"interpolation": "monotone"},
+})
+add({"id": "c-score", "kind": "container", "spacing": "small", "style": card()})
+md("txt-score", section_title("Regional scorecard"))
+add({
+    "id": "tbl-score", "kind": "table", "name": "Regional scorecard",
+    "source": {"elementId": "tbl-region", "kind": "table"},
+    "columns": [
+        {"id": "sc0", "formula": f"[{RP}/Region]", "name": "Region"},
+        {"id": "sc1", "formula": f"[{RP}/EV Backlog]", "name": "EV backlog", "format": NUM0},
+        {"id": "sc2", "formula": f"[{RP}/Hybrid Backlog]", "name": "Hybrid", "format": NUM0},
+        {"id": "sc3", "formula": f"[{RP}/EV Share]", "name": "EV share", "format": PCT0},
+        {"id": "sc4", "formula": f"[{RP}/Backlog Weeks]", "name": "Wait (wks)", "format": NUM1},
+        {"id": "sc5", "formula": f"[{RP}/Delta Weeks]", "name": "Δ weeks",
+         "format": {"kind": "number", "formatString": "+,.1f"}},
+        {"id": "sc6", "formula": f"[{RP}/EV Growth Pct] / 100", "name": "30d growth",
+         "format": {"kind": "number", "formatString": "+,.0%"}},
+    ],
+    "style": {"padding": "none", "backgroundColor": CARD},
+    "tableComponents": {"summaryBar": "hidden"},
+    "conditionalFormats": [
+        {"type": "single", "columnIds": ["sc4"], "condition": ">", "value": 5,
+         "style": {"backgroundColor": "#FCE8E6", "color": RED, "bold": True}},
+        {"type": "single", "columnIds": ["sc4"], "condition": "Between", "low": 3, "high": 5,
+         "style": {"backgroundColor": "#FDF3DA", "color": GOLD}},
+        {"type": "single", "columnIds": ["sc5"], "condition": ">", "value": 0,
+         "style": {"backgroundColor": "#FCE8E6", "color": RED}},
+        {"type": "single", "columnIds": ["sc5"], "condition": "<", "value": 0,
+         "style": {"backgroundColor": "#E3F5EC", "color": GREEN}},
+        {"type": "single", "columnIds": ["sc6"], "condition": ">", "value": 0.25,
+         "style": {"backgroundColor": "#FCE8E6", "color": RED, "bold": True}},
+    ],
 })
 md("txt-foot",
    f'<span style="color: {MUTED}">Sigma Motors · Sustainable Mobility · Smarter Supply · Stronger Margins'
@@ -1024,6 +1098,7 @@ agents.append({
     "dataSources": [
         {"kind": "table", "elementId": "tbl-month"},
         {"kind": "table", "elementId": "tbl-region"},
+        {"kind": "table", "elementId": "tbl-mix"},
         {"kind": "table", "elementId": "tbl-realloc"},
     ],
     "tools": [],
@@ -1073,9 +1148,10 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg1">
   <Container elementId="c-hdr1" type="grid" gridColumn="1 / 25" gridRow="1 / 5"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="logo1" gridColumn="1 / 8" gridRow="1 / 5"/>
-    <Element elementId="nav1" gridColumn="8 / 20" gridRow="2 / 5"/>
-    <Element elementId="ctrl-date" gridColumn="20 / 25" gridRow="2 / 5"/>
+    <Element elementId="logo1" gridColumn="1 / 7" gridRow="1 / 5"/>
+    <Element elementId="nav1" gridColumn="7 / 16" gridRow="2 / 5"/>
+    <Element elementId="ctrl-grain" gridColumn="16 / 21" gridRow="2 / 5"/>
+    <Element elementId="ctrl-date" gridColumn="21 / 25" gridRow="2 / 5"/>
   </Container>
   <Container elementId="c-title" type="grid" gridColumn="1 / 25" gridRow="5 / 10"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
@@ -1114,57 +1190,38 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
     <Element elementId="kc-rk" gridColumn="1 / 13" gridRow="3 / 8"/>
     <Element elementId="sp-rk" gridColumn="1 / 13" gridRow="8 / 12"/>
   </Container>
-  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="21 / 27"
+  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="22 / 28"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-ai" gridColumn="1 / 3" gridRow="2 / 5"/>
     <Element elementId="txt-ai" gridColumn="3 / 20" gridRow="1 / 6"/>
     <Element elementId="btn-scen" gridColumn="20 / 25" gridRow="2 / 5"/>
   </Container>
-  <Container elementId="c-qq" type="grid" gridColumn="1 / 8" gridRow="27 / 53"
+  <Container elementId="c-qq" type="grid" gridColumn="1 / 8" gridRow="28 / 63"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-qq1" gridColumn="1 / 3" gridRow="1 / 3"/>
     <Element elementId="txt-qq-h" gridColumn="3 / 13" gridRow="1 / 3"/>
     <Element elementId="txt-qq-list" gridColumn="1 / 13" gridRow="3 / 10"/>
     <Element elementId="chat1" gridColumn="1 / 13" gridRow="10 / 24"/>
   </Container>
-  <Container elementId="c-pulse" type="grid" gridColumn="8 / 25" gridRow="27 / 41"
+  <Container elementId="c-pulse" type="grid" gridColumn="8 / 25" gridRow="28 / 48"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="txt-pulse" gridColumn="1 / 25" gridRow="1 / 3"/>
-    <Container elementId="c-dn-sw" type="grid" gridColumn="1 / 6" gridRow="3 / 16"
-               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-      <Element elementId="dn-sw" gridColumn="1 / 13" gridRow="1 / 9"/>
-      <Element elementId="cap-sw" gridColumn="1 / 13" gridRow="9 / 13"/>
-    </Container>
-    <Container elementId="c-dn-we" type="grid" gridColumn="6 / 11" gridRow="3 / 16"
-               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-      <Element elementId="dn-we" gridColumn="1 / 13" gridRow="1 / 9"/>
-      <Element elementId="cap-we" gridColumn="1 / 13" gridRow="9 / 13"/>
-    </Container>
-    <Container elementId="c-dn-mw" type="grid" gridColumn="11 / 16" gridRow="3 / 16"
-               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-      <Element elementId="dn-mw" gridColumn="1 / 13" gridRow="1 / 9"/>
-      <Element elementId="cap-mw" gridColumn="1 / 13" gridRow="9 / 13"/>
-    </Container>
-    <Container elementId="c-dn-ne" type="grid" gridColumn="16 / 21" gridRow="3 / 16"
-               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-      <Element elementId="dn-ne" gridColumn="1 / 13" gridRow="1 / 9"/>
-      <Element elementId="cap-ne" gridColumn="1 / 13" gridRow="9 / 13"/>
-    </Container>
-    <Container elementId="c-dn-so" type="grid" gridColumn="21 / 25" gridRow="3 / 16"
-               gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-      <Element elementId="dn-so" gridColumn="1 / 13" gridRow="1 / 9"/>
-      <Element elementId="cap-so" gridColumn="1 / 13" gridRow="9 / 13"/>
-    </Container>
+    <Element elementId="plg-demand" gridColumn="1 / 25" gridRow="3 / 21"/>
   </Container>
-  <Container elementId="c-bar" type="grid" gridColumn="8 / 17" gridRow="41 / 53"
+  <Container elementId="c-score" type="grid" gridColumn="8 / 17" gridRow="48 / 63"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="bar-ev" gridColumn="1 / 13" gridRow="1 / 12"/>
+    <Element elementId="txt-score" gridColumn="1 / 13" gridRow="1 / 2"/>
+    <Element elementId="tbl-score" gridColumn="1 / 13" gridRow="2 / 14"/>
   </Container>
-  <Container elementId="c-trend" type="grid" gridColumn="17 / 25" gridRow="41 / 53"
+  <Container elementId="c-trend" type="grid" gridColumn="17 / 25" gridRow="48 / 56"
              gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
-    <Element elementId="line-trend" gridColumn="1 / 13" gridRow="1 / 12"/>
+    <Element elementId="line-trend" gridColumn="1 / 13" gridRow="1 / 10"/>
   </Container>
-  <Element elementId="txt-foot" gridColumn="1 / 25" gridRow="53 / 55"/>
+  <Container elementId="c-bar" type="grid" gridColumn="17 / 25" gridRow="56 / 63"
+             gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="bar-ev" gridColumn="1 / 13" gridRow="1 / 10"/>
+  </Container>
+  <Element elementId="txt-foot" gridColumn="1 / 25" gridRow="63 / 65"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg2">
   <Container elementId="c-hdr2" type="grid" gridColumn="1 / 25" gridRow="1 / 5"
@@ -1298,15 +1355,11 @@ LAYOUT = '''<?xml version="1.0" encoding="utf-8"?>
   <Element elementId="tbl-month" gridColumn="1 / 13" gridRow="1 / 10"/>
   <Element elementId="tbl-region" gridColumn="13 / 25" gridRow="1 / 10"/>
   <Element elementId="tbl-realloc" gridColumn="1 / 13" gridRow="10 / 18"/>
-  <Element elementId="sql-fleet" gridColumn="13 / 25" gridRow="10 / 18"/>
-  <Element elementId="tbl-fleet-scenario" gridColumn="1 / 13" gridRow="18 / 26"/>
-  <Element elementId="sql-ramp" gridColumn="13 / 25" gridRow="18 / 26"/>
-  <Element elementId="ctrl-selected-scenario" gridColumn="1 / 7" gridRow="26 / 28"/>
-  <Element elementId="tbl-sw" gridColumn="7 / 12" gridRow="26 / 32"/>
-  <Element elementId="tbl-we" gridColumn="12 / 17" gridRow="26 / 32"/>
-  <Element elementId="tbl-mw" gridColumn="17 / 22" gridRow="26 / 32"/>
-  <Element elementId="tbl-ne" gridColumn="1 / 6" gridRow="32 / 38"/>
-  <Element elementId="tbl-so" gridColumn="6 / 11" gridRow="32 / 38"/>
+  <Element elementId="tbl-mix" gridColumn="13 / 25" gridRow="10 / 18"/>
+  <Element elementId="sql-fleet" gridColumn="1 / 13" gridRow="18 / 26"/>
+  <Element elementId="tbl-fleet-scenario" gridColumn="13 / 25" gridRow="18 / 26"/>
+  <Element elementId="sql-ramp" gridColumn="1 / 13" gridRow="26 / 34"/>
+  <Element elementId="ctrl-selected-scenario" gridColumn="13 / 20" gridRow="26 / 28"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="m-scenarios">
   <Element elementId="ms-icon" gridColumn="1 / 2" gridRow="1 / 2"/>
