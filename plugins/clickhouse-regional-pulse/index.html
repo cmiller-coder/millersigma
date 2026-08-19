@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ClickHouse Regional Pulse — Sigma Plugin</title>
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@sigmacomputing/plugin@1.2.0/dist/umd/sigmacomputing-plugin.umd.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#F5F7FF;overflow:hidden}
+  #wrap{height:100%;width:100%;position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:18px;padding:16px}
+  .cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;user-select:none;position:relative}
+  .ring{border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;transition:box-shadow .15s,opacity .15s}
+  .ring::before{content:'';position:absolute;inset:0;border-radius:50%;animation:pulse 2.2s ease-in-out infinite;background:inherit;opacity:.55}
+  .ring.slow::before{animation-duration:3.2s}
+  .ring.fast::before{animation-duration:1.3s}
+  @keyframes pulse{
+    0%{transform:scale(1);opacity:.45}
+    70%{transform:scale(1.55);opacity:0}
+    100%{transform:scale(1.55);opacity:0}
+  }
+  .ring .core{border-radius:50%;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;font-weight:800;color:#0B0B1A}
+  .cell.dim{opacity:.32}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.04em;color:#AAB1D2;text-align:center;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .val{font-size:11px;font-weight:700;color:#F5F7FF}
+  #note{position:absolute;top:6px;right:10px;font-size:9px;color:#5B6290;letter-spacing:.05em;text-transform:uppercase;z-index:2}
+  #empty{font-size:12px;color:#AAB1D2}
+  #legend{position:absolute;bottom:6px;left:10px;font-size:9px;color:#5B6290;letter-spacing:.03em;z-index:2}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function(){
+  var SDK = window.SigmaPlugin || (window.sigmaComputing && window.sigmaComputing.plugin) || window["@sigmacomputing/plugin"];
+  if(!SDK || !SDK.client || !window.React || !window.ReactDOM){
+    document.getElementById('root').innerHTML = '<div id="wrap"><div id="empty">Plugin SDK failed to load. Reload the workbook; if it persists, check the plugin URL is publicly accessible.</div></div>';
+    return;
+  }
+  var h = React.createElement;
+
+  SDK.client.config.configureEditorPanel([
+    {name:'source', type:'element'},
+    {name:'category', type:'column', source:'source', label:'Region (one ring per value)'},
+    {name:'size', type:'column', source:'source', allowedTypes:['number','integer'], label:'Ring size (revenue)'},
+    {name:'velocity', type:'column', source:'source', allowedTypes:['number','integer'], label:'Pulse speed (order volume)'},
+    {name:'colorMetric', type:'column', source:'source', allowedTypes:['number','integer'], label:'Ring color (margin %, optional)'},
+    {name:'clickTarget', type:'variable', label:'Select → variable'},
+    {name:'onSelect', type:'action-trigger', label:'Select → action (optional)'}
+  ]);
+
+  var YELLOW = '#FCFF74', BLUE = '#40D7FF', PINK = '#FF72D0';
+
+  function fmtUSD(n){
+    if(n==null||isNaN(n)) return '—';
+    var a=Math.abs(n), s;
+    if(a>=1e9) s=(a/1e9).toFixed(2)+'B'; else if(a>=1e6) s=(a/1e6).toFixed(2)+'M';
+    else if(a>=1e3) s=(a/1e3).toFixed(1)+'k'; else s=a.toFixed(0);
+    return '$'+s;
+  }
+  function sum(arr){ var t=0; for(var i=0;i<arr.length;i++){ var n=Number(arr[i]); if(!isNaN(n)) t+=n; } return t; }
+
+  function synth(){
+    return {
+      cats: ['West','South','Northeast','Midwest'],
+      size: [4200000, 3650000, 2980000, 2410000],
+      velocity: [9200, 8100, 6400, 5300],
+      color: [28, 24, 31, 19]
+    };
+  }
+
+  function colorFor(pct){
+    if(pct==null) return YELLOW;
+    if(pct>=28) return YELLOW;
+    if(pct>=22) return BLUE;
+    return PINK;
+  }
+
+  function App(){
+    var config = SDK.useConfig();
+    var data = SDK.useElementData(config.source || '');
+    var varTuple = SDK.useVariable(config.clickTarget || '');
+    var selected = varTuple[0], setSelected = varTuple[1];
+    var triggerOnSelect = SDK.useActionTrigger(config.onSelect || '');
+    var boxTuple = React.useState({w:400,h:300});
+    var box = boxTuple[0], setBox = boxTuple[1];
+    var ref = React.useRef(null);
+
+    React.useEffect(function(){
+      if(!ref.current) return;
+      var ro = new ResizeObserver(function(entries){
+        var r = entries[0].contentRect;
+        setBox({w:r.width, h:r.height});
+      });
+      ro.observe(ref.current);
+      return function(){ ro.disconnect(); };
+    }, []);
+
+    var d = data, c = config;
+    var live = d && c.category && c.size && d[c.category] && d[c.size];
+    var cats, size, velocity, colorVals;
+    var illustrative = !live;
+    if(live){
+      var rawCats = d[c.category], rawSize = d[c.size];
+      var rawVel = c.velocity ? d[c.velocity] : null;
+      var rawColor = c.colorMetric ? d[c.colorMetric] : null;
+      var byCat = {}, order = [];
+      for(var i=0;i<rawCats.length;i++){
+        var k = String(rawCats[i]);
+        if(!byCat[k]){ byCat[k] = {size:[], vel:[], col:[]}; order.push(k); }
+        byCat[k].size.push(rawSize[i]);
+        if(rawVel) byCat[k].vel.push(rawVel[i]);
+        if(rawColor) byCat[k].col.push(rawColor[i]);
+      }
+      cats = order;
+      size = order.map(function(k){ return sum(byCat[k].size); });
+      velocity = order.map(function(k){ return byCat[k].vel.length ? byCat[k].vel.length : 0; });
+      colorVals = order.map(function(k){ return byCat[k].col.length ? sum(byCat[k].col)/byCat[k].col.length : null; });
+    } else {
+      var s = synth();
+      cats = s.cats; size = s.size; velocity = s.velocity; colorVals = s.color;
+    }
+
+    var maxSize = Math.max.apply(null, size.concat([1]));
+    var maxVel = Math.max.apply(null, velocity.concat([1]));
+    var minDim = Math.max(60, Math.min(box.w, box.h) - 40);
+    var maxD = Math.min(minDim / Math.max(1, Math.ceil(Math.sqrt(cats.length))), 160);
+    var minD = Math.max(34, maxD * 0.38);
+
+    async function handleClick(k){
+      var was = selected === k;
+      setSelected(was ? '' : k);
+      if(triggerOnSelect) await triggerOnSelect();
+    }
+
+    var cells = cats.map(function(k, i){
+      var frac = maxSize > 0 ? size[i] / maxSize : 0;
+      var d = minD + frac * (maxD - minD);
+      var velFrac = maxVel > 0 ? velocity[i] / maxVel : 0.5;
+      var speedClass = velFrac > 0.66 ? 'fast' : velFrac < 0.33 ? 'slow' : '';
+      var col = colorFor(colorVals[i]);
+      var isDim = selected && selected !== k;
+      return h('div', {className:'cell'+(isDim?' dim':''), key:k, onClick:function(){ handleClick(k); }}, [
+        h('div', {className:'ring '+speedClass, key:'ring', style:{width:d, height:d, background:col}}, [
+          h('div', {className:'core', key:'core', style:{width:d*0.7, height:d*0.7, background:col, fontSize:Math.max(10, d*0.14)}}, fmtUSD(size[i]))
+        ]),
+        h('div', {className:'lbl', key:'lbl'}, k)
+      ]);
+    });
+
+    var children = [];
+    if(illustrative) children.push(h('div', {id:'note', key:'note'}, 'illustrative'));
+    children.push(h('div', {id:'legend', key:'legend'}, 'ring size = revenue · pulse speed = order volume'));
+    children.push.apply(children, cells);
+
+    return h('div', {id:'wrap', ref:ref}, children);
+  }
+
+  ReactDOM.render(h(App), document.getElementById('root'));
+})();
+</script>
+</body>
+</html>
