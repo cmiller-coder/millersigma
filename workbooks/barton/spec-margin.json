@@ -4462,10 +4462,14 @@
         "selectionMode": "multiple",
         "values": [],
         "source": {
-          "kind": "manual",
-          "valueType": "text"
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-assignments"
+          },
+          "columnId": "col-main-specialty"
         },
-        "includeNulls": "when-no-value-is-selected",
+        "includeNulls": "never",
         "filters": [
           {
             "source": {
@@ -4592,10 +4596,14 @@
         "selectionMode": "multiple",
         "values": [],
         "source": {
-          "kind": "manual",
-          "valueType": "text"
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "mg-book"
+          },
+          "columnId": "mg-pill"
         },
-        "includeNulls": "when-no-value-is-selected",
+        "includeNulls": "never",
         "filters": [
           {
             "source": {
@@ -4603,13 +4611,6 @@
               "elementId": "mg-detail"
             },
             "columnId": "mgd-pill"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-book"
-            },
-            "columnId": "mg-pill"
           },
           {
             "source": {

@@ -2,7 +2,10 @@
 
 **Audience:** Finance & operations leaders  
 **Duration:** ~20 minutes (15 min demo + 5 min Q&A)  
-**Workbook:** POC Test → four tabs  
+**Workbook:** **Barton Margin Tracker** (standalone — use this one)  
+**URL id:** `0Gv0MxZH1k13nlbfE8XUQ` (open from Sigma → My Documents, or ask for the full link)
+
+Legacy multi-tab POC (`POC Test`) also has a Margin Tracker tab; prefer the standalone workbook for finance demo.
 **Data:** `ASSIGNMENT_POC_TEST` (prod assignments, bill/pay rates, LOA)  
 **Revenue formula:** Bill Rate × Assignment LOA × 8  
 
@@ -158,7 +161,6 @@
 ## Deploy / refresh (internal)
 
 ```bash
-python3 workbooks/barton/apply_theme.py
-python3 workbooks/barton/add_forecast_page.py
-python3 workbooks/barton/add_margin_page.py
+python3 workbooks/barton/build_margin_workbook.py   # creates/refreshes standalone workbook
+python3 workbooks/barton/add_margin_page.py       # patches Margin tab on POC Test only
 ```

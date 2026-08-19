@@ -370,8 +370,12 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "mode": "include",
         "selectionMode": "multiple",
         "values": [],
-        "source": {"kind": "manual", "valueType": "text"},
-        "includeNulls": "when-no-value-is-selected",
+        "source": {
+            "kind": "source",
+            "source": {"kind": "table", "elementId": SRC},
+            "columnId": "col-main-specialty",
+        },
+        "includeNulls": "never",
         "filters": margin_specialty_filters(),
     }
 
@@ -384,11 +388,14 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "mode": "include",
         "selectionMode": "multiple",
         "values": [],
-        "source": {"kind": "manual", "valueType": "text"},
-        "includeNulls": "when-no-value-is-selected",
+        "source": {
+            "kind": "source",
+            "source": {"kind": "table", "elementId": "mg-book"},
+            "columnId": "mg-pill",
+        },
+        "includeNulls": "never",
         "filters": [
             {"source": {"kind": "table", "elementId": "mg-detail"}, "columnId": "mgd-pill"},
-            {"source": {"kind": "table", "elementId": "mg-book"}, "columnId": "mg-pill"},
             {"source": {"kind": "table", "elementId": "mg-kpi-margin"}, "columnId": "mgkm-col-margin-status"},
             {"source": {"kind": "table", "elementId": "mg-kpi-gross"}, "columnId": "mgkg-col-margin-status"},
             {"source": {"kind": "table", "elementId": "mg-kpi-bill"}, "columnId": "mgkb-col-margin-status"},
