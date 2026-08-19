@@ -5086,7 +5086,7 @@
       {
         "id": "mg-instr",
         "kind": "text",
-        "body": "**Margin %** = (Bill \u2212 Pay) \u00d7 LOA \u00d7 8 \u00f7 Contract Value. Adjust **Low-margin threshold** to flag placements; filter the detail tab. Log **rate corrections** and **commission splits** in the writeback tabs \u2014 audit trail included.",
+        "body": "**Margin %** = (Bill \u2212 Pay) \u00d7 LOA \u00d7 8 \u00f7 Contract Value. Adjust **Low-margin threshold** to flag placements; review flagged rows on the detail tab. Log **rate corrections** and **commission splits** in the writeback tabs \u2014 audit trail included.",
         "verticalAlign": "middle",
         "style": {
           "color": "#41454D"
