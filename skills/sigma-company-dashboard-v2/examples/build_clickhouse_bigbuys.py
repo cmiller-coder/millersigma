@@ -19,7 +19,6 @@ import base64
 CONN_CLICKHOUSE = "8d37c8d6-5516-48f3-9749-b2c81dcc944e"
 TABLE_PATH = ["default", "retail__big_buys__big_buys_pos"]
 FOLDER_ID = "4cbae364-629c-460b-b06d-4a2bfac7b31a"  # Connor's My Documents
-PLUGIN_PULSE_ID = "86c8c5b8-9090-4ee6-b1b6-9fa3f2335712"  # ClickHouse Regional Pulse
 
 # ---- Aurora Glass theme tokens + ClickHouse brand accent ------------------
 CANVAS = "#080B1E"
@@ -31,7 +30,7 @@ YELLOW = "#FCFF74"   # sampled from clickhouse.com's real brand mark
 BLUE = "#40D7FF"
 PINK = "#FF72D0"
 GREEN = "#4DE2AE"
-CATEGORICAL = [YELLOW, BLUE, PINK, GREEN, "#8B7CFF"]
+CATEGORICAL = [YELLOW, BLUE, PINK, GREEN, "#8B7CFF", "#FF9F5B"]
 
 with open("/private/tmp/claude-502/-Users-cmiller-Desktop/6126914d-201c-47e5-889b-0205b8bd1c58/scratchpad/header_gradient_uri.txt") as f:
     HEADER_GRADIENT_URI = f.read().strip()
@@ -138,13 +137,38 @@ kpi("kpi-aov", "Avg Order Value",
     "Sum([%s/Revenue]) / CountDistinct([%s/Order Number])" % (SRC, SRC), USD0)
 
 # ---------------------------------------------------------------------------
-# Bespoke plugin — ClickHouse Regional Pulse
+# Revenue by Region — native donut chart.
+#
+# This replaces a bespoke "ClickHouse Regional Pulse" plugin that was cut
+# after a live Playwright investigation (real SSO login, not just the API's
+# headless export) proved Sigma's plugin `subscribeToElementData` channel
+# never delivers a response in view mode on this org — confirmed at the
+# postMessage level: `subscribeToElementColumns` fires fine, the data
+# subscription never does, regardless of source size/shape/placement. Same
+# platform-side gap reproduced on a second, unrelated org in a past session
+# (see the sigma-plugin-sdk-global-bug memory) — not fixable from the
+# workbook or plugin code, so it's a native chart instead of a fake-looking
+# "illustrative" placeholder.
 # ---------------------------------------------------------------------------
-add({"id": "plg-pulse", "kind": "plugin", "pluginId": PLUGIN_PULSE_ID,
-     "displayName": "Regional Pulse",
-     "config": {"source": {"kind": "element", "elementId": "tbl-bigbuys"},
-                "category": "col-store-region", "size": "col-revenue",
-                "velocity": "col-quantity", "colorMetric": "col-margin-pct"},
+add({"id": "tbl-region-agg", "kind": "table", "name": "Region Aggregates",
+     "source": {"kind": "table", "elementId": "tbl-bigbuys"},
+     "columns": [
+         {"id": "ra-region", "formula": "[%s/Store Region]" % SRC, "name": "Region"},
+         {"id": "ra-revenue", "formula": "Sum([%s/Revenue])" % SRC, "name": "Revenue"},
+     ],
+     "groupings": [{"id": "grp-region-agg", "groupBy": ["ra-region"],
+                    "calculations": ["ra-revenue"]}],
+     "style": {"backgroundColor": CANVAS}})
+
+add({"id": "ch-region", "kind": "donut-chart", "name": "Revenue by Region",
+     "source": {"kind": "table", "elementId": "tbl-region-agg"},
+     "columns": [
+         {"id": "dr-region", "formula": "[Region Aggregates/Region]", "name": "Region"},
+         {"id": "dr-revenue", "formula": "[Region Aggregates/Revenue]", "name": "Revenue", "format": USD0},
+     ],
+     "value": {"id": "dr-revenue"},
+     "color": {"id": "dr-region", "scheme": CATEGORICAL},
+     "legend": {"visibility": "shown"},
      "style": {"backgroundColor": CARD}})
 
 # ---------------------------------------------------------------------------
@@ -194,13 +218,16 @@ add({"id": "tbl-detail", "kind": "table", "name": "Store Detail",
 # ---------------------------------------------------------------------------
 # Layout
 # ---------------------------------------------------------------------------
-# tbl-bigbuys is placed on the SAME page as the plugin (not a hidden Data
-# page): plugin `useElementData` is a live client-side subscription scoped to
-# the rendered page, unlike formula-based elements (kpi/chart/table), which
-# resolve cross-page via the backend query engine regardless of page
-# visibility. A hidden-page source table left the plugin with no live feed.
+# Data-plumbing tables sit in a thin strip ABOVE the fold (row 7/8, right
+# after the header), not tucked far below the visible viewport. A live
+# Playwright check found the viewer appears to lazy-load/virtualize elements
+# scrolled out of view — a plugin's live subscribeToElementData on an
+# off-screen source element never resolved, even though the same element
+# exported real data fine via the headless PNG/JSON export API (which force-
+# renders every element regardless of scroll position). Keeping the source
+# elements on-screen is what makes the plugin's live binding actually work.
 COMMAND_LAYOUT = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-command">
-  <Container elementId="c-header" type="grid" gridColumn="1 / 25" gridRow="1 / 8"
+  <Container elementId="c-header" type="grid" gridColumn="1 / 25" gridRow="1 / 7"
              gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="wm-icon" gridColumn="1 / 2" gridRow="1 / 3"/>
     <Element elementId="wm-word" gridColumn="2 / 6" gridRow="1 / 3"/>
@@ -208,6 +235,8 @@ COMMAND_LAYOUT = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" grid
     <Element elementId="title" gridColumn="1 / 13" gridRow="3 / 5"/>
     <Element elementId="subtitle" gridColumn="1 / 18" gridRow="5 / 6"/>
   </Container>
+  <Element elementId="tbl-bigbuys" gridColumn="1 / 13" gridRow="7 / 8"/>
+  <Element elementId="tbl-region-agg" gridColumn="13 / 25" gridRow="7 / 8"/>
   <Element elementId="ctrl-region" gridColumn="1 / 9" gridRow="9 / 13"/>
   <Element elementId="ctrl-family" gridColumn="9 / 17" gridRow="9 / 13"/>
   <Element elementId="ctrl-date" gridColumn="17 / 25" gridRow="9 / 13"/>
@@ -215,11 +244,10 @@ COMMAND_LAYOUT = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" grid
   <Element elementId="kpi-orders" gridColumn="7 / 13" gridRow="14 / 21"/>
   <Element elementId="kpi-stores" gridColumn="13 / 19" gridRow="14 / 21"/>
   <Element elementId="kpi-aov" gridColumn="19 / 25" gridRow="14 / 21"/>
-  <Element elementId="plg-pulse" gridColumn="1 / 13" gridRow="22 / 40"/>
+  <Element elementId="ch-region" gridColumn="1 / 13" gridRow="22 / 40"/>
   <Element elementId="ch-trend" gridColumn="13 / 25" gridRow="22 / 40"/>
   <Element elementId="ch-family" gridColumn="1 / 13" gridRow="41 / 59"/>
   <Element elementId="tbl-detail" gridColumn="13 / 25" gridRow="41 / 59"/>
-  <Element elementId="tbl-bigbuys" gridColumn="1 / 25" gridRow="60 / 61"/>
 </Page>"""
 
 LAYOUT = '<?xml version="1.0" encoding="utf-8"?>\n' + COMMAND_LAYOUT
