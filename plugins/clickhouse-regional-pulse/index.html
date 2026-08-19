@@ -81,7 +81,11 @@
 
   function App(){
     var config = SDK.useConfig();
-    var data = SDK.useElementData(config.source || '');
+    var rawSource = config.source;
+    var sourceId = (rawSource && typeof rawSource === 'object')
+      ? (rawSource.elementId || rawSource.id || '')
+      : (rawSource || '');
+    var data = SDK.useElementData(sourceId);
     var varTuple = SDK.useVariable(config.clickTarget || '');
     var selected = varTuple[0], setSelected = varTuple[1];
     var triggerOnSelect = SDK.useActionTrigger(config.onSelect || '');
