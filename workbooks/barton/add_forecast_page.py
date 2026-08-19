@@ -5,9 +5,13 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from barton_formulas import DT_PERIOD, KPI_PERIOD, PERIOD, PERIOD_COMPARISON
 
 REPO = Path(__file__).resolve().parents[2]
 WORKBOOK_ID = "3b65aa5b-c908-4b8d-bcb6-f177d74bb5ef"
@@ -558,6 +562,39 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str, str]
         muted=True,
     )
 
+    kpi_period = {
+        "id": "fc-kpi-period",
+        "kind": "kpi-chart",
+        "source": {"elementId": "tbl-assignments", "kind": "table"},
+        "columns": [
+            {"id": "fkt-period", "formula": KPI_PERIOD, "name": "Period", "format": DT_PERIOD},
+            {
+                "id": "fkt-val",
+                "formula": "Sum([Assignments/Estimated Contract Value])",
+                "name": "Contract Value",
+                "format": CUR,
+            },
+        ],
+        "value": {"columnId": "fkt-val", "color": NAVY, "fontSize": 24},
+        "name": {"text": "Contract Value (period trend)", "color": TEXT_MUTED, "fontSize": 12},
+        "layout": {"anchor": "middle"},
+        "style": dict(CARD_STYLE),
+        "timeline": {"columnId": "fkt-period"},
+        "periodComparison": "month",
+        "comparison": dict(PERIOD_COMPARISON),
+    }
+
+    fc_tabs = {
+        "id": "fc-tc",
+        "kind": "tabbed-container",
+        "tabs": [
+            {"name": "Impact"},
+            {"name": "Drivers"},
+            {"name": "Approval"},
+        ],
+        "tabBar": {"alignment": "start"},
+    }
+
     compare_chart = {
         "id": "fc-chart-compare",
         "kind": "bar-chart",
@@ -671,7 +708,8 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str, str]
         "body": (
             "**1** — Select **Base Case** or **Create scenario**. "
             "**2** — Adjust **Booking Growth %**, **Bill Rate %**, **Pay Rate %**, and **Cancel Rate %** per specialty. "
-            "**3** — Review KPIs and charts, then **Submit for approval** → **Approve** to lock the plan."
+            "**3** — Review KPIs and charts, then **Submit for approval** → **Approve** to lock the plan. "
+            "Use **Date grain** / **Date basis** on Assignment Overview for the period trend KPI."
         ),
         "verticalAlign": "middle",
         "style": {"color": SLATE},
@@ -686,12 +724,12 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str, str]
 
     elements = [
         sbase, scenarios, spivot, assum, book, subs,
-        hdr, logo, title, subtitle, toolbar,
+        hdr, logo, title, subtitle, toolbar, fc_tabs,
         sel_ctrl, name_ctrl, create_btn, submit_btn, approve_btn,
-        kpi_prev, kpi_mar, kpi_uplift, kpi_base,
+        kpi_prev, kpi_mar, kpi_uplift, kpi_base, kpi_period,
         div_kpi, sec_impact, baseline_chart, compare_chart, variance_chart,
-        div_charts, sec_drivers, instr_c, instr_hd, instr,
-        div_drivers, sec_approval,
+        sec_drivers, instr_c, instr_hd, instr,
+        sec_approval,
         create_confirm, cancel_btn, modal_title,
     ]
 
@@ -732,24 +770,31 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str, str]
   <Element elementId="fc-kpi-uplift" gridColumn="16 / 21" gridRow="8 / 15"/>
   <Element elementId="fc-kpi-base" gridColumn="21 / 25" gridRow="8 / 15"/>
   <Element elementId="fc-div-kpi" gridColumn="1 / 25" gridRow="15 / 16"/>
-  <Element elementId="fc-sec-impact" gridColumn="1 / 25" gridRow="16 / 17"/>
-  <Element elementId="fc-chart-base-bar" gridColumn="1 / 13" gridRow="17 / 29"/>
-  <Element elementId="fc-chart-compare" gridColumn="13 / 25" gridRow="17 / 29"/>
-  <Element elementId="fc-chart-var" gridColumn="1 / 25" gridRow="29 / 41"/>
-  <Element elementId="fc-div-charts" gridColumn="1 / 25" gridRow="41 / 42"/>
-  <Element elementId="fc-sec-drivers" gridColumn="1 / 25" gridRow="42 / 43"/>
-  <Container elementId="fc-instr-c" type="grid" gridColumn="1 / 25" gridRow="43 / 46" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="fc-instr-hd" gridColumn="1 / 25" gridRow="1 / 2"/>
-    <Element elementId="fc-instr" gridColumn="1 / 25" gridRow="2 / 4"/>
-  </Container>
-  <Element elementId="fc-assum" gridColumn="1 / 25" gridRow="46 / 62"/>
-  <Element elementId="fc-div-drivers" gridColumn="1 / 25" gridRow="62 / 63"/>
-  <Element elementId="fc-sec-approval" gridColumn="1 / 25" gridRow="63 / 64"/>
-  <Element elementId="fc-subs" gridColumn="1 / 25" gridRow="64 / 70"/>
-  <Element elementId="fc-base" gridColumn="1 / 2" gridRow="70 / 71"/>
-  <Element elementId="fc-scenarios" gridColumn="2 / 3" gridRow="70 / 71"/>
-  <Element elementId="fc-pivot" gridColumn="3 / 4" gridRow="70 / 71"/>
-  <Element elementId="fc-book" gridColumn="4 / 5" gridRow="70 / 71"/>
+  <TabbedContainer elementId="fc-tc" type="tabbed-container" gridColumn="1 / 25" gridRow="16 / 69">
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="fc-sec-impact" gridColumn="1 / 25" gridRow="1 / 2"/>
+      <Element elementId="fc-kpi-period" gridColumn="1 / 8" gridRow="2 / 9"/>
+      <Element elementId="fc-chart-base-bar" gridColumn="1 / 13" gridRow="9 / 21"/>
+      <Element elementId="fc-chart-compare" gridColumn="13 / 25" gridRow="9 / 21"/>
+      <Element elementId="fc-chart-var" gridColumn="1 / 25" gridRow="21 / 33"/>
+    </Tab>
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="fc-sec-drivers" gridColumn="1 / 25" gridRow="1 / 2"/>
+      <Container elementId="fc-instr-c" type="grid" gridColumn="1 / 25" gridRow="2 / 5" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+        <Element elementId="fc-instr-hd" gridColumn="1 / 25" gridRow="1 / 2"/>
+        <Element elementId="fc-instr" gridColumn="1 / 25" gridRow="2 / 4"/>
+      </Container>
+      <Element elementId="fc-assum" gridColumn="1 / 25" gridRow="5 / 28"/>
+    </Tab>
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="fc-sec-approval" gridColumn="1 / 25" gridRow="1 / 2"/>
+      <Element elementId="fc-subs" gridColumn="1 / 25" gridRow="2 / 18"/>
+    </Tab>
+  </TabbedContainer>
+  <Element elementId="fc-base" gridColumn="1 / 2" gridRow="69 / 70"/>
+  <Element elementId="fc-scenarios" gridColumn="2 / 3" gridRow="69 / 70"/>
+  <Element elementId="fc-pivot" gridColumn="3 / 4" gridRow="69 / 70"/>
+  <Element elementId="fc-book" gridColumn="4 / 5" gridRow="69 / 70"/>
 </Page>"""
 
     return elements, overlay, page_layout, modal_layout

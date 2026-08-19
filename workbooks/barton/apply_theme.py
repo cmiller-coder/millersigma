@@ -12,6 +12,10 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from barton_formulas import DT_PERIOD, KPI_PERIOD, PERIOD, PERIOD_COMPARISON, TREND_VALUE
 WORKBOOK_ID = "3b65aa5b-c908-4b8d-bcb6-f177d74bb5ef"
 LOGO_URI = (REPO / "workbooks/barton/logo.datauri.txt").read_text().strip()
 
@@ -290,6 +294,116 @@ def apply_theme(spec: dict) -> dict:
         "color": SLATE,
     }
 
+    # --- period-comparison KPIs, switchers, tabbed chart area ---
+    ids = {e["id"] for e in elements}
+    interactive_elements = [
+        {
+            "id": "container-switchers-p1",
+            "kind": "container",
+            "style": dict(CARD_STYLE),
+        },
+        {
+            "kind": "control",
+            "controlId": "Date-Basis",
+            "id": "ctrl-date-basis",
+            "name": "Date basis",
+            "controlType": "segmented",
+            "source": {
+                "kind": "manual",
+                "valueType": "text",
+                "values": ["Created Date", "Start Date"],
+                "labels": ["Created", "Start"],
+            },
+            "value": "Created Date",
+        },
+        {
+            "kind": "control",
+            "controlId": "Trend-Metric",
+            "id": "ctrl-trend-metric",
+            "name": "Trend metric",
+            "controlType": "segmented",
+            "source": {
+                "kind": "manual",
+                "valueType": "text",
+                "values": ["Bookings", "Contract Value", "Cancellations"],
+                "labels": ["Bookings", "Contract $", "Cancels"],
+            },
+            "value": "Bookings",
+        },
+        {
+            "id": "tc-charts-p1",
+            "kind": "tabbed-container",
+            "tabs": [
+                {"name": "Volume trend"},
+                {"name": "Rates & geography"},
+                {"name": "Cancellations"},
+            ],
+            "tabBar": {"alignment": "start"},
+        },
+        {
+            "id": "tc-detail-p2",
+            "kind": "tabbed-container",
+            "tabs": [
+                {"name": "Specialty × status"},
+                {"name": "Assignment detail"},
+            ],
+            "tabBar": {"alignment": "start"},
+        },
+    ]
+    for ne in interactive_elements:
+        if ne["id"] not in ids:
+            elements.append(ne)
+            ids.add(ne["id"])
+
+    grain = elem_by_id(elements, "ctrl-grain")
+    grain["controlId"] = "Date-Segment"
+    grain["name"] = "Date grain"
+    grain["controlType"] = "segmented"
+    grain.setdefault("value", "month")
+
+    kpi_period_cols = {
+        "kpi-booked": "kb-month",
+        "kpi-avg-bill": "kbr-month",
+        "kpi-avg-pay": "kpr-month",
+        "kpi-avg-spread": "ksp-month",
+        "kpi-contract-value": "kcv-month",
+        "kpi-cancelled": "kcx-month",
+    }
+    for kid, period_id in kpi_period_cols.items():
+        kpi = elem_by_id(elements, kid)
+        updated = False
+        for col in kpi["columns"]:
+            if col["id"] == period_id:
+                col["formula"] = KPI_PERIOD
+                col["name"] = "Period"
+                col["format"] = DT_PERIOD
+                updated = True
+                break
+        if not updated:
+            kpi["columns"].insert(
+                0,
+                {"id": period_id, "formula": KPI_PERIOD, "name": "Period", "format": DT_PERIOD},
+            )
+        kpi["timeline"] = {"columnId": period_id}
+        kpi["periodComparison"] = "month"
+        kpi["comparison"] = dict(PERIOD_COMPARISON)
+
+    trend = elem_by_id(elements, "chart-trend")
+    for col in trend["columns"]:
+        if col["id"] == "ctd-period":
+            col["formula"] = PERIOD
+            col["format"] = DT_PERIOD
+        elif col["id"] == "ctd-count":
+            col["formula"] = TREND_VALUE
+            col["name"] = "Trend value"
+
+    cancel = elem_by_id(elements, "chart-cancel-trend")
+    for col in cancel["columns"]:
+        if col["id"] == "ccx-month":
+            col["formula"] = PERIOD
+            col["name"] = "Period"
+            col["format"] = DT_PERIOD
+
     # --- layout ---
     kpi_layout = "\n".join(
         f'    <Element elementId="{kid}" gridColumn="{1 + i * 4} / {5 + i * 4}" gridRow="1 / 9"/>'
@@ -312,12 +426,24 @@ def apply_theme(spec: dict) -> dict:
   <Container elementId="container-kpi-p1" type="grid" gridColumn="1 / 25" gridRow="8 / 17" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="repeat(8, 1fr)">
 {kpi_layout}
   </Container>
-  <Element elementId="ctrl-grain" gridColumn="1 / 5" gridRow="17 / 20"/>
-  <Element elementId="chart-trend" gridColumn="5 / 25" gridRow="17 / 33"/>
-  <Element elementId="chart-rate-by-specialty" gridColumn="1 / 13" gridRow="33 / 49"/>
-  <Element elementId="chart-by-state" gridColumn="13 / 25" gridRow="33 / 49"/>
-  <Element elementId="chart-cancel-trend" gridColumn="1 / 19" gridRow="49 / 65"/>
-  <Element elementId="text-note-p1" gridColumn="19 / 25" gridRow="49 / 65"/>
+  <Container elementId="container-switchers-p1" type="grid" gridColumn="1 / 25" gridRow="17 / 20" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ctrl-grain" gridColumn="1 / 7" gridRow="1 / 4"/>
+    <Element elementId="ctrl-date-basis" gridColumn="7 / 14" gridRow="1 / 4"/>
+    <Element elementId="ctrl-trend-metric" gridColumn="14 / 25" gridRow="1 / 4"/>
+  </Container>
+  <TabbedContainer elementId="tc-charts-p1" type="tabbed-container" gridColumn="1 / 25" gridRow="20 / 66">
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="chart-trend" gridColumn="1 / 25" gridRow="1 / 22"/>
+    </Tab>
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="chart-rate-by-specialty" gridColumn="1 / 13" gridRow="1 / 20"/>
+      <Element elementId="chart-by-state" gridColumn="13 / 25" gridRow="1 / 20"/>
+    </Tab>
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="chart-cancel-trend" gridColumn="1 / 19" gridRow="1 / 20"/>
+      <Element elementId="text-note-p1" gridColumn="19 / 25" gridRow="1 / 20"/>
+    </Tab>
+  </TabbedContainer>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-detail">
   <Container elementId="container-hdr-p2" type="grid" gridColumn="1 / 25" gridRow="1 / 5" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
@@ -327,8 +453,14 @@ def apply_theme(spec: dict) -> dict:
     <Element elementId="ctrl-status-p2" gridColumn="16 / 21" gridRow="2 / 5"/>
     <Element elementId="ctrl-specialty-p2" gridColumn="21 / 25" gridRow="2 / 5"/>
   </Container>
-  <Element elementId="pivot-specialty-status" gridColumn="1 / 25" gridRow="5 / 21"/>
-  <Element elementId="tbl-detail" gridColumn="1 / 25" gridRow="21 / 45"/>
+  <TabbedContainer elementId="tc-detail-p2" type="tabbed-container" gridColumn="1 / 25" gridRow="5 / 45">
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="pivot-specialty-status" gridColumn="1 / 25" gridRow="1 / 18"/>
+    </Tab>
+    <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+      <Element elementId="tbl-detail" gridColumn="1 / 25" gridRow="1 / 24"/>
+    </Tab>
+  </TabbedContainer>
   <Element elementId="tbl-assignments" gridColumn="1 / 25" gridRow="45 / 47"/>
 </Page>
 """
@@ -338,8 +470,24 @@ def apply_theme(spec: dict) -> dict:
 
 
 def main() -> None:
+    import re
+
     spec = api("GET", f"/v2/workbooks/{WORKBOOK_ID}/spec")
+    existing_layout = spec["document"].get("layout", "")
+    extra_pages = ""
+    for page_id in ("page-forecast", "fc-modal-create"):
+        m = re.search(
+            rf'<Page[^>]*id="{page_id}"[^>]*>.*?</Page>\s*',
+            existing_layout,
+            flags=re.DOTALL,
+        )
+        if m:
+            extra_pages += m.group(0)
+
     themed = apply_theme(spec)
+    if extra_pages:
+        themed["document"]["layout"] = themed["document"]["layout"].rstrip() + extra_pages
+
     out = REPO / "workbooks/barton/spec-themed.json"
     payload = {
         "name": themed["name"],
