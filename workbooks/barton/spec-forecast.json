@@ -435,6 +435,15 @@
         },
         "columns": [
           {
+            "id": "kb-month",
+            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%b %Y"
+            }
+          },
+          {
             "id": "kb-value",
             "formula": "CountDistinct([Assignments/Assignment Number])",
             "name": "Assignments Booked"
@@ -548,11 +557,6 @@
             "id": "kb-col-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "kb-month",
-            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
-            "name": "Month"
           }
         ],
         "value": {
@@ -570,7 +574,17 @@
         },
         "layout": {
           "anchor": "middle"
-        }
+        },
+        "comparison": {
+          "display": "delta",
+          "colorGood": "#007a78",
+          "colorBad": "#d64545",
+          "fontSize": 13
+        },
+        "timeline": {
+          "columnId": "kb-month"
+        },
+        "periodComparison": "month"
       },
       {
         "id": "kpi-avg-bill",
@@ -580,6 +594,15 @@
           "kind": "table"
         },
         "columns": [
+          {
+            "id": "kbr-month",
+            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%b %Y"
+            }
+          },
           {
             "id": "kbr-value",
             "formula": "Avg([Assignments/Bill Rate])",
@@ -694,11 +717,6 @@
             "id": "kbr-col-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "kbr-month",
-            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
-            "name": "Month"
           }
         ],
         "value": {
@@ -716,7 +734,17 @@
         },
         "layout": {
           "anchor": "middle"
-        }
+        },
+        "comparison": {
+          "display": "delta",
+          "colorGood": "#007a78",
+          "colorBad": "#d64545",
+          "fontSize": 13
+        },
+        "timeline": {
+          "columnId": "kbr-month"
+        },
+        "periodComparison": "month"
       },
       {
         "id": "kpi-avg-pay",
@@ -726,6 +754,15 @@
           "kind": "table"
         },
         "columns": [
+          {
+            "id": "kpr-month",
+            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%b %Y"
+            }
+          },
           {
             "id": "kpr-value",
             "formula": "Avg([Assignments/Pay Rate])",
@@ -840,11 +877,6 @@
             "id": "kpr-col-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "kpr-month",
-            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
-            "name": "Month"
           }
         ],
         "value": {
@@ -862,7 +894,17 @@
         },
         "layout": {
           "anchor": "middle"
-        }
+        },
+        "comparison": {
+          "display": "delta",
+          "colorGood": "#007a78",
+          "colorBad": "#d64545",
+          "fontSize": 13
+        },
+        "timeline": {
+          "columnId": "kpr-month"
+        },
+        "periodComparison": "month"
       },
       {
         "id": "kpi-avg-spread",
@@ -872,6 +914,15 @@
           "kind": "table"
         },
         "columns": [
+          {
+            "id": "ksp-month",
+            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%b %Y"
+            }
+          },
           {
             "id": "ksp-value",
             "formula": "Avg([Assignments/Rate Spread])",
@@ -986,11 +1037,6 @@
             "id": "ksp-col-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "ksp-month",
-            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
-            "name": "Month"
           }
         ],
         "value": {
@@ -1008,7 +1054,17 @@
         },
         "layout": {
           "anchor": "middle"
-        }
+        },
+        "comparison": {
+          "display": "delta",
+          "colorGood": "#007a78",
+          "colorBad": "#d64545",
+          "fontSize": 13
+        },
+        "timeline": {
+          "columnId": "ksp-month"
+        },
+        "periodComparison": "month"
       },
       {
         "id": "kpi-contract-value",
@@ -1018,6 +1074,15 @@
           "kind": "table"
         },
         "columns": [
+          {
+            "id": "kcv-month",
+            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%b %Y"
+            }
+          },
           {
             "id": "kcv-value",
             "formula": "Sum([Assignments/Estimated Contract Value])",
@@ -1132,11 +1197,6 @@
             "id": "kcv-col-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "kcv-month",
-            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
-            "name": "Month"
           }
         ],
         "value": {
@@ -1154,7 +1214,17 @@
         },
         "layout": {
           "anchor": "middle"
-        }
+        },
+        "comparison": {
+          "display": "delta",
+          "colorGood": "#007a78",
+          "colorBad": "#d64545",
+          "fontSize": 13
+        },
+        "timeline": {
+          "columnId": "kcv-month"
+        },
+        "periodComparison": "month"
       },
       {
         "id": "kpi-cancelled",
@@ -1164,6 +1234,15 @@
           "kind": "table"
         },
         "columns": [
+          {
+            "id": "kcx-month",
+            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%b %Y"
+            }
+          },
           {
             "id": "kcx-value",
             "formula": "Sum([Assignments/Is Cancelled Or Withdrawn])",
@@ -1278,11 +1357,6 @@
             "id": "kcx-col-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "kcx-month",
-            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
-            "name": "Month"
           }
         ],
         "value": {
@@ -1300,12 +1374,33 @@
         },
         "layout": {
           "anchor": "middle"
+        },
+        "comparison": {
+          "display": "delta",
+          "colorGood": "#007a78",
+          "colorBad": "#d64545",
+          "fontSize": 13
+        },
+        "timeline": {
+          "columnId": "kcx-month"
+        },
+        "periodComparison": "month"
+      },
+      {
+        "id": "container-switchers-p1",
+        "kind": "container",
+        "style": {
+          "backgroundColor": "#ffffff",
+          "borderRadius": "round",
+          "borderColor": "#d4e8e7",
+          "borderWidth": 1
         }
       },
       {
         "kind": "control",
         "controlId": "Date-Segment",
         "id": "ctrl-grain",
+        "name": "Date grain",
         "controlType": "segmented",
         "source": {
           "kind": "manual",
@@ -1326,6 +1421,66 @@
         "value": "month"
       },
       {
+        "kind": "control",
+        "controlId": "Date-Basis",
+        "id": "ctrl-date-basis",
+        "name": "Date basis",
+        "controlType": "segmented",
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "Created Date",
+            "Start Date"
+          ],
+          "labels": [
+            "Created",
+            "Start"
+          ]
+        },
+        "value": "Created Date"
+      },
+      {
+        "kind": "control",
+        "controlId": "Trend-Metric",
+        "id": "ctrl-trend-metric",
+        "name": "Trend metric",
+        "controlType": "segmented",
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "Bookings",
+            "Contract Value",
+            "Cancellations"
+          ],
+          "labels": [
+            "Bookings",
+            "Contract $",
+            "Cancels"
+          ]
+        },
+        "value": "Bookings"
+      },
+      {
+        "id": "tc-charts-p1",
+        "kind": "tabbed-container",
+        "tabs": [
+          {
+            "name": "Volume trend"
+          },
+          {
+            "name": "Rates & geography"
+          },
+          {
+            "name": "Cancellations"
+          }
+        ],
+        "tabBar": {
+          "alignment": "start"
+        }
+      },
+      {
         "id": "chart-trend",
         "kind": "bar-chart",
         "source": {
@@ -1335,13 +1490,17 @@
         "columns": [
           {
             "id": "ctd-period",
-            "formula": "DateTrunc([Date-Segment], [Assignments/Assignment Created Date])",
-            "name": "Period"
+            "formula": "Switch([Date-Segment], \"year\", DateTrunc(\"year\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])), \"quarter\", DateTrunc(\"quarter\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])), \"week\", DateTrunc(\"week\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])), DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])))",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%b %Y"
+            }
           },
           {
             "id": "ctd-count",
-            "formula": "CountDistinct([Assignments/Assignment Number])",
-            "name": "Assignments Booked"
+            "formula": "Switch([Trend-Metric], \"Contract Value\", Sum([Assignments/Estimated Contract Value]), \"Avg Bill Rate\", Avg([Assignments/Bill Rate]), \"Cancellations\", Sum([Assignments/Is Cancelled Or Withdrawn]), CountDistinct([Assignments/Assignment Number]))",
+            "name": "Trend value"
           },
           {
             "id": "ctd-col-assignment-number",
@@ -1796,8 +1955,12 @@
           },
           {
             "id": "ccx-month",
-            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
-            "name": "Month"
+            "formula": "Switch([Date-Segment], \"year\", DateTrunc(\"year\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])), \"quarter\", DateTrunc(\"quarter\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])), \"week\", DateTrunc(\"week\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])), DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])))",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%b %Y"
+            }
           },
           {
             "id": "ccx-count",
@@ -3123,6 +3286,24 @@
         }
       },
       {
+        "id": "fc-tc",
+        "kind": "tabbed-container",
+        "tabs": [
+          {
+            "name": "Impact"
+          },
+          {
+            "name": "Drivers"
+          },
+          {
+            "name": "Approval"
+          }
+        ],
+        "tabBar": {
+          "alignment": "start"
+        }
+      },
+      {
         "kind": "control",
         "controlId": "ForecastScenario",
         "id": "fc-ctrl-scen",
@@ -3465,6 +3646,64 @@
         }
       },
       {
+        "id": "fc-kpi-period",
+        "kind": "kpi-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "fkt-period",
+            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%b %Y"
+            }
+          },
+          {
+            "id": "fkt-val",
+            "formula": "Sum([Assignments/Estimated Contract Value])",
+            "name": "Contract Value",
+            "format": {
+              "kind": "number",
+              "formatString": "$.3~s",
+              "currencySymbol": "$"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "fkt-val",
+          "color": "#1E3A4C",
+          "fontSize": 24
+        },
+        "name": {
+          "text": "Contract Value (period trend)",
+          "color": "#6B7B85",
+          "fontSize": 12
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        },
+        "timeline": {
+          "columnId": "fkt-period"
+        },
+        "periodComparison": "month",
+        "comparison": {
+          "display": "delta",
+          "colorGood": "#007A78",
+          "colorBad": "#D64545",
+          "fontSize": 13
+        }
+      },
+      {
         "id": "fc-div-kpi",
         "kind": "divider",
         "style": {
@@ -3673,13 +3912,6 @@
         }
       },
       {
-        "id": "fc-div-charts",
-        "kind": "divider",
-        "style": {
-          "color": "#D4E8E7"
-        }
-      },
-      {
         "id": "fc-sec-drivers",
         "kind": "text",
         "body": "### Scenario drivers",
@@ -3710,17 +3942,10 @@
       {
         "id": "fc-instr",
         "kind": "text",
-        "body": "**1** \u2014 Select **Base Case** or **Create scenario**. **2** \u2014 Adjust **Booking Growth %**, **Bill Rate %**, **Pay Rate %**, and **Cancel Rate %** per specialty. **3** \u2014 Review KPIs and charts, then **Submit for approval** \u2192 **Approve** to lock the plan.",
+        "body": "**1** \u2014 Select **Base Case** or **Create scenario**. **2** \u2014 Adjust **Booking Growth %**, **Bill Rate %**, **Pay Rate %**, and **Cancel Rate %** per specialty. **3** \u2014 Review KPIs and charts, then **Submit for approval** \u2192 **Approve** to lock the plan. Use **Date grain** / **Date basis** on Assignment Overview for the period trend KPI.",
         "verticalAlign": "middle",
         "style": {
           "color": "#41454D"
-        }
-      },
-      {
-        "id": "fc-div-drivers",
-        "kind": "divider",
-        "style": {
-          "color": "#D4E8E7"
         }
       },
       {
@@ -3883,6 +4108,6 @@
       }
     ],
     "kind": "workbook",
-    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <Container elementId=\"container-hdr-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p1\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p1\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"text-subtitle-p1\" gridColumn=\"6 / 20\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"container-filters-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-state\" gridColumn=\"7 / 13\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-status\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Container elementId=\"container-kpi-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"8 / 17\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"kpi-booked\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-bill\" gridColumn=\"5 / 9\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-pay\" gridColumn=\"9 / 13\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-spread\" gridColumn=\"13 / 17\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-contract-value\" gridColumn=\"17 / 21\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-cancelled\" gridColumn=\"21 / 25\" gridRow=\"1 / 9\"/>\n  </Container>\n  <Element elementId=\"ctrl-grain\" gridColumn=\"1 / 5\" gridRow=\"17 / 20\"/>\n  <Element elementId=\"chart-trend\" gridColumn=\"5 / 25\" gridRow=\"17 / 33\"/>\n  <Element elementId=\"chart-rate-by-specialty\" gridColumn=\"1 / 13\" gridRow=\"33 / 49\"/>\n  <Element elementId=\"chart-by-state\" gridColumn=\"13 / 25\" gridRow=\"33 / 49\"/>\n  <Element elementId=\"chart-cancel-trend\" gridColumn=\"1 / 19\" gridRow=\"49 / 65\"/>\n  <Element elementId=\"text-note-p1\" gridColumn=\"19 / 25\" gridRow=\"49 / 65\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-detail\">\n  <Container elementId=\"container-hdr-p2\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 7\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p2\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p2\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"ctrl-status-p2\" gridColumn=\"16 / 21\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"ctrl-specialty-p2\" gridColumn=\"21 / 25\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"text-subtitle-p2\" gridColumn=\"6 / 20\" gridRow=\"5 / 7\"/>\n  </Container>\n  <Element elementId=\"pivot-specialty-status\" gridColumn=\"1 / 25\" gridRow=\"7 / 23\"/>\n  <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"23 / 47\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 25\" gridRow=\"47 / 49\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-forecast\">\n  <Container elementId=\"fc-hdr\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-logo\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"fc-title\" gridColumn=\"6 / 18\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"fc-subtitle\" gridColumn=\"6 / 22\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"fc-toolbar\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-ctrl-scen\" gridColumn=\"1 / 8\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-create\" gridColumn=\"8 / 14\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-submit\" gridColumn=\"14 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-approve\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"fc-kpi-prev\" gridColumn=\"1 / 10\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-mar\" gridColumn=\"10 / 16\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-uplift\" gridColumn=\"16 / 21\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-base\" gridColumn=\"21 / 25\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-div-kpi\" gridColumn=\"1 / 25\" gridRow=\"15 / 16\"/>\n  <Element elementId=\"fc-sec-impact\" gridColumn=\"1 / 25\" gridRow=\"16 / 17\"/>\n  <Element elementId=\"fc-chart-base-bar\" gridColumn=\"1 / 13\" gridRow=\"17 / 29\"/>\n  <Element elementId=\"fc-chart-compare\" gridColumn=\"13 / 25\" gridRow=\"17 / 29\"/>\n  <Element elementId=\"fc-chart-var\" gridColumn=\"1 / 25\" gridRow=\"29 / 41\"/>\n  <Element elementId=\"fc-div-charts\" gridColumn=\"1 / 25\" gridRow=\"41 / 42\"/>\n  <Element elementId=\"fc-sec-drivers\" gridColumn=\"1 / 25\" gridRow=\"42 / 43\"/>\n  <Container elementId=\"fc-instr-c\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"43 / 46\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-instr-hd\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n    <Element elementId=\"fc-instr\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n  </Container>\n  <Element elementId=\"fc-assum\" gridColumn=\"1 / 25\" gridRow=\"46 / 62\"/>\n  <Element elementId=\"fc-div-drivers\" gridColumn=\"1 / 25\" gridRow=\"62 / 63\"/>\n  <Element elementId=\"fc-sec-approval\" gridColumn=\"1 / 25\" gridRow=\"63 / 64\"/>\n  <Element elementId=\"fc-subs\" gridColumn=\"1 / 25\" gridRow=\"64 / 70\"/>\n  <Element elementId=\"fc-base\" gridColumn=\"1 / 2\" gridRow=\"70 / 71\"/>\n  <Element elementId=\"fc-scenarios\" gridColumn=\"2 / 3\" gridRow=\"70 / 71\"/>\n  <Element elementId=\"fc-pivot\" gridColumn=\"3 / 4\" gridRow=\"70 / 71\"/>\n  <Element elementId=\"fc-book\" gridColumn=\"4 / 5\" gridRow=\"70 / 71\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"fc-modal-create\">\n  <Element elementId=\"fc-modal-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Element elementId=\"fc-ctrl-name\" gridColumn=\"1 / 25\" gridRow=\"3 / 5\"/>\n  <Element elementId=\"fc-btn-cancel\" gridColumn=\"13 / 19\" gridRow=\"5 / 7\"/>\n  <Element elementId=\"fc-btn-create-ok\" gridColumn=\"19 / 25\" gridRow=\"5 / 7\"/>\n</Page>"
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <Container elementId=\"container-hdr-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p1\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p1\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"text-subtitle-p1\" gridColumn=\"6 / 20\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"container-filters-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-state\" gridColumn=\"7 / 13\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-status\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Container elementId=\"container-kpi-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"8 / 17\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"kpi-booked\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-bill\" gridColumn=\"5 / 9\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-pay\" gridColumn=\"9 / 13\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-spread\" gridColumn=\"13 / 17\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-contract-value\" gridColumn=\"17 / 21\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-cancelled\" gridColumn=\"21 / 25\" gridRow=\"1 / 9\"/>\n  </Container>\n  <Container elementId=\"container-switchers-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"17 / 20\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-grain\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-date-basis\" gridColumn=\"7 / 14\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-trend-metric\" gridColumn=\"14 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <TabbedContainer elementId=\"tc-charts-p1\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"20 / 66\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"chart-trend\" gridColumn=\"1 / 25\" gridRow=\"1 / 22\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"chart-rate-by-specialty\" gridColumn=\"1 / 13\" gridRow=\"1 / 20\"/>\n      <Element elementId=\"chart-by-state\" gridColumn=\"13 / 25\" gridRow=\"1 / 20\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"chart-cancel-trend\" gridColumn=\"1 / 19\" gridRow=\"1 / 20\"/>\n      <Element elementId=\"text-note-p1\" gridColumn=\"19 / 25\" gridRow=\"1 / 20\"/>\n    </Tab>\n  </TabbedContainer>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-detail\">\n  <Container elementId=\"container-hdr-p2\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 7\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p2\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p2\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"ctrl-status-p2\" gridColumn=\"16 / 21\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"ctrl-specialty-p2\" gridColumn=\"21 / 25\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"text-subtitle-p2\" gridColumn=\"6 / 20\" gridRow=\"5 / 7\"/>\n  </Container>\n  <Element elementId=\"pivot-specialty-status\" gridColumn=\"1 / 25\" gridRow=\"7 / 23\"/>\n  <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"23 / 47\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 25\" gridRow=\"47 / 49\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-forecast\">\n  <Container elementId=\"fc-hdr\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-logo\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"fc-title\" gridColumn=\"6 / 18\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"fc-subtitle\" gridColumn=\"6 / 22\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"fc-toolbar\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-ctrl-scen\" gridColumn=\"1 / 8\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-create\" gridColumn=\"8 / 14\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-submit\" gridColumn=\"14 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-approve\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"fc-kpi-prev\" gridColumn=\"1 / 10\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-mar\" gridColumn=\"10 / 16\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-uplift\" gridColumn=\"16 / 21\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-base\" gridColumn=\"21 / 25\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-div-kpi\" gridColumn=\"1 / 25\" gridRow=\"15 / 16\"/>\n  <TabbedContainer elementId=\"fc-tc\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"16 / 69\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"fc-sec-impact\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"fc-kpi-period\" gridColumn=\"1 / 8\" gridRow=\"2 / 9\"/>\n      <Element elementId=\"fc-chart-base-bar\" gridColumn=\"1 / 13\" gridRow=\"9 / 21\"/>\n      <Element elementId=\"fc-chart-compare\" gridColumn=\"13 / 25\" gridRow=\"9 / 21\"/>\n      <Element elementId=\"fc-chart-var\" gridColumn=\"1 / 25\" gridRow=\"21 / 33\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"fc-sec-drivers\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Container elementId=\"fc-instr-c\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"2 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n        <Element elementId=\"fc-instr-hd\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n        <Element elementId=\"fc-instr\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n      </Container>\n      <Element elementId=\"fc-assum\" gridColumn=\"1 / 25\" gridRow=\"5 / 28\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"fc-sec-approval\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"fc-subs\" gridColumn=\"1 / 25\" gridRow=\"2 / 18\"/>\n    </Tab>\n  </TabbedContainer>\n  <Element elementId=\"fc-base\" gridColumn=\"1 / 2\" gridRow=\"69 / 70\"/>\n  <Element elementId=\"fc-scenarios\" gridColumn=\"2 / 3\" gridRow=\"69 / 70\"/>\n  <Element elementId=\"fc-pivot\" gridColumn=\"3 / 4\" gridRow=\"69 / 70\"/>\n  <Element elementId=\"fc-book\" gridColumn=\"4 / 5\" gridRow=\"69 / 70\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"fc-modal-create\">\n  <Element elementId=\"fc-modal-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Element elementId=\"fc-ctrl-name\" gridColumn=\"1 / 25\" gridRow=\"3 / 5\"/>\n  <Element elementId=\"fc-btn-cancel\" gridColumn=\"13 / 19\" gridRow=\"5 / 7\"/>\n  <Element elementId=\"fc-btn-create-ok\" gridColumn=\"19 / 25\" gridRow=\"5 / 7\"/>\n</Page>"
   }
 }

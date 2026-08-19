@@ -475,7 +475,7 @@ def main() -> None:
     spec = api("GET", f"/v2/workbooks/{WORKBOOK_ID}/spec")
     existing_layout = spec["document"].get("layout", "")
     extra_pages = ""
-    for page_id in ("page-forecast", "fc-modal-create"):
+    for page_id in ("page-forecast", "page-margin", "fc-modal-create"):
         m = re.search(
             rf'<Page[^>]*id="{page_id}"[^>]*>.*?</Page>\s*',
             existing_layout,
