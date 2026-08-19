@@ -4137,7 +4137,7 @@
         "id": "mg-adj",
         "kind": "input-table",
         "name": "Rate Adjustments",
-        "inputMode": "view",
+        "inputMode": "edit",
         "source": {
           "kind": "empty",
           "connectionId": "f45a23e2-7b17-41d4-aa34-f2ed38483a53"
@@ -4196,7 +4196,7 @@
         "id": "mg-split",
         "kind": "input-table",
         "name": "Commission Splits",
-        "inputMode": "view",
+        "inputMode": "edit",
         "source": {
           "kind": "empty",
           "connectionId": "f45a23e2-7b17-41d4-aa34-f2ed38483a53"
@@ -4362,11 +4362,18 @@
           "borderRadius": "round"
         },
         "name": {
-          "text": "Placement margin detail",
+          "text": "Low-margin placements",
           "fontWeight": "bold",
           "fontSize": 15,
           "color": "#41454D"
-        }
+        },
+        "sort": [
+          {
+            "columnId": "mgd-mpct",
+            "direction": "ascending",
+            "nulls": "last"
+          }
+        ]
       },
       {
         "id": "mg-hdr",
@@ -4458,7 +4465,15 @@
           "kind": "manual",
           "valueType": "text"
         },
+        "includeNulls": "when-no-value-is-selected",
         "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-main-specialty"
+          },
           {
             "source": {
               "kind": "table",
@@ -4569,19 +4584,104 @@
       },
       {
         "kind": "control",
-        "controlId": "ShowLowMarginOnly",
-        "id": "mg-ctrl-lowonly",
-        "name": "Placement filter",
-        "controlType": "segmented",
+        "controlId": "MarginStatusFilter",
+        "id": "mg-ctrl-status",
+        "name": "Margin status",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
         "source": {
           "kind": "manual",
-          "valueType": "text",
-          "values": [
-            "All",
-            "Low margin only"
-          ]
+          "valueType": "text"
         },
-        "value": "All"
+        "includeNulls": "when-no-value-is-selected",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-detail"
+            },
+            "columnId": "mgd-pill"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-book"
+            },
+            "columnId": "mg-pill"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-margin"
+            },
+            "columnId": "mgkm-col-margin-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-gross"
+            },
+            "columnId": "mgkg-col-margin-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-bill"
+            },
+            "columnId": "mgkb-col-margin-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-pay"
+            },
+            "columnId": "mgkp-col-margin-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-spread"
+            },
+            "columnId": "mgks-col-margin-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-low"
+            },
+            "columnId": "mgkl-col-margin-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-chart-trend"
+            },
+            "columnId": "mct-col-margin-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-chart-margin-spec"
+            },
+            "columnId": "mcm-col-margin-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-chart-bill-pay"
+            },
+            "columnId": "mcb-col-margin-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-chart-spread-spec"
+            },
+            "columnId": "mcs-col-margin-status"
+          }
+        ]
       },
       {
         "id": "mg-kpi-margin",
@@ -4718,6 +4818,11 @@
             "id": "mgkm-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
+          },
+          {
+            "id": "mgkm-col-margin-status",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "name": "Margin Status"
           }
         ],
         "value": {
@@ -4883,6 +4988,11 @@
             "id": "mgkg-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
+          },
+          {
+            "id": "mgkg-col-margin-status",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "name": "Margin Status"
           }
         ],
         "value": {
@@ -5051,6 +5161,11 @@
             "id": "mgkb-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
+          },
+          {
+            "id": "mgkb-col-margin-status",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "name": "Margin Status"
           }
         ],
         "value": {
@@ -5219,6 +5334,11 @@
             "id": "mgkp-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
+          },
+          {
+            "id": "mgkp-col-margin-status",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "name": "Margin Status"
           }
         ],
         "value": {
@@ -5378,6 +5498,11 @@
             "id": "mgks-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
+          },
+          {
+            "id": "mgks-col-margin-status",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "name": "Margin Status"
           }
         ],
         "value": {
@@ -5526,6 +5651,11 @@
             "id": "mgkl-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
+          },
+          {
+            "id": "mgkl-col-margin-status",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "name": "Margin Status"
           }
         ],
         "value": {
@@ -5684,6 +5814,11 @@
             "id": "mcm-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
+          },
+          {
+            "id": "mcm-col-margin-status",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "name": "Margin Status"
           }
         ],
         "xAxis": {
@@ -5858,6 +5993,11 @@
             "id": "mcb-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
+          },
+          {
+            "id": "mcb-col-margin-status",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "name": "Margin Status"
           }
         ],
         "xAxis": {
@@ -6032,6 +6172,11 @@
             "id": "mcs-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
+          },
+          {
+            "id": "mcs-col-margin-status",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "name": "Margin Status"
           }
         ],
         "xAxis": {
@@ -6210,6 +6355,11 @@
             "id": "mct-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
+          },
+          {
+            "id": "mct-col-margin-status",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "name": "Margin Status"
           }
         ],
         "xAxis": {
@@ -6256,7 +6406,25 @@
       {
         "id": "mg-instr",
         "kind": "text",
-        "body": "**Margin %** = (Bill \u2212 Pay) \u00d7 LOA \u00d7 8 \u00f7 Contract Value. Adjust **Low-margin threshold** to flag placements; review flagged rows on the detail tab. Log **rate corrections** and **commission splits** in the writeback tabs \u2014 audit trail included.",
+        "body": "**How to use this page:** Pick a **Specialty** to filter every KPI and chart. Set the **Low-margin threshold** \u2014 the counter and detail tab update together. On **Low-margin placements**, select **Low** under Margin status to focus exceptions. Use **Rate adjustments** / **Commission splits** tabs \u2014 click **+** to add a row (audit trail auto-captures who/when).",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#41454D"
+        }
+      },
+      {
+        "id": "mg-adj-hint",
+        "kind": "text",
+        "body": "Click **+ Add row** below to log a bill or pay rate correction. Assignment number, field, original vs adjusted rate, and reason are required for finance audit.",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#41454D"
+        }
+      },
+      {
+        "id": "mg-split-hint",
+        "kind": "text",
+        "body": "Click **+ Add row** to record a commission split approval. Set status to Draft while reviewing, Approved when ready for payroll.",
         "verticalAlign": "middle",
         "style": {
           "color": "#41454D"
@@ -6274,7 +6442,7 @@
       {
         "id": "mg-sec-detail",
         "kind": "text",
-        "body": "### Flagged placements",
+        "body": "### Flagged placements \u2014 sort by margin %",
         "verticalAlign": "middle",
         "style": {
           "color": "#1E3A4C"
@@ -6378,6 +6546,6 @@
       }
     ],
     "kind": "workbook",
-    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <Container elementId=\"container-hdr-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p1\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p1\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"text-subtitle-p1\" gridColumn=\"6 / 20\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"container-filters-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-state\" gridColumn=\"7 / 13\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-status\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Container elementId=\"container-kpi-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"8 / 17\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"kpi-booked\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-bill\" gridColumn=\"5 / 9\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-pay\" gridColumn=\"9 / 13\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-spread\" gridColumn=\"13 / 17\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-contract-value\" gridColumn=\"17 / 21\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-cancelled\" gridColumn=\"21 / 25\" gridRow=\"1 / 9\"/>\n  </Container>\n  <Container elementId=\"container-switchers-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"17 / 20\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-grain\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-date-basis\" gridColumn=\"7 / 14\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-trend-metric\" gridColumn=\"14 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <TabbedContainer elementId=\"tc-charts-p1\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"20 / 66\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"chart-trend\" gridColumn=\"1 / 25\" gridRow=\"1 / 22\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"chart-rate-by-specialty\" gridColumn=\"1 / 13\" gridRow=\"1 / 20\"/>\n      <Element elementId=\"chart-by-state\" gridColumn=\"13 / 25\" gridRow=\"1 / 20\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"chart-cancel-trend\" gridColumn=\"1 / 19\" gridRow=\"1 / 20\"/>\n      <Element elementId=\"text-note-p1\" gridColumn=\"19 / 25\" gridRow=\"1 / 20\"/>\n    </Tab>\n  </TabbedContainer>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-detail\">\n  <Container elementId=\"container-hdr-p2\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 7\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p2\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p2\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"ctrl-status-p2\" gridColumn=\"16 / 21\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"ctrl-specialty-p2\" gridColumn=\"21 / 25\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"text-subtitle-p2\" gridColumn=\"6 / 20\" gridRow=\"5 / 7\"/>\n  </Container>\n  <TabbedContainer elementId=\"tc-detail-p2\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"7 / 47\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"pivot-specialty-status\" gridColumn=\"1 / 25\" gridRow=\"1 / 18\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"1 / 24\"/>\n    </Tab>\n  </TabbedContainer>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 25\" gridRow=\"47 / 49\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-forecast\">\n  <Container elementId=\"fc-hdr\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-logo\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"fc-title\" gridColumn=\"6 / 18\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"fc-subtitle\" gridColumn=\"6 / 22\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"fc-toolbar\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-ctrl-scen\" gridColumn=\"1 / 8\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-create\" gridColumn=\"8 / 14\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-submit\" gridColumn=\"14 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-approve\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"fc-kpi-prev\" gridColumn=\"1 / 10\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-mar\" gridColumn=\"10 / 16\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-uplift\" gridColumn=\"16 / 21\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-base\" gridColumn=\"21 / 25\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-div-kpi\" gridColumn=\"1 / 25\" gridRow=\"15 / 16\"/>\n  <TabbedContainer elementId=\"fc-tc\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"16 / 69\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"fc-sec-impact\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"fc-kpi-period\" gridColumn=\"1 / 8\" gridRow=\"2 / 9\"/>\n      <Element elementId=\"fc-chart-base-bar\" gridColumn=\"1 / 13\" gridRow=\"9 / 21\"/>\n      <Element elementId=\"fc-chart-compare\" gridColumn=\"13 / 25\" gridRow=\"9 / 21\"/>\n      <Element elementId=\"fc-chart-var\" gridColumn=\"1 / 25\" gridRow=\"21 / 33\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"fc-sec-drivers\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Container elementId=\"fc-instr-c\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"2 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n        <Element elementId=\"fc-instr-hd\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n        <Element elementId=\"fc-instr\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n      </Container>\n      <Element elementId=\"fc-assum\" gridColumn=\"1 / 25\" gridRow=\"5 / 28\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"fc-sec-approval\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"fc-subs\" gridColumn=\"1 / 25\" gridRow=\"2 / 18\"/>\n    </Tab>\n  </TabbedContainer>\n  <Element elementId=\"fc-base\" gridColumn=\"1 / 2\" gridRow=\"69 / 70\"/>\n  <Element elementId=\"fc-scenarios\" gridColumn=\"2 / 3\" gridRow=\"69 / 70\"/>\n  <Element elementId=\"fc-pivot\" gridColumn=\"3 / 4\" gridRow=\"69 / 70\"/>\n  <Element elementId=\"fc-book\" gridColumn=\"4 / 5\" gridRow=\"69 / 70\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"fc-modal-create\">\n  <Element elementId=\"fc-modal-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Element elementId=\"fc-ctrl-name\" gridColumn=\"1 / 25\" gridRow=\"3 / 5\"/>\n  <Element elementId=\"fc-btn-cancel\" gridColumn=\"13 / 19\" gridRow=\"5 / 7\"/>\n  <Element elementId=\"fc-btn-create-ok\" gridColumn=\"19 / 25\" gridRow=\"5 / 7\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-margin\">\n  <Container elementId=\"mg-hdr\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-logo\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"mg-title\" gridColumn=\"6 / 18\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"mg-subtitle\" gridColumn=\"6 / 22\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"mg-toolbar\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-ctrl-spec\" gridColumn=\"1 / 9\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"mg-ctrl-thresh\" gridColumn=\"9 / 16\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"mg-ctrl-lowonly\" gridColumn=\"16 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"mg-kpi-margin\" gridColumn=\"1 / 10\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-gross\" gridColumn=\"10 / 16\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-bill\" gridColumn=\"16 / 20\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-pay\" gridColumn=\"20 / 25\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-spread\" gridColumn=\"1 / 7\" gridRow=\"15 / 20\"/>\n  <Element elementId=\"mg-kpi-low\" gridColumn=\"7 / 13\" gridRow=\"15 / 20\"/>\n  <Container elementId=\"mg-instr-c\" type=\"grid\" gridColumn=\"13 / 25\" gridRow=\"15 / 20\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-instr\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <TabbedContainer elementId=\"mg-tc\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"20 / 68\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-overview\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-chart-trend\" gridColumn=\"1 / 25\" gridRow=\"2 / 14\"/>\n      <Element elementId=\"mg-chart-margin-spec\" gridColumn=\"1 / 13\" gridRow=\"14 / 26\"/>\n      <Element elementId=\"mg-chart-bill-pay\" gridColumn=\"13 / 25\" gridRow=\"14 / 26\"/>\n      <Element elementId=\"mg-chart-spread-spec\" gridColumn=\"1 / 25\" gridRow=\"26 / 38\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-detail\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-detail\" gridColumn=\"1 / 25\" gridRow=\"2 / 30\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-adj\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-adj\" gridColumn=\"1 / 25\" gridRow=\"2 / 28\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-split\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-split\" gridColumn=\"1 / 25\" gridRow=\"2 / 28\"/>\n    </Tab>\n  </TabbedContainer>\n  <Element elementId=\"mg-book\" gridColumn=\"1 / 2\" gridRow=\"68 / 69\"/>\n</Page>"
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <Container elementId=\"container-hdr-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p1\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p1\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"text-subtitle-p1\" gridColumn=\"6 / 20\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"container-filters-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-state\" gridColumn=\"7 / 13\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-status\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Container elementId=\"container-kpi-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"8 / 17\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"kpi-booked\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-bill\" gridColumn=\"5 / 9\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-pay\" gridColumn=\"9 / 13\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-spread\" gridColumn=\"13 / 17\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-contract-value\" gridColumn=\"17 / 21\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-cancelled\" gridColumn=\"21 / 25\" gridRow=\"1 / 9\"/>\n  </Container>\n  <Container elementId=\"container-switchers-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"17 / 20\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-grain\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-date-basis\" gridColumn=\"7 / 14\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-trend-metric\" gridColumn=\"14 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <TabbedContainer elementId=\"tc-charts-p1\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"20 / 66\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"chart-trend\" gridColumn=\"1 / 25\" gridRow=\"1 / 22\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"chart-rate-by-specialty\" gridColumn=\"1 / 13\" gridRow=\"1 / 20\"/>\n      <Element elementId=\"chart-by-state\" gridColumn=\"13 / 25\" gridRow=\"1 / 20\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"chart-cancel-trend\" gridColumn=\"1 / 19\" gridRow=\"1 / 20\"/>\n      <Element elementId=\"text-note-p1\" gridColumn=\"19 / 25\" gridRow=\"1 / 20\"/>\n    </Tab>\n  </TabbedContainer>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-detail\">\n  <Container elementId=\"container-hdr-p2\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 7\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p2\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p2\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"ctrl-status-p2\" gridColumn=\"16 / 21\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"ctrl-specialty-p2\" gridColumn=\"21 / 25\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"text-subtitle-p2\" gridColumn=\"6 / 20\" gridRow=\"5 / 7\"/>\n  </Container>\n  <TabbedContainer elementId=\"tc-detail-p2\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"7 / 47\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"pivot-specialty-status\" gridColumn=\"1 / 25\" gridRow=\"1 / 18\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"1 / 24\"/>\n    </Tab>\n  </TabbedContainer>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 25\" gridRow=\"47 / 49\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-forecast\">\n  <Container elementId=\"fc-hdr\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-logo\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"fc-title\" gridColumn=\"6 / 18\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"fc-subtitle\" gridColumn=\"6 / 22\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"fc-toolbar\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-ctrl-scen\" gridColumn=\"1 / 8\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-create\" gridColumn=\"8 / 14\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-submit\" gridColumn=\"14 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-approve\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"fc-kpi-prev\" gridColumn=\"1 / 10\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-mar\" gridColumn=\"10 / 16\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-uplift\" gridColumn=\"16 / 21\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-base\" gridColumn=\"21 / 25\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-div-kpi\" gridColumn=\"1 / 25\" gridRow=\"15 / 16\"/>\n  <TabbedContainer elementId=\"fc-tc\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"16 / 69\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"fc-sec-impact\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"fc-kpi-period\" gridColumn=\"1 / 8\" gridRow=\"2 / 9\"/>\n      <Element elementId=\"fc-chart-base-bar\" gridColumn=\"1 / 13\" gridRow=\"9 / 21\"/>\n      <Element elementId=\"fc-chart-compare\" gridColumn=\"13 / 25\" gridRow=\"9 / 21\"/>\n      <Element elementId=\"fc-chart-var\" gridColumn=\"1 / 25\" gridRow=\"21 / 33\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"fc-sec-drivers\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Container elementId=\"fc-instr-c\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"2 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n        <Element elementId=\"fc-instr-hd\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n        <Element elementId=\"fc-instr\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n      </Container>\n      <Element elementId=\"fc-assum\" gridColumn=\"1 / 25\" gridRow=\"5 / 28\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"fc-sec-approval\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"fc-subs\" gridColumn=\"1 / 25\" gridRow=\"2 / 18\"/>\n    </Tab>\n  </TabbedContainer>\n  <Element elementId=\"fc-base\" gridColumn=\"1 / 2\" gridRow=\"69 / 70\"/>\n  <Element elementId=\"fc-scenarios\" gridColumn=\"2 / 3\" gridRow=\"69 / 70\"/>\n  <Element elementId=\"fc-pivot\" gridColumn=\"3 / 4\" gridRow=\"69 / 70\"/>\n  <Element elementId=\"fc-book\" gridColumn=\"4 / 5\" gridRow=\"69 / 70\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\" id=\"fc-modal-create\">\n  <Element elementId=\"fc-modal-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Element elementId=\"fc-ctrl-name\" gridColumn=\"1 / 25\" gridRow=\"3 / 5\"/>\n  <Element elementId=\"fc-btn-cancel\" gridColumn=\"13 / 19\" gridRow=\"5 / 7\"/>\n  <Element elementId=\"fc-btn-create-ok\" gridColumn=\"19 / 25\" gridRow=\"5 / 7\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-margin\">\n  <Container elementId=\"mg-hdr\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-logo\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"mg-title\" gridColumn=\"6 / 18\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"mg-subtitle\" gridColumn=\"6 / 22\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"mg-toolbar\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-ctrl-spec\" gridColumn=\"1 / 8\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"mg-ctrl-thresh\" gridColumn=\"8 / 15\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"mg-ctrl-status\" gridColumn=\"15 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"mg-kpi-margin\" gridColumn=\"1 / 10\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-gross\" gridColumn=\"10 / 16\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-bill\" gridColumn=\"16 / 20\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-pay\" gridColumn=\"20 / 25\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-spread\" gridColumn=\"1 / 7\" gridRow=\"15 / 20\"/>\n  <Element elementId=\"mg-kpi-low\" gridColumn=\"7 / 13\" gridRow=\"15 / 20\"/>\n  <Container elementId=\"mg-instr-c\" type=\"grid\" gridColumn=\"13 / 25\" gridRow=\"15 / 20\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-instr\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <TabbedContainer elementId=\"mg-tc\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"20 / 68\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-overview\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-chart-trend\" gridColumn=\"1 / 25\" gridRow=\"2 / 14\"/>\n      <Element elementId=\"mg-chart-margin-spec\" gridColumn=\"1 / 13\" gridRow=\"14 / 26\"/>\n      <Element elementId=\"mg-chart-bill-pay\" gridColumn=\"13 / 25\" gridRow=\"14 / 26\"/>\n      <Element elementId=\"mg-chart-spread-spec\" gridColumn=\"1 / 25\" gridRow=\"26 / 38\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-detail\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-detail\" gridColumn=\"1 / 25\" gridRow=\"2 / 30\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-adj\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-adj-hint\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n      <Element elementId=\"mg-adj\" gridColumn=\"1 / 25\" gridRow=\"4 / 30\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-split\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-split-hint\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n      <Element elementId=\"mg-split\" gridColumn=\"1 / 25\" gridRow=\"4 / 30\"/>\n    </Tab>\n  </TabbedContainer>\n  <Element elementId=\"mg-book\" gridColumn=\"1 / 2\" gridRow=\"68 / 69\"/>\n</Page>"
   }
 }

@@ -65,6 +65,25 @@ MB_MPCT = "Margin Pct"
 SRC = "tbl-assignments"
 
 
+def margin_specialty_filters() -> list[dict]:
+    """Targets for the shared MainSpecialty control — keeps margin page in sync with Overview."""
+    return [
+        {"source": {"kind": "table", "elementId": SRC}, "columnId": "col-main-specialty"},
+        {"source": {"kind": "table", "elementId": "mg-book"}, "columnId": "mg-spec"},
+        {"source": {"kind": "table", "elementId": "mg-detail"}, "columnId": "mgd-spec"},
+        {"source": {"kind": "table", "elementId": "mg-kpi-margin"}, "columnId": "mgkm-col-main-specialty"},
+        {"source": {"kind": "table", "elementId": "mg-kpi-gross"}, "columnId": "mgkg-col-main-specialty"},
+        {"source": {"kind": "table", "elementId": "mg-kpi-bill"}, "columnId": "mgkb-col-main-specialty"},
+        {"source": {"kind": "table", "elementId": "mg-kpi-pay"}, "columnId": "mgkp-col-main-specialty"},
+        {"source": {"kind": "table", "elementId": "mg-kpi-spread"}, "columnId": "mgks-col-main-specialty"},
+        {"source": {"kind": "table", "elementId": "mg-kpi-low"}, "columnId": "mgkl-col-main-specialty"},
+        {"source": {"kind": "table", "elementId": "mg-chart-trend"}, "columnId": "mct-col-main-specialty"},
+        {"source": {"kind": "table", "elementId": "mg-chart-margin-spec"}, "columnId": "mc-spec"},
+        {"source": {"kind": "table", "elementId": "mg-chart-bill-pay"}, "columnId": "bp-spec"},
+        {"source": {"kind": "table", "elementId": "mg-chart-spread-spec"}, "columnId": "cs-spec"},
+    ]
+
+
 def passthrough_cols(prefix: str) -> list[dict]:
     """Filter passthrough columns — KPIs/charts must include these when sourcing tbl-assignments."""
     fields = [
@@ -118,6 +137,8 @@ def passthrough_cols(prefix: str) -> list[dict]:
     return [
         {"id": f"{prefix}-col-{slug}", "formula": col_map[slug], "name": label}
         for slug, label in fields
+    ] + [
+        {"id": f"{prefix}-col-margin-status", "formula": IS_LOW, "name": "Margin Status"},
     ]
 
 
@@ -280,7 +301,7 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "id": "mg-adj",
         "kind": "input-table",
         "name": "Rate Adjustments",
-        "inputMode": "view",
+        "inputMode": "edit",
         "source": {"kind": "empty", "connectionId": CONN},
         "columns": [
             {"id": "mg-adj-num", "type": "text", "name": "Assignment Number"},
@@ -305,7 +326,7 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "id": "mg-split",
         "kind": "input-table",
         "name": "Commission Splits",
-        "inputMode": "view",
+        "inputMode": "edit",
         "source": {"kind": "empty", "connectionId": CONN},
         "columns": [
             {"id": "mg-sp-num", "type": "text", "name": "Assignment Number"},
@@ -340,20 +361,6 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "value": "15",
     }
 
-    low_only_ctrl = {
-        "kind": "control",
-        "controlId": "ShowLowMarginOnly",
-        "id": "mg-ctrl-lowonly",
-        "name": "Placement filter",
-        "controlType": "segmented",
-        "source": {
-            "kind": "manual",
-            "valueType": "text",
-            "values": ["All", "Low margin only"],
-        },
-        "value": "All",
-    }
-
     spec_ctrl = {
         "kind": "control",
         "controlId": "MarginSpecialty",
@@ -364,19 +371,34 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "selectionMode": "multiple",
         "values": [],
         "source": {"kind": "manual", "valueType": "text"},
+        "includeNulls": "when-no-value-is-selected",
+        "filters": margin_specialty_filters(),
+    }
+
+    status_ctrl = {
+        "kind": "control",
+        "controlId": "MarginStatusFilter",
+        "id": "mg-ctrl-status",
+        "name": "Margin status",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {"kind": "manual", "valueType": "text"},
+        "includeNulls": "when-no-value-is-selected",
         "filters": [
-            {"source": {"kind": "table", "elementId": "mg-book"}, "columnId": "mg-spec"},
-            {"source": {"kind": "table", "elementId": "mg-detail"}, "columnId": "mgd-spec"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-margin"}, "columnId": "mgkm-col-main-specialty"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-gross"}, "columnId": "mgkg-col-main-specialty"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-bill"}, "columnId": "mgkb-col-main-specialty"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-pay"}, "columnId": "mgkp-col-main-specialty"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-spread"}, "columnId": "mgks-col-main-specialty"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-low"}, "columnId": "mgkl-col-main-specialty"},
-            {"source": {"kind": "table", "elementId": "mg-chart-trend"}, "columnId": "mct-col-main-specialty"},
-            {"source": {"kind": "table", "elementId": "mg-chart-margin-spec"}, "columnId": "mc-spec"},
-            {"source": {"kind": "table", "elementId": "mg-chart-bill-pay"}, "columnId": "bp-spec"},
-            {"source": {"kind": "table", "elementId": "mg-chart-spread-spec"}, "columnId": "cs-spec"},
+            {"source": {"kind": "table", "elementId": "mg-detail"}, "columnId": "mgd-pill"},
+            {"source": {"kind": "table", "elementId": "mg-book"}, "columnId": "mg-pill"},
+            {"source": {"kind": "table", "elementId": "mg-kpi-margin"}, "columnId": "mgkm-col-margin-status"},
+            {"source": {"kind": "table", "elementId": "mg-kpi-gross"}, "columnId": "mgkg-col-margin-status"},
+            {"source": {"kind": "table", "elementId": "mg-kpi-bill"}, "columnId": "mgkb-col-margin-status"},
+            {"source": {"kind": "table", "elementId": "mg-kpi-pay"}, "columnId": "mgkp-col-margin-status"},
+            {"source": {"kind": "table", "elementId": "mg-kpi-spread"}, "columnId": "mgks-col-margin-status"},
+            {"source": {"kind": "table", "elementId": "mg-kpi-low"}, "columnId": "mgkl-col-margin-status"},
+            {"source": {"kind": "table", "elementId": "mg-chart-trend"}, "columnId": "mct-col-margin-status"},
+            {"source": {"kind": "table", "elementId": "mg-chart-margin-spec"}, "columnId": "mcm-col-margin-status"},
+            {"source": {"kind": "table", "elementId": "mg-chart-bill-pay"}, "columnId": "mcb-col-margin-status"},
+            {"source": {"kind": "table", "elementId": "mg-chart-spread-spec"}, "columnId": "mcs-col-margin-status"},
         ],
     }
 
@@ -402,7 +424,8 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
             "mgd-spread", "mgd-rev", "mgd-mar", "mgd-mpct", "mgd-pill",
         ],
         "style": dict(CARD_STYLE),
-        "name": {"text": "Placement margin detail", "fontWeight": "bold", "fontSize": 15, "color": SLATE},
+        "name": {"text": "Low-margin placements", "fontWeight": "bold", "fontSize": 15, "color": SLATE},
+        "sort": [{"columnId": "mgd-mpct", "direction": "ascending", "nulls": "last"}],
     }
 
     kpi_margin = kpi_card(
@@ -559,10 +582,25 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "id": "mg-instr",
         "kind": "text",
         "body": (
-            "**Margin %** = (Bill − Pay) × LOA × 8 ÷ Contract Value. "
-            "Adjust **Low-margin threshold** to flag placements; review flagged rows on the detail tab. "
-            "Log **rate corrections** and **commission splits** in the writeback tabs — audit trail included."
+            "**How to use this page:** Pick a **Specialty** to filter every KPI and chart. "
+            "Set the **Low-margin threshold** — the counter and detail tab update together. "
+            "On **Low-margin placements**, select **Low** under Margin status to focus exceptions. "
+            "Use **Rate adjustments** / **Commission splits** tabs — click **+** to add a row (audit trail auto-captures who/when)."
         ),
+        "verticalAlign": "middle",
+        "style": {"color": SLATE},
+    }
+    adj_hint = {
+        "id": "mg-adj-hint",
+        "kind": "text",
+        "body": "Click **+ Add row** below to log a bill or pay rate correction. Assignment number, field, original vs adjusted rate, and reason are required for finance audit.",
+        "verticalAlign": "middle",
+        "style": {"color": SLATE},
+    }
+    split_hint = {
+        "id": "mg-split-hint",
+        "kind": "text",
+        "body": "Click **+ Add row** to record a commission split approval. Set status to Draft while reviewing, Approved when ready for payroll.",
         "verticalAlign": "middle",
         "style": {"color": SLATE},
     }
@@ -581,12 +619,12 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
     elements = [
         mg_book, mg_adj, mg_split, mg_detail,
         hdr, logo, title, subtitle, toolbar, mg_tabs,
-        spec_ctrl, thresh_ctrl, low_only_ctrl,
+        spec_ctrl, thresh_ctrl, status_ctrl,
         kpi_margin, kpi_gross, kpi_bill, kpi_pay, kpi_spread, kpi_low,
         chart_margin_spec, chart_bill_pay, chart_spread, chart_trend,
-        instr_c, instr,
+        instr_c, instr, adj_hint, split_hint,
         section_label("mg-sec-overview", "Margin overview"),
-        section_label("mg-sec-detail", "Flagged placements"),
+        section_label("mg-sec-detail", "Flagged placements — sort by margin %"),
         section_label("mg-sec-adj", "Rate adjustment log"),
         section_label("mg-sec-split", "Commission splits"),
     ]
@@ -599,9 +637,9 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
     <Element elementId="mg-subtitle" gridColumn="6 / 22" gridRow="3 / 5"/>
   </Container>
   <Container elementId="mg-toolbar" type="grid" gridColumn="1 / 25" gridRow="5 / 8" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="mg-ctrl-spec" gridColumn="1 / 9" gridRow="1 / 4"/>
-    <Element elementId="mg-ctrl-thresh" gridColumn="9 / 16" gridRow="1 / 4"/>
-    <Element elementId="mg-ctrl-lowonly" gridColumn="16 / 25" gridRow="1 / 4"/>
+    <Element elementId="mg-ctrl-spec" gridColumn="1 / 8" gridRow="1 / 4"/>
+    <Element elementId="mg-ctrl-thresh" gridColumn="8 / 15" gridRow="1 / 4"/>
+    <Element elementId="mg-ctrl-status" gridColumn="15 / 25" gridRow="1 / 4"/>
   </Container>
   <Element elementId="mg-kpi-margin" gridColumn="1 / 10" gridRow="8 / 15"/>
   <Element elementId="mg-kpi-gross" gridColumn="10 / 16" gridRow="8 / 15"/>
@@ -626,11 +664,13 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
     </Tab>
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
       <Element elementId="mg-sec-adj" gridColumn="1 / 25" gridRow="1 / 2"/>
-      <Element elementId="mg-adj" gridColumn="1 / 25" gridRow="2 / 28"/>
+      <Element elementId="mg-adj-hint" gridColumn="1 / 25" gridRow="2 / 4"/>
+      <Element elementId="mg-adj" gridColumn="1 / 25" gridRow="4 / 30"/>
     </Tab>
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
       <Element elementId="mg-sec-split" gridColumn="1 / 25" gridRow="1 / 2"/>
-      <Element elementId="mg-split" gridColumn="1 / 25" gridRow="2 / 28"/>
+      <Element elementId="mg-split-hint" gridColumn="1 / 25" gridRow="2 / 4"/>
+      <Element elementId="mg-split" gridColumn="1 / 25" gridRow="4 / 30"/>
     </Tab>
   </TabbedContainer>
   <Element elementId="mg-book" gridColumn="1 / 2" gridRow="68 / 69"/>
