@@ -16,6 +16,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from barton_formulas import DT_PERIOD, KPI_PERIOD, PERIOD, PERIOD_COMPARISON, TREND_VALUE
+from barton_controls import fix_filter_control_sources
 WORKBOOK_ID = "3b65aa5b-c908-4b8d-bcb6-f177d74bb5ef"
 LOGO_URI = (REPO / "workbooks/barton/logo.datauri.txt").read_text().strip()
 
@@ -403,6 +404,8 @@ def apply_theme(spec: dict) -> dict:
             col["formula"] = PERIOD
             col["name"] = "Period"
             col["format"] = DT_PERIOD
+
+    fix_filter_control_sources(doc)
 
     # --- layout ---
     kpi_layout = "\n".join(
