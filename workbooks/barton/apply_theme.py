@@ -217,7 +217,10 @@ def apply_theme(spec: dict) -> dict:
     elem_by_id(elements, "text-title-p2")["style"] = {"color": WHITE}
     elem_by_id(elements, "text-note-p1")["style"] = {"color": SLATE, "backgroundColor": "#F4FAFA"}
 
-    # --- KPI gradient wrappers ---
+    # --- KPI cards ---
+    # kpi-chart always renders an opaque tile background — it cannot be
+    # transparent, so wrapper gradients never show through. Paint each tile
+    # directly (see build_sofi.py KPI pattern).
     kpi_ids = [
         "kpi-booked",
         "kpi-avg-bill",
@@ -226,35 +229,30 @@ def apply_theme(spec: dict) -> dict:
         "kpi-contract-value",
         "kpi-cancelled",
     ]
-    wrap_ids = []
+    doc["elements"] = [e for e in elements if not e["id"].startswith("kpi-wrap-")]
+    elements = doc["elements"]
+    def kpi_label(kpi: dict, fallback: str) -> str:
+        nm = kpi.get("name", fallback)
+        if isinstance(nm, dict):
+            txt = nm.get("text", fallback)
+            return txt if isinstance(txt, str) else fallback
+        return nm if isinstance(nm, str) else fallback
+
     for i, kid in enumerate(kpi_ids):
-        wid = f"kpi-wrap-{kid.replace('kpi-', '')}"
-        wrap_ids.append(wid)
-        if wid not in ids:
-            a, b = KPI_GRADIENTS[i % len(KPI_GRADIENTS)]
-            elements.append(
-                {
-                    "id": wid,
-                    "kind": "container",
-                    "style": {"borderRadius": "round", "borderWidth": 0},
-                    "backgroundImage": {
-                        "source": {"kind": "url", "url": grad_uri(a, b)},
-                        "style": {"fit": "cover"},
-                    },
-                }
-            )
-            ids.add(wid)
+        a, b = KPI_GRADIENTS[i % len(KPI_GRADIENTS)]
         kpi = elem_by_id(elements, kid)
-        kpi["value"] = {"columnId": kpi["value"]["columnId"], "color": WHITE, "fontSize": 26}
+        kpi["value"] = {
+            "columnId": kpi["value"]["columnId"],
+            "color": WHITE,
+            "fontSize": 26,
+        }
         kpi["name"] = {
-            "text": kpi.get("name", kid),
+            "text": kpi_label(kpi, kid),
             "fontSize": 13,
             "color": "#E8F7F6",
         }
-        kpi.pop("style", None)
-        if "style" in kpi:
-            del kpi["style"]
         kpi["layout"] = {"anchor": "middle"}
+        kpi["style"] = {"backgroundColor": a}
 
     elem_by_id(elements, "container-kpi-p1").pop("style", None)
 
@@ -266,11 +264,18 @@ def apply_theme(spec: dict) -> dict:
         "chart-cancel-trend",
         "pivot-specialty-status",
     ]
+    def element_title(el: dict, fallback: str) -> str:
+        nm = el.get("name", fallback)
+        if isinstance(nm, dict):
+            txt = nm.get("text", fallback)
+            return txt if isinstance(txt, str) else fallback
+        return nm if isinstance(nm, str) else fallback
+
     for cid in chart_ids:
         ch = elem_by_id(elements, cid)
         ch["style"] = dict(CARD_STYLE)
         ch["name"] = {
-            "text": ch.get("name", cid),
+            "text": element_title(ch, cid),
             "fontWeight": "bold",
             "fontSize": 15,
             "color": SLATE,
@@ -278,15 +283,17 @@ def apply_theme(spec: dict) -> dict:
 
     tbl = elem_by_id(elements, "tbl-detail")
     tbl["style"] = dict(CARD_STYLE)
-    tbl["name"] = {"text": "Assignment Detail", "fontWeight": "bold", "fontSize": 15, "color": SLATE}
+    tbl["name"] = {
+        "text": element_title(tbl, "Assignment Detail"),
+        "fontWeight": "bold",
+        "fontSize": 15,
+        "color": SLATE,
+    }
 
     # --- layout ---
     kpi_layout = "\n".join(
-        f'    <Container elementId="{wid}" type="grid" gridColumn="{1 + i * 4} / {5 + i * 4}" '
-        f'gridRow="1 / 9" gridTemplateColumns="repeat(4, 1fr)" gridTemplateRows="repeat(8, 1fr)">\n'
-        f'      <Element elementId="{kid}" gridColumn="1 / 5" gridRow="1 / 9"/>\n'
-        f"    </Container>"
-        for i, (wid, kid) in enumerate(zip(wrap_ids, kpi_ids))
+        f'    <Element elementId="{kid}" gridColumn="{1 + i * 4} / {5 + i * 4}" gridRow="1 / 9"/>'
+        for i, kid in enumerate(kpi_ids)
     )
 
     doc["layout"] = f"""<?xml version="1.0" encoding="utf-8"?>
@@ -302,15 +309,15 @@ def apply_theme(spec: dict) -> dict:
     <Element elementId="ctrl-type" gridColumn="13 / 19" gridRow="1 / 4"/>
     <Element elementId="ctrl-status" gridColumn="19 / 25" gridRow="1 / 4"/>
   </Container>
-  <Container elementId="container-kpi-p1" type="grid" gridColumn="1 / 25" gridRow="8 / 16" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+  <Container elementId="container-kpi-p1" type="grid" gridColumn="1 / 25" gridRow="8 / 17" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="repeat(8, 1fr)">
 {kpi_layout}
   </Container>
-  <Element elementId="ctrl-grain" gridColumn="1 / 5" gridRow="16 / 19"/>
-  <Element elementId="chart-trend" gridColumn="5 / 25" gridRow="16 / 32"/>
-  <Element elementId="chart-rate-by-specialty" gridColumn="1 / 13" gridRow="32 / 48"/>
-  <Element elementId="chart-by-state" gridColumn="13 / 25" gridRow="32 / 48"/>
-  <Element elementId="chart-cancel-trend" gridColumn="1 / 19" gridRow="48 / 64"/>
-  <Element elementId="text-note-p1" gridColumn="19 / 25" gridRow="48 / 64"/>
+  <Element elementId="ctrl-grain" gridColumn="1 / 5" gridRow="17 / 20"/>
+  <Element elementId="chart-trend" gridColumn="5 / 25" gridRow="17 / 33"/>
+  <Element elementId="chart-rate-by-specialty" gridColumn="1 / 13" gridRow="33 / 49"/>
+  <Element elementId="chart-by-state" gridColumn="13 / 25" gridRow="33 / 49"/>
+  <Element elementId="chart-cancel-trend" gridColumn="1 / 19" gridRow="49 / 65"/>
+  <Element elementId="text-note-p1" gridColumn="19 / 25" gridRow="49 / 65"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="page-detail">
   <Container elementId="container-hdr-p2" type="grid" gridColumn="1 / 25" gridRow="1 / 5" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
