@@ -4095,8 +4095,8 @@
           },
           {
             "id": "mg-mpct",
-            "formula": "If([Assignments/Estimated Contract Value] = 0, Null(), [Assignments/Estimated Margin] / [Assignments/Estimated Contract Value])",
-            "name": "Margin %",
+            "formula": "[Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0)",
+            "name": "Margin Pct",
             "format": {
               "kind": "number",
               "formatString": ",.1%"
@@ -4104,7 +4104,7 @@
           },
           {
             "id": "mg-low",
-            "formula": "If(If([Assignments/Estimated Contract Value] = 0, Null(), [Assignments/Estimated Margin] / [Assignments/Estimated Contract Value]) < Number([MarginThreshold]) / 100, 1, 0)",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, 1, 0)",
             "name": "Low Margin Flag",
             "format": {
               "kind": "number",
@@ -4113,7 +4113,7 @@
           },
           {
             "id": "mg-pill",
-            "formula": "If(If([Assignments/Estimated Contract Value] = 0, Null(), [Assignments/Estimated Margin] / [Assignments/Estimated Contract Value]) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
             "name": "Margin Status"
           }
         ],
@@ -4321,7 +4321,7 @@
           },
           {
             "id": "mgd-mpct",
-            "formula": "[Margin Book/Margin %]",
+            "formula": "[Margin Book/Margin Pct]",
             "name": "Margin %",
             "format": {
               "kind": "number",
@@ -4472,6 +4472,76 @@
               "elementId": "mg-detail"
             },
             "columnId": "mgd-spec"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-margin"
+            },
+            "columnId": "mgkm-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-gross"
+            },
+            "columnId": "mgkg-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-bill"
+            },
+            "columnId": "mgkb-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-pay"
+            },
+            "columnId": "mgkp-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-spread"
+            },
+            "columnId": "mgks-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-kpi-low"
+            },
+            "columnId": "mgkl-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-chart-trend"
+            },
+            "columnId": "mct-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-chart-margin-spec"
+            },
+            "columnId": "mc-spec"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-chart-bill-pay"
+            },
+            "columnId": "bp-spec"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "mg-chart-spread-spec"
+            },
+            "columnId": "cs-spec"
           }
         ]
       },
@@ -4517,7 +4587,7 @@
         "id": "mg-kpi-margin",
         "kind": "kpi-chart",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
@@ -4532,12 +4602,122 @@
           },
           {
             "id": "mg-kpi-margin-v",
-            "formula": "Avg([Margin Book/Margin %])",
+            "formula": "Avg([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0))",
             "name": "Avg Placement Margin %",
             "format": {
               "kind": "number",
               "formatString": ",.1%"
             }
+          },
+          {
+            "id": "mgkm-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "mgkm-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "mgkm-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "mgkm-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "mgkm-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "mgkm-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "mgkm-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "mgkm-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "mgkm-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "mgkm-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "mgkm-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "mgkm-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "mgkm-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "mgkm-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "mgkm-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "mgkm-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "mgkm-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "mgkm-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "mgkm-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "mgkm-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "mgkm-col-cancelled-flag",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "mgkm-col-worksite-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
           }
         ],
         "value": {
@@ -4571,7 +4751,7 @@
         "id": "mg-kpi-gross",
         "kind": "kpi-chart",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
@@ -4586,13 +4766,123 @@
           },
           {
             "id": "mg-kpi-gross-v",
-            "formula": "Sum([Margin Book/Margin])",
+            "formula": "Sum([Assignments/Estimated Margin])",
             "name": "Total Gross Margin",
             "format": {
               "kind": "number",
               "formatString": "$.3~s",
               "currencySymbol": "$"
             }
+          },
+          {
+            "id": "mgkg-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "mgkg-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "mgkg-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "mgkg-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "mgkg-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "mgkg-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "mgkg-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "mgkg-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "mgkg-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "mgkg-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "mgkg-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "mgkg-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "mgkg-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "mgkg-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "mgkg-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "mgkg-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "mgkg-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "mgkg-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "mgkg-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "mgkg-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "mgkg-col-cancelled-flag",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "mgkg-col-worksite-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
           }
         ],
         "value": {
@@ -4629,7 +4919,7 @@
         "id": "mg-kpi-bill",
         "kind": "kpi-chart",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
@@ -4644,13 +4934,123 @@
           },
           {
             "id": "mg-kpi-bill-v",
-            "formula": "Avg([Margin Book/Bill Rate])",
+            "formula": "Avg([Assignments/Bill Rate])",
             "name": "Avg Bill Rate",
             "format": {
               "kind": "number",
               "formatString": "$,.0f",
               "currencySymbol": "$"
             }
+          },
+          {
+            "id": "mgkb-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "mgkb-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "mgkb-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "mgkb-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "mgkb-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "mgkb-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "mgkb-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "mgkb-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "mgkb-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "mgkb-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "mgkb-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "mgkb-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "mgkb-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "mgkb-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "mgkb-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "mgkb-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "mgkb-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "mgkb-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "mgkb-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "mgkb-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "mgkb-col-cancelled-flag",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "mgkb-col-worksite-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
           }
         ],
         "value": {
@@ -4687,7 +5087,7 @@
         "id": "mg-kpi-pay",
         "kind": "kpi-chart",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
@@ -4702,13 +5102,123 @@
           },
           {
             "id": "mg-kpi-pay-v",
-            "formula": "Avg([Margin Book/Pay Rate])",
+            "formula": "Avg([Assignments/Pay Rate])",
             "name": "Avg Pay Rate",
             "format": {
               "kind": "number",
               "formatString": "$,.0f",
               "currencySymbol": "$"
             }
+          },
+          {
+            "id": "mgkp-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "mgkp-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "mgkp-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "mgkp-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "mgkp-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "mgkp-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "mgkp-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "mgkp-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "mgkp-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "mgkp-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "mgkp-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "mgkp-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "mgkp-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "mgkp-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "mgkp-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "mgkp-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "mgkp-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "mgkp-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "mgkp-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "mgkp-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "mgkp-col-cancelled-flag",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "mgkp-col-worksite-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
           }
         ],
         "value": {
@@ -4745,19 +5255,129 @@
         "id": "mg-kpi-spread",
         "kind": "kpi-chart",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
           {
             "id": "mg-kpi-spread-v",
-            "formula": "Avg([Margin Book/Rate Spread])",
+            "formula": "Avg([Assignments/Rate Spread])",
             "name": "Avg Rate Spread",
             "format": {
               "kind": "number",
               "formatString": "$,.0f",
               "currencySymbol": "$"
             }
+          },
+          {
+            "id": "mgks-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "mgks-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "mgks-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "mgks-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "mgks-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "mgks-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "mgks-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "mgks-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "mgks-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "mgks-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "mgks-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "mgks-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "mgks-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "mgks-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "mgks-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "mgks-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "mgks-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "mgks-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "mgks-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "mgks-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "mgks-col-cancelled-flag",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "mgks-col-worksite-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
           }
         ],
         "value": {
@@ -4784,18 +5404,128 @@
         "id": "mg-kpi-low",
         "kind": "kpi-chart",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
           {
             "id": "mg-kpi-low-v",
-            "formula": "SumIf(1, [Margin Book/Margin %] < Number([MarginThreshold]) / 100)",
+            "formula": "SumIf(1, [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100)",
             "name": "Low-Margin Placements",
             "format": {
               "kind": "number",
               "formatString": ",.3~s"
             }
+          },
+          {
+            "id": "mgkl-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "mgkl-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "mgkl-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "mgkl-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "mgkl-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "mgkl-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "mgkl-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "mgkl-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "mgkl-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "mgkl-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "mgkl-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "mgkl-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "mgkl-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "mgkl-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "mgkl-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "mgkl-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "mgkl-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "mgkl-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "mgkl-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "mgkl-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "mgkl-col-cancelled-flag",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "mgkl-col-worksite-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
           }
         ],
         "value": {
@@ -4822,13 +5552,13 @@
         "id": "mg-chart-margin-spec",
         "kind": "bar-chart",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
           {
             "id": "mc-spec",
-            "formula": "[Margin Book/Specialty]",
+            "formula": "[Assignments/Main Specialty]",
             "name": "Specialty"
           },
           {
@@ -4838,12 +5568,122 @@
           },
           {
             "id": "mc-val",
-            "formula": "Avg([Margin Book/Margin %])",
+            "formula": "Avg([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0))",
             "name": "Margin %",
             "format": {
               "kind": "number",
               "formatString": ",.1%"
             }
+          },
+          {
+            "id": "mcm-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "mcm-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "mcm-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "mcm-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "mcm-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "mcm-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "mcm-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "mcm-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "mcm-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "mcm-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "mcm-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "mcm-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "mcm-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "mcm-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "mcm-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "mcm-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "mcm-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "mcm-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "mcm-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "mcm-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "mcm-col-cancelled-flag",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "mcm-col-worksite-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
           }
         ],
         "xAxis": {
@@ -4885,13 +5725,13 @@
         "id": "mg-chart-bill-pay",
         "kind": "bar-chart",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
           {
             "id": "bp-spec",
-            "formula": "[Margin Book/Specialty]",
+            "formula": "[Assignments/Main Specialty]",
             "name": "Specialty"
           },
           {
@@ -4901,13 +5741,123 @@
           },
           {
             "id": "bp-bill",
-            "formula": "Avg([Margin Book/Bill Rate])",
+            "formula": "Avg([Assignments/Bill Rate])",
             "name": "Bill Rate",
             "format": {
               "kind": "number",
               "formatString": "$,.0f",
               "currencySymbol": "$"
             }
+          },
+          {
+            "id": "mcb-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "mcb-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "mcb-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "mcb-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "mcb-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "mcb-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "mcb-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "mcb-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "mcb-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "mcb-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "mcb-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "mcb-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "mcb-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "mcb-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "mcb-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "mcb-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "mcb-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "mcb-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "mcb-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "mcb-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "mcb-col-cancelled-flag",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "mcb-col-worksite-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
           }
         ],
         "xAxis": {
@@ -4949,13 +5899,13 @@
         "id": "mg-chart-spread-spec",
         "kind": "bar-chart",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
           {
             "id": "cs-spec",
-            "formula": "[Margin Book/Specialty]",
+            "formula": "[Assignments/Main Specialty]",
             "name": "Specialty"
           },
           {
@@ -4965,13 +5915,123 @@
           },
           {
             "id": "cs-sp",
-            "formula": "Avg([Margin Book/Rate Spread])",
+            "formula": "Avg([Assignments/Rate Spread])",
             "name": "Spread",
             "format": {
               "kind": "number",
               "formatString": "$,.0f",
               "currencySymbol": "$"
             }
+          },
+          {
+            "id": "mcs-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "mcs-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "mcs-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "mcs-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "mcs-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "mcs-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "mcs-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "mcs-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "mcs-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "mcs-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "mcs-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "mcs-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "mcs-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "mcs-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "mcs-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "mcs-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "mcs-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "mcs-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "mcs-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "mcs-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "mcs-col-cancelled-flag",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "mcs-col-worksite-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
           }
         ],
         "xAxis": {
@@ -5013,7 +6073,7 @@
         "id": "mg-chart-trend",
         "kind": "bar-chart",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
@@ -5033,13 +6093,123 @@
           },
           {
             "id": "mt-mar",
-            "formula": "Sum([Margin Book/Margin])",
+            "formula": "Sum([Assignments/Estimated Margin])",
             "name": "Gross Margin",
             "format": {
               "kind": "number",
               "formatString": "$.3~s",
               "currencySymbol": "$"
             }
+          },
+          {
+            "id": "mct-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "mct-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "mct-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "mct-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "mct-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "mct-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "mct-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "mct-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "mct-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "mct-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "mct-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "mct-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "mct-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "mct-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "mct-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "mct-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "mct-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "mct-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "mct-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "mct-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "mct-col-cancelled-flag",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "mct-col-worksite-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
           }
         ],
         "xAxis": {
