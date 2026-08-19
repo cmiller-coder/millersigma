@@ -150,6 +150,21 @@ add({"id": "tbl-pc", "kind": "table", "name": PC,
          ("p4", "RateLabel"), ("p5", "RateValue"), ("p6", "MembersM"), ("p7", "GoalPct"),
          ("p8", "Status")]]})
 
+# Card-scoped clone of tbl-pc, same reason tbl-base-card is separate from
+# tbl-base: filtering ctrl-card directly against tbl-pc (so the modal title
+# shows the picked product instead of "Multiple values") broke every OTHER
+# product card on the page -- they all read tbl-pc via MaxIf lookups keyed
+# by product name, and once tbl-pc itself was filtered to one product, every
+# other card's lookup returned null. Confirmed live: TVs/Laptops/Power/VR
+# all showed "null" the moment PC Gaming was selected. This clone is what
+# the modal filters instead, leaving the page's own tbl-pc untouched.
+add({"id": "tbl-pc-card", "kind": "table", "name": "%s (Card)" % PC,
+     "source": {"connectionId": CONN_CLICKHOUSE, "kind": "sql", "statement": CARDS_SQL.strip()},
+     "columns": [{"id": "y" + p[1:], "name": n, "formula": "[Custom SQL/%s]" % n} for p, n in [
+         ("p0", "Product"), ("p1", "ProductOrder"), ("p2", "Tagline"), ("p3", "BalancesB"),
+         ("p4", "RateLabel"), ("p5", "RateValue"), ("p6", "MembersM"), ("p7", "GoalPct"),
+         ("p8", "Status")]]})
+
 NOTIF_SQL = """
 SELECT 'a1' AS AlertKey, 1 AS AlertOrder, 'critical' AS Severity, 'Laptop margin compression' AS Title, 'Laptops carry $861M in revenue, the #2 category, but only a 20.9% gross margin -- the thinnest of the top five categories.' AS Body, '24m ago' AS Age, 'Merchandising' AS Owner, 10 AS Impact
 UNION ALL SELECT 'a2', 2, 'critical', 'Mid-Atlantic margin lag', 'Mid-Atlantic is the #2 revenue region at $1.94B, but its 37.1% margin is the lowest of all six regions.', '51m ago', 'Regional Ops', 37
@@ -274,7 +289,12 @@ header(CFG["title"],
 add({"kind": "control", "id": "ctrl-card", "controlId": "cardProduct",
      "name": "Product", "controlType": "list", "selectionMode": "single",
      "mode": "include", "values": [],
-     "filters": [{"source": {"kind": "table", "elementId": "tbl-base-card"}, "columnId": "z-family"}],
+     # Filters the CARD-SCOPED clones only (tbl-base-card, tbl-pc-card), never
+     # the page's own tbl-base/tbl-pc -- see the tbl-pc-card comment above for
+     # why (filtering tbl-pc directly broke every other product card's MaxIf
+     # lookup, all "null" the moment one product was selected).
+     "filters": [{"source": {"kind": "table", "elementId": "tbl-base-card"}, "columnId": "z-family"},
+                 {"source": {"kind": "table", "elementId": "tbl-pc-card"}, "columnId": "y0"}],
      "source": {"kind": "source", "source": {"kind": "table", "elementId": "tbl-pc"}, "columnId": "p0"}})
 
 overlays.append({"id": "modalCard", "type": "modal", "name": "Product Card",
@@ -289,7 +309,7 @@ add({"id": "mc-band", "kind": "container",
 add({"id": "mc-logo", "kind": "image", "source": {"kind": "url", "url": B.logo_white()},
      "style": {"fit": "contain", "align": "start", "padding": "none"}})
 add({"id": "mc-title", "kind": "text",
-     "body": '## **<span style="color: #FFFFFF">{{[%s/Product]}}</span>**' % PC,
+     "body": '## **<span style="color: #FFFFFF">{{[%s (Card)/Product]}}</span>**' % PC,
      "verticalAlign": "middle"})
 
 for _k, _lab, _f, _fmt in [
@@ -684,6 +704,7 @@ __NOTIF_CARDS__
   <Element elementId="tbl-base-card" gridColumn="7 / 13" gridRow="73 / 74"/>
   <Element elementId="tbl-pc" gridColumn="13 / 19" gridRow="73 / 74"/>
   <Element elementId="tbl-notif" gridColumn="19 / 25" gridRow="73 / 74"/>
+  <Element elementId="tbl-pc-card" gridColumn="1 / 7" gridRow="74 / 75"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="modalCard">
   <Container elementId="mc-band" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
