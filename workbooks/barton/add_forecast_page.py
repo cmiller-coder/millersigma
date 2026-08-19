@@ -24,6 +24,23 @@ CARD = "#FFFFFF"
 BORDER = "#D4E8E7"
 GOOD = "#0EA5A0"
 BAD = "#D64545"
+CANVAS = "#EEF4F4"
+TINT = "#F4FAFA"
+TEXT_MUTED = "#6B7B85"
+KPI_LIGHT = "#F7FAFA"
+
+CARD_STYLE = {
+    "backgroundColor": CARD,
+    "borderColor": BORDER,
+    "borderWidth": 1,
+    "borderRadius": "round",
+}
+TINT_STYLE = {
+    "backgroundColor": TINT,
+    "borderColor": BORDER,
+    "borderWidth": 1,
+    "borderRadius": "round",
+}
 
 CUR = {"kind": "number", "formatString": "$.3~s", "currencySymbol": "$"}
 PCT1 = {"kind": "number", "formatString": "+,.1%"}
@@ -97,18 +114,83 @@ def header_bg_uri() -> str:
     import base64
 
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 220" preserveAspectRatio="xMidYMid slice">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0.35">
-    <stop offset="0%" stop-color="{NAVY_DEEP}"/><stop offset="45%" stop-color="{NAVY}"/>
-    <stop offset="100%" stop-color="{TEAL_DARK}"/></linearGradient></defs>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="0.35">
+      <stop offset="0%" stop-color="{NAVY_DEEP}"/>
+      <stop offset="45%" stop-color="{NAVY}"/>
+      <stop offset="100%" stop-color="{TEAL_DARK}"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.25" r="0.55">
+      <stop offset="0%" stop-color="{TEAL}" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="{NAVY_DEEP}" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
   <rect width="1600" height="220" fill="url(#g)"/>
+  <rect width="1600" height="220" fill="url(#glow)"/>
   <rect y="217" width="1600" height="3" fill="{TEAL}"/>
 </svg>"""
     return "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
 
 
-def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str]:
-    """Return (new elements, overlay modal spec, layout xml fragment)."""
-    card = {"backgroundColor": CARD, "borderColor": BORDER, "borderWidth": 1, "borderRadius": "round"}
+def section_label(eid: str, text: str) -> dict:
+    return {
+        "id": eid,
+        "kind": "text",
+        "body": f"### {text}",
+        "verticalAlign": "middle",
+        "style": {"color": NAVY},
+    }
+
+
+def section_divider(eid: str) -> dict:
+    return {"id": eid, "kind": "divider", "style": {"color": BORDER}}
+
+
+def kpi_card(
+    eid: str,
+    title: str,
+    val: str,
+    fmt: dict,
+    *,
+    hero: bool = False,
+    muted: bool = False,
+    comp: str | None = None,
+) -> dict:
+    if hero:
+        bg, val_color, name_color, val_size, name_size = TEAL_DARK, WHITE, "#E8F7F6", 32, 14
+        style: dict = {"backgroundColor": bg}
+    elif muted:
+        bg, val_color, name_color, val_size, name_size = KPI_LIGHT, SLATE, TEXT_MUTED, 22, 12
+        style = {**CARD_STYLE, "backgroundColor": bg}
+    else:
+        bg, val_color, name_color, val_size, name_size = CARD, NAVY, TEXT_MUTED, 26, 12
+        style = dict(CARD_STYLE)
+
+    cols = [{"id": f"{eid}-v", "formula": val, "name": title, "format": fmt}]
+    el: dict = {
+        "id": eid,
+        "kind": "kpi-chart",
+        "source": {"elementId": "fc-book", "kind": "table"},
+        "columns": cols,
+        "value": {"columnId": f"{eid}-v", "color": val_color, "fontSize": val_size},
+        "name": {"text": title, "color": name_color, "fontSize": name_size},
+        "layout": {"anchor": "middle"},
+        "style": style,
+    }
+    if comp:
+        cols.append({"id": f"{eid}-c", "formula": comp, "name": "Comparison", "format": fmt})
+        el["comparisonColumn"] = {"columnId": f"{eid}-c"}
+        el["comparison"] = {
+            "display": "delta",
+            "colorGood": "#C8F7F6" if hero else GOOD,
+            "colorBad": "#FFD1C7" if hero else BAD,
+            "fontSize": 13,
+        }
+    return el
+
+
+def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str, str]:
+    """Return (new elements, overlay modal spec, page layout, modal layout)."""
 
     sbase = {
         "id": "fc-base",
@@ -265,6 +347,9 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str]:
             "ia-bc-book", "ia-book-g", "ia-bill-g", "ia-pay-g", "ia-cancel-g",
             "ia-proj-rev", "ia-proj-mar", "ia-d-rev", "ia-d-mar",
         ],
+        "name": AS,
+        "style": dict(CARD_STYLE),
+        "tableComponents": {"summaryBar": "hidden"},
     }
 
     book = {
@@ -304,6 +389,9 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str]:
             {"id": "CREATED_AT", "name": "Submitted At"},
             {"id": "CREATED_BY", "name": "Submitted By"},
         ],
+        "name": SU,
+        "style": dict(CARD_STYLE),
+        "tableComponents": {"summaryBar": "hidden"},
     }
 
     sel_ctrl = {
@@ -441,49 +529,33 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str]:
 
     scen_filter = '[Forecast Book/Scenario] = [ForecastScenario]'
 
-    def kpi(eid: str, title: str, val: str, fmt: dict, comp: str | None = None) -> dict:
-        cols = [{"id": f"{eid}-v", "formula": val, "name": title, "format": fmt}]
-        el = {
-            "id": eid,
-            "kind": "kpi-chart",
-            "source": {"elementId": "fc-book", "kind": "table"},
-            "columns": cols,
-            "value": {"columnId": f"{eid}-v", "color": WHITE, "fontSize": 26},
-            "name": {"text": title, "color": "#E8F7F6", "fontSize": 13},
-            "layout": {"anchor": "middle"},
-            "style": {"backgroundColor": NAVY_DEEP},
-        }
-        if comp:
-            cols.append({"id": f"{eid}-c", "formula": comp, "name": "Comparison", "format": fmt})
-            el["comparisonColumn"] = {"columnId": f"{eid}-c"}
-            el["comparison"] = {"display": "delta", "colorGood": GOOD, "colorBad": BAD, "fontSize": 13}
-        return el
-
-    kpi_prev = kpi(
+    kpi_prev = kpi_card(
         "fc-kpi-prev",
         "Projected Contract Value",
         f"SumIf([{BK}/Projected Contract Value], {scen_filter})",
         CUR,
-        f"SumIf([{BK}/Projected Contract Value], {scen_filter}) - SumIf([{BK}/Base Contract Value], {scen_filter})",
+        hero=True,
+        comp=f"SumIf([{BK}/Projected Contract Value], {scen_filter}) - SumIf([{BK}/Base Contract Value], {scen_filter})",
     )
-    kpi_mar = kpi(
+    kpi_mar = kpi_card(
         "fc-kpi-mar",
         "Projected Margin",
         f"SumIf([{BK}/Projected Margin], {scen_filter})",
         CUR,
-        f"SumIf([{BK}/Projected Margin], {scen_filter}) - SumIf([{BK}/Base Margin], {scen_filter})",
+        comp=f"SumIf([{BK}/Projected Margin], {scen_filter}) - SumIf([{BK}/Base Margin], {scen_filter})",
     )
-    kpi_uplift = kpi(
+    kpi_uplift = kpi_card(
         "fc-kpi-uplift",
-        "Revenue Uplift %",
+        "Revenue Uplift",
         f"SumIf([{BK}/Projected Contract Value], {scen_filter}) / SumIf([{BK}/Base Contract Value], {scen_filter}) - 1",
         PCT1,
     )
-    kpi_base = kpi(
+    kpi_base = kpi_card(
         "fc-kpi-base",
         "Baseline Contract Value",
         f"SumIf([{BK}/Base Contract Value], {scen_filter})",
         CUR,
+        muted=True,
     )
 
     compare_chart = {
@@ -499,8 +571,13 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str]:
         "yAxis": {"columnIds": ["cc-proj"]},
         "color": {"by": "category", "column": "cc-cat", "scheme": [TEAL]},
         "legend": {"visibility": "hidden"},
-        "name": {"text": "Projected contract value by specialty", "fontWeight": "bold", "fontSize": 15, "color": SLATE},
-        "style": dict(card),
+        "name": {
+            "text": "Projected contract value",
+            "fontWeight": "bold",
+            "fontSize": 15,
+            "color": SLATE,
+        },
+        "style": dict(CARD_STYLE),
     }
 
     baseline_chart = {
@@ -514,10 +591,15 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str]:
         ],
         "xAxis": {"columnId": "cb-spec", "sort": {"by": "cb-base", "direction": "descending"}},
         "yAxis": {"columnIds": ["cb-base"]},
-        "color": {"by": "category", "column": "cb-cat", "scheme": [SLATE]},
+        "color": {"by": "category", "column": "cb-cat", "scheme": [TEXT_MUTED]},
         "legend": {"visibility": "hidden"},
-        "name": {"text": "Baseline contract value by specialty", "fontWeight": "bold", "fontSize": 15, "color": SLATE},
-        "style": dict(card),
+        "name": {
+            "text": "Baseline contract value",
+            "fontWeight": "bold",
+            "fontSize": 15,
+            "color": SLATE,
+        },
+        "style": dict(CARD_STYLE),
     }
 
     variance_chart = {
@@ -533,8 +615,13 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str]:
         "yAxis": {"columnIds": ["cv-d"]},
         "color": {"by": "category", "column": "cv-cat", "scheme": [TEAL]},
         "legend": {"visibility": "hidden"},
-        "name": {"text": "Variance vs baseline by specialty", "fontWeight": "bold", "fontSize": 15, "color": SLATE},
-        "style": dict(card),
+        "name": {
+            "text": "Variance vs baseline",
+            "fontWeight": "bold",
+            "fontSize": 15,
+            "color": SLATE,
+        },
+        "style": dict(CARD_STYLE),
     }
 
     hdr = {
@@ -563,17 +650,31 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str]:
         "verticalAlign": "middle",
         "style": {"color": "#C8E8E7"},
     }
-    toolbar = {"id": "fc-toolbar", "kind": "container", "style": dict(card)}
+    toolbar = {"id": "fc-toolbar", "kind": "container", "style": dict(CARD_STYLE)}
+    sec_impact = section_label("fc-sec-impact", "Impact by specialty")
+    sec_drivers = section_label("fc-sec-drivers", "Scenario drivers")
+    sec_approval = section_label("fc-sec-approval", "Approval workflow")
+    div_kpi = section_divider("fc-div-kpi")
+    div_charts = section_divider("fc-div-charts")
+    div_drivers = section_divider("fc-div-drivers")
+    instr_c = {"id": "fc-instr-c", "kind": "container", "style": dict(TINT_STYLE)}
+    instr_hd = {
+        "id": "fc-instr-hd",
+        "kind": "text",
+        "body": "**How to model a scenario**",
+        "verticalAlign": "middle",
+        "style": {"color": NAVY},
+    }
     instr = {
         "id": "fc-instr",
         "kind": "text",
         "body": (
-            "**How to use:** Pick **Base Case** (auto-seeded drivers from pipeline pressure) or **Create scenario**. "
-            "Edit **Booking Growth %**, **Bill Rate Change %**, **Pay Rate Change %**, and **Cancel Rate Change %** "
-            "per specialty. KPIs and charts update instantly. **Submit for approval** → manager **Approve** to lock the plan."
+            "**1** — Select **Base Case** or **Create scenario**. "
+            "**2** — Adjust **Booking Growth %**, **Bill Rate %**, **Pay Rate %**, and **Cancel Rate %** per specialty. "
+            "**3** — Review KPIs and charts, then **Submit for approval** → **Approve** to lock the plan."
         ),
         "verticalAlign": "middle",
-        "style": {"color": SLATE, "backgroundColor": "#F4FAFA"},
+        "style": {"color": SLATE},
     }
     modal_title = {
         "id": "fc-modal-title",
@@ -588,7 +689,9 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str]:
         hdr, logo, title, subtitle, toolbar,
         sel_ctrl, name_ctrl, create_btn, submit_btn, approve_btn,
         kpi_prev, kpi_mar, kpi_uplift, kpi_base,
-        instr, baseline_chart, compare_chart, variance_chart,
+        div_kpi, sec_impact, baseline_chart, compare_chart, variance_chart,
+        div_charts, sec_drivers, instr_c, instr_hd, instr,
+        div_drivers, sec_approval,
         create_confirm, cancel_btn, modal_title,
     ]
 
@@ -624,20 +727,29 @@ def build_forecast_elements(header_bg: str) -> tuple[list[dict], dict, str]:
     <Element elementId="fc-btn-submit" gridColumn="14 / 19" gridRow="1 / 4"/>
     <Element elementId="fc-btn-approve" gridColumn="19 / 25" gridRow="1 / 4"/>
   </Container>
-  <Element elementId="fc-kpi-prev" gridColumn="1 / 7" gridRow="8 / 14"/>
-  <Element elementId="fc-kpi-mar" gridColumn="7 / 13" gridRow="8 / 14"/>
-  <Element elementId="fc-kpi-uplift" gridColumn="13 / 19" gridRow="8 / 14"/>
-  <Element elementId="fc-kpi-base" gridColumn="19 / 25" gridRow="8 / 14"/>
-  <Element elementId="fc-instr" gridColumn="1 / 25" gridRow="14 / 17"/>
-  <Element elementId="fc-assum" gridColumn="1 / 25" gridRow="17 / 38"/>
-  <Element elementId="fc-chart-base-bar" gridColumn="1 / 13" gridRow="38 / 54"/>
-  <Element elementId="fc-chart-compare" gridColumn="13 / 25" gridRow="38 / 54"/>
-  <Element elementId="fc-chart-var" gridColumn="1 / 25" gridRow="54 / 68"/>
-  <Element elementId="fc-subs" gridColumn="1 / 25" gridRow="68 / 74"/>
-  <Element elementId="fc-base" gridColumn="1 / 2" gridRow="74 / 75"/>
-  <Element elementId="fc-scenarios" gridColumn="2 / 3" gridRow="74 / 75"/>
-  <Element elementId="fc-pivot" gridColumn="3 / 4" gridRow="74 / 75"/>
-  <Element elementId="fc-book" gridColumn="4 / 5" gridRow="74 / 75"/>
+  <Element elementId="fc-kpi-prev" gridColumn="1 / 10" gridRow="8 / 15"/>
+  <Element elementId="fc-kpi-mar" gridColumn="10 / 16" gridRow="8 / 15"/>
+  <Element elementId="fc-kpi-uplift" gridColumn="16 / 21" gridRow="8 / 15"/>
+  <Element elementId="fc-kpi-base" gridColumn="21 / 25" gridRow="8 / 15"/>
+  <Element elementId="fc-div-kpi" gridColumn="1 / 25" gridRow="15 / 16"/>
+  <Element elementId="fc-sec-impact" gridColumn="1 / 25" gridRow="16 / 17"/>
+  <Element elementId="fc-chart-base-bar" gridColumn="1 / 13" gridRow="17 / 29"/>
+  <Element elementId="fc-chart-compare" gridColumn="13 / 25" gridRow="17 / 29"/>
+  <Element elementId="fc-chart-var" gridColumn="1 / 25" gridRow="29 / 41"/>
+  <Element elementId="fc-div-charts" gridColumn="1 / 25" gridRow="41 / 42"/>
+  <Element elementId="fc-sec-drivers" gridColumn="1 / 25" gridRow="42 / 43"/>
+  <Container elementId="fc-instr-c" type="grid" gridColumn="1 / 25" gridRow="43 / 46" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="fc-instr-hd" gridColumn="1 / 25" gridRow="1 / 2"/>
+    <Element elementId="fc-instr" gridColumn="1 / 25" gridRow="2 / 4"/>
+  </Container>
+  <Element elementId="fc-assum" gridColumn="1 / 25" gridRow="46 / 62"/>
+  <Element elementId="fc-div-drivers" gridColumn="1 / 25" gridRow="62 / 63"/>
+  <Element elementId="fc-sec-approval" gridColumn="1 / 25" gridRow="63 / 64"/>
+  <Element elementId="fc-subs" gridColumn="1 / 25" gridRow="64 / 70"/>
+  <Element elementId="fc-base" gridColumn="1 / 2" gridRow="70 / 71"/>
+  <Element elementId="fc-scenarios" gridColumn="2 / 3" gridRow="70 / 71"/>
+  <Element elementId="fc-pivot" gridColumn="3 / 4" gridRow="70 / 71"/>
+  <Element elementId="fc-book" gridColumn="4 / 5" gridRow="70 / 71"/>
 </Page>"""
 
     return elements, overlay, page_layout, modal_layout
@@ -667,12 +779,24 @@ def main() -> None:
 
     base_layout = doc.get("layout", "")
     base_layout = re.sub(
+        r'<Page[^>]*id="page-forecast"[^>]*>.*?</Page>\s*',
+        "",
+        base_layout,
+        flags=re.DOTALL,
+    )
+    base_layout = re.sub(
         r'<Page[^>]*id="fc-modal-create"[^>]*>.*?</Page>\s*',
         "",
         base_layout,
         flags=re.DOTALL,
     )
     doc["layout"] = base_layout.rstrip() + page_layout + modal_layout
+
+    overrides = doc.setdefault("settings", {}).setdefault("theme", {}).setdefault("overrides", {})
+    overrides.setdefault("pageWidth", "large")
+    space = overrides.setdefault("space", {})
+    space.setdefault("unit", "small")
+    space.setdefault("showElementPadding", "shown")
 
     payload = {"name": spec["name"], "folderId": spec["folderId"], "document": doc}
     (REPO / "workbooks/barton/spec-forecast.json").write_text(json.dumps(payload, indent=2))

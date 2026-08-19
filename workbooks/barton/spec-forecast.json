@@ -2919,7 +2919,16 @@
           "ia-proj-mar",
           "ia-d-rev",
           "ia-d-mar"
-        ]
+        ],
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        },
+        "tableComponents": {
+          "summaryBar": "hidden"
+        }
       },
       {
         "id": "fc-book",
@@ -3046,7 +3055,16 @@
             "id": "CREATED_BY",
             "name": "Submitted By"
           }
-        ]
+        ],
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        },
+        "tableComponents": {
+          "summaryBar": "hidden"
+        }
       },
       {
         "id": "fc-hdr",
@@ -3058,7 +3076,7 @@
         "backgroundImage": {
           "source": {
             "kind": "url",
-            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDIyMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ieE1pZFlNaWQgc2xpY2UiPgogIDxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjAuMzUiPgogICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzBGMkEzQSIvPjxzdG9wIG9mZnNldD0iNDUlIiBzdG9wLWNvbG9yPSIjMUUzQTRDIi8+CiAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMDdBNzgiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIyMjAiIGZpbGw9InVybCgjZykiLz4KICA8cmVjdCB5PSIyMTciIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjMiIGZpbGw9IiMwMEE1QTIiLz4KPC9zdmc+"
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDIyMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ieE1pZFlNaWQgc2xpY2UiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMC4zNSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwRjJBM0EiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI0NSUiIHN0b3AtY29sb3I9IiMxRTNBNEMiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDA3QTc4Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJnbG93IiBjeD0iMC44MiIgY3k9IjAuMjUiIHI9IjAuNTUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMDBBNUEyIiBzdG9wLW9wYWNpdHk9IjAuMzUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEYyQTNBIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjIyMCIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjIyMCIgZmlsbD0idXJsKCNnbG93KSIvPgogIDxyZWN0IHk9IjIxNyIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMyIgZmlsbD0iIzAwQTVBMiIvPgo8L3N2Zz4="
           },
           "style": {
             "fit": "cover"
@@ -3288,26 +3306,26 @@
         "value": {
           "columnId": "fc-kpi-prev-v",
           "color": "#FFFFFF",
-          "fontSize": 26
+          "fontSize": 32
         },
         "name": {
           "text": "Projected Contract Value",
           "color": "#E8F7F6",
-          "fontSize": 13
+          "fontSize": 14
         },
         "layout": {
           "anchor": "middle"
         },
         "style": {
-          "backgroundColor": "#0F2A3A"
+          "backgroundColor": "#007A78"
         },
         "comparisonColumn": {
           "columnId": "fc-kpi-prev-c"
         },
         "comparison": {
           "display": "delta",
-          "colorGood": "#0EA5A0",
-          "colorBad": "#D64545",
+          "colorGood": "#C8F7F6",
+          "colorBad": "#FFD1C7",
           "fontSize": 13
         }
       },
@@ -3342,19 +3360,22 @@
         ],
         "value": {
           "columnId": "fc-kpi-mar-v",
-          "color": "#FFFFFF",
+          "color": "#1E3A4C",
           "fontSize": 26
         },
         "name": {
           "text": "Projected Margin",
-          "color": "#E8F7F6",
-          "fontSize": 13
+          "color": "#6B7B85",
+          "fontSize": 12
         },
         "layout": {
           "anchor": "middle"
         },
         "style": {
-          "backgroundColor": "#0F2A3A"
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
         },
         "comparisonColumn": {
           "columnId": "fc-kpi-mar-c"
@@ -3377,7 +3398,7 @@
           {
             "id": "fc-kpi-uplift-v",
             "formula": "SumIf([Forecast Book/Projected Contract Value], [Forecast Book/Scenario] = [ForecastScenario]) / SumIf([Forecast Book/Base Contract Value], [Forecast Book/Scenario] = [ForecastScenario]) - 1",
-            "name": "Revenue Uplift %",
+            "name": "Revenue Uplift",
             "format": {
               "kind": "number",
               "formatString": "+,.1%"
@@ -3386,19 +3407,22 @@
         ],
         "value": {
           "columnId": "fc-kpi-uplift-v",
-          "color": "#FFFFFF",
+          "color": "#1E3A4C",
           "fontSize": 26
         },
         "name": {
-          "text": "Revenue Uplift %",
-          "color": "#E8F7F6",
-          "fontSize": 13
+          "text": "Revenue Uplift",
+          "color": "#6B7B85",
+          "fontSize": 12
         },
         "layout": {
           "anchor": "middle"
         },
         "style": {
-          "backgroundColor": "#0F2A3A"
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
         }
       },
       {
@@ -3422,29 +3446,38 @@
         ],
         "value": {
           "columnId": "fc-kpi-base-v",
-          "color": "#FFFFFF",
-          "fontSize": 26
+          "color": "#41454D",
+          "fontSize": 22
         },
         "name": {
           "text": "Baseline Contract Value",
-          "color": "#E8F7F6",
-          "fontSize": 13
+          "color": "#6B7B85",
+          "fontSize": 12
         },
         "layout": {
           "anchor": "middle"
         },
         "style": {
-          "backgroundColor": "#0F2A3A"
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
         }
       },
       {
-        "id": "fc-instr",
+        "id": "fc-div-kpi",
+        "kind": "divider",
+        "style": {
+          "color": "#D4E8E7"
+        }
+      },
+      {
+        "id": "fc-sec-impact",
         "kind": "text",
-        "body": "**How to use:** Pick **Base Case** (auto-seeded drivers from pipeline pressure) or **Create scenario**. Edit **Booking Growth %**, **Bill Rate Change %**, **Pay Rate Change %**, and **Cancel Rate Change %** per specialty. KPIs and charts update instantly. **Submit for approval** \u2192 manager **Approve** to lock the plan.",
+        "body": "### Impact by specialty",
         "verticalAlign": "middle",
         "style": {
-          "color": "#41454D",
-          "backgroundColor": "#F4FAFA"
+          "color": "#1E3A4C"
         }
       },
       {
@@ -3492,14 +3525,14 @@
           "by": "category",
           "column": "cb-cat",
           "scheme": [
-            "#41454D"
+            "#6B7B85"
           ]
         },
         "legend": {
           "visibility": "hidden"
         },
         "name": {
-          "text": "Baseline contract value by specialty",
+          "text": "Baseline contract value",
           "fontWeight": "bold",
           "fontSize": 15,
           "color": "#41454D"
@@ -3563,7 +3596,7 @@
           "visibility": "hidden"
         },
         "name": {
-          "text": "Projected contract value by specialty",
+          "text": "Projected contract value",
           "fontWeight": "bold",
           "fontSize": 15,
           "color": "#41454D"
@@ -3627,7 +3660,7 @@
           "visibility": "hidden"
         },
         "name": {
-          "text": "Variance vs baseline by specialty",
+          "text": "Variance vs baseline",
           "fontWeight": "bold",
           "fontSize": 15,
           "color": "#41454D"
@@ -3637,6 +3670,66 @@
           "borderColor": "#D4E8E7",
           "borderWidth": 1,
           "borderRadius": "round"
+        }
+      },
+      {
+        "id": "fc-div-charts",
+        "kind": "divider",
+        "style": {
+          "color": "#D4E8E7"
+        }
+      },
+      {
+        "id": "fc-sec-drivers",
+        "kind": "text",
+        "body": "### Scenario drivers",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#1E3A4C"
+        }
+      },
+      {
+        "id": "fc-instr-c",
+        "kind": "container",
+        "style": {
+          "backgroundColor": "#F4FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "fc-instr-hd",
+        "kind": "text",
+        "body": "**How to model a scenario**",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#1E3A4C"
+        }
+      },
+      {
+        "id": "fc-instr",
+        "kind": "text",
+        "body": "**1** \u2014 Select **Base Case** or **Create scenario**. **2** \u2014 Adjust **Booking Growth %**, **Bill Rate %**, **Pay Rate %**, and **Cancel Rate %** per specialty. **3** \u2014 Review KPIs and charts, then **Submit for approval** \u2192 **Approve** to lock the plan.",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#41454D"
+        }
+      },
+      {
+        "id": "fc-div-drivers",
+        "kind": "divider",
+        "style": {
+          "color": "#D4E8E7"
+        }
+      },
+      {
+        "id": "fc-sec-approval",
+        "kind": "text",
+        "body": "### Approval workflow",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#1E3A4C"
         }
       },
       {
@@ -3762,12 +3855,11 @@
           "space": {
             "unit": "small",
             "showElementPadding": "shown"
-          }
+          },
+          "pageWidth": "large"
         }
       }
     },
-    "kind": "workbook",
-    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <Container elementId=\"container-hdr-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p1\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p1\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"text-subtitle-p1\" gridColumn=\"6 / 20\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"container-filters-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-state\" gridColumn=\"7 / 13\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-status\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Container elementId=\"container-kpi-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"8 / 17\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"kpi-booked\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-bill\" gridColumn=\"5 / 9\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-pay\" gridColumn=\"9 / 13\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-spread\" gridColumn=\"13 / 17\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-contract-value\" gridColumn=\"17 / 21\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-cancelled\" gridColumn=\"21 / 25\" gridRow=\"1 / 9\"/>\n  </Container>\n  <Element elementId=\"ctrl-grain\" gridColumn=\"1 / 5\" gridRow=\"17 / 20\"/>\n  <Element elementId=\"chart-trend\" gridColumn=\"5 / 25\" gridRow=\"17 / 33\"/>\n  <Element elementId=\"chart-rate-by-specialty\" gridColumn=\"1 / 13\" gridRow=\"33 / 49\"/>\n  <Element elementId=\"chart-by-state\" gridColumn=\"13 / 25\" gridRow=\"33 / 49\"/>\n  <Element elementId=\"chart-cancel-trend\" gridColumn=\"1 / 19\" gridRow=\"49 / 65\"/>\n  <Element elementId=\"text-note-p1\" gridColumn=\"19 / 25\" gridRow=\"49 / 65\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-detail\">\n  <Container elementId=\"container-hdr-p2\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 7\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p2\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p2\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"ctrl-status-p2\" gridColumn=\"16 / 21\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"ctrl-specialty-p2\" gridColumn=\"21 / 25\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"text-subtitle-p2\" gridColumn=\"6 / 20\" gridRow=\"5 / 7\"/>\n  </Container>\n  <Element elementId=\"pivot-specialty-status\" gridColumn=\"1 / 25\" gridRow=\"7 / 23\"/>\n  <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"23 / 47\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 25\" gridRow=\"47 / 49\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-forecast\">\n  <Container elementId=\"fc-hdr\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-logo\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"fc-title\" gridColumn=\"6 / 18\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"fc-subtitle\" gridColumn=\"6 / 22\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"fc-toolbar\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-ctrl-scen\" gridColumn=\"1 / 8\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-create\" gridColumn=\"8 / 14\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-submit\" gridColumn=\"14 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-approve\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"fc-kpi-prev\" gridColumn=\"1 / 7\" gridRow=\"8 / 14\"/>\n  <Element elementId=\"fc-kpi-mar\" gridColumn=\"7 / 13\" gridRow=\"8 / 14\"/>\n  <Element elementId=\"fc-kpi-uplift\" gridColumn=\"13 / 19\" gridRow=\"8 / 14\"/>\n  <Element elementId=\"fc-kpi-base\" gridColumn=\"19 / 25\" gridRow=\"8 / 14\"/>\n  <Element elementId=\"fc-instr\" gridColumn=\"1 / 25\" gridRow=\"14 / 17\"/>\n  <Element elementId=\"fc-assum\" gridColumn=\"1 / 25\" gridRow=\"17 / 38\"/>\n  <Element elementId=\"fc-chart-base-bar\" gridColumn=\"1 / 13\" gridRow=\"38 / 54\"/>\n  <Element elementId=\"fc-chart-compare\" gridColumn=\"13 / 25\" gridRow=\"38 / 54\"/>\n  <Element elementId=\"fc-chart-var\" gridColumn=\"1 / 25\" gridRow=\"54 / 68\"/>\n  <Element elementId=\"fc-subs\" gridColumn=\"1 / 25\" gridRow=\"68 / 74\"/>\n  <Element elementId=\"fc-base\" gridColumn=\"1 / 2\" gridRow=\"74 / 75\"/>\n  <Element elementId=\"fc-scenarios\" gridColumn=\"2 / 3\" gridRow=\"74 / 75\"/>\n  <Element elementId=\"fc-pivot\" gridColumn=\"3 / 4\" gridRow=\"74 / 75\"/>\n  <Element elementId=\"fc-book\" gridColumn=\"4 / 5\" gridRow=\"74 / 75\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"fc-modal-create\">\n  <Element elementId=\"fc-modal-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Element elementId=\"fc-ctrl-name\" gridColumn=\"1 / 25\" gridRow=\"3 / 5\"/>\n  <Element elementId=\"fc-btn-cancel\" gridColumn=\"13 / 19\" gridRow=\"5 / 7\"/>\n  <Element elementId=\"fc-btn-create-ok\" gridColumn=\"19 / 25\" gridRow=\"5 / 7\"/>\n</Page>",
     "overlays": [
       {
         "id": "fc-modal-create",
@@ -3789,6 +3881,8 @@
           }
         }
       }
-    ]
+    ],
+    "kind": "workbook",
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <Container elementId=\"container-hdr-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p1\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p1\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"text-subtitle-p1\" gridColumn=\"6 / 20\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"container-filters-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-state\" gridColumn=\"7 / 13\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-status\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Container elementId=\"container-kpi-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"8 / 17\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"kpi-booked\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-bill\" gridColumn=\"5 / 9\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-pay\" gridColumn=\"9 / 13\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-avg-spread\" gridColumn=\"13 / 17\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-contract-value\" gridColumn=\"17 / 21\" gridRow=\"1 / 9\"/>\n    <Element elementId=\"kpi-cancelled\" gridColumn=\"21 / 25\" gridRow=\"1 / 9\"/>\n  </Container>\n  <Element elementId=\"ctrl-grain\" gridColumn=\"1 / 5\" gridRow=\"17 / 20\"/>\n  <Element elementId=\"chart-trend\" gridColumn=\"5 / 25\" gridRow=\"17 / 33\"/>\n  <Element elementId=\"chart-rate-by-specialty\" gridColumn=\"1 / 13\" gridRow=\"33 / 49\"/>\n  <Element elementId=\"chart-by-state\" gridColumn=\"13 / 25\" gridRow=\"33 / 49\"/>\n  <Element elementId=\"chart-cancel-trend\" gridColumn=\"1 / 19\" gridRow=\"49 / 65\"/>\n  <Element elementId=\"text-note-p1\" gridColumn=\"19 / 25\" gridRow=\"49 / 65\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-detail\">\n  <Container elementId=\"container-hdr-p2\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 7\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p2\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p2\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"ctrl-status-p2\" gridColumn=\"16 / 21\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"ctrl-specialty-p2\" gridColumn=\"21 / 25\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"text-subtitle-p2\" gridColumn=\"6 / 20\" gridRow=\"5 / 7\"/>\n  </Container>\n  <Element elementId=\"pivot-specialty-status\" gridColumn=\"1 / 25\" gridRow=\"7 / 23\"/>\n  <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"23 / 47\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 25\" gridRow=\"47 / 49\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-forecast\">\n  <Container elementId=\"fc-hdr\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-logo\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"fc-title\" gridColumn=\"6 / 18\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"fc-subtitle\" gridColumn=\"6 / 22\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"fc-toolbar\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-ctrl-scen\" gridColumn=\"1 / 8\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-create\" gridColumn=\"8 / 14\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-submit\" gridColumn=\"14 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"fc-btn-approve\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"fc-kpi-prev\" gridColumn=\"1 / 10\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-mar\" gridColumn=\"10 / 16\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-uplift\" gridColumn=\"16 / 21\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-kpi-base\" gridColumn=\"21 / 25\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"fc-div-kpi\" gridColumn=\"1 / 25\" gridRow=\"15 / 16\"/>\n  <Element elementId=\"fc-sec-impact\" gridColumn=\"1 / 25\" gridRow=\"16 / 17\"/>\n  <Element elementId=\"fc-chart-base-bar\" gridColumn=\"1 / 13\" gridRow=\"17 / 29\"/>\n  <Element elementId=\"fc-chart-compare\" gridColumn=\"13 / 25\" gridRow=\"17 / 29\"/>\n  <Element elementId=\"fc-chart-var\" gridColumn=\"1 / 25\" gridRow=\"29 / 41\"/>\n  <Element elementId=\"fc-div-charts\" gridColumn=\"1 / 25\" gridRow=\"41 / 42\"/>\n  <Element elementId=\"fc-sec-drivers\" gridColumn=\"1 / 25\" gridRow=\"42 / 43\"/>\n  <Container elementId=\"fc-instr-c\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"43 / 46\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"fc-instr-hd\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n    <Element elementId=\"fc-instr\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n  </Container>\n  <Element elementId=\"fc-assum\" gridColumn=\"1 / 25\" gridRow=\"46 / 62\"/>\n  <Element elementId=\"fc-div-drivers\" gridColumn=\"1 / 25\" gridRow=\"62 / 63\"/>\n  <Element elementId=\"fc-sec-approval\" gridColumn=\"1 / 25\" gridRow=\"63 / 64\"/>\n  <Element elementId=\"fc-subs\" gridColumn=\"1 / 25\" gridRow=\"64 / 70\"/>\n  <Element elementId=\"fc-base\" gridColumn=\"1 / 2\" gridRow=\"70 / 71\"/>\n  <Element elementId=\"fc-scenarios\" gridColumn=\"2 / 3\" gridRow=\"70 / 71\"/>\n  <Element elementId=\"fc-pivot\" gridColumn=\"3 / 4\" gridRow=\"70 / 71\"/>\n  <Element elementId=\"fc-book\" gridColumn=\"4 / 5\" gridRow=\"70 / 71\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"fc-modal-create\">\n  <Element elementId=\"fc-modal-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Element elementId=\"fc-ctrl-name\" gridColumn=\"1 / 25\" gridRow=\"3 / 5\"/>\n  <Element elementId=\"fc-btn-cancel\" gridColumn=\"13 / 19\" gridRow=\"5 / 7\"/>\n  <Element elementId=\"fc-btn-create-ok\" gridColumn=\"19 / 25\" gridRow=\"5 / 7\"/>\n</Page>"
   }
 }
