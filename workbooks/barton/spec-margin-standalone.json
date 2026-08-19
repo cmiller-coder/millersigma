@@ -263,7 +263,7 @@
           },
           {
             "id": "mg-low",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, 1, 0)",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, 1, 0)",
             "name": "Low Margin Flag",
             "format": {
               "kind": "number",
@@ -272,7 +272,7 @@
           },
           {
             "id": "mg-pill",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
             "name": "Margin Status"
           }
         ],
@@ -409,28 +409,28 @@
         "id": "mg-detail",
         "kind": "table",
         "source": {
-          "elementId": "mg-book",
+          "elementId": "tbl-assignments",
           "kind": "table"
         },
         "columns": [
           {
             "id": "mgd-num",
-            "formula": "[Margin Book/Assignment Number]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, [Assignments/Assignment Number], \"\")",
             "name": "Assignment Number"
           },
           {
             "id": "mgd-spec",
-            "formula": "[Margin Book/Specialty]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, [Assignments/Main Specialty], \"\")",
             "name": "Specialty"
           },
           {
             "id": "mgd-state",
-            "formula": "[Margin Book/State]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, [Assignments/Worksite State (Display)], \"\")",
             "name": "State"
           },
           {
             "id": "mgd-bill",
-            "formula": "[Margin Book/Bill Rate]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, [Assignments/Bill Rate], 0)",
             "name": "Bill Rate",
             "format": {
               "kind": "number",
@@ -440,7 +440,7 @@
           },
           {
             "id": "mgd-pay",
-            "formula": "[Margin Book/Pay Rate]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, [Assignments/Pay Rate], 0)",
             "name": "Pay Rate",
             "format": {
               "kind": "number",
@@ -450,7 +450,7 @@
           },
           {
             "id": "mgd-spread",
-            "formula": "[Margin Book/Rate Spread]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, [Assignments/Rate Spread], 0)",
             "name": "Spread",
             "format": {
               "kind": "number",
@@ -460,7 +460,7 @@
           },
           {
             "id": "mgd-rev",
-            "formula": "[Margin Book/Contract Value]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, [Assignments/Estimated Contract Value], 0)",
             "name": "Contract Value",
             "format": {
               "kind": "number",
@@ -470,7 +470,7 @@
           },
           {
             "id": "mgd-mar",
-            "formula": "[Margin Book/Margin]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, [Assignments/Estimated Margin], 0)",
             "name": "Margin",
             "format": {
               "kind": "number",
@@ -480,7 +480,7 @@
           },
           {
             "id": "mgd-mpct",
-            "formula": "[Margin Book/Margin Pct]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0), 0)",
             "name": "Margin %",
             "format": {
               "kind": "number",
@@ -489,12 +489,12 @@
           },
           {
             "id": "mgd-pill",
-            "formula": "[Margin Book/Margin Status]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
             "name": "Margin Status"
           },
           {
             "id": "mgd-low",
-            "formula": "[Margin Book/Low Margin Flag]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, 1, 0)",
             "name": "Low Margin Flag",
             "format": {
               "kind": "number",
@@ -621,12 +621,22 @@
         "selectionMode": "multiple",
         "values": [],
         "source": {
-          "kind": "source",
-          "source": {
-            "kind": "table",
-            "elementId": "tbl-assignments"
-          },
-          "columnId": "col-main-specialty"
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "Anesthesiology",
+            "Radiology",
+            "Emergency Medicine",
+            "Hospitalist",
+            "Clinical Services",
+            "Cardiology & Critical Care",
+            "Oncology",
+            "Surgical Services",
+            "Primary Care",
+            "Psyc",
+            "Dentistry",
+            "Women's Health"
+          ]
         },
         "includeNulls": "never",
         "filters": [
@@ -746,104 +756,6 @@
         "value": "15"
       },
       {
-        "kind": "control",
-        "controlId": "MarginStatusFilter",
-        "id": "mg-ctrl-status",
-        "name": "Margin status",
-        "controlType": "list",
-        "mode": "include",
-        "selectionMode": "multiple",
-        "values": [],
-        "source": {
-          "kind": "source",
-          "source": {
-            "kind": "table",
-            "elementId": "mg-book"
-          },
-          "columnId": "mg-pill"
-        },
-        "includeNulls": "never",
-        "filters": [
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-detail"
-            },
-            "columnId": "mgd-pill"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-kpi-margin"
-            },
-            "columnId": "mgkm-col-margin-status"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-kpi-gross"
-            },
-            "columnId": "mgkg-col-margin-status"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-kpi-bill"
-            },
-            "columnId": "mgkb-col-margin-status"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-kpi-pay"
-            },
-            "columnId": "mgkp-col-margin-status"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-kpi-spread"
-            },
-            "columnId": "mgks-col-margin-status"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-kpi-low"
-            },
-            "columnId": "mgkl-col-margin-status"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-chart-trend"
-            },
-            "columnId": "mct-col-margin-status"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-chart-margin-spec"
-            },
-            "columnId": "mcm-col-margin-status"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-chart-bill-pay"
-            },
-            "columnId": "mcb-col-margin-status"
-          },
-          {
-            "source": {
-              "kind": "table",
-              "elementId": "mg-chart-spread-spec"
-            },
-            "columnId": "mcs-col-margin-status"
-          }
-        ]
-      },
-      {
         "id": "mg-kpi-margin",
         "kind": "kpi-chart",
         "source": {
@@ -853,7 +765,7 @@
         "columns": [
           {
             "id": "mg-kpi-margin-p",
-            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "formula": "DateTrunc(\"month\", [Assignments/Start Date])",
             "name": "Period",
             "format": {
               "kind": "datetime",
@@ -862,7 +774,7 @@
           },
           {
             "id": "mg-kpi-margin-v",
-            "formula": "Avg([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0))",
+            "formula": "AvgIf([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0), [Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\")",
             "name": "Avg Placement Margin %",
             "format": {
               "kind": "number",
@@ -978,11 +890,6 @@
             "id": "mgkm-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "mgkm-col-margin-status",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
-            "name": "Margin Status"
           }
         ],
         "value": {
@@ -1022,7 +929,7 @@
         "columns": [
           {
             "id": "mg-kpi-gross-p",
-            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "formula": "DateTrunc(\"month\", [Assignments/Start Date])",
             "name": "Period",
             "format": {
               "kind": "datetime",
@@ -1031,7 +938,7 @@
           },
           {
             "id": "mg-kpi-gross-v",
-            "formula": "Sum([Assignments/Estimated Margin])",
+            "formula": "SumIf([Assignments/Estimated Margin], [Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\")",
             "name": "Total Gross Margin",
             "format": {
               "kind": "number",
@@ -1148,11 +1055,6 @@
             "id": "mgkg-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "mgkg-col-margin-status",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
-            "name": "Margin Status"
           }
         ],
         "value": {
@@ -1195,7 +1097,7 @@
         "columns": [
           {
             "id": "mg-kpi-bill-p",
-            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "formula": "DateTrunc(\"month\", [Assignments/Start Date])",
             "name": "Period",
             "format": {
               "kind": "datetime",
@@ -1204,7 +1106,7 @@
           },
           {
             "id": "mg-kpi-bill-v",
-            "formula": "Avg([Assignments/Bill Rate])",
+            "formula": "AvgIf([Assignments/Bill Rate], [Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\")",
             "name": "Avg Bill Rate",
             "format": {
               "kind": "number",
@@ -1321,11 +1223,6 @@
             "id": "mgkb-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "mgkb-col-margin-status",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
-            "name": "Margin Status"
           }
         ],
         "value": {
@@ -1368,7 +1265,7 @@
         "columns": [
           {
             "id": "mg-kpi-pay-p",
-            "formula": "DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date]))",
+            "formula": "DateTrunc(\"month\", [Assignments/Start Date])",
             "name": "Period",
             "format": {
               "kind": "datetime",
@@ -1377,7 +1274,7 @@
           },
           {
             "id": "mg-kpi-pay-v",
-            "formula": "Avg([Assignments/Pay Rate])",
+            "formula": "AvgIf([Assignments/Pay Rate], [Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\")",
             "name": "Avg Pay Rate",
             "format": {
               "kind": "number",
@@ -1494,11 +1391,6 @@
             "id": "mgkp-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "mgkp-col-margin-status",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
-            "name": "Margin Status"
           }
         ],
         "value": {
@@ -1541,7 +1433,7 @@
         "columns": [
           {
             "id": "mg-kpi-spread-v",
-            "formula": "Avg([Assignments/Rate Spread])",
+            "formula": "AvgIf([Assignments/Rate Spread], [Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\")",
             "name": "Avg Rate Spread",
             "format": {
               "kind": "number",
@@ -1658,11 +1550,6 @@
             "id": "mgks-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "mgks-col-margin-status",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
-            "name": "Margin Status"
           }
         ],
         "value": {
@@ -1695,7 +1582,7 @@
         "columns": [
           {
             "id": "mg-kpi-low-v",
-            "formula": "SumIf(1, [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100)",
+            "formula": "SumIf(1, [Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\" and [Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100)",
             "name": "Low-Margin Placements",
             "format": {
               "kind": "number",
@@ -1811,11 +1698,6 @@
             "id": "mgkl-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "mgkl-col-margin-status",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
-            "name": "Margin Status"
           }
         ],
         "value": {
@@ -1848,7 +1730,7 @@
         "columns": [
           {
             "id": "mc-spec",
-            "formula": "[Assignments/Main Specialty]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\", [Assignments/Main Specialty], \"\")",
             "name": "Specialty"
           },
           {
@@ -1858,7 +1740,7 @@
           },
           {
             "id": "mc-val",
-            "formula": "Avg([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0))",
+            "formula": "AvgIf([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0), [Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\")",
             "name": "Margin %",
             "format": {
               "kind": "number",
@@ -1974,11 +1856,6 @@
             "id": "mcm-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "mcm-col-margin-status",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
-            "name": "Margin Status"
           }
         ],
         "xAxis": {
@@ -2026,7 +1903,7 @@
         "columns": [
           {
             "id": "bp-spec",
-            "formula": "[Assignments/Main Specialty]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\", [Assignments/Main Specialty], \"\")",
             "name": "Specialty"
           },
           {
@@ -2036,7 +1913,7 @@
           },
           {
             "id": "bp-bill",
-            "formula": "Avg([Assignments/Bill Rate])",
+            "formula": "AvgIf([Assignments/Bill Rate], [Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\")",
             "name": "Bill Rate",
             "format": {
               "kind": "number",
@@ -2153,11 +2030,6 @@
             "id": "mcb-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "mcb-col-margin-status",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
-            "name": "Margin Status"
           }
         ],
         "xAxis": {
@@ -2205,7 +2077,7 @@
         "columns": [
           {
             "id": "cs-spec",
-            "formula": "[Assignments/Main Specialty]",
+            "formula": "If([Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\", [Assignments/Main Specialty], \"\")",
             "name": "Specialty"
           },
           {
@@ -2215,7 +2087,7 @@
           },
           {
             "id": "cs-sp",
-            "formula": "Avg([Assignments/Rate Spread])",
+            "formula": "AvgIf([Assignments/Rate Spread], [Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\")",
             "name": "Spread",
             "format": {
               "kind": "number",
@@ -2332,11 +2204,6 @@
             "id": "mcs-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "mcs-col-margin-status",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
-            "name": "Margin Status"
           }
         ],
         "xAxis": {
@@ -2384,7 +2251,7 @@
         "columns": [
           {
             "id": "mt-per",
-            "formula": "Switch([Date-Segment], \"year\", DateTrunc(\"year\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])), \"quarter\", DateTrunc(\"quarter\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])), \"week\", DateTrunc(\"week\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])), DateTrunc(\"month\", Switch([Date-Basis], \"Start Date\", [Assignments/Start Date], [Assignments/Assignment Created Date])))",
+            "formula": "DateTrunc(\"month\", [Assignments/Start Date])",
             "name": "Period",
             "format": {
               "kind": "datetime",
@@ -2398,7 +2265,7 @@
           },
           {
             "id": "mt-mar",
-            "formula": "Sum([Assignments/Estimated Margin])",
+            "formula": "SumIf([Assignments/Estimated Margin], [Assignments/Prod Assignment] = \"Yes\" and Not(IsNull([Assignments/Main Specialty])) and [Assignments/Main Specialty] != \"\")",
             "name": "Gross Margin",
             "format": {
               "kind": "number",
@@ -2515,11 +2382,6 @@
             "id": "mct-col-worksite-state-display",
             "formula": "[Assignments/Worksite State (Display)]",
             "name": "Worksite State (Display)"
-          },
-          {
-            "id": "mct-col-margin-status",
-            "formula": "If([Assignments/Estimated Margin] / NullIf([Assignments/Estimated Contract Value], 0) < Number([MarginThreshold]) / 100, \"Low\", \"OK\")",
-            "name": "Margin Status"
           }
         ],
         "xAxis": {
@@ -2566,7 +2428,7 @@
       {
         "id": "mg-instr",
         "kind": "text",
-        "body": "**How to use this page:** Pick a **Specialty** to filter every KPI and chart. Set the **Low-margin threshold** \u2014 the counter and detail tab update together. On **Low-margin placements**, select **Low** under Margin status to focus exceptions. Use **Rate adjustments** / **Commission splits** tabs \u2014 click **+** to add a row (audit trail auto-captures who/when).",
+        "body": "**How to use this page:** Pick a **Specialty** to filter every KPI and chart. Set the **Low-margin threshold** \u2014 the counter and detail tab update together. The **Low-margin placements** tab lists flagged prod assignments sorted by margin %. Use **Rate adjustments** / **Commission splits** tabs \u2014 click **+** to add a row (audit trail auto-captures who/when).",
         "verticalAlign": "middle",
         "style": {
           "color": "#41454D"
@@ -2627,7 +2489,7 @@
         }
       }
     ],
-    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-margin\">\n  <Container elementId=\"mg-hdr\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-logo\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"mg-title\" gridColumn=\"6 / 18\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"mg-subtitle\" gridColumn=\"6 / 22\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"mg-toolbar\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-ctrl-spec\" gridColumn=\"1 / 8\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"mg-ctrl-thresh\" gridColumn=\"8 / 15\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"mg-ctrl-status\" gridColumn=\"15 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"mg-kpi-margin\" gridColumn=\"1 / 10\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-gross\" gridColumn=\"10 / 16\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-bill\" gridColumn=\"16 / 20\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-pay\" gridColumn=\"20 / 25\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-spread\" gridColumn=\"1 / 7\" gridRow=\"15 / 20\"/>\n  <Element elementId=\"mg-kpi-low\" gridColumn=\"7 / 13\" gridRow=\"15 / 20\"/>\n  <Container elementId=\"mg-instr-c\" type=\"grid\" gridColumn=\"13 / 25\" gridRow=\"15 / 20\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-instr\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <TabbedContainer elementId=\"mg-tc\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"20 / 68\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-overview\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-chart-trend\" gridColumn=\"1 / 25\" gridRow=\"2 / 14\"/>\n      <Element elementId=\"mg-chart-margin-spec\" gridColumn=\"1 / 13\" gridRow=\"14 / 26\"/>\n      <Element elementId=\"mg-chart-bill-pay\" gridColumn=\"13 / 25\" gridRow=\"14 / 26\"/>\n      <Element elementId=\"mg-chart-spread-spec\" gridColumn=\"1 / 25\" gridRow=\"26 / 38\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-detail\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-detail\" gridColumn=\"1 / 25\" gridRow=\"2 / 30\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-adj\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-adj-hint\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n      <Element elementId=\"mg-adj\" gridColumn=\"1 / 25\" gridRow=\"4 / 30\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-split\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-split-hint\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n      <Element elementId=\"mg-split\" gridColumn=\"1 / 25\" gridRow=\"4 / 30\"/>\n    </Tab>\n  </TabbedContainer>\n  <Element elementId=\"mg-book\" gridColumn=\"1 / 2\" gridRow=\"68 / 69\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 2\" gridRow=\"69 / 70\"/>\n</Page>",
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-margin\">\n  <Container elementId=\"mg-hdr\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-logo\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"mg-title\" gridColumn=\"6 / 18\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"mg-subtitle\" gridColumn=\"6 / 22\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"mg-toolbar\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-ctrl-spec\" gridColumn=\"1 / 10\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"mg-ctrl-thresh\" gridColumn=\"10 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"mg-kpi-margin\" gridColumn=\"1 / 10\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-gross\" gridColumn=\"10 / 16\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-bill\" gridColumn=\"16 / 20\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-pay\" gridColumn=\"20 / 25\" gridRow=\"8 / 15\"/>\n  <Element elementId=\"mg-kpi-spread\" gridColumn=\"1 / 7\" gridRow=\"15 / 20\"/>\n  <Element elementId=\"mg-kpi-low\" gridColumn=\"7 / 13\" gridRow=\"15 / 20\"/>\n  <Container elementId=\"mg-instr-c\" type=\"grid\" gridColumn=\"13 / 25\" gridRow=\"15 / 20\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"mg-instr\" gridColumn=\"1 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <TabbedContainer elementId=\"mg-tc\" type=\"tabbed-container\" gridColumn=\"1 / 25\" gridRow=\"20 / 68\">\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-overview\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-chart-trend\" gridColumn=\"1 / 25\" gridRow=\"2 / 14\"/>\n      <Element elementId=\"mg-chart-margin-spec\" gridColumn=\"1 / 13\" gridRow=\"14 / 26\"/>\n      <Element elementId=\"mg-chart-bill-pay\" gridColumn=\"13 / 25\" gridRow=\"14 / 26\"/>\n      <Element elementId=\"mg-chart-spread-spec\" gridColumn=\"1 / 25\" gridRow=\"26 / 38\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-detail\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-detail\" gridColumn=\"1 / 25\" gridRow=\"2 / 30\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-adj\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-adj-hint\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n      <Element elementId=\"mg-adj\" gridColumn=\"1 / 25\" gridRow=\"4 / 30\"/>\n    </Tab>\n    <Tab gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n      <Element elementId=\"mg-sec-split\" gridColumn=\"1 / 25\" gridRow=\"1 / 2\"/>\n      <Element elementId=\"mg-split-hint\" gridColumn=\"1 / 25\" gridRow=\"2 / 4\"/>\n      <Element elementId=\"mg-split\" gridColumn=\"1 / 25\" gridRow=\"4 / 30\"/>\n    </Tab>\n  </TabbedContainer>\n  <Element elementId=\"mg-book\" gridColumn=\"1 / 2\" gridRow=\"68 / 69\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 2\" gridRow=\"69 / 70\"/>\n</Page>",
     "settings": {
       "theme": {
         "overrides": {

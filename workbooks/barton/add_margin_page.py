@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from barton_formulas import DT_PERIOD, KPI_PERIOD, PERIOD, PERIOD_COMPARISON
+from barton_formulas import DT_PERIOD, PERIOD_COMPARISON
 
 REPO = Path(__file__).resolve().parents[2]
 WORKBOOK_ID = "3b65aa5b-c908-4b8d-bcb6-f177d74bb5ef"
@@ -56,13 +56,37 @@ NUM = {"kind": "number", "formatString": ",.3~s"}
 MARGIN_PCT = (
     f"[{ASGN}/Estimated Margin] / NullIf([{ASGN}/Estimated Contract Value], 0)"
 )
-IS_LOW = (
-    f'If({MARGIN_PCT} < Number([MarginThreshold]) / 100, "Low", "OK")'
-)
-LOW_FLAG = f"If({MARGIN_PCT} < Number([MarginThreshold]) / 100, 1, 0)"
-LOW_COUNT = f"SumIf(1, {MARGIN_PCT} < Number([MarginThreshold]) / 100)"
+
 MB_MPCT = "Margin Pct"
 SRC = "tbl-assignments"
+
+# Prod assignments with a real specialty (empty/null specialty was breaking the filter dropdown).
+PROD_OK = (
+    f'[{ASGN}/Prod Assignment] = "Yes" and '
+    f"Not(IsNull([{ASGN}/Main Specialty])) and [{ASGN}/Main Specialty] != \"\""
+)
+SPECIALTIES = [
+    "Anesthesiology",
+    "Radiology",
+    "Emergency Medicine",
+    "Hospitalist",
+    "Clinical Services",
+    "Cardiology & Critical Care",
+    "Oncology",
+    "Surgical Services",
+    "Primary Care",
+    "Psyc",
+    "Dentistry",
+    "Women's Health",
+]
+LOW_ROW = f"{PROD_OK} and {MARGIN_PCT} < Number([MarginThreshold]) / 100"
+IS_LOW = f'If({PROD_OK} and {MARGIN_PCT} < Number([MarginThreshold]) / 100, "Low", "OK")'
+LOW_FLAG = f"If({PROD_OK} and {MARGIN_PCT} < Number([MarginThreshold]) / 100, 1, 0)"
+LOW_COUNT = f"SumIf(1, {PROD_OK} and {MARGIN_PCT} < Number([MarginThreshold]) / 100)"
+
+# Margin page uses Start Date directly — standalone workbook has no Date-Basis / Date-Segment controls.
+MARGIN_DATE = f"[{ASGN}/Start Date]"
+MARGIN_KPI_PERIOD = f'DateTrunc("month", {MARGIN_DATE})'
 
 
 def margin_specialty_filters() -> list[dict]:
@@ -137,8 +161,6 @@ def passthrough_cols(prefix: str) -> list[dict]:
     return [
         {"id": f"{prefix}-col-{slug}", "formula": col_map[slug], "name": label}
         for slug, label in fields
-    ] + [
-        {"id": f"{prefix}-col-margin-status", "formula": IS_LOW, "name": "Margin Status"},
     ]
 
 
@@ -235,7 +257,7 @@ def kpi_card(
     if period:
         cols.insert(
             0,
-            {"id": f"{eid}-p", "formula": KPI_PERIOD, "name": "Period", "format": DT_PERIOD},
+            {"id": f"{eid}-p", "formula": MARGIN_KPI_PERIOD, "name": "Period", "format": DT_PERIOD},
         )
     if pt_prefix:
         cols.extend(passthrough_cols(pt_prefix))
@@ -285,11 +307,7 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
             {"id": "mg-mar", "formula": f"[{ASGN}/Estimated Margin]", "name": "Margin", "format": CUR},
             {"id": "mg-mpct", "formula": MARGIN_PCT, "name": MB_MPCT, "format": PCT0},
             {"id": "mg-low", "formula": LOW_FLAG, "name": "Low Margin Flag", "format": NUM},
-            {
-                "id": "mg-pill",
-                "formula": IS_LOW,
-                "name": "Margin Status",
-            },
+            {"id": "mg-pill", "formula": IS_LOW, "name": "Margin Status"},
         ],
         "order": [
             "mg-num", "mg-spec", "mg-state", "mg-status", "mg-bill", "mg-pay", "mg-spread",
@@ -371,60 +389,78 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "selectionMode": "multiple",
         "values": [],
         "source": {
-            "kind": "source",
-            "source": {"kind": "table", "elementId": SRC},
-            "columnId": "col-main-specialty",
+            "kind": "manual",
+            "valueType": "text",
+            "values": SPECIALTIES,
         },
         "includeNulls": "never",
         "filters": margin_specialty_filters(),
     }
 
-    status_ctrl = {
-        "kind": "control",
-        "controlId": "MarginStatusFilter",
-        "id": "mg-ctrl-status",
-        "name": "Margin status",
-        "controlType": "list",
-        "mode": "include",
-        "selectionMode": "multiple",
-        "values": [],
-        "source": {
-            "kind": "source",
-            "source": {"kind": "table", "elementId": "mg-book"},
-            "columnId": "mg-pill",
-        },
-        "includeNulls": "never",
-        "filters": [
-            {"source": {"kind": "table", "elementId": "mg-detail"}, "columnId": "mgd-pill"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-margin"}, "columnId": "mgkm-col-margin-status"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-gross"}, "columnId": "mgkg-col-margin-status"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-bill"}, "columnId": "mgkb-col-margin-status"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-pay"}, "columnId": "mgkp-col-margin-status"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-spread"}, "columnId": "mgks-col-margin-status"},
-            {"source": {"kind": "table", "elementId": "mg-kpi-low"}, "columnId": "mgkl-col-margin-status"},
-            {"source": {"kind": "table", "elementId": "mg-chart-trend"}, "columnId": "mct-col-margin-status"},
-            {"source": {"kind": "table", "elementId": "mg-chart-margin-spec"}, "columnId": "mcm-col-margin-status"},
-            {"source": {"kind": "table", "elementId": "mg-chart-bill-pay"}, "columnId": "mcb-col-margin-status"},
-            {"source": {"kind": "table", "elementId": "mg-chart-spread-spec"}, "columnId": "mcs-col-margin-status"},
-        ],
-    }
+    def num_if(formula: str) -> str:
+        return f"If({LOW_ROW}, {formula}, 0)"
+
+    def txt_if(formula: str) -> str:
+        return f"If({LOW_ROW}, {formula}, \"\")"
 
     mg_detail = {
         "id": "mg-detail",
         "kind": "table",
-        "source": {"elementId": "mg-book", "kind": "table"},
+        "source": {"elementId": "tbl-assignments", "kind": "table"},
         "columns": [
-            {"id": "mgd-num", "formula": f"[{MB}/Assignment Number]", "name": "Assignment Number"},
-            {"id": "mgd-spec", "formula": f"[{MB}/Specialty]", "name": "Specialty"},
-            {"id": "mgd-state", "formula": f"[{MB}/State]", "name": "State"},
-            {"id": "mgd-bill", "formula": f"[{MB}/Bill Rate]", "name": "Bill Rate", "format": RATE},
-            {"id": "mgd-pay", "formula": f"[{MB}/Pay Rate]", "name": "Pay Rate", "format": RATE},
-            {"id": "mgd-spread", "formula": f"[{MB}/Rate Spread]", "name": "Spread", "format": RATE},
-            {"id": "mgd-rev", "formula": f"[{MB}/Contract Value]", "name": "Contract Value", "format": CUR},
-            {"id": "mgd-mar", "formula": f"[{MB}/Margin]", "name": "Margin", "format": CUR},
-            {"id": "mgd-mpct", "formula": f"[{MB}/{MB_MPCT}]", "name": "Margin %", "format": PCT0},
-            {"id": "mgd-pill", "formula": f"[{MB}/Margin Status]", "name": "Margin Status"},
-            {"id": "mgd-low", "formula": f"[{MB}/Low Margin Flag]", "name": "Low Margin Flag", "format": NUM},
+            {
+                "id": "mgd-num",
+                "formula": txt_if(f"[{ASGN}/Assignment Number]"),
+                "name": "Assignment Number",
+            },
+            {
+                "id": "mgd-spec",
+                "formula": txt_if(f"[{ASGN}/Main Specialty]"),
+                "name": "Specialty",
+            },
+            {
+                "id": "mgd-state",
+                "formula": txt_if(f"[{ASGN}/Worksite State (Display)]"),
+                "name": "State",
+            },
+            {
+                "id": "mgd-bill",
+                "formula": num_if(f"[{ASGN}/Bill Rate]"),
+                "name": "Bill Rate",
+                "format": RATE,
+            },
+            {
+                "id": "mgd-pay",
+                "formula": num_if(f"[{ASGN}/Pay Rate]"),
+                "name": "Pay Rate",
+                "format": RATE,
+            },
+            {
+                "id": "mgd-spread",
+                "formula": num_if(f"[{ASGN}/Rate Spread]"),
+                "name": "Spread",
+                "format": RATE,
+            },
+            {
+                "id": "mgd-rev",
+                "formula": num_if(f"[{ASGN}/Estimated Contract Value]"),
+                "name": "Contract Value",
+                "format": CUR,
+            },
+            {
+                "id": "mgd-mar",
+                "formula": num_if(f"[{ASGN}/Estimated Margin]"),
+                "name": "Margin",
+                "format": CUR,
+            },
+            {
+                "id": "mgd-mpct",
+                "formula": num_if(MARGIN_PCT),
+                "name": "Margin %",
+                "format": PCT0,
+            },
+            {"id": "mgd-pill", "formula": IS_LOW, "name": "Margin Status"},
+            {"id": "mgd-low", "formula": LOW_FLAG, "name": "Low Margin Flag", "format": NUM},
         ],
         "order": [
             "mgd-num", "mgd-spec", "mgd-state", "mgd-bill", "mgd-pay",
@@ -438,7 +474,7 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
     kpi_margin = kpi_card(
         "mg-kpi-margin",
         "Avg Placement Margin %",
-        f"Avg({MARGIN_PCT})",
+        f"AvgIf({MARGIN_PCT}, {PROD_OK})",
         PCT0,
         pt_prefix="mgkm",
         hero=True,
@@ -447,7 +483,7 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
     kpi_gross = kpi_card(
         "mg-kpi-gross",
         "Total Gross Margin",
-        f"Sum([{ASGN}/Estimated Margin])",
+        f"SumIf([{ASGN}/Estimated Margin], {PROD_OK})",
         CUR,
         pt_prefix="mgkg",
         period=True,
@@ -455,7 +491,7 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
     kpi_bill = kpi_card(
         "mg-kpi-bill",
         "Avg Bill Rate",
-        f"Avg([{ASGN}/Bill Rate])",
+        f"AvgIf([{ASGN}/Bill Rate], {PROD_OK})",
         RATE,
         pt_prefix="mgkb",
         period=True,
@@ -463,7 +499,7 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
     kpi_pay = kpi_card(
         "mg-kpi-pay",
         "Avg Pay Rate",
-        f"Avg([{ASGN}/Pay Rate])",
+        f"AvgIf([{ASGN}/Pay Rate], {PROD_OK})",
         RATE,
         pt_prefix="mgkp",
         period=True,
@@ -471,7 +507,7 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
     kpi_spread = kpi_card(
         "mg-kpi-spread",
         "Avg Rate Spread",
-        f"Avg([{ASGN}/Rate Spread])",
+        f"AvgIf([{ASGN}/Rate Spread], {PROD_OK})",
         RATE,
         pt_prefix="mgks",
         muted=True,
@@ -490,9 +526,9 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "kind": "bar-chart",
         "source": {"elementId": SRC, "kind": "table"},
         "columns": [
-            {"id": "mc-spec", "formula": f"[{ASGN}/Main Specialty]", "name": "Specialty"},
+            {"id": "mc-spec", "formula": f"If({PROD_OK}, [{ASGN}/Main Specialty], \"\")", "name": "Specialty"},
             {"id": "mc-cat", "formula": '"Avg margin %"', "name": "Series"},
-            {"id": "mc-val", "formula": f"Avg({MARGIN_PCT})", "name": "Margin %", "format": PCT0},
+            {"id": "mc-val", "formula": f"AvgIf({MARGIN_PCT}, {PROD_OK})", "name": "Margin %", "format": PCT0},
             *passthrough_cols("mcm"),
         ],
         "xAxis": {"columnId": "mc-spec", "sort": {"by": "mc-val", "direction": "ascending"}},
@@ -508,9 +544,9 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "kind": "bar-chart",
         "source": {"elementId": SRC, "kind": "table"},
         "columns": [
-            {"id": "bp-spec", "formula": f"[{ASGN}/Main Specialty]", "name": "Specialty"},
+            {"id": "bp-spec", "formula": f"If({PROD_OK}, [{ASGN}/Main Specialty], \"\")", "name": "Specialty"},
             {"id": "bp-cat", "formula": '"Avg bill rate"', "name": "Series"},
-            {"id": "bp-bill", "formula": f"Avg([{ASGN}/Bill Rate])", "name": "Bill Rate", "format": RATE},
+            {"id": "bp-bill", "formula": f"AvgIf([{ASGN}/Bill Rate], {PROD_OK})", "name": "Bill Rate", "format": RATE},
             *passthrough_cols("mcb"),
         ],
         "xAxis": {"columnId": "bp-spec", "sort": {"by": "bp-bill", "direction": "descending"}},
@@ -526,9 +562,9 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "kind": "bar-chart",
         "source": {"elementId": SRC, "kind": "table"},
         "columns": [
-            {"id": "cs-spec", "formula": f"[{ASGN}/Main Specialty]", "name": "Specialty"},
+            {"id": "cs-spec", "formula": f"If({PROD_OK}, [{ASGN}/Main Specialty], \"\")", "name": "Specialty"},
             {"id": "cs-cat", "formula": '"Avg rate spread"', "name": "Series"},
-            {"id": "cs-sp", "formula": f"Avg([{ASGN}/Rate Spread])", "name": "Spread", "format": RATE},
+            {"id": "cs-sp", "formula": f"AvgIf([{ASGN}/Rate Spread], {PROD_OK})", "name": "Spread", "format": RATE},
             *passthrough_cols("mcs"),
         ],
         "xAxis": {"columnId": "cs-spec", "sort": {"by": "cs-sp", "direction": "descending"}},
@@ -544,9 +580,9 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "kind": "bar-chart",
         "source": {"elementId": SRC, "kind": "table"},
         "columns": [
-            {"id": "mt-per", "formula": PERIOD, "name": "Period", "format": DT_PERIOD},
+            {"id": "mt-per", "formula": MARGIN_KPI_PERIOD, "name": "Period", "format": DT_PERIOD},
             {"id": "mt-cat", "formula": '"Gross margin"', "name": "Series"},
-            {"id": "mt-mar", "formula": f"Sum([{ASGN}/Estimated Margin])", "name": "Gross Margin", "format": CUR},
+            {"id": "mt-mar", "formula": f"SumIf([{ASGN}/Estimated Margin], {PROD_OK})", "name": "Gross Margin", "format": CUR},
             *passthrough_cols("mct"),
         ],
         "xAxis": {"columnId": "mt-per"},
@@ -591,7 +627,7 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
         "body": (
             "**How to use this page:** Pick a **Specialty** to filter every KPI and chart. "
             "Set the **Low-margin threshold** — the counter and detail tab update together. "
-            "On **Low-margin placements**, select **Low** under Margin status to focus exceptions. "
+            "The **Low-margin placements** tab lists flagged prod assignments sorted by margin %. "
             "Use **Rate adjustments** / **Commission splits** tabs — click **+** to add a row (audit trail auto-captures who/when)."
         ),
         "verticalAlign": "middle",
@@ -626,7 +662,7 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
     elements = [
         mg_book, mg_adj, mg_split, mg_detail,
         hdr, logo, title, subtitle, toolbar, mg_tabs,
-        spec_ctrl, thresh_ctrl, status_ctrl,
+        spec_ctrl, thresh_ctrl,
         kpi_margin, kpi_gross, kpi_bill, kpi_pay, kpi_spread, kpi_low,
         chart_margin_spec, chart_bill_pay, chart_spread, chart_trend,
         instr_c, instr, adj_hint, split_hint,
@@ -644,9 +680,8 @@ def build_margin_elements(header_bg: str) -> tuple[list[dict], str]:
     <Element elementId="mg-subtitle" gridColumn="6 / 22" gridRow="3 / 5"/>
   </Container>
   <Container elementId="mg-toolbar" type="grid" gridColumn="1 / 25" gridRow="5 / 8" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="mg-ctrl-spec" gridColumn="1 / 8" gridRow="1 / 4"/>
-    <Element elementId="mg-ctrl-thresh" gridColumn="8 / 15" gridRow="1 / 4"/>
-    <Element elementId="mg-ctrl-status" gridColumn="15 / 25" gridRow="1 / 4"/>
+    <Element elementId="mg-ctrl-spec" gridColumn="1 / 10" gridRow="1 / 4"/>
+    <Element elementId="mg-ctrl-thresh" gridColumn="10 / 25" gridRow="1 / 4"/>
   </Container>
   <Element elementId="mg-kpi-margin" gridColumn="1 / 10" gridRow="8 / 15"/>
   <Element elementId="mg-kpi-gross" gridColumn="10 / 16" gridRow="8 / 15"/>
