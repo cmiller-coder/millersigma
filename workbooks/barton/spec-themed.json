@@ -1,0 +1,2668 @@
+{
+  "name": "POC Test",
+  "folderId": "dc487f89-30a6-48b7-8de8-e0cce0315e1b",
+  "document": {
+    "schemaVersion": 1,
+    "elements": [
+      {
+        "id": "container-hdr-p1",
+        "kind": "container",
+        "style": {
+          "borderRadius": "round",
+          "borderWidth": 0
+        },
+        "backgroundImage": {
+          "source": {
+            "kind": "url",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDIyMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ieE1pZFlNaWQgc2xpY2UiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMC4zNSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwRjJBM0EiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI0NSUiIHN0b3AtY29sb3I9IiMxRTNBNEMiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDA3QTc4Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJnbG93IiBjeD0iMC44MiIgY3k9IjAuMjUiIHI9IjAuNTUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMDBBNUEyIiBzdG9wLW9wYWNpdHk9IjAuMzUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEYyQTNBIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjIyMCIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjIyMCIgZmlsbD0idXJsKCNnbG93KSIvPgogIDxyZWN0IHk9IjIxNyIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMyIgZmlsbD0iIzAwQTVBMiIvPgo8L3N2Zz4="
+          },
+          "style": {
+            "fit": "cover"
+          }
+        }
+      },
+      {
+        "id": "text-title-p1",
+        "kind": "text",
+        "body": "## Assignment Booking & Pipeline",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "kind": "control",
+        "controlId": "MainSpecialty",
+        "id": "ctrl-specialty",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-booked"
+            },
+            "columnId": "kb-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-bill"
+            },
+            "columnId": "kbr-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-pay"
+            },
+            "columnId": "kpr-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-spread"
+            },
+            "columnId": "ksp-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-contract-value"
+            },
+            "columnId": "kcv-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-cancelled"
+            },
+            "columnId": "kcx-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-trend"
+            },
+            "columnId": "ctd-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-rate-by-specialty"
+            },
+            "columnId": "crs-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-by-state"
+            },
+            "columnId": "cbs-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-cancel-trend"
+            },
+            "columnId": "ccx-col-main-specialty"
+          }
+        ],
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "manual",
+          "valueType": "text"
+        }
+      },
+      {
+        "kind": "control",
+        "controlId": "WorksiteState",
+        "id": "ctrl-state",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-worksite-state"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-booked"
+            },
+            "columnId": "kb-col-worksite-state"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-bill"
+            },
+            "columnId": "kbr-col-worksite-state"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-pay"
+            },
+            "columnId": "kpr-col-worksite-state"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-spread"
+            },
+            "columnId": "ksp-col-worksite-state"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-contract-value"
+            },
+            "columnId": "kcv-col-worksite-state"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-cancelled"
+            },
+            "columnId": "kcx-col-worksite-state"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-trend"
+            },
+            "columnId": "ctd-col-worksite-state"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-rate-by-specialty"
+            },
+            "columnId": "crs-col-worksite-state"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-by-state"
+            },
+            "columnId": "cbs-col-worksite-state"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-cancel-trend"
+            },
+            "columnId": "ccx-col-worksite-state"
+          }
+        ],
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "manual",
+          "valueType": "text"
+        }
+      },
+      {
+        "kind": "control",
+        "controlId": "AssignmentType",
+        "id": "ctrl-type",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-assignment-type"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-booked"
+            },
+            "columnId": "kb-col-assignment-type"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-bill"
+            },
+            "columnId": "kbr-col-assignment-type"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-pay"
+            },
+            "columnId": "kpr-col-assignment-type"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-spread"
+            },
+            "columnId": "ksp-col-assignment-type"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-contract-value"
+            },
+            "columnId": "kcv-col-assignment-type"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-cancelled"
+            },
+            "columnId": "kcx-col-assignment-type"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-trend"
+            },
+            "columnId": "ctd-col-assignment-type"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-rate-by-specialty"
+            },
+            "columnId": "crs-col-assignment-type"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-by-state"
+            },
+            "columnId": "cbs-col-assignment-type"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-cancel-trend"
+            },
+            "columnId": "ccx-col-assignment-type"
+          }
+        ],
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "manual",
+          "valueType": "text"
+        }
+      },
+      {
+        "kind": "control",
+        "controlId": "AssignmentStatus",
+        "id": "ctrl-status",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-booked"
+            },
+            "columnId": "kb-col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-bill"
+            },
+            "columnId": "kbr-col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-pay"
+            },
+            "columnId": "kpr-col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-avg-spread"
+            },
+            "columnId": "ksp-col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-contract-value"
+            },
+            "columnId": "kcv-col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "kpi-cancelled"
+            },
+            "columnId": "kcx-col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-trend"
+            },
+            "columnId": "ctd-col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-rate-by-specialty"
+            },
+            "columnId": "crs-col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-by-state"
+            },
+            "columnId": "cbs-col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "chart-cancel-trend"
+            },
+            "columnId": "ccx-col-assignment-status"
+          }
+        ],
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "manual",
+          "valueType": "text"
+        }
+      },
+      {
+        "id": "container-kpi-p1",
+        "kind": "container"
+      },
+      {
+        "id": "kpi-booked",
+        "kind": "kpi-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "kb-value",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Assignments Booked"
+          },
+          {
+            "id": "kb-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "kb-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "kb-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "kb-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "kb-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "kb-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "kb-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "kb-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "kb-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "kb-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "kb-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "kb-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "kb-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "kb-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "kb-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "kb-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "kb-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "kb-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "kb-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "kb-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "kb-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "kb-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          },
+          {
+            "id": "kb-month",
+            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
+            "name": "Month"
+          }
+        ],
+        "value": {
+          "columnId": "kb-value",
+          "color": "#FFFFFF",
+          "fontSize": 26
+        },
+        "name": {
+          "text": "Assignments Booked",
+          "fontSize": 13,
+          "color": "#E8F7F6"
+        },
+        "layout": {
+          "anchor": "middle"
+        }
+      },
+      {
+        "id": "kpi-avg-bill",
+        "kind": "kpi-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "kbr-value",
+            "formula": "Avg([Assignments/Bill Rate])",
+            "name": "Avg Bill Rate ($/hr)"
+          },
+          {
+            "id": "kbr-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "kbr-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "kbr-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "kbr-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "kbr-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "kbr-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "kbr-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "kbr-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "kbr-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "kbr-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "kbr-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "kbr-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "kbr-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "kbr-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "kbr-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "kbr-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "kbr-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "kbr-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "kbr-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "kbr-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "kbr-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "kbr-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          },
+          {
+            "id": "kbr-month",
+            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
+            "name": "Month"
+          }
+        ],
+        "value": {
+          "columnId": "kbr-value",
+          "color": "#FFFFFF",
+          "fontSize": 26
+        },
+        "name": {
+          "text": "Avg Bill Rate ($/hr)",
+          "fontSize": 13,
+          "color": "#E8F7F6"
+        },
+        "layout": {
+          "anchor": "middle"
+        }
+      },
+      {
+        "id": "kpi-avg-pay",
+        "kind": "kpi-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "kpr-value",
+            "formula": "Avg([Assignments/Pay Rate])",
+            "name": "Avg Pay Rate ($/hr)"
+          },
+          {
+            "id": "kpr-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "kpr-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "kpr-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "kpr-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "kpr-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "kpr-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "kpr-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "kpr-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "kpr-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "kpr-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "kpr-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "kpr-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "kpr-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "kpr-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "kpr-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "kpr-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "kpr-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "kpr-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "kpr-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "kpr-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "kpr-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "kpr-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          },
+          {
+            "id": "kpr-month",
+            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
+            "name": "Month"
+          }
+        ],
+        "value": {
+          "columnId": "kpr-value",
+          "color": "#FFFFFF",
+          "fontSize": 26
+        },
+        "name": {
+          "text": "Avg Pay Rate ($/hr)",
+          "fontSize": 13,
+          "color": "#E8F7F6"
+        },
+        "layout": {
+          "anchor": "middle"
+        }
+      },
+      {
+        "id": "kpi-avg-spread",
+        "kind": "kpi-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "ksp-value",
+            "formula": "Avg([Assignments/Rate Spread])",
+            "name": "Avg Margin ($/hr)"
+          },
+          {
+            "id": "ksp-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "ksp-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "ksp-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "ksp-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "ksp-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "ksp-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "ksp-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "ksp-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "ksp-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "ksp-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "ksp-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "ksp-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "ksp-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "ksp-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "ksp-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "ksp-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "ksp-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "ksp-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "ksp-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "ksp-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "ksp-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "ksp-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          },
+          {
+            "id": "ksp-month",
+            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
+            "name": "Month"
+          }
+        ],
+        "value": {
+          "columnId": "ksp-value",
+          "color": "#FFFFFF",
+          "fontSize": 26
+        },
+        "name": {
+          "text": "Avg Margin ($/hr)",
+          "fontSize": 13,
+          "color": "#E8F7F6"
+        },
+        "layout": {
+          "anchor": "middle"
+        }
+      },
+      {
+        "id": "kpi-contract-value",
+        "kind": "kpi-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "kcv-value",
+            "formula": "Sum([Assignments/Estimated Contract Value])",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "kcv-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "kcv-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "kcv-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "kcv-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "kcv-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "kcv-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "kcv-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "kcv-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "kcv-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "kcv-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "kcv-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "kcv-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "kcv-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "kcv-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "kcv-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "kcv-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "kcv-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "kcv-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "kcv-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "kcv-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "kcv-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "kcv-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          },
+          {
+            "id": "kcv-month",
+            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
+            "name": "Month"
+          }
+        ],
+        "value": {
+          "columnId": "kcv-value",
+          "color": "#FFFFFF",
+          "fontSize": 26
+        },
+        "name": {
+          "text": "Estimated Contract Value",
+          "fontSize": 13,
+          "color": "#E8F7F6"
+        },
+        "layout": {
+          "anchor": "middle"
+        }
+      },
+      {
+        "id": "kpi-cancelled",
+        "kind": "kpi-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "kcx-value",
+            "formula": "Sum([Assignments/Is Cancelled Or Withdrawn])",
+            "name": "Cancelled + Withdrawn"
+          },
+          {
+            "id": "kcx-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "kcx-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "kcx-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "kcx-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "kcx-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "kcx-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "kcx-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "kcx-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "kcx-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "kcx-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "kcx-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "kcx-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "kcx-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "kcx-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "kcx-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "kcx-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "kcx-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "kcx-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "kcx-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "kcx-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "kcx-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "kcx-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          },
+          {
+            "id": "kcx-month",
+            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
+            "name": "Month"
+          }
+        ],
+        "value": {
+          "columnId": "kcx-value",
+          "color": "#FFFFFF",
+          "fontSize": 26
+        },
+        "name": {
+          "text": "Cancelled + Withdrawn",
+          "fontSize": 13,
+          "color": "#E8F7F6"
+        },
+        "layout": {
+          "anchor": "middle"
+        }
+      },
+      {
+        "kind": "control",
+        "controlId": "Date-Segment",
+        "id": "ctrl-grain",
+        "controlType": "segmented",
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "year",
+            "quarter",
+            "month",
+            "week"
+          ],
+          "labels": [
+            "Year",
+            "Quarter",
+            "Month",
+            "Week"
+          ]
+        },
+        "value": "month"
+      },
+      {
+        "id": "chart-trend",
+        "kind": "bar-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "ctd-period",
+            "formula": "DateTrunc([Date-Segment], [Assignments/Assignment Created Date])",
+            "name": "Period"
+          },
+          {
+            "id": "ctd-count",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Assignments Booked"
+          },
+          {
+            "id": "ctd-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "ctd-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "ctd-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "ctd-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "ctd-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "ctd-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "ctd-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "ctd-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "ctd-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "ctd-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "ctd-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "ctd-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "ctd-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "ctd-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "ctd-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "ctd-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "ctd-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "ctd-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "ctd-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "ctd-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "ctd-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "ctd-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          }
+        ],
+        "yAxis": {
+          "columnIds": [
+            "ctd-count"
+          ]
+        },
+        "xAxis": {
+          "columnId": "ctd-period"
+        },
+        "name": {
+          "text": "Assignments Booked Over Time",
+          "fontWeight": "bold",
+          "fontSize": 15,
+          "color": "#41454D"
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "chart-rate-by-specialty",
+        "kind": "bar-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "crs-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "crs-avg-bill",
+            "formula": "Avg([Assignments/Bill Rate])",
+            "name": "Avg Bill Rate"
+          },
+          {
+            "id": "crs-avg-pay",
+            "formula": "Avg([Assignments/Pay Rate])",
+            "name": "Avg Pay Rate"
+          },
+          {
+            "id": "crs-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "crs-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "crs-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "crs-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "crs-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "crs-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "crs-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "crs-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "crs-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "crs-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "crs-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "crs-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "crs-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "crs-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "crs-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "crs-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "crs-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "crs-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "crs-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "crs-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "crs-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "crs-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          }
+        ],
+        "yAxis": {
+          "columnIds": [
+            "crs-avg-bill",
+            "crs-avg-pay"
+          ]
+        },
+        "xAxis": {
+          "columnId": "crs-specialty"
+        },
+        "name": {
+          "text": "Avg Bill Rate vs Pay Rate by Specialty",
+          "fontWeight": "bold",
+          "fontSize": 15,
+          "color": "#41454D"
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "chart-by-state",
+        "kind": "bar-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "cbs-state",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          },
+          {
+            "id": "cbs-count",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Assignments"
+          },
+          {
+            "id": "cbs-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "cbs-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "cbs-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "cbs-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "cbs-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "cbs-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "cbs-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "cbs-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "cbs-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "cbs-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "cbs-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "cbs-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "cbs-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "cbs-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "cbs-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "cbs-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "cbs-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "cbs-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "cbs-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "cbs-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "cbs-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "cbs-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          }
+        ],
+        "yAxis": {
+          "columnIds": [
+            "cbs-count"
+          ]
+        },
+        "xAxis": {
+          "columnId": "cbs-state"
+        },
+        "name": {
+          "text": "Assignments by Worksite State",
+          "fontWeight": "bold",
+          "fontSize": 15,
+          "color": "#41454D"
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "chart-cancel-trend",
+        "kind": "bar-chart",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "ccx-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "ccx-month",
+            "formula": "DateTrunc(\"month\", [Assignments/Assignment Created Date])",
+            "name": "Month"
+          },
+          {
+            "id": "ccx-count",
+            "formula": "Sum([Assignments/Is Cancelled Or Withdrawn])",
+            "name": "Cancelled + Withdrawn"
+          },
+          {
+            "id": "ccx-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "ccx-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "ccx-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "ccx-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "ccx-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "ccx-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "ccx-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "ccx-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "ccx-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "ccx-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "ccx-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "ccx-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "ccx-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "ccx-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "ccx-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "ccx-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "ccx-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "ccx-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "ccx-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "ccx-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "ccx-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "ccx-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          }
+        ],
+        "yAxis": {
+          "columnIds": [
+            "ccx-count"
+          ]
+        },
+        "xAxis": {
+          "columnId": "ccx-month"
+        },
+        "color": {
+          "by": "category",
+          "column": "ccx-specialty"
+        },
+        "name": {
+          "text": "Cancelled + Withdrawn Assignments by Month",
+          "fontWeight": "bold",
+          "fontSize": 15,
+          "color": "#41454D"
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "text-note-p1",
+        "kind": "text",
+        "body": "**Data notes:** Estimated Contract Value = Bill Rate \u00d7 Assignment LOA (days) \u00d7 8 hrs/shift. Cancellation reason and facility type are not present in this POC extract, so they aren't broken out below. \\~38% of records have no Worksite State captured (mostly on-site \"Regular\" assignments, not just Telehealth) \u2014 shown as *(Not Captured)* rather than hidden.",
+        "verticalAlign": "start",
+        "style": {
+          "color": "#41454D",
+          "backgroundColor": "#F4FAFA"
+        }
+      },
+      {
+        "id": "container-hdr-p2",
+        "kind": "container",
+        "style": {
+          "borderRadius": "round",
+          "borderWidth": 0
+        },
+        "backgroundImage": {
+          "source": {
+            "kind": "url",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDIyMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ieE1pZFlNaWQgc2xpY2UiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMC4zNSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwRjJBM0EiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI0NSUiIHN0b3AtY29sb3I9IiMxRTNBNEMiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDA3QTc4Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJnbG93IiBjeD0iMC44MiIgY3k9IjAuMjUiIHI9IjAuNTUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMDBBNUEyIiBzdG9wLW9wYWNpdHk9IjAuMzUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEYyQTNBIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjIyMCIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjIyMCIgZmlsbD0idXJsKCNnbG93KSIvPgogIDxyZWN0IHk9IjIxNyIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMyIgZmlsbD0iIzAwQTVBMiIvPgo8L3N2Zz4="
+          },
+          "style": {
+            "fit": "cover"
+          }
+        }
+      },
+      {
+        "id": "text-title-p2",
+        "kind": "text",
+        "body": "## Assignment Pipeline & Detail",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#FFFFFF"
+        }
+      },
+      {
+        "kind": "control",
+        "controlId": "AssignmentStatusP2",
+        "id": "ctrl-status-p2",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "pivot-specialty-status"
+            },
+            "columnId": "pvt-col-assignment-status"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-detail"
+            },
+            "columnId": "dtl-col-assignment-status"
+          }
+        ],
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "manual",
+          "valueType": "text"
+        }
+      },
+      {
+        "kind": "control",
+        "controlId": "MainSpecialtyP2",
+        "id": "ctrl-specialty-p2",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "pivot-specialty-status"
+            },
+            "columnId": "pvt-col-main-specialty"
+          },
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-detail"
+            },
+            "columnId": "dtl-col-main-specialty"
+          }
+        ],
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "manual",
+          "valueType": "text"
+        }
+      },
+      {
+        "id": "pivot-specialty-status",
+        "kind": "pivot-table",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "pvt-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "pvt-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "pvt-count",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Assignments"
+          },
+          {
+            "id": "pvt-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "pvt-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "pvt-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "pvt-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "pvt-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "pvt-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "pvt-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "pvt-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "pvt-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "pvt-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "pvt-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "pvt-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "pvt-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "pvt-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "pvt-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "pvt-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "pvt-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "pvt-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "pvt-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "pvt-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "pvt-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "pvt-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          }
+        ],
+        "values": [
+          "pvt-count"
+        ],
+        "rowsBy": [
+          {
+            "id": "pvt-specialty"
+          }
+        ],
+        "columnsBy": [
+          {
+            "id": "pvt-status"
+          }
+        ],
+        "name": {
+          "text": "Assignment Volume \u2014 Specialty x Status",
+          "fontWeight": "bold",
+          "fontSize": 15,
+          "color": "#41454D"
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "tbl-detail",
+        "kind": "table",
+        "source": {
+          "elementId": "tbl-assignments",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "dtl-col-assignment-number",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "dtl-col-assignment-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "dtl-col-listing-loa",
+            "formula": "[Assignments/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "dtl-col-start-date",
+            "formula": "[Assignments/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "dtl-col-worksite-state",
+            "formula": "[Assignments/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "dtl-col-main-specialty",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "dtl-col-sub-specialty",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "dtl-col-bill-rate",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "dtl-col-pay-rate",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "dtl-col-assignment-status",
+            "formula": "[Assignments/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "dtl-col-provider-type",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "dtl-col-assignment-type",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "dtl-col-reassignment",
+            "formula": "[Assignments/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "dtl-col-created-date",
+            "formula": "[Assignments/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "dtl-col-cancelled-date",
+            "formula": "[Assignments/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "dtl-col-prod-assignment",
+            "formula": "[Assignments/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "dtl-col-contract-value",
+            "formula": "[Assignments/Estimated Contract Value]",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "dtl-col-cost-value",
+            "formula": "[Assignments/Estimated Cost]",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "dtl-col-margin-value",
+            "formula": "[Assignments/Estimated Margin]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "dtl-col-rate-spread",
+            "formula": "[Assignments/Rate Spread]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "dtl-col-is-cancelled",
+            "formula": "[Assignments/Is Cancelled Or Withdrawn]",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "dtl-col-state-display",
+            "formula": "[Assignments/Worksite State (Display)]",
+            "name": "Worksite State (Display)"
+          }
+        ],
+        "name": {
+          "text": "Assignment Detail",
+          "fontWeight": "bold",
+          "fontSize": 15,
+          "color": "#41454D"
+        },
+        "order": [
+          "dtl-col-assignment-number",
+          "dtl-col-assignment-loa",
+          "dtl-col-listing-loa",
+          "dtl-col-start-date",
+          "dtl-col-worksite-state",
+          "dtl-col-main-specialty",
+          "dtl-col-sub-specialty",
+          "dtl-col-bill-rate",
+          "dtl-col-pay-rate",
+          "dtl-col-assignment-status",
+          "dtl-col-provider-type",
+          "dtl-col-assignment-type",
+          "dtl-col-reassignment",
+          "dtl-col-created-date",
+          "dtl-col-cancelled-date",
+          "dtl-col-prod-assignment",
+          "dtl-col-contract-value",
+          "dtl-col-cost-value",
+          "dtl-col-margin-value",
+          "dtl-col-rate-spread",
+          "dtl-col-is-cancelled",
+          "dtl-col-state-display"
+        ],
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "tbl-assignments",
+        "kind": "table",
+        "source": {
+          "connectionId": "f45a23e2-7b17-41d4-aa34-f2ed38483a53",
+          "kind": "warehouse-table",
+          "path": [
+            "BARTONDB",
+            "GOLD",
+            "ASSIGNMENT_POC_TEST"
+          ]
+        },
+        "columns": [
+          {
+            "id": "col-assignment-number",
+            "formula": "[ASSIGNMENT_POC_TEST/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "col-assignment-loa",
+            "formula": "[ASSIGNMENT_POC_TEST/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "col-listing-loa",
+            "formula": "[ASSIGNMENT_POC_TEST/Listing LOA]",
+            "name": "Listing LOA"
+          },
+          {
+            "id": "col-start-date",
+            "formula": "[ASSIGNMENT_POC_TEST/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "col-worksite-state",
+            "formula": "[ASSIGNMENT_POC_TEST/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "col-main-specialty",
+            "formula": "[ASSIGNMENT_POC_TEST/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "col-sub-specialty",
+            "formula": "[ASSIGNMENT_POC_TEST/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "col-bill-rate",
+            "formula": "[ASSIGNMENT_POC_TEST/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "col-pay-rate",
+            "formula": "[ASSIGNMENT_POC_TEST/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "col-assignment-status",
+            "formula": "[ASSIGNMENT_POC_TEST/Assignment Status]",
+            "name": "Assignment Status"
+          },
+          {
+            "id": "col-provider-type",
+            "formula": "[ASSIGNMENT_POC_TEST/Provider Type]",
+            "name": "Provider Type"
+          },
+          {
+            "id": "col-assignment-type",
+            "formula": "[ASSIGNMENT_POC_TEST/Assignment Type]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "col-reassignment",
+            "formula": "[ASSIGNMENT_POC_TEST/Reassignment]",
+            "name": "Reassignment"
+          },
+          {
+            "id": "col-created-date",
+            "formula": "[ASSIGNMENT_POC_TEST/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "col-cancelled-date",
+            "formula": "[ASSIGNMENT_POC_TEST/Assignment Cancelled Date]",
+            "name": "Assignment Cancelled Date"
+          },
+          {
+            "id": "col-prod-assignment",
+            "formula": "[ASSIGNMENT_POC_TEST/Prod Assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "col-contract-value",
+            "formula": "[Bill Rate] * [Assignment LOA] * 8",
+            "name": "Estimated Contract Value"
+          },
+          {
+            "id": "col-cost-value",
+            "formula": "[Pay Rate] * [Assignment LOA] * 8",
+            "name": "Estimated Cost"
+          },
+          {
+            "id": "col-margin-value",
+            "formula": "[Estimated Contract Value] - [Estimated Cost]",
+            "name": "Estimated Margin"
+          },
+          {
+            "id": "col-rate-spread",
+            "formula": "[Bill Rate] - [Pay Rate]",
+            "name": "Rate Spread"
+          },
+          {
+            "id": "col-is-cancelled",
+            "formula": "If([Assignment Status] = \"Cancelled\" or [Assignment Status] = \"Withdrawn\", 1, 0)",
+            "name": "Is Cancelled Or Withdrawn"
+          },
+          {
+            "id": "col-state-display",
+            "formula": "If([Worksite State] = \"\", \"(Not Captured)\", [Worksite State])",
+            "name": "Worksite State (Display)"
+          }
+        ],
+        "name": "Assignments",
+        "order": [
+          "col-assignment-number",
+          "col-assignment-loa",
+          "col-listing-loa",
+          "col-start-date",
+          "col-worksite-state",
+          "col-main-specialty",
+          "col-sub-specialty",
+          "col-bill-rate",
+          "col-pay-rate",
+          "col-assignment-status",
+          "col-provider-type",
+          "col-assignment-type",
+          "col-reassignment",
+          "col-created-date",
+          "col-cancelled-date",
+          "col-prod-assignment",
+          "col-contract-value",
+          "col-cost-value",
+          "col-margin-value",
+          "col-rate-spread",
+          "col-is-cancelled",
+          "col-state-display"
+        ],
+        "visibleAsSource": false
+      },
+      {
+        "id": "logo-p1",
+        "kind": "image",
+        "source": {
+          "kind": "url",
+          "url": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTY3IiBoZWlnaHQ9IjQ4IiB2aWV3Qm94PSIwIDAgMTY3IDQ4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMjQuMDA5NiAwLjAwMDM5MjA4QzQuMjM2OTQgLTAuMTA5ODcyIC03LjA3MSAyMy4wNjEzIDQuOTE2MjQgMzguNTUxM0gxNC4xMDM2TDE3LjQwMTYgMzIuMDM0TDIwLjY5NTggMzguNTUxM0gyNi41ODlDMjguNTI2NSAzOC41NTEzIDMwLjIzMTYgMzguMjA2OCAzMS42OTA2IDM3LjUxOTZDMzYuMjU2NyAzNS41MjcgMzcuNjQwOSAyOS44MzQ2IDM0LjU1NTUgMjUuOTg1MkMzMy40NTg4IDI0LjYxMDkgMzIuMTIzOCAyMy43ODE5IDMwLjU0ODYgMjMuNDk4NEMzMy41ODQ4IDIyLjQyNTMgMzUuNTYzNyAyMC4xMzE0IDM1LjUyNjIgMTYuNzk3OUMzNS41MjYyIDEzLjg2MjEgMzMuOTEzNiAxMS41MTkgMzEuMTgyNiAxMC4yNjA4QzI5Ljc1MzIgOS41ODM0OSAyOC4wMzQyIDkuMjQ4NzYgMjYuMDM5NiA5LjI0ODc2SDE0Ljg2MzZWMjUuNDgzMUgyNS45OTgzQzI3LjYyODYgMjUuNDgzMSAyOC45MzQgMjUuOTAyNSAyOS45MTQ2IDI2Ljc0OTJDMzEuODM4MyAyOC4yMzM4IDMxLjkxMTIgMzEuOTU3MiAyOS45OTkzIDMzLjQ1MTZDMjguMzA5OSAzNC45NTc5IDI1LjU5ODYgMzQuNTkzNyAyMy4zMzIzIDM0LjYzM0wxOS45Mzk3IDI3LjkyNjZIMTQuODUxOEwxMS40NTkyIDM0LjYzM0g2LjczNTZDLTEuNTg1MzggMjEuNDMyOSA4LjI4OTEzIDMuNTcyMTUgMjQuMDA3NiAzLjczMTY0QzM1LjIwOTIgMy43MzE2NCA0NC4yODYzIDEyLjgwNDggNDQuMjg2MyAyNC4wMDY0QzQ0LjMwMDEgMzMuODM3NiAzNy4yMzkzIDQyLjA2MDEgMjguMDEyNiA0My44ODE0QzIyLjg3OTQgNDQuOTcwMyAxNy4wOTQ1IDQzLjc5MjggMTIuODkwNyA0MC45NjE0SDcuMDIxMUMyMS45NzU2IDU1Ljg4MDUgNDcuODUyMiA0NS42MDQzIDQ4LjAxMzYgMjQuMDA2NEM0OC4wMTU2IDEwLjc0OTEgMzcuMjY2OCAwLjAwMDM5MjA4IDI0LjAwOTYgMC4wMDAzOTIwOFpNMjkuMzEwMSAyMC40ODM4QzI4LjQyNDEgMjEuMjAwNiAyNy4xOTM1IDIxLjU2MDkgMjUuNjE4MyAyMS41NjA5SDE5LjY3MzlWMTMuMTcxSDI1LjYxODNDMjcuMTkzNSAxMy4xNzEgMjguNDI0MSAxMy41NDUxIDI5LjMxMDEgMTQuMjg3NEMzMS4wNzYzIDE1LjYyODMgMzEuMDgyMiAxOS4xODA0IDI5LjMxMDEgMjAuNDg1OFYyMC40ODM4WiIgZmlsbD0iIzAwQTVBMiIvPgo8cGF0aCBkPSJNNzMuMDIxOCAxNi4wMTA0QzczLjYzNDIgMTYuNzk4IDczLjk0MTQgMTcuNjk3OCA3My45NDE0IDE4LjcwNzlDNzMuOTQxNCAyMC4xNjY5IDczLjQzMTQgMjEuMzIyNyA3Mi40MTE0IDIyLjE3NzNDNzEuMzkxNSAyMy4wMzE4IDY5Ljk2OTkgMjMuNDU3MSA2OC4xNDY2IDIzLjQ1NzFINjAuMDE0NlY2SDY3Ljg3MjlDNjkuNjQ3IDYgNzEuMDM1MSA2LjQwNTYxIDcyLjAzOTMgNy4yMTg4MUM3My4wNDE1IDguMDMyIDczLjU0MzYgOS4xMzI2NyA3My41NDM2IDEwLjUyNjdDNzMuNTQzNiAxMS41NTQ1IDczLjI3MzkgMTIuNDA5MSA3Mi43MzYzIDEzLjA4ODRDNzIuMTk2OCAxMy43Njc3IDcxLjQ4MDEgMTQuMjQwMiA3MC41ODYyIDE0LjUwNjFDNzEuNTk2MyAxNC43MjI2IDcyLjQwOTUgMTUuMjIyOCA3My4wMjM4IDE2LjAxMDRINzMuMDIxOFpNNjQuMjY3NyAxMy4wNjI4SDY3LjA1MzhDNjcuNzUwOCAxMy4wNjI4IDY4LjI4NDQgMTIuOTA5MiA2OC42NTg1IDEyLjYwMkM2OS4wMzA3IDEyLjI5NDkgNjkuMjE3NyAxMS44NDQgNjkuMjE3NyAxMS4yNDc0QzY5LjIxNzcgMTAuNjUwOCA2OS4wMzA3IDEwLjE5NCA2OC42NTg1IDkuODc4OTJDNjguMjg0NCA5LjU2Mzg4IDY3Ljc1MDggOS40MDYzNiA2Ny4wNTM4IDkuNDA2MzZINjQuMjY3N1YxMy4wNjI4Wk02OS4wNTQzIDE5LjU0MDhDNjkuNDQ0MiAxOS4yMTc5IDY5LjYzOTEgMTguNzQ5MiA2OS42MzkxIDE4LjEzNDlDNjkuNjM5MSAxNy41MjA2IDY5LjQzNjMgMTcuMDQwMiA2OS4wMzA3IDE2LjY5MzZDNjguNjI1MSAxNi4zNDUxIDY4LjA2MzkgMTYuMTcxOCA2Ny4zNTExIDE2LjE3MThINjQuMjY3N1YyMC4wMjUxSDY3LjQwMDRDNjguMTEzMSAyMC4wMjUxIDY4LjY2NDQgMTkuODYzNyA2OS4wNTQzIDE5LjU0MDhaIiBmaWxsPSIjMDBBNUEyIi8+CjxwYXRoIGQ9Ik03Ni40MzgxIDEyLjczOTlDNzYuOTc3NyAxMS42NjI5IDc3LjcxMDEgMTAuODM0IDc4LjYzOTUgMTAuMjUzMUM3OS41NjY5IDkuNjcyMjUgODAuNjA0NSA5LjM4MjgxIDgxLjc0ODUgOS4zODI4MUM4Mi43MjcxIDkuMzgyODEgODMuNTgzNiA5LjU4MTY4IDg0LjMyMiA5Ljk3OTQyQzg1LjA1ODQgMTAuMzc3MiA4NS42Mjc0IDEwLjg5ODkgODYuMDI1MiAxMS41NDY3VjkuNTgxNjhIOTAuMjc2MlYyMy40NTcySDg2LjAyNTJWMjEuNDkyMUM4NS42MDk3IDIyLjEzOCA4NS4wMzQ4IDIyLjY2MTcgODQuMjk2NCAyMy4wNTk1QzgzLjU1OCAyMy40NTcyIDgyLjcwMTUgMjMuNjU2MSA4MS43MjI5IDIzLjY1NjFDODAuNTk0NyAyMy42NTYxIDc5LjU2NjkgMjMuMzYyNyA3OC42Mzk1IDIyLjc3MzlDNzcuNzEwMSAyMi4xODUyIDc2Ljk3NzcgMjEuMzQ4NCA3Ni40MzgxIDIwLjI2MTVDNzUuODk4NiAxOS4xNzY2IDc1LjYzMDkgMTcuOTIwNCA3NS42MzA5IDE2LjQ5NDhDNzUuNjMwOSAxNS4wNjkzIDc1LjkwMDYgMTMuODE3IDc2LjQzODEgMTIuNzM5OVpNODUuMTQxMSAxNC4wMDhDODQuNTUyNCAxMy4zOTU2IDgzLjgzNTcgMTMuMDg4NSA4Mi45OTEgMTMuMDg4NUM4Mi4xNDYzIDEzLjA4ODUgODEuNDI3NiAxMy4zOTE3IDgwLjg0MDggMTMuOTk2MkM4MC4yNTIxIDE0LjYwMDYgNzkuOTU4NyAxNS40MzU1IDc5Ljk1ODcgMTYuNDk0OEM3OS45NTg3IDE3LjU1NDEgODAuMjUyMSAxOC4zOTY5IDgwLjg0MDggMTkuMDE5MUM4MS40Mjk2IDE5LjY0MTMgODIuMTQ2MyAxOS45NTI0IDgyLjk5MSAxOS45NTI0QzgzLjgzNTcgMTkuOTUyNCA4NC41NTI0IDE5LjY0NTIgODUuMTQxMSAxOS4wMzI5Qzg1LjcyOTggMTguNDIwNSA4Ni4wMjMyIDE3LjU4MTcgODYuMDIzMiAxNi41MjA0Qzg2LjAyMzIgMTUuNDU5MSA4NS43Mjc5IDE0LjYyMjMgODUuMTQxMSAxNC4wMDhaIiBmaWxsPSIjMDBBNUEyIi8+CjxwYXRoIGQ9Ik05OS4zOTQgMTAuMDkxM0MxMDAuMTQgOS42NTIxNyAxMDAuOTY5IDkuNDMxNjQgMTAxLjg4MSA5LjQzMTY0VjEzLjkzMjhIMTAwLjcxM0M5OS42NTE5IDEzLjkzMjggOTguODU2NSAxNC4xNjEyIDk4LjMyNjggMTQuNjE2Qzk3Ljc5NTIgMTUuMDcyOCA5Ny41MzEzIDE1Ljg3MjIgOTcuNTMxMyAxNy4wMTYyVjIzLjQ1NjhIOTMuMjgwM1Y5LjU4MTI4SDk3LjUzMTNWMTEuODkyOUM5OC4wMjk1IDExLjEzMDkgOTguNjQ5NyAxMC41MzAzIDk5LjM5NiAxMC4wODkzTDk5LjM5NCAxMC4wOTEzWiIgZmlsbD0iIzAwQTVBMiIvPgo8cGF0aCBkPSJNMTExLjg0IDE5Ljg1MTNWMjMuNDU2NUgxMDkuNjc2QzEwOC4xMzQgMjMuNDU2NSAxMDYuOTMxIDIzLjA4MDQgMTA2LjA3MSAyMi4zMjQzQzEwNS4yMDkgMjEuNTcwMiAxMDQuNzc3IDIwLjMzOTYgMTA0Ljc3NyAxOC42MzI0VjEzLjExMTRIMTAzLjA4NlY5LjU4MDk4SDEwNC43NzdWNi4xOTgyNEgxMDkuMDNWOS41ODA5OEgxMTEuODE0VjEzLjExMTRIMTA5LjAzVjE4LjY4MTdDMTA5LjAzIDE5LjA5NzEgMTA5LjEyOSAxOS4zOTQ0IDEwOS4zMjggMTkuNTc3NkMxMDkuNTI3IDE5Ljc2MDcgMTA5Ljg1NyAxOS44NTEzIDExMC4zMjIgMTkuODUxM0gxMTEuODRaIiBmaWxsPSIjMDBBNUEyIi8+CjxwYXRoIGQ9Ik0xMTYuNzA2IDIyLjc4NThDMTE1LjYxOSAyMi4yMDQ5IDExNC43NjYgMjEuMzc3OSAxMTQuMTQ0IDIwLjI5ODlDMTEzLjUyMiAxOS4yMjE5IDExMy4yMTEgMTcuOTYxNyAxMTMuMjExIDE2LjUxODRDMTEzLjIxMSAxNS4wNzUyIDExMy41MjYgMTMuODM2NyAxMTQuMTU2IDEyLjc1MThDMTE0Ljc4NiAxMS42NjY4IDExNS42NDkgMTAuODM0IDExNi43NDEgMTAuMjUzMUMxMTcuODM2IDkuNjcyMjUgMTE5LjA2MyA5LjM4MjgxIDEyMC40MjEgOS4zODI4MUMxMjEuNzggOS4zODI4MSAxMjMuMDA3IDkuNjcyMjUgMTI0LjEwMSAxMC4yNTMxQzEyNS4xOTYgMTAuODM0IDEyNi4wNTkgMTEuNjY2OCAxMjYuNjg3IDEyLjc1MThDMTI3LjMxNyAxMy44Mzg2IDEyNy42MzIgMTUuMDkyOSAxMjcuNjMyIDE2LjUxODRDMTI3LjYzMiAxNy45NDQgMTI3LjMxMyAxOS4yMDAyIDEyNi42NzUgMjAuMjg1MUMxMjYuMDM3IDIxLjM3MiAxMjUuMTY3IDIyLjIwNDkgMTI0LjA2NCAyMi43ODM4QzEyMi45NjEgMjMuMzY0NiAxMjEuNzMxIDIzLjY1NDEgMTIwLjM3MiAyMy42NTQxQzExOS4wMTQgMjMuNjU0MSAxMTcuNzg5IDIzLjM2NDYgMTE2LjcwNCAyMi43ODM4TDExNi43MDYgMjIuNzg1OFpNMTIyLjQ1MSAxOS4wODAxQzEyMy4wMjQgMTguNDgzNSAxMjMuMzEgMTcuNjI5IDEyMy4zMSAxNi41MTg0QzEyMy4zMSAxNS40MDc5IDEyMy4wMzIgMTQuNTUzNCAxMjIuNDc3IDEzLjk1NjhDMTIxLjkyMiAxMy4zNjAyIDEyMS4yMzcgMTMuMDYwOSAxMjAuNDI1IDEzLjA2MDlDMTE5LjYxNCAxMy4wNjA5IDExOC45MDcgMTMuMzU2MiAxMTguMzYyIDEzLjk0M0MxMTcuODE0IDE0LjUzMTcgMTE3LjU0MSAxNS4zOTAyIDExNy41NDEgMTYuNTE2NUMxMTcuNTQxIDE3LjY0MjcgMTE3LjgxMSAxOC40ODE1IDExOC4zNSAxOS4wNzgxQzExOC44ODggMTkuNjc0NyAxMTkuNTY1IDE5Ljk3NCAxMjAuMzc2IDE5Ljk3NEMxMjEuMTg3IDE5Ljk3NCAxMjEuODggMTkuNjc0NyAxMjIuNDUzIDE5LjA3ODFMMTIyLjQ1MSAxOS4wODAxWiIgZmlsbD0iIzAwQTVBMiIvPgo8cGF0aCBkPSJNMTQyLjE2OSAxMS4wMTA4QzE0My4xNCAxMi4wNjQyIDE0My42MjQgMTMuNTA5NCAxNDMuNjI0IDE1LjM1MDVWMjMuNDU2OEgxMzkuMzk2VjE1LjkyMTVDMTM5LjM5NiAxNC45OTQxIDEzOS4xNTYgMTQuMjcxNCAxMzguNjc2IDEzLjc1NzVDMTM4LjE5NSAxMy4yNDM2IDEzNy41NDggMTIuOTg3NyAxMzYuNzM2IDEyLjk4NzdDMTM1LjkyNSAxMi45ODc3IDEzNS4yNzcgMTMuMjQ1NiAxMzQuNzk3IDEzLjc1NzVDMTM0LjMxNiAxNC4yNzE0IDEzNC4wNzYgMTQuOTkyMSAxMzQuMDc2IDE1LjkyMTVWMjMuNDU2OEgxMjkuODI1VjkuNTgxM0gxMzQuMDc2VjExLjQyMDNDMTM0LjUwNyAxMC44MDggMTM1LjA4OCAxMC4zMjE2IDEzNS44MTcgOS45NjUyNUMxMzYuNTQ1IDkuNjA4ODcgMTM3LjM2NiA5LjQyOTY5IDEzOC4yNzggOS40Mjk2OUMxMzkuOTAzIDkuNDI5NjkgMTQxLjIgOS45NTU0MSAxNDIuMTcxIDExLjAwODhMMTQyLjE2OSAxMS4wMTA4WiIgZmlsbD0iIzAwQTVBMiIvPgo8cGF0aCBkPSJNNjkuMTY2NSAzOC45MDQ0SDYzLjA2NjZMNjEuOTQyMyA0Mi4wMTU0SDYwLjAxNjZMNjUuMDczIDI4LjEwODRINjcuMTc5OEw3Mi4yMTY1IDQyLjAxNTRINzAuMjkwOEw2OS4xNjY1IDM4LjkwNDRaTTY4LjY0NDcgMzcuNDE5OEw2Ni4xMTY1IDMwLjM1N0w2My41ODg0IDM3LjQxOThINjguNjQ0N1oiIGZpbGw9IiM0MTQ1NEQiLz4KPHBhdGggZD0iTTc1Ljg2ODUgNDEuNzYzOEM3NS4xOTkxIDQxLjQ3NjQgNzQuNjcxNCA0MS4wNzQ3IDc0LjI4MzUgNDAuNTU4OEM3My44OTU2IDQwLjA0NDkgNzMuNjgxIDM5LjQ1MjIgNzMuNjQxNiAzOC43ODI4SDc1LjUyNzlDNzUuNTgxMSAzOS4zMzIxIDc1LjgzOSAzOS43NzkxIDc2LjI5OTcgNDAuMTI3NkM3Ni43NjA1IDQwLjQ3NjEgNzcuMzY2OSA0MC42NDk0IDc4LjExNTIgNDAuNjQ5NEM3OC44MTAyIDQwLjY0OTQgNzkuMzU5NiA0MC40OTU4IDc5Ljc2MTIgNDAuMTg4NkM4MC4xNjI5IDM5Ljg4MTUgODAuMzYzNyAzOS40OTM2IDgwLjM2MzcgMzkuMDI1QzgwLjM2MzcgMzguNTU2NCA4MC4xNDkxIDM4LjE4NjIgNzkuNzIxOSAzNy45NTE5Qzc5LjI5MjYgMzcuNzE3NiA3OC42MzEgMzcuNDg3MiA3Ny43MzUxIDM3LjI1ODhDNzYuOTIgMzcuMDQ0MiA3Ni4yNTI1IDM2LjgyNzYgNzUuNzM4NiAzNi42MDdDNzUuMjIyNyAzNi4zODY1IDc0Ljc4MTYgMzYuMDU3NyA3NC40MTM0IDM1LjYyNDVDNzQuMDQ1MiAzNS4xODk0IDczLjg2MjEgMzQuNjE4NCA3My44NjIxIDMzLjkwOTVDNzMuODYyMSAzMy4zNDg0IDc0LjAyOTUgMzIuODMyNSA3NC4zNjQyIDMyLjM2MzlDNzQuNjk4OSAzMS44OTUyIDc1LjE3MzUgMzEuNTI1MSA3NS43ODk4IDMxLjI0OTRDNzYuNDA0MSAzMC45NzU3IDc3LjEwNyAzMC44Mzc5IDc3Ljg5NjYgMzAuODM3OUM3OS4xMTM0IDMwLjgzNzkgODAuMDk3OSAzMS4xNDUxIDgwLjg0NjIgMzEuNzYxM0M4MS41OTQ0IDMyLjM3NzYgODEuOTk2IDMzLjIyMDQgODIuMDQ5MiAzNC4yODk1SDgwLjIyNEM4MC4xODQ2IDMzLjcxNDYgNzkuOTUyMiAzMy4yNTE5IDc5LjUzMjggMzIuOTA1M0M3OS4xMTE1IDMyLjU1NjggNzguNTQ2NCAzMi4zODM2IDc3LjgzNzUgMzIuMzgzNkM3Ny4xODE5IDMyLjM4MzYgNzYuNjYwMSAzMi41MjM0IDc2LjI3MjIgMzIuODA0OUM3NS44ODQzIDMzLjA4NjUgNzUuNjg5NCAzMy40NTQ3IDc1LjY4OTQgMzMuOTA5NUM3NS42ODk0IDM0LjI3MTggNzUuODA1NSAzNC41NjkxIDc2LjAzOTggMzQuODAzNEM3Ni4yNzQxIDM1LjAzNzggNzYuNTY3NSAzNS4yMjQ4IDc2LjkyMTkgMzUuMzY0NkM3Ny4yNzY0IDM1LjUwNDQgNzcuNzY4NiAzNS42NjE5IDc4LjM5NjcgMzUuODM1MkM3OS4xODYzIDM2LjA0OTggNzkuODI4MiAzNi4yNjA1IDgwLjMyMjQgMzYuNDY3MkM4MC44MTY2IDM2LjY3NCA4MS4yNDE5IDM2Ljk4NTEgODEuNTk2MyAzNy40MDA2QzgxLjk1MDggMzcuODE2IDgyLjEzMzkgMzguMzU3NSA4Mi4xNDc3IDM5LjAyNjlDODIuMTQ3NyAzOS42Mjk1IDgxLjk4MDMgNDAuMTcwOSA4MS42NDU2IDQwLjY1MzNDODEuMzEwOCA0MS4xMzU3IDgwLjg0MDIgNDEuNTEzOCA4MC4yMzE4IDQxLjc4NzVDNzkuNjIzNCA0Mi4wNjEyIDc4LjkyNDQgNDIuMTk5IDc4LjEzNDggNDIuMTk5Qzc3LjI5MjEgNDIuMTk5IDc2LjUzNiA0Mi4wNTUzIDc1Ljg2NjYgNDEuNzY3OEw3NS44Njg1IDQxLjc2MzhaIiBmaWxsPSIjNDE0NTREIi8+CjxwYXRoIGQ9Ik04Ni40MjIzIDQxLjc2MzhDODUuNzUyOCA0MS40NzY0IDg1LjIyNTEgNDEuMDc0NyA4NC44MzcyIDQwLjU1ODhDODQuNDQ5MyA0MC4wNDQ5IDg0LjIzNDcgMzkuNDUyMiA4NC4xOTUzIDM4Ljc4MjhIODYuMDgxNkM4Ni4xMzQ4IDM5LjMzMjEgODYuMzkyNyAzOS43NzkxIDg2Ljg1MzUgNDAuMTI3NkM4Ny4zMTYyIDQwLjQ3NjEgODcuOTIwNyA0MC42NDk0IDg4LjY2ODkgNDAuNjQ5NEM4OS4zNjM5IDQwLjY0OTQgODkuOTEzMyA0MC40OTU4IDkwLjMxNSA0MC4xODg2QzkwLjcxNjYgMzkuODgxNSA5MC45MTc1IDM5LjQ5MzYgOTAuOTE3NSAzOS4wMjVDOTAuOTE3NSAzOC41NTY0IDkwLjcwMjggMzguMTg2MiA5MC4yNzU2IDM3Ljk1MTlDODkuODQ2MyAzNy43MTc2IDg5LjE4NDcgMzcuNDg3MiA4OC4yODg5IDM3LjI1ODhDODcuNDcxNyAzNy4wNDQyIDg2LjgwNjIgMzYuODI3NiA4Ni4yOTIzIDM2LjYwN0M4NS43NzY0IDM2LjM4NjUgODUuMzM1NCAzNi4wNTc3IDg0Ljk2NzIgMzUuNjI0NUM4NC41OTkgMzUuMTg5NCA4NC40MTU4IDM0LjYxODQgODQuNDE1OCAzMy45MDk1Qzg0LjQxNTggMzMuMzQ4NCA4NC41ODMyIDMyLjgzMjUgODQuOTE3OSAzMi4zNjM5Qzg1LjI1MjcgMzEuODk1MiA4NS43MjcyIDMxLjUyNTEgODYuMzQzNSAzMS4yNDk0Qzg2Ljk1NzggMzAuOTc1NyA4Ny42NjA3IDMwLjgzNzkgODguNDUwMyAzMC44Mzc5Qzg5LjY2NzIgMzAuODM3OSA5MC42NTE3IDMxLjE0NTEgOTEuMzk5OSAzMS43NjEzQzkyLjE0ODEgMzIuMzc3NiA5Mi41NDk4IDMzLjIyMDQgOTIuNjAyOSAzNC4yODk1SDkwLjc3NzdDOTAuNzM4MyAzMy43MTQ2IDkwLjUwNTkgMzMuMjUxOSA5MC4wODY1IDMyLjkwNTNDODkuNjY1MiAzMi41NTY4IDg5LjEwMDEgMzIuMzgzNiA4OC4zOTEyIDMyLjM4MzZDODcuNzM1NiAzMi4zODM2IDg3LjIxMzggMzIuNTIzNCA4Ni44MjU5IDMyLjgwNDlDODYuNDM4IDMzLjA4NjUgODYuMjQzMSAzMy40NTQ3IDg2LjI0MzEgMzMuOTA5NUM4Ni4yNDMxIDM0LjI3MTggODYuMzYxMiAzNC41NjkxIDg2LjU5MzYgMzQuODAzNEM4Ni44MjU5IDM1LjAzNzggODcuMTIxMiAzNS4yMjQ4IDg3LjQ3NzYgMzUuMzY0NkM4Ny44MzIgMzUuNTA0NCA4OC4zMjQzIDM1LjY2MTkgODguOTUyNCAzNS44MzUyQzg5Ljc0MiAzNi4wNDk4IDkwLjM4MzkgMzYuMjYwNSA5MC44ODAxIDM2LjQ2NzJDOTEuMzc0MyAzNi42NzQgOTEuNzk5NiAzNi45ODUxIDkyLjE1NCAzNy40MDA2QzkyLjUwODQgMzcuODE2IDkyLjY5MTUgMzguMzU3NSA5Mi43MDUzIDM5LjAyNjlDOTIuNzA1MyAzOS42Mjk1IDkyLjUzNzkgNDAuMTcwOSA5Mi4yMDMyIDQwLjY1MzNDOTEuODY4NSA0MS4xMzU3IDkxLjM5NzkgNDEuNTEzOCA5MC43ODk1IDQxLjc4NzVDOTAuMTgxMSA0Mi4wNjEyIDg5LjQ4MjEgNDIuMTk5IDg4LjY5MjUgNDIuMTk5Qzg3Ljg0OTggNDIuMTk5IDg3LjA5MzcgNDIuMDU1MyA4Ni40MjYyIDQxLjc2NzhMODYuNDIyMyA0MS43NjM4WiIgZmlsbD0iIzQxNDU0RCIvPgo8cGF0aCBkPSJNOTcuMzM5IDQxLjQ5NDFDOTYuNTAyMiA0MS4wMjU1IDk1Ljg0NjUgNDAuMzYgOTUuMzcyIDM5LjQ5NzVDOTQuODk3NCAzOC42MzUxIDk0LjY1OTIgMzcuNjM0OSA5NC42NTkyIDM2LjQ5NjhDOTQuNjU5MiAzNS4zNTg3IDk0LjkwMzMgMzQuMzgwMSA5NS4zOTE2IDMzLjUxNTdDOTUuODggMzIuNjUzMyA5Ni41NDU1IDMxLjk5MTcgOTcuMzg4MiAzMS41MjlDOTguMjMwOSAzMS4wNjgzIDk5LjE3NDEgMzAuODM1OSAxMDAuMjE4IDMwLjgzNTlDMTAxLjI2MSAzMC44MzU5IDEwMi4yMDQgMzEuMDY2MyAxMDMuMDQ3IDMxLjUyOUMxMDMuODkgMzEuOTg5OCAxMDQuNTU1IDMyLjY0OTQgMTA1LjA0NCAzMy41MDU5QzEwNS41MzIgMzQuMzYyNCAxMDUuNzc2IDM1LjM1ODcgMTA1Ljc3NiAzNi40OTY4QzEwNS43NzYgMzcuNjM0OSAxMDUuNTI2IDM4LjYzMzIgMTA1LjAyNCAzOS40OTc1QzEwNC41MjIgNDAuMzYgMTAzLjg0MyA0MS4wMjU1IDEwMi45ODggNDEuNDk0MUMxMDIuMTMyIDQxLjk2MjcgMTAxLjE4MiA0Mi4xOTcgMTAwLjEzOSA0Mi4xOTdDOTkuMDk1MyA0Mi4xOTcgOTguMTc1OCA0MS45NjI3IDk3LjMzOSA0MS40OTQxWk0xMDEuOTg0IDQwLjEyOTZDMTAyLjU1OSAzOS44MjI0IDEwMy4wMjMgMzkuMzU5NyAxMDMuMzc4IDM4Ljc0NTRDMTAzLjczMiAzOC4xMzExIDEwMy45MSAzNy4zODA5IDEwMy45MSAzNi40OTg4QzEwMy45MSAzNS42MTY3IDEwMy43MzQgMzQuODY2NSAxMDMuMzg4IDM0LjI1MjFDMTAzLjAzOSAzMy42Mzc4IDEwMi41ODQgMzMuMTc5IDEwMi4wMjMgMzIuODc3OEMxMDEuNDYyIDMyLjU3NjUgMTAwLjg1NCAzMi40MjY5IDEwMC4xOTggMzIuNDI2OUM5OS41NDIzIDMyLjQyNjkgOTguOTE2MSAzMi41NzY1IDk4LjM2MjkgMzIuODc3OEM5Ny44MDc2IDMzLjE3OSA5Ny4zNjI2IDMzLjYzNzggOTcuMDI3OSAzNC4yNTIxQzk2LjY5MzIgMzQuODY2NSA5Ni41MjU4IDM1LjYxNjcgOTYuNTI1OCAzNi40OTg4Qzk2LjUyNTggMzcuMzgwOSA5Ni42ODkyIDM4LjE1MDggOTcuMDE4IDM4Ljc2N0M5Ny4zNDQ5IDM5LjM4MzMgOTcuNzg0IDM5Ljg0MDEgOTguMzMxNCA0MC4xNDE0Qzk4Ljg3ODcgNDAuNDQyNyA5OS40ODEyIDQwLjU5MjMgMTAwLjEzNyA0MC41OTIzQzEwMC43OTMgNDAuNTkyMyAxMDEuNDA3IDQwLjQzODcgMTAxLjk4MiA0MC4xMzE2TDEwMS45ODQgNDAuMTI5NloiIGZpbGw9IiM0MTQ1NEQiLz4KPHBhdGggZD0iTTEwOC4zNzkgMzMuNTE3N0MxMDguODMzIDMyLjY2OTEgMTA5LjQ2NSAzMi4wMDk0IDExMC4yNzUgMzEuNTQwOEMxMTEuMDg0IDMxLjA3MjIgMTEyLjAwOSAzMC44Mzc5IDExMy4wNTMgMzAuODM3OUMxMTQuNDA0IDMwLjgzNzkgMTE1LjUxOCAzMS4xNjY3IDExNi4zOTQgMzEuODIwNEMxMTcuMjcxIDMyLjQ3NjEgMTE3Ljg0OSAzMy4zODU4IDExOC4xMjkgMzQuNTQ5NEgxMTYuMTYyQzExNS45NzUgMzMuODggMTE1LjYxMSAzMy4zNTIzIDExNS4wNjcgMzIuOTY0NEMxMTQuNTI2IDMyLjU3NjUgMTEzLjg1NCAzMi4zODE2IDExMy4wNTEgMzIuMzgxNkMxMTIuMDA3IDMyLjM4MTYgMTExLjE2NSAzMi43Mzk5IDExMC41MjMgMzMuNDU0N0MxMDkuODgxIDM0LjE3MTQgMTA5LjU2IDM1LjE4MzUgMTA5LjU2IDM2LjQ5NDhDMTA5LjU2IDM3LjgwNjIgMTA5Ljg4MSAzOC44NDE5IDExMC41MjMgMzkuNTY0NUMxMTEuMTY1IDQwLjI4NzEgMTEyLjAwNyA0MC42NDc0IDExMy4wNTEgNDAuNjQ3NEMxMTMuODU0IDQwLjY0NzQgMTE0LjUyMiA0MC40NjA0IDExNS4wNTcgNDAuMDg2M0MxMTUuNTkzIDM5LjcxMjIgMTE1Ljk2MSAzOS4xNzY2IDExNi4xNjIgMzguNDgxNUgxMTguMTI5QzExNy44MzYgMzkuNjA1OCAxMTcuMjQ3IDQwLjUwNTcgMTE2LjM2MyA0MS4xODFDMTE1LjQ3OSA0MS44NTY0IDExNC4zNzYgNDIuMTk1MSAxMTMuMDUxIDQyLjE5NTFDMTEyLjAwNyA0Mi4xOTUxIDExMS4wODIgNDEuOTYwNyAxMTAuMjczIDQxLjQ5MjFDMTA5LjQ2MyA0MS4wMjM1IDEwOC44MzEgNDAuMzYxOSAxMDguMzc3IDM5LjUwNTRDMTA3LjkyMiAzOC42NDg5IDEwNy42OTUgMzcuNjQ2NyAxMDcuNjk1IDM2LjQ5NDhDMTA3LjY5NSAzNS4zNDI5IDEwNy45MjQgMzQuMzY0NCAxMDguMzc3IDMzLjUxMzhMMTA4LjM3OSAzMy41MTc3WiIgZmlsbD0iIzQxNDU0RCIvPgo8cGF0aCBkPSJNMTIwLjY1OCAzMC4yMzQ5QzEyMC40MTggMjkuOTk0NyAxMjAuMjk2IDI5LjY5OTMgMTIwLjI5NiAyOS4zNTI4QzEyMC4yOTYgMjkuMDA2MyAxMjAuNDE2IDI4LjcxMDkgMTIwLjY1OCAyOC40Njg3QzEyMC45IDI4LjIyNjUgMTIxLjE5NCAyOC4xMDg0IDEyMS41NDIgMjguMTA4NEMxMjEuODkxIDI4LjEwODQgMTIyLjE2MSAyOC4yMjg1IDEyMi4zOTUgMjguNDY4N0MxMjIuNjI5IDI4LjcwODkgMTIyLjc0NyAyOS4wMDQzIDEyMi43NDcgMjkuMzUyOEMxMjIuNzQ3IDI5LjcwMTMgMTIyLjYyOSAyOS45OTQ3IDEyMi4zOTUgMzAuMjM0OUMxMjIuMTYxIDMwLjQ3NTEgMTIxLjg3NyAzMC41OTUyIDEyMS41NDIgMzAuNTk1MkMxMjEuMjA4IDMwLjU5NTIgMTIwLjkgMzAuNDc1MSAxMjAuNjU4IDMwLjIzNDlaIiBmaWxsPSIjNDE0NTREIi8+CjxwYXRoIGQ9Ik0xMjIuNDIyIDMyLjM4MjhIMTIwLjU5N1Y0Mi4wMTUxSDEyMi40MjJWMzIuMzgyOFoiIGZpbGw9IiM0MTQ1NEQiLz4KPHBhdGggZD0iTTEyNS42MzcgMzMuNTE3N0MxMjYuMDkyIDMyLjY2OTEgMTI2LjcxOCAzMi4wMDk0IDEyNy41MTQgMzEuNTQwOEMxMjguMzA5IDMxLjA3MjIgMTI5LjE5NSAzMC44Mzc5IDEzMC4xNzIgMzAuODM3OUMxMzEuMTQ5IDMwLjgzNzkgMTMxLjk3MiAzMS4wNDQ2IDEzMi42OCAzMS40NjAxQzEzMy4zODkgMzEuODc1NiAxMzMuOTE3IDMyLjM5NzMgMTM0LjI2NSAzMy4wMjU0VjMxLjAxOUgxMzYuMTEyVjQyLjAxNTlIMTM0LjI2NVYzOS45NjgxQzEzMy45MDUgNDAuNjEgMTMzLjM2NiA0MS4xNDE2IDEzMi42NTEgNDEuNTYzQzEzMS45MzQgNDEuOTg0NCAxMzEuMTAxIDQyLjE5NTEgMTMwLjE1MiA0Mi4xOTUxQzEyOS4yMDMgNDIuMTk1MSAxMjguMjk0IDQxLjk1NDggMTI3LjUwNCA0MS40NzI0QzEyNi43MTQgNDAuOTkgMTI2LjA5MiA0MC4zMTQ3IDEyNS42MzcgMzkuNDQ2M0MxMjUuMTgyIDM4LjU3NiAxMjQuOTU2IDM3LjU4NzYgMTI0Ljk1NiAzNi40NzcxQzEyNC45NTYgMzUuMzY2NiAxMjUuMTg0IDM0LjM2NjMgMTI1LjYzNyAzMy41MTc3Wk0xMzMuNzY1IDM0LjMyODlDMTMzLjQzMSAzMy43MTQ2IDEzMi45OCAzMy4yNDIgMTMyLjQxMSAzMi45MTMyQzEzMS44NDIgMzIuNTg2NCAxMzEuMjE3IDMyLjQyMSAxMzAuNTM0IDMyLjQyMUMxMjkuODUxIDMyLjQyMSAxMjkuMjMxIDMyLjU4MDUgMTI4LjY2OCAzMi45MDM0QzEyOC4xMDYgMzMuMjI0MyAxMjcuNjU4IDMzLjY5MjkgMTI3LjMyMyAzNC4zMDczQzEyNi45ODggMzQuOTIzNiAxMjYuODIxIDM1LjY0NDIgMTI2LjgyMSAzNi40NzUxQzEyNi44MjEgMzcuMzA2IDEyNi45ODggMzguMDUwMyAxMjcuMzIzIDM4LjY3MjVDMTI3LjY1OCAzOS4yOTQ3IDEyOC4xMDQgMzkuNzY5MyAxMjguNjY4IDQwLjA5ODFDMTI5LjIyOSA0MC40MjY5IDEyOS44NTEgNDAuNTkwMyAxMzAuNTM0IDQwLjU5MDNDMTMxLjIxNyA0MC41OTAzIDEzMS44NDIgNDAuNDI2OSAxMzIuNDExIDQwLjA5ODFDMTMyLjk4IDM5Ljc3MTIgMTMzLjQzMSAzOS4yOTQ3IDEzMy43NjUgMzguNjcyNUMxMzQuMSAzOC4wNTAzIDEzNC4yNjcgMzcuMzI1NyAxMzQuMjY3IDM2LjQ5NDhDMTM0LjI2NyAzNS42NjM5IDEzNC4xIDM0Ljk0MzIgMTMzLjc2NSAzNC4zMjY5VjM0LjMyODlaIiBmaWxsPSIjNDE0NTREIi8+CjxwYXRoIGQ9Ik0xNDEuNTA4IDMyLjUyMjdWMzkuMDA0N0MxNDEuNTA4IDM5LjU0MDIgMTQxLjYyMiAzOS45MTgzIDE0MS44NDggNDAuMTM4OEMxNDIuMDc3IDQwLjM1OTMgMTQyLjQ3MSA0MC40Njk2IDE0My4wMzIgNDAuNDY5NkgxNDQuMzc2VjQyLjAxNTNIMTQyLjczQzE0MS43MTQgNDIuMDE1MyAxNDAuOTUgNDEuNzgwOSAxNDAuNDQyIDQxLjMxMjNDMTM5LjkzNCA0MC44NDM3IDEzOS42OCA0MC4wNzU4IDEzOS42OCAzOS4wMDQ3VjMyLjUyMjdIMTM4LjI1NVYzMS4wMTg0SDEzOS42OFYyOC4yNDhIMTQxLjUwNlYzMS4wMTg0SDE0NC4zNzVWMzIuNTIyN0gxNDEuNTA2SDE0MS41MDhaIiBmaWxsPSIjNDE0NTREIi8+CjxwYXRoIGQ9Ik0xNTYuMjgzIDM3LjE5OTdIMTQ3LjQ5NEMxNDcuNTYgMzguMjgyNyAxNDcuOTMxIDM5LjEyOTMgMTQ4LjYwOCAzOS43Mzc4QzE0OS4yODMgNDAuMzQ2MiAxNTAuMTAyIDQwLjY1MTQgMTUxLjA2NyA0MC42NTE0QzE1MS44NTcgNDAuNjUxNCAxNTIuNTE0IDQwLjQ2ODMgMTUzLjA0NCA0MC4xMDAxQzE1My41NzIgMzkuNzMxOSAxNTMuOTQ0IDM5LjI0MTYgMTU0LjE1OSAzOC42MjUzSDE1Ni4xMjZDMTU1LjgzIDM5LjY4MjYgMTU1LjI0MiA0MC41NDExIDE1NC4zNTkgNDEuMjA0N0MxNTMuNDc1IDQxLjg2NjIgMTUyLjM3OSA0Mi4xOTcgMTUxLjA2OSA0Mi4xOTdDMTUwLjAyNiA0Mi4xOTcgMTQ5LjA5MiA0MS45NjI3IDE0OC4yNjkgNDEuNDk0MUMxNDcuNDQ2IDQxLjAyNTUgMTQ2LjggNDAuMzYgMTQ2LjMzMiAzOS40OTc1QzE0NS44NjMgMzguNjM1MSAxNDUuNjI5IDM3LjYzNDkgMTQ1LjYyOSAzNi40OTY4QzE0NS42MjkgMzUuMzU4NyAxNDUuODU3IDM0LjM2MjQgMTQ2LjMxIDMzLjUwNTlDMTQ2Ljc2NSAzMi42NDk0IDE0Ny40MDUgMzEuOTkxNyAxNDguMjI2IDMxLjUyOUMxNDkuMDQ5IDMxLjA2ODMgMTQ5Ljk5NCAzMC44MzU5IDE1MS4wNjUgMzAuODM1OUMxNTIuMTM2IDMwLjgzNTkgMTUzLjAzMiAzMS4wNjQzIDE1My44MzQgMzEuNTE3MkMxNTQuNjM3IDMxLjk3MiAxNTUuMjU1IDMyLjU5ODIgMTU1LjY5IDMzLjM5MzdDMTU2LjEyNiAzNC4xODkxIDE1Ni4zNDIgMzUuMDg5IDE1Ni4zNDIgMzYuMDkzMkMxNTYuMzQyIDM2LjQ0MTcgMTU2LjMyMyAzNi44MDk5IDE1Ni4yODEgMzcuMTk3OEwxNTYuMjgzIDM3LjE5OTdaTTE1My45OTUgMzMuOTE3NEMxNTMuNjg4IDMzLjQxNTMgMTUzLjI2OSAzMy4wMzUzIDE1Mi43NDEgMzIuNzczNEMxNTIuMjEzIDMyLjUxMzUgMTUxLjYyOCAzMi4zODE2IDE1MC45ODUgMzIuMzgxNkMxNTAuMDYxIDMyLjM4MTYgMTQ5LjI3NSAzMi42NzUgMTQ4LjYyOCAzMy4yNjM3QzE0Ny45NzggMzMuODUyNCAxNDcuNjA4IDM0LjY2NzYgMTQ3LjUxNSAzNS43MTEySDE1NC40NThDMTU0LjQ1OCAzNS4wMTYxIDE1NC4zMDQgMzQuNDE3NSAxNTMuOTk3IDMzLjkxNTRMMTUzLjk5NSAzMy45MTc0WiIgZmlsbD0iIzQxNDU0RCIvPgo8cGF0aCBkPSJNMTYwLjQ3OSA0MS43NjM4QzE1OS44MDkgNDEuNDc2NCAxNTkuMjgyIDQxLjA3NDcgMTU4Ljg5NCA0MC41NTg4QzE1OC41MDYgNDAuMDQ0OSAxNTguMjkxIDM5LjQ1MjIgMTU4LjI1MiAzOC43ODI4SDE2MC4xMzhDMTYwLjE5MSAzOS4zMzIxIDE2MC40NDkgMzkuNzc5MSAxNjAuOTEgNDAuMTI3NkMxNjEuMzczIDQwLjQ3NjEgMTYxLjk3NyA0MC42NDk0IDE2Mi43MjYgNDAuNjQ5NEMxNjMuNDIxIDQwLjY0OTQgMTYzLjk3IDQwLjQ5NTggMTY0LjM3MiA0MC4xODg2QzE2NC43NzMgMzkuODgxNSAxNjQuOTc0IDM5LjQ5MzYgMTY0Ljk3NCAzOS4wMjVDMTY0Ljk3NCAzOC41NTY0IDE2NC43NTkgMzguMTg2MiAxNjQuMzMyIDM3Ljk1MTlDMTYzLjkwMyAzNy43MTc2IDE2My4yNDEgMzcuNDg3MiAxNjIuMzQ2IDM3LjI1ODhDMTYxLjUyOCAzNy4wNDQyIDE2MC44NjMgMzYuODI3NiAxNjAuMzQ5IDM2LjYwN0MxNTkuODMzIDM2LjM4NjUgMTU5LjM5MiAzNi4wNTc3IDE1OS4wMjQgMzUuNjI0NUMxNTguNjU2IDM1LjE4OTQgMTU4LjQ3MiAzNC42MTg0IDE1OC40NzIgMzMuOTA5NUMxNTguNDcyIDMzLjM0ODQgMTU4LjY0IDMyLjgzMjUgMTU4Ljk3NSAzMi4zNjM5QzE1OS4zMDkgMzEuODk1MiAxNTkuNzg0IDMxLjUyNTEgMTYwLjQgMzEuMjQ5NEMxNjEuMDE0IDMwLjk3NTcgMTYxLjcxNyAzMC44Mzc5IDE2Mi41MDcgMzAuODM3OUMxNjMuNzI0IDMwLjgzNzkgMTY0LjcwOCAzMS4xNDUxIDE2NS40NTcgMzEuNzYxM0MxNjYuMjA1IDMyLjM3NzYgMTY2LjYwNiAzMy4yMjA0IDE2Ni42NiAzNC4yODk1SDE2NC44MzRDMTY0Ljc5NSAzMy43MTQ2IDE2NC41NjMgMzMuMjUxOSAxNjQuMTQzIDMyLjkwNTNDMTYzLjcyMiAzMi41NTY4IDE2My4xNTcgMzIuMzgzNiAxNjIuNDQ4IDMyLjM4MzZDMTYxLjc5MiAzMi4zODM2IDE2MS4yNyAzMi41MjM0IDE2MC44ODMgMzIuODA0OUMxNjAuNDk1IDMzLjA4NjUgMTYwLjMgMzMuNDU0NyAxNjAuMyAzMy45MDk1QzE2MC4zIDM0LjI3MTggMTYwLjQxOCAzNC41NjkxIDE2MC42NSAzNC44MDM0QzE2MC44ODMgMzUuMDM3OCAxNjEuMTc4IDM1LjIyNDggMTYxLjUzNCAzNS4zNjQ2QzE2MS44ODkgMzUuNTA0NCAxNjIuMzgxIDM1LjY2MTkgMTYzLjAwOSAzNS44MzUyQzE2My43OTkgMzYuMDQ5OCAxNjQuNDQxIDM2LjI2MDUgMTY0LjkzNyAzNi40NjcyQzE2NS40MzEgMzYuNjc0IDE2NS44NTYgMzYuOTg1MSAxNjYuMjExIDM3LjQwMDZDMTY2LjU2NSAzNy44MTYgMTY2Ljc0OCAzOC4zNTc1IDE2Ni43NjIgMzkuMDI2OUMxNjYuNzYyIDM5LjYyOTUgMTY2LjU5NSA0MC4xNzA5IDE2Ni4yNiA0MC42NTMzQzE2NS45MjUgNDEuMTM1NyAxNjUuNDU1IDQxLjUxMzggMTY0Ljg0NiA0MS43ODc1QzE2NC4yMzggNDIuMDYxMiAxNjMuNTM5IDQyLjE5OSAxNjIuNzQ5IDQyLjE5OUMxNjEuOTA2IDQyLjE5OSAxNjEuMTUgNDIuMDU1MyAxNjAuNDgzIDQxLjc2NzhMMTYwLjQ3OSA0MS43NjM4WiIgZmlsbD0iIzQxNDU0RCIvPgo8L3N2Zz4K"
+        },
+        "style": {
+          "fit": "contain"
+        }
+      },
+      {
+        "id": "text-subtitle-p1",
+        "kind": "text",
+        "body": "Locum tenens assignment booking, pipeline & contract performance",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#C8E8E7"
+        }
+      },
+      {
+        "id": "logo-p2",
+        "kind": "image",
+        "source": {
+          "kind": "url",
+          "url": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTY3IiBoZWlnaHQ9IjQ4IiB2aWV3Qm94PSIwIDAgMTY3IDQ4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMjQuMDA5NiAwLjAwMDM5MjA4QzQuMjM2OTQgLTAuMTA5ODcyIC03LjA3MSAyMy4wNjEzIDQuOTE2MjQgMzguNTUxM0gxNC4xMDM2TDE3LjQwMTYgMzIuMDM0TDIwLjY5NTggMzguNTUxM0gyNi41ODlDMjguNTI2NSAzOC41NTEzIDMwLjIzMTYgMzguMjA2OCAzMS42OTA2IDM3LjUxOTZDMzYuMjU2NyAzNS41MjcgMzcuNjQwOSAyOS44MzQ2IDM0LjU1NTUgMjUuOTg1MkMzMy40NTg4IDI0LjYxMDkgMzIuMTIzOCAyMy43ODE5IDMwLjU0ODYgMjMuNDk4NEMzMy41ODQ4IDIyLjQyNTMgMzUuNTYzNyAyMC4xMzE0IDM1LjUyNjIgMTYuNzk3OUMzNS41MjYyIDEzLjg2MjEgMzMuOTEzNiAxMS41MTkgMzEuMTgyNiAxMC4yNjA4QzI5Ljc1MzIgOS41ODM0OSAyOC4wMzQyIDkuMjQ4NzYgMjYuMDM5NiA5LjI0ODc2SDE0Ljg2MzZWMjUuNDgzMUgyNS45OTgzQzI3LjYyODYgMjUuNDgzMSAyOC45MzQgMjUuOTAyNSAyOS45MTQ2IDI2Ljc0OTJDMzEuODM4MyAyOC4yMzM4IDMxLjkxMTIgMzEuOTU3MiAyOS45OTkzIDMzLjQ1MTZDMjguMzA5OSAzNC45NTc5IDI1LjU5ODYgMzQuNTkzNyAyMy4zMzIzIDM0LjYzM0wxOS45Mzk3IDI3LjkyNjZIMTQuODUxOEwxMS40NTkyIDM0LjYzM0g2LjczNTZDLTEuNTg1MzggMjEuNDMyOSA4LjI4OTEzIDMuNTcyMTUgMjQuMDA3NiAzLjczMTY0QzM1LjIwOTIgMy43MzE2NCA0NC4yODYzIDEyLjgwNDggNDQuMjg2MyAyNC4wMDY0QzQ0LjMwMDEgMzMuODM3NiAzNy4yMzkzIDQyLjA2MDEgMjguMDEyNiA0My44ODE0QzIyLjg3OTQgNDQuOTcwMyAxNy4wOTQ1IDQzLjc5MjggMTIuODkwNyA0MC45NjE0SDcuMDIxMUMyMS45NzU2IDU1Ljg4MDUgNDcuODUyMiA0NS42MDQzIDQ4LjAxMzYgMjQuMDA2NEM0OC4wMTU2IDEwLjc0OTEgMzcuMjY2OCAwLjAwMDM5MjA4IDI0LjAwOTYgMC4wMDAzOTIwOFpNMjkuMzEwMSAyMC40ODM4QzI4LjQyNDEgMjEuMjAwNiAyNy4xOTM1IDIxLjU2MDkgMjUuNjE4MyAyMS41NjA5SDE5LjY3MzlWMTMuMTcxSDI1LjYxODNDMjcuMTkzNSAxMy4xNzEgMjguNDI0MSAxMy41NDUxIDI5LjMxMDEgMTQuMjg3NEMzMS4wNzYzIDE1LjYyODMgMzEuMDgyMiAxOS4xODA0IDI5LjMxMDEgMjAuNDg1OFYyMC40ODM4WiIgZmlsbD0iIzAwQTVBMiIvPgo8cGF0aCBkPSJNNzMuMDIxOCAxNi4wMTA0QzczLjYzNDIgMTYuNzk4IDczLjk0MTQgMTcuNjk3OCA3My45NDE0IDE4LjcwNzlDNzMuOTQxNCAyMC4xNjY5IDczLjQzMTQgMjEuMzIyNyA3Mi40MTE0IDIyLjE3NzNDNzEuMzkxNSAyMy4wMzE4IDY5Ljk2OTkgMjMuNDU3MSA2OC4xNDY2IDIzLjQ1NzFINjAuMDE0NlY2SDY3Ljg3MjlDNjkuNjQ3IDYgNzEuMDM1MSA2LjQwNTYxIDcyLjAzOTMgNy4yMTg4MUM3My4wNDE1IDguMDMyIDczLjU0MzYgOS4xMzI2NyA3My41NDM2IDEwLjUyNjdDNzMuNTQzNiAxMS41NTQ1IDczLjI3MzkgMTIuNDA5MSA3Mi43MzYzIDEzLjA4ODRDNzIuMTk2OCAxMy43Njc3IDcxLjQ4MDEgMTQuMjQwMiA3MC41ODYyIDE0LjUwNjFDNzEuNTk2MyAxNC43MjI2IDcyLjQwOTUgMTUuMjIyOCA3My4wMjM4IDE2LjAxMDRINzMuMDIxOFpNNjQuMjY3NyAxMy4wNjI4SDY3LjA1MzhDNjcuNzUwOCAxMy4wNjI4IDY4LjI4NDQgMTIuOTA5MiA2OC42NTg1IDEyLjYwMkM2OS4wMzA3IDEyLjI5NDkgNjkuMjE3NyAxMS44NDQgNjkuMjE3NyAxMS4yNDc0QzY5LjIxNzcgMTAuNjUwOCA2OS4wMzA3IDEwLjE5NCA2OC42NTg1IDkuODc4OTJDNjguMjg0NCA5LjU2Mzg4IDY3Ljc1MDggOS40MDYzNiA2Ny4wNTM4IDkuNDA2MzZINjQuMjY3N1YxMy4wNjI4Wk02OS4wNTQzIDE5LjU0MDhDNjkuNDQ0MiAxOS4yMTc5IDY5LjYzOTEgMTguNzQ5MiA2OS42MzkxIDE4LjEzNDlDNjkuNjM5MSAxNy41MjA2IDY5LjQzNjMgMTcuMDQwMiA2OS4wMzA3IDE2LjY5MzZDNjguNjI1MSAxNi4zNDUxIDY4LjA2MzkgMTYuMTcxOCA2Ny4zNTExIDE2LjE3MThINjQuMjY3N1YyMC4wMjUxSDY3LjQwMDRDNjguMTEzMSAyMC4wMjUxIDY4LjY2NDQgMTkuODYzNyA2OS4wNTQzIDE5LjU0MDhaIiBmaWxsPSIjMDBBNUEyIi8+CjxwYXRoIGQ9Ik03Ni40MzgxIDEyLjczOTlDNzYuOTc3NyAxMS42NjI5IDc3LjcxMDEgMTAuODM0IDc4LjYzOTUgMTAuMjUzMUM3OS41NjY5IDkuNjcyMjUgODAuNjA0NSA5LjM4MjgxIDgxLjc0ODUgOS4zODI4MUM4Mi43MjcxIDkuMzgyODEgODMuNTgzNiA5LjU4MTY4IDg0LjMyMiA5Ljk3OTQyQzg1LjA1ODQgMTAuMzc3MiA4NS42Mjc0IDEwLjg5ODkgODYuMDI1MiAxMS41NDY3VjkuNTgxNjhIOTAuMjc2MlYyMy40NTcySDg2LjAyNTJWMjEuNDkyMUM4NS42MDk3IDIyLjEzOCA4NS4wMzQ4IDIyLjY2MTcgODQuMjk2NCAyMy4wNTk1QzgzLjU1OCAyMy40NTcyIDgyLjcwMTUgMjMuNjU2MSA4MS43MjI5IDIzLjY1NjFDODAuNTk0NyAyMy42NTYxIDc5LjU2NjkgMjMuMzYyNyA3OC42Mzk1IDIyLjc3MzlDNzcuNzEwMSAyMi4xODUyIDc2Ljk3NzcgMjEuMzQ4NCA3Ni40MzgxIDIwLjI2MTVDNzUuODk4NiAxOS4xNzY2IDc1LjYzMDkgMTcuOTIwNCA3NS42MzA5IDE2LjQ5NDhDNzUuNjMwOSAxNS4wNjkzIDc1LjkwMDYgMTMuODE3IDc2LjQzODEgMTIuNzM5OVpNODUuMTQxMSAxNC4wMDhDODQuNTUyNCAxMy4zOTU2IDgzLjgzNTcgMTMuMDg4NSA4Mi45OTEgMTMuMDg4NUM4Mi4xNDYzIDEzLjA4ODUgODEuNDI3NiAxMy4zOTE3IDgwLjg0MDggMTMuOTk2MkM4MC4yNTIxIDE0LjYwMDYgNzkuOTU4NyAxNS40MzU1IDc5Ljk1ODcgMTYuNDk0OEM3OS45NTg3IDE3LjU1NDEgODAuMjUyMSAxOC4zOTY5IDgwLjg0MDggMTkuMDE5MUM4MS40Mjk2IDE5LjY0MTMgODIuMTQ2MyAxOS45NTI0IDgyLjk5MSAxOS45NTI0QzgzLjgzNTcgMTkuOTUyNCA4NC41NTI0IDE5LjY0NTIgODUuMTQxMSAxOS4wMzI5Qzg1LjcyOTggMTguNDIwNSA4Ni4wMjMyIDE3LjU4MTcgODYuMDIzMiAxNi41MjA0Qzg2LjAyMzIgMTUuNDU5MSA4NS43Mjc5IDE0LjYyMjMgODUuMTQxMSAxNC4wMDhaIiBmaWxsPSIjMDBBNUEyIi8+CjxwYXRoIGQ9Ik05OS4zOTQgMTAuMDkxM0MxMDAuMTQgOS42NTIxNyAxMDAuOTY5IDkuNDMxNjQgMTAxLjg4MSA5LjQzMTY0VjEzLjkzMjhIMTAwLjcxM0M5OS42NTE5IDEzLjkzMjggOTguODU2NSAxNC4xNjEyIDk4LjMyNjggMTQuNjE2Qzk3Ljc5NTIgMTUuMDcyOCA5Ny41MzEzIDE1Ljg3MjIgOTcuNTMxMyAxNy4wMTYyVjIzLjQ1NjhIOTMuMjgwM1Y5LjU4MTI4SDk3LjUzMTNWMTEuODkyOUM5OC4wMjk1IDExLjEzMDkgOTguNjQ5NyAxMC41MzAzIDk5LjM5NiAxMC4wODkzTDk5LjM5NCAxMC4wOTEzWiIgZmlsbD0iIzAwQTVBMiIvPgo8cGF0aCBkPSJNMTExLjg0IDE5Ljg1MTNWMjMuNDU2NUgxMDkuNjc2QzEwOC4xMzQgMjMuNDU2NSAxMDYuOTMxIDIzLjA4MDQgMTA2LjA3MSAyMi4zMjQzQzEwNS4yMDkgMjEuNTcwMiAxMDQuNzc3IDIwLjMzOTYgMTA0Ljc3NyAxOC42MzI0VjEzLjExMTRIMTAzLjA4NlY5LjU4MDk4SDEwNC43NzdWNi4xOTgyNEgxMDkuMDNWOS41ODA5OEgxMTEuODE0VjEzLjExMTRIMTA5LjAzVjE4LjY4MTdDMTA5LjAzIDE5LjA5NzEgMTA5LjEyOSAxOS4zOTQ0IDEwOS4zMjggMTkuNTc3NkMxMDkuNTI3IDE5Ljc2MDcgMTA5Ljg1NyAxOS44NTEzIDExMC4zMjIgMTkuODUxM0gxMTEuODRaIiBmaWxsPSIjMDBBNUEyIi8+CjxwYXRoIGQ9Ik0xMTYuNzA2IDIyLjc4NThDMTE1LjYxOSAyMi4yMDQ5IDExNC43NjYgMjEuMzc3OSAxMTQuMTQ0IDIwLjI5ODlDMTEzLjUyMiAxOS4yMjE5IDExMy4yMTEgMTcuOTYxNyAxMTMuMjExIDE2LjUxODRDMTEzLjIxMSAxNS4wNzUyIDExMy41MjYgMTMuODM2NyAxMTQuMTU2IDEyLjc1MThDMTE0Ljc4NiAxMS42NjY4IDExNS42NDkgMTAuODM0IDExNi43NDEgMTAuMjUzMUMxMTcuODM2IDkuNjcyMjUgMTE5LjA2MyA5LjM4MjgxIDEyMC40MjEgOS4zODI4MUMxMjEuNzggOS4zODI4MSAxMjMuMDA3IDkuNjcyMjUgMTI0LjEwMSAxMC4yNTMxQzEyNS4xOTYgMTAuODM0IDEyNi4wNTkgMTEuNjY2OCAxMjYuNjg3IDEyLjc1MThDMTI3LjMxNyAxMy44Mzg2IDEyNy42MzIgMTUuMDkyOSAxMjcuNjMyIDE2LjUxODRDMTI3LjYzMiAxNy45NDQgMTI3LjMxMyAxOS4yMDAyIDEyNi42NzUgMjAuMjg1MUMxMjYuMDM3IDIxLjM3MiAxMjUuMTY3IDIyLjIwNDkgMTI0LjA2NCAyMi43ODM4QzEyMi45NjEgMjMuMzY0NiAxMjEuNzMxIDIzLjY1NDEgMTIwLjM3MiAyMy42NTQxQzExOS4wMTQgMjMuNjU0MSAxMTcuNzg5IDIzLjM2NDYgMTE2LjcwNCAyMi43ODM4TDExNi43MDYgMjIuNzg1OFpNMTIyLjQ1MSAxOS4wODAxQzEyMy4wMjQgMTguNDgzNSAxMjMuMzEgMTcuNjI5IDEyMy4zMSAxNi41MTg0QzEyMy4zMSAxNS40MDc5IDEyMy4wMzIgMTQuNTUzNCAxMjIuNDc3IDEzLjk1NjhDMTIxLjkyMiAxMy4zNjAyIDEyMS4yMzcgMTMuMDYwOSAxMjAuNDI1IDEzLjA2MDlDMTE5LjYxNCAxMy4wNjA5IDExOC45MDcgMTMuMzU2MiAxMTguMzYyIDEzLjk0M0MxMTcuODE0IDE0LjUzMTcgMTE3LjU0MSAxNS4zOTAyIDExNy41NDEgMTYuNTE2NUMxMTcuNTQxIDE3LjY0MjcgMTE3LjgxMSAxOC40ODE1IDExOC4zNSAxOS4wNzgxQzExOC44ODggMTkuNjc0NyAxMTkuNTY1IDE5Ljk3NCAxMjAuMzc2IDE5Ljk3NEMxMjEuMTg3IDE5Ljk3NCAxMjEuODggMTkuNjc0NyAxMjIuNDUzIDE5LjA3ODFMMTIyLjQ1MSAxOS4wODAxWiIgZmlsbD0iIzAwQTVBMiIvPgo8cGF0aCBkPSJNMTQyLjE2OSAxMS4wMTA4QzE0My4xNCAxMi4wNjQyIDE0My42MjQgMTMuNTA5NCAxNDMuNjI0IDE1LjM1MDVWMjMuNDU2OEgxMzkuMzk2VjE1LjkyMTVDMTM5LjM5NiAxNC45OTQxIDEzOS4xNTYgMTQuMjcxNCAxMzguNjc2IDEzLjc1NzVDMTM4LjE5NSAxMy4yNDM2IDEzNy41NDggMTIuOTg3NyAxMzYuNzM2IDEyLjk4NzdDMTM1LjkyNSAxMi45ODc3IDEzNS4yNzcgMTMuMjQ1NiAxMzQuNzk3IDEzLjc1NzVDMTM0LjMxNiAxNC4yNzE0IDEzNC4wNzYgMTQuOTkyMSAxMzQuMDc2IDE1LjkyMTVWMjMuNDU2OEgxMjkuODI1VjkuNTgxM0gxMzQuMDc2VjExLjQyMDNDMTM0LjUwNyAxMC44MDggMTM1LjA4OCAxMC4zMjE2IDEzNS44MTcgOS45NjUyNUMxMzYuNTQ1IDkuNjA4ODcgMTM3LjM2NiA5LjQyOTY5IDEzOC4yNzggOS40Mjk2OUMxMzkuOTAzIDkuNDI5NjkgMTQxLjIgOS45NTU0MSAxNDIuMTcxIDExLjAwODhMMTQyLjE2OSAxMS4wMTA4WiIgZmlsbD0iIzAwQTVBMiIvPgo8cGF0aCBkPSJNNjkuMTY2NSAzOC45MDQ0SDYzLjA2NjZMNjEuOTQyMyA0Mi4wMTU0SDYwLjAxNjZMNjUuMDczIDI4LjEwODRINjcuMTc5OEw3Mi4yMTY1IDQyLjAxNTRINzAuMjkwOEw2OS4xNjY1IDM4LjkwNDRaTTY4LjY0NDcgMzcuNDE5OEw2Ni4xMTY1IDMwLjM1N0w2My41ODg0IDM3LjQxOThINjguNjQ0N1oiIGZpbGw9IiM0MTQ1NEQiLz4KPHBhdGggZD0iTTc1Ljg2ODUgNDEuNzYzOEM3NS4xOTkxIDQxLjQ3NjQgNzQuNjcxNCA0MS4wNzQ3IDc0LjI4MzUgNDAuNTU4OEM3My44OTU2IDQwLjA0NDkgNzMuNjgxIDM5LjQ1MjIgNzMuNjQxNiAzOC43ODI4SDc1LjUyNzlDNzUuNTgxMSAzOS4zMzIxIDc1LjgzOSAzOS43NzkxIDc2LjI5OTcgNDAuMTI3NkM3Ni43NjA1IDQwLjQ3NjEgNzcuMzY2OSA0MC42NDk0IDc4LjExNTIgNDAuNjQ5NEM3OC44MTAyIDQwLjY0OTQgNzkuMzU5NiA0MC40OTU4IDc5Ljc2MTIgNDAuMTg4NkM4MC4xNjI5IDM5Ljg4MTUgODAuMzYzNyAzOS40OTM2IDgwLjM2MzcgMzkuMDI1QzgwLjM2MzcgMzguNTU2NCA4MC4xNDkxIDM4LjE4NjIgNzkuNzIxOSAzNy45NTE5Qzc5LjI5MjYgMzcuNzE3NiA3OC42MzEgMzcuNDg3MiA3Ny43MzUxIDM3LjI1ODhDNzYuOTIgMzcuMDQ0MiA3Ni4yNTI1IDM2LjgyNzYgNzUuNzM4NiAzNi42MDdDNzUuMjIyNyAzNi4zODY1IDc0Ljc4MTYgMzYuMDU3NyA3NC40MTM0IDM1LjYyNDVDNzQuMDQ1MiAzNS4xODk0IDczLjg2MjEgMzQuNjE4NCA3My44NjIxIDMzLjkwOTVDNzMuODYyMSAzMy4zNDg0IDc0LjAyOTUgMzIuODMyNSA3NC4zNjQyIDMyLjM2MzlDNzQuNjk4OSAzMS44OTUyIDc1LjE3MzUgMzEuNTI1MSA3NS43ODk4IDMxLjI0OTRDNzYuNDA0MSAzMC45NzU3IDc3LjEwNyAzMC44Mzc5IDc3Ljg5NjYgMzAuODM3OUM3OS4xMTM0IDMwLjgzNzkgODAuMDk3OSAzMS4xNDUxIDgwLjg0NjIgMzEuNzYxM0M4MS41OTQ0IDMyLjM3NzYgODEuOTk2IDMzLjIyMDQgODIuMDQ5MiAzNC4yODk1SDgwLjIyNEM4MC4xODQ2IDMzLjcxNDYgNzkuOTUyMiAzMy4yNTE5IDc5LjUzMjggMzIuOTA1M0M3OS4xMTE1IDMyLjU1NjggNzguNTQ2NCAzMi4zODM2IDc3LjgzNzUgMzIuMzgzNkM3Ny4xODE5IDMyLjM4MzYgNzYuNjYwMSAzMi41MjM0IDc2LjI3MjIgMzIuODA0OUM3NS44ODQzIDMzLjA4NjUgNzUuNjg5NCAzMy40NTQ3IDc1LjY4OTQgMzMuOTA5NUM3NS42ODk0IDM0LjI3MTggNzUuODA1NSAzNC41NjkxIDc2LjAzOTggMzQuODAzNEM3Ni4yNzQxIDM1LjAzNzggNzYuNTY3NSAzNS4yMjQ4IDc2LjkyMTkgMzUuMzY0NkM3Ny4yNzY0IDM1LjUwNDQgNzcuNzY4NiAzNS42NjE5IDc4LjM5NjcgMzUuODM1MkM3OS4xODYzIDM2LjA0OTggNzkuODI4MiAzNi4yNjA1IDgwLjMyMjQgMzYuNDY3MkM4MC44MTY2IDM2LjY3NCA4MS4yNDE5IDM2Ljk4NTEgODEuNTk2MyAzNy40MDA2QzgxLjk1MDggMzcuODE2IDgyLjEzMzkgMzguMzU3NSA4Mi4xNDc3IDM5LjAyNjlDODIuMTQ3NyAzOS42Mjk1IDgxLjk4MDMgNDAuMTcwOSA4MS42NDU2IDQwLjY1MzNDODEuMzEwOCA0MS4xMzU3IDgwLjg0MDIgNDEuNTEzOCA4MC4yMzE4IDQxLjc4NzVDNzkuNjIzNCA0Mi4wNjEyIDc4LjkyNDQgNDIuMTk5IDc4LjEzNDggNDIuMTk5Qzc3LjI5MjEgNDIuMTk5IDc2LjUzNiA0Mi4wNTUzIDc1Ljg2NjYgNDEuNzY3OEw3NS44Njg1IDQxLjc2MzhaIiBmaWxsPSIjNDE0NTREIi8+CjxwYXRoIGQ9Ik04Ni40MjIzIDQxLjc2MzhDODUuNzUyOCA0MS40NzY0IDg1LjIyNTEgNDEuMDc0NyA4NC44MzcyIDQwLjU1ODhDODQuNDQ5MyA0MC4wNDQ5IDg0LjIzNDcgMzkuNDUyMiA4NC4xOTUzIDM4Ljc4MjhIODYuMDgxNkM4Ni4xMzQ4IDM5LjMzMjEgODYuMzkyNyAzOS43NzkxIDg2Ljg1MzUgNDAuMTI3NkM4Ny4zMTYyIDQwLjQ3NjEgODcuOTIwNyA0MC42NDk0IDg4LjY2ODkgNDAuNjQ5NEM4OS4zNjM5IDQwLjY0OTQgODkuOTEzMyA0MC40OTU4IDkwLjMxNSA0MC4xODg2QzkwLjcxNjYgMzkuODgxNSA5MC45MTc1IDM5LjQ5MzYgOTAuOTE3NSAzOS4wMjVDOTAuOTE3NSAzOC41NTY0IDkwLjcwMjggMzguMTg2MiA5MC4yNzU2IDM3Ljk1MTlDODkuODQ2MyAzNy43MTc2IDg5LjE4NDcgMzcuNDg3MiA4OC4yODg5IDM3LjI1ODhDODcuNDcxNyAzNy4wNDQyIDg2LjgwNjIgMzYuODI3NiA4Ni4yOTIzIDM2LjYwN0M4NS43NzY0IDM2LjM4NjUgODUuMzM1NCAzNi4wNTc3IDg0Ljk2NzIgMzUuNjI0NUM4NC41OTkgMzUuMTg5NCA4NC40MTU4IDM0LjYxODQgODQuNDE1OCAzMy45MDk1Qzg0LjQxNTggMzMuMzQ4NCA4NC41ODMyIDMyLjgzMjUgODQuOTE3OSAzMi4zNjM5Qzg1LjI1MjcgMzEuODk1MiA4NS43MjcyIDMxLjUyNTEgODYuMzQzNSAzMS4yNDk0Qzg2Ljk1NzggMzAuOTc1NyA4Ny42NjA3IDMwLjgzNzkgODguNDUwMyAzMC44Mzc5Qzg5LjY2NzIgMzAuODM3OSA5MC42NTE3IDMxLjE0NTEgOTEuMzk5OSAzMS43NjEzQzkyLjE0ODEgMzIuMzc3NiA5Mi41NDk4IDMzLjIyMDQgOTIuNjAyOSAzNC4yODk1SDkwLjc3NzdDOTAuNzM4MyAzMy43MTQ2IDkwLjUwNTkgMzMuMjUxOSA5MC4wODY1IDMyLjkwNTNDODkuNjY1MiAzMi41NTY4IDg5LjEwMDEgMzIuMzgzNiA4OC4zOTEyIDMyLjM4MzZDODcuNzM1NiAzMi4zODM2IDg3LjIxMzggMzIuNTIzNCA4Ni44MjU5IDMyLjgwNDlDODYuNDM4IDMzLjA4NjUgODYuMjQzMSAzMy40NTQ3IDg2LjI0MzEgMzMuOTA5NUM4Ni4yNDMxIDM0LjI3MTggODYuMzYxMiAzNC41NjkxIDg2LjU5MzYgMzQuODAzNEM4Ni44MjU5IDM1LjAzNzggODcuMTIxMiAzNS4yMjQ4IDg3LjQ3NzYgMzUuMzY0NkM4Ny44MzIgMzUuNTA0NCA4OC4zMjQzIDM1LjY2MTkgODguOTUyNCAzNS44MzUyQzg5Ljc0MiAzNi4wNDk4IDkwLjM4MzkgMzYuMjYwNSA5MC44ODAxIDM2LjQ2NzJDOTEuMzc0MyAzNi42NzQgOTEuNzk5NiAzNi45ODUxIDkyLjE1NCAzNy40MDA2QzkyLjUwODQgMzcuODE2IDkyLjY5MTUgMzguMzU3NSA5Mi43MDUzIDM5LjAyNjlDOTIuNzA1MyAzOS42Mjk1IDkyLjUzNzkgNDAuMTcwOSA5Mi4yMDMyIDQwLjY1MzNDOTEuODY4NSA0MS4xMzU3IDkxLjM5NzkgNDEuNTEzOCA5MC43ODk1IDQxLjc4NzVDOTAuMTgxMSA0Mi4wNjEyIDg5LjQ4MjEgNDIuMTk5IDg4LjY5MjUgNDIuMTk5Qzg3Ljg0OTggNDIuMTk5IDg3LjA5MzcgNDIuMDU1MyA4Ni40MjYyIDQxLjc2NzhMODYuNDIyMyA0MS43NjM4WiIgZmlsbD0iIzQxNDU0RCIvPgo8cGF0aCBkPSJNOTcuMzM5IDQxLjQ5NDFDOTYuNTAyMiA0MS4wMjU1IDk1Ljg0NjUgNDAuMzYgOTUuMzcyIDM5LjQ5NzVDOTQuODk3NCAzOC42MzUxIDk0LjY1OTIgMzcuNjM0OSA5NC42NTkyIDM2LjQ5NjhDOTQuNjU5MiAzNS4zNTg3IDk0LjkwMzMgMzQuMzgwMSA5NS4zOTE2IDMzLjUxNTdDOTUuODggMzIuNjUzMyA5Ni41NDU1IDMxLjk5MTcgOTcuMzg4MiAzMS41MjlDOTguMjMwOSAzMS4wNjgzIDk5LjE3NDEgMzAuODM1OSAxMDAuMjE4IDMwLjgzNTlDMTAxLjI2MSAzMC44MzU5IDEwMi4yMDQgMzEuMDY2MyAxMDMuMDQ3IDMxLjUyOUMxMDMuODkgMzEuOTg5OCAxMDQuNTU1IDMyLjY0OTQgMTA1LjA0NCAzMy41MDU5QzEwNS41MzIgMzQuMzYyNCAxMDUuNzc2IDM1LjM1ODcgMTA1Ljc3NiAzNi40OTY4QzEwNS43NzYgMzcuNjM0OSAxMDUuNTI2IDM4LjYzMzIgMTA1LjAyNCAzOS40OTc1QzEwNC41MjIgNDAuMzYgMTAzLjg0MyA0MS4wMjU1IDEwMi45ODggNDEuNDk0MUMxMDIuMTMyIDQxLjk2MjcgMTAxLjE4MiA0Mi4xOTcgMTAwLjEzOSA0Mi4xOTdDOTkuMDk1MyA0Mi4xOTcgOTguMTc1OCA0MS45NjI3IDk3LjMzOSA0MS40OTQxWk0xMDEuOTg0IDQwLjEyOTZDMTAyLjU1OSAzOS44MjI0IDEwMy4wMjMgMzkuMzU5NyAxMDMuMzc4IDM4Ljc0NTRDMTAzLjczMiAzOC4xMzExIDEwMy45MSAzNy4zODA5IDEwMy45MSAzNi40OTg4QzEwMy45MSAzNS42MTY3IDEwMy43MzQgMzQuODY2NSAxMDMuMzg4IDM0LjI1MjFDMTAzLjAzOSAzMy42Mzc4IDEwMi41ODQgMzMuMTc5IDEwMi4wMjMgMzIuODc3OEMxMDEuNDYyIDMyLjU3NjUgMTAwLjg1NCAzMi40MjY5IDEwMC4xOTggMzIuNDI2OUM5OS41NDIzIDMyLjQyNjkgOTguOTE2MSAzMi41NzY1IDk4LjM2MjkgMzIuODc3OEM5Ny44MDc2IDMzLjE3OSA5Ny4zNjI2IDMzLjYzNzggOTcuMDI3OSAzNC4yNTIxQzk2LjY5MzIgMzQuODY2NSA5Ni41MjU4IDM1LjYxNjcgOTYuNTI1OCAzNi40OTg4Qzk2LjUyNTggMzcuMzgwOSA5Ni42ODkyIDM4LjE1MDggOTcuMDE4IDM4Ljc2N0M5Ny4zNDQ5IDM5LjM4MzMgOTcuNzg0IDM5Ljg0MDEgOTguMzMxNCA0MC4xNDE0Qzk4Ljg3ODcgNDAuNDQyNyA5OS40ODEyIDQwLjU5MjMgMTAwLjEzNyA0MC41OTIzQzEwMC43OTMgNDAuNTkyMyAxMDEuNDA3IDQwLjQzODcgMTAxLjk4MiA0MC4xMzE2TDEwMS45ODQgNDAuMTI5NloiIGZpbGw9IiM0MTQ1NEQiLz4KPHBhdGggZD0iTTEwOC4zNzkgMzMuNTE3N0MxMDguODMzIDMyLjY2OTEgMTA5LjQ2NSAzMi4wMDk0IDExMC4yNzUgMzEuNTQwOEMxMTEuMDg0IDMxLjA3MjIgMTEyLjAwOSAzMC44Mzc5IDExMy4wNTMgMzAuODM3OUMxMTQuNDA0IDMwLjgzNzkgMTE1LjUxOCAzMS4xNjY3IDExNi4zOTQgMzEuODIwNEMxMTcuMjcxIDMyLjQ3NjEgMTE3Ljg0OSAzMy4zODU4IDExOC4xMjkgMzQuNTQ5NEgxMTYuMTYyQzExNS45NzUgMzMuODggMTE1LjYxMSAzMy4zNTIzIDExNS4wNjcgMzIuOTY0NEMxMTQuNTI2IDMyLjU3NjUgMTEzLjg1NCAzMi4zODE2IDExMy4wNTEgMzIuMzgxNkMxMTIuMDA3IDMyLjM4MTYgMTExLjE2NSAzMi43Mzk5IDExMC41MjMgMzMuNDU0N0MxMDkuODgxIDM0LjE3MTQgMTA5LjU2IDM1LjE4MzUgMTA5LjU2IDM2LjQ5NDhDMTA5LjU2IDM3LjgwNjIgMTA5Ljg4MSAzOC44NDE5IDExMC41MjMgMzkuNTY0NUMxMTEuMTY1IDQwLjI4NzEgMTEyLjAwNyA0MC42NDc0IDExMy4wNTEgNDAuNjQ3NEMxMTMuODU0IDQwLjY0NzQgMTE0LjUyMiA0MC40NjA0IDExNS4wNTcgNDAuMDg2M0MxMTUuNTkzIDM5LjcxMjIgMTE1Ljk2MSAzOS4xNzY2IDExNi4xNjIgMzguNDgxNUgxMTguMTI5QzExNy44MzYgMzkuNjA1OCAxMTcuMjQ3IDQwLjUwNTcgMTE2LjM2MyA0MS4xODFDMTE1LjQ3OSA0MS44NTY0IDExNC4zNzYgNDIuMTk1MSAxMTMuMDUxIDQyLjE5NTFDMTEyLjAwNyA0Mi4xOTUxIDExMS4wODIgNDEuOTYwNyAxMTAuMjczIDQxLjQ5MjFDMTA5LjQ2MyA0MS4wMjM1IDEwOC44MzEgNDAuMzYxOSAxMDguMzc3IDM5LjUwNTRDMTA3LjkyMiAzOC42NDg5IDEwNy42OTUgMzcuNjQ2NyAxMDcuNjk1IDM2LjQ5NDhDMTA3LjY5NSAzNS4zNDI5IDEwNy45MjQgMzQuMzY0NCAxMDguMzc3IDMzLjUxMzhMMTA4LjM3OSAzMy41MTc3WiIgZmlsbD0iIzQxNDU0RCIvPgo8cGF0aCBkPSJNMTIwLjY1OCAzMC4yMzQ5QzEyMC40MTggMjkuOTk0NyAxMjAuMjk2IDI5LjY5OTMgMTIwLjI5NiAyOS4zNTI4QzEyMC4yOTYgMjkuMDA2MyAxMjAuNDE2IDI4LjcxMDkgMTIwLjY1OCAyOC40Njg3QzEyMC45IDI4LjIyNjUgMTIxLjE5NCAyOC4xMDg0IDEyMS41NDIgMjguMTA4NEMxMjEuODkxIDI4LjEwODQgMTIyLjE2MSAyOC4yMjg1IDEyMi4zOTUgMjguNDY4N0MxMjIuNjI5IDI4LjcwODkgMTIyLjc0NyAyOS4wMDQzIDEyMi43NDcgMjkuMzUyOEMxMjIuNzQ3IDI5LjcwMTMgMTIyLjYyOSAyOS45OTQ3IDEyMi4zOTUgMzAuMjM0OUMxMjIuMTYxIDMwLjQ3NTEgMTIxLjg3NyAzMC41OTUyIDEyMS41NDIgMzAuNTk1MkMxMjEuMjA4IDMwLjU5NTIgMTIwLjkgMzAuNDc1MSAxMjAuNjU4IDMwLjIzNDlaIiBmaWxsPSIjNDE0NTREIi8+CjxwYXRoIGQ9Ik0xMjIuNDIyIDMyLjM4MjhIMTIwLjU5N1Y0Mi4wMTUxSDEyMi40MjJWMzIuMzgyOFoiIGZpbGw9IiM0MTQ1NEQiLz4KPHBhdGggZD0iTTEyNS42MzcgMzMuNTE3N0MxMjYuMDkyIDMyLjY2OTEgMTI2LjcxOCAzMi4wMDk0IDEyNy41MTQgMzEuNTQwOEMxMjguMzA5IDMxLjA3MjIgMTI5LjE5NSAzMC44Mzc5IDEzMC4xNzIgMzAuODM3OUMxMzEuMTQ5IDMwLjgzNzkgMTMxLjk3MiAzMS4wNDQ2IDEzMi42OCAzMS40NjAxQzEzMy4zODkgMzEuODc1NiAxMzMuOTE3IDMyLjM5NzMgMTM0LjI2NSAzMy4wMjU0VjMxLjAxOUgxMzYuMTEyVjQyLjAxNTlIMTM0LjI2NVYzOS45NjgxQzEzMy45MDUgNDAuNjEgMTMzLjM2NiA0MS4xNDE2IDEzMi42NTEgNDEuNTYzQzEzMS45MzQgNDEuOTg0NCAxMzEuMTAxIDQyLjE5NTEgMTMwLjE1MiA0Mi4xOTUxQzEyOS4yMDMgNDIuMTk1MSAxMjguMjk0IDQxLjk1NDggMTI3LjUwNCA0MS40NzI0QzEyNi43MTQgNDAuOTkgMTI2LjA5MiA0MC4zMTQ3IDEyNS42MzcgMzkuNDQ2M0MxMjUuMTgyIDM4LjU3NiAxMjQuOTU2IDM3LjU4NzYgMTI0Ljk1NiAzNi40NzcxQzEyNC45NTYgMzUuMzY2NiAxMjUuMTg0IDM0LjM2NjMgMTI1LjYzNyAzMy41MTc3Wk0xMzMuNzY1IDM0LjMyODlDMTMzLjQzMSAzMy43MTQ2IDEzMi45OCAzMy4yNDIgMTMyLjQxMSAzMi45MTMyQzEzMS44NDIgMzIuNTg2NCAxMzEuMjE3IDMyLjQyMSAxMzAuNTM0IDMyLjQyMUMxMjkuODUxIDMyLjQyMSAxMjkuMjMxIDMyLjU4MDUgMTI4LjY2OCAzMi45MDM0QzEyOC4xMDYgMzMuMjI0MyAxMjcuNjU4IDMzLjY5MjkgMTI3LjMyMyAzNC4zMDczQzEyNi45ODggMzQuOTIzNiAxMjYuODIxIDM1LjY0NDIgMTI2LjgyMSAzNi40NzUxQzEyNi44MjEgMzcuMzA2IDEyNi45ODggMzguMDUwMyAxMjcuMzIzIDM4LjY3MjVDMTI3LjY1OCAzOS4yOTQ3IDEyOC4xMDQgMzkuNzY5MyAxMjguNjY4IDQwLjA5ODFDMTI5LjIyOSA0MC40MjY5IDEyOS44NTEgNDAuNTkwMyAxMzAuNTM0IDQwLjU5MDNDMTMxLjIxNyA0MC41OTAzIDEzMS44NDIgNDAuNDI2OSAxMzIuNDExIDQwLjA5ODFDMTMyLjk4IDM5Ljc3MTIgMTMzLjQzMSAzOS4yOTQ3IDEzMy43NjUgMzguNjcyNUMxMzQuMSAzOC4wNTAzIDEzNC4yNjcgMzcuMzI1NyAxMzQuMjY3IDM2LjQ5NDhDMTM0LjI2NyAzNS42NjM5IDEzNC4xIDM0Ljk0MzIgMTMzLjc2NSAzNC4zMjY5VjM0LjMyODlaIiBmaWxsPSIjNDE0NTREIi8+CjxwYXRoIGQ9Ik0xNDEuNTA4IDMyLjUyMjdWMzkuMDA0N0MxNDEuNTA4IDM5LjU0MDIgMTQxLjYyMiAzOS45MTgzIDE0MS44NDggNDAuMTM4OEMxNDIuMDc3IDQwLjM1OTMgMTQyLjQ3MSA0MC40Njk2IDE0My4wMzIgNDAuNDY5NkgxNDQuMzc2VjQyLjAxNTNIMTQyLjczQzE0MS43MTQgNDIuMDE1MyAxNDAuOTUgNDEuNzgwOSAxNDAuNDQyIDQxLjMxMjNDMTM5LjkzNCA0MC44NDM3IDEzOS42OCA0MC4wNzU4IDEzOS42OCAzOS4wMDQ3VjMyLjUyMjdIMTM4LjI1NVYzMS4wMTg0SDEzOS42OFYyOC4yNDhIMTQxLjUwNlYzMS4wMTg0SDE0NC4zNzVWMzIuNTIyN0gxNDEuNTA2SDE0MS41MDhaIiBmaWxsPSIjNDE0NTREIi8+CjxwYXRoIGQ9Ik0xNTYuMjgzIDM3LjE5OTdIMTQ3LjQ5NEMxNDcuNTYgMzguMjgyNyAxNDcuOTMxIDM5LjEyOTMgMTQ4LjYwOCAzOS43Mzc4QzE0OS4yODMgNDAuMzQ2MiAxNTAuMTAyIDQwLjY1MTQgMTUxLjA2NyA0MC42NTE0QzE1MS44NTcgNDAuNjUxNCAxNTIuNTE0IDQwLjQ2ODMgMTUzLjA0NCA0MC4xMDAxQzE1My41NzIgMzkuNzMxOSAxNTMuOTQ0IDM5LjI0MTYgMTU0LjE1OSAzOC42MjUzSDE1Ni4xMjZDMTU1LjgzIDM5LjY4MjYgMTU1LjI0MiA0MC41NDExIDE1NC4zNTkgNDEuMjA0N0MxNTMuNDc1IDQxLjg2NjIgMTUyLjM3OSA0Mi4xOTcgMTUxLjA2OSA0Mi4xOTdDMTUwLjAyNiA0Mi4xOTcgMTQ5LjA5MiA0MS45NjI3IDE0OC4yNjkgNDEuNDk0MUMxNDcuNDQ2IDQxLjAyNTUgMTQ2LjggNDAuMzYgMTQ2LjMzMiAzOS40OTc1QzE0NS44NjMgMzguNjM1MSAxNDUuNjI5IDM3LjYzNDkgMTQ1LjYyOSAzNi40OTY4QzE0NS42MjkgMzUuMzU4NyAxNDUuODU3IDM0LjM2MjQgMTQ2LjMxIDMzLjUwNTlDMTQ2Ljc2NSAzMi42NDk0IDE0Ny40MDUgMzEuOTkxNyAxNDguMjI2IDMxLjUyOUMxNDkuMDQ5IDMxLjA2ODMgMTQ5Ljk5NCAzMC44MzU5IDE1MS4wNjUgMzAuODM1OUMxNTIuMTM2IDMwLjgzNTkgMTUzLjAzMiAzMS4wNjQzIDE1My44MzQgMzEuNTE3MkMxNTQuNjM3IDMxLjk3MiAxNTUuMjU1IDMyLjU5ODIgMTU1LjY5IDMzLjM5MzdDMTU2LjEyNiAzNC4xODkxIDE1Ni4zNDIgMzUuMDg5IDE1Ni4zNDIgMzYuMDkzMkMxNTYuMzQyIDM2LjQ0MTcgMTU2LjMyMyAzNi44MDk5IDE1Ni4yODEgMzcuMTk3OEwxNTYuMjgzIDM3LjE5OTdaTTE1My45OTUgMzMuOTE3NEMxNTMuNjg4IDMzLjQxNTMgMTUzLjI2OSAzMy4wMzUzIDE1Mi43NDEgMzIuNzczNEMxNTIuMjEzIDMyLjUxMzUgMTUxLjYyOCAzMi4zODE2IDE1MC45ODUgMzIuMzgxNkMxNTAuMDYxIDMyLjM4MTYgMTQ5LjI3NSAzMi42NzUgMTQ4LjYyOCAzMy4yNjM3QzE0Ny45NzggMzMuODUyNCAxNDcuNjA4IDM0LjY2NzYgMTQ3LjUxNSAzNS43MTEySDE1NC40NThDMTU0LjQ1OCAzNS4wMTYxIDE1NC4zMDQgMzQuNDE3NSAxNTMuOTk3IDMzLjkxNTRMMTUzLjk5NSAzMy45MTc0WiIgZmlsbD0iIzQxNDU0RCIvPgo8cGF0aCBkPSJNMTYwLjQ3OSA0MS43NjM4QzE1OS44MDkgNDEuNDc2NCAxNTkuMjgyIDQxLjA3NDcgMTU4Ljg5NCA0MC41NTg4QzE1OC41MDYgNDAuMDQ0OSAxNTguMjkxIDM5LjQ1MjIgMTU4LjI1MiAzOC43ODI4SDE2MC4xMzhDMTYwLjE5MSAzOS4zMzIxIDE2MC40NDkgMzkuNzc5MSAxNjAuOTEgNDAuMTI3NkMxNjEuMzczIDQwLjQ3NjEgMTYxLjk3NyA0MC42NDk0IDE2Mi43MjYgNDAuNjQ5NEMxNjMuNDIxIDQwLjY0OTQgMTYzLjk3IDQwLjQ5NTggMTY0LjM3MiA0MC4xODg2QzE2NC43NzMgMzkuODgxNSAxNjQuOTc0IDM5LjQ5MzYgMTY0Ljk3NCAzOS4wMjVDMTY0Ljk3NCAzOC41NTY0IDE2NC43NTkgMzguMTg2MiAxNjQuMzMyIDM3Ljk1MTlDMTYzLjkwMyAzNy43MTc2IDE2My4yNDEgMzcuNDg3MiAxNjIuMzQ2IDM3LjI1ODhDMTYxLjUyOCAzNy4wNDQyIDE2MC44NjMgMzYuODI3NiAxNjAuMzQ5IDM2LjYwN0MxNTkuODMzIDM2LjM4NjUgMTU5LjM5MiAzNi4wNTc3IDE1OS4wMjQgMzUuNjI0NUMxNTguNjU2IDM1LjE4OTQgMTU4LjQ3MiAzNC42MTg0IDE1OC40NzIgMzMuOTA5NUMxNTguNDcyIDMzLjM0ODQgMTU4LjY0IDMyLjgzMjUgMTU4Ljk3NSAzMi4zNjM5QzE1OS4zMDkgMzEuODk1MiAxNTkuNzg0IDMxLjUyNTEgMTYwLjQgMzEuMjQ5NEMxNjEuMDE0IDMwLjk3NTcgMTYxLjcxNyAzMC44Mzc5IDE2Mi41MDcgMzAuODM3OUMxNjMuNzI0IDMwLjgzNzkgMTY0LjcwOCAzMS4xNDUxIDE2NS40NTcgMzEuNzYxM0MxNjYuMjA1IDMyLjM3NzYgMTY2LjYwNiAzMy4yMjA0IDE2Ni42NiAzNC4yODk1SDE2NC44MzRDMTY0Ljc5NSAzMy43MTQ2IDE2NC41NjMgMzMuMjUxOSAxNjQuMTQzIDMyLjkwNTNDMTYzLjcyMiAzMi41NTY4IDE2My4xNTcgMzIuMzgzNiAxNjIuNDQ4IDMyLjM4MzZDMTYxLjc5MiAzMi4zODM2IDE2MS4yNyAzMi41MjM0IDE2MC44ODMgMzIuODA0OUMxNjAuNDk1IDMzLjA4NjUgMTYwLjMgMzMuNDU0NyAxNjAuMyAzMy45MDk1QzE2MC4zIDM0LjI3MTggMTYwLjQxOCAzNC41NjkxIDE2MC42NSAzNC44MDM0QzE2MC44ODMgMzUuMDM3OCAxNjEuMTc4IDM1LjIyNDggMTYxLjUzNCAzNS4zNjQ2QzE2MS44ODkgMzUuNTA0NCAxNjIuMzgxIDM1LjY2MTkgMTYzLjAwOSAzNS44MzUyQzE2My43OTkgMzYuMDQ5OCAxNjQuNDQxIDM2LjI2MDUgMTY0LjkzNyAzNi40NjcyQzE2NS40MzEgMzYuNjc0IDE2NS44NTYgMzYuOTg1MSAxNjYuMjExIDM3LjQwMDZDMTY2LjU2NSAzNy44MTYgMTY2Ljc0OCAzOC4zNTc1IDE2Ni43NjIgMzkuMDI2OUMxNjYuNzYyIDM5LjYyOTUgMTY2LjU5NSA0MC4xNzA5IDE2Ni4yNiA0MC42NTMzQzE2NS45MjUgNDEuMTM1NyAxNjUuNDU1IDQxLjUxMzggMTY0Ljg0NiA0MS43ODc1QzE2NC4yMzggNDIuMDYxMiAxNjMuNTM5IDQyLjE5OSAxNjIuNzQ5IDQyLjE5OUMxNjEuOTA2IDQyLjE5OSAxNjEuMTUgNDIuMDU1MyAxNjAuNDgzIDQxLjc2NzhMMTYwLjQ3OSA0MS43NjM4WiIgZmlsbD0iIzQxNDU0RCIvPgo8L3N2Zz4K"
+        },
+        "style": {
+          "fit": "contain"
+        }
+      },
+      {
+        "id": "text-subtitle-p2",
+        "kind": "text",
+        "body": "Specialty \u00d7 status volume and governed assignment detail",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#C8E8E7"
+        }
+      },
+      {
+        "id": "container-filters-p1",
+        "kind": "container",
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "kpi-wrap-booked",
+        "kind": "container",
+        "style": {
+          "borderRadius": "round",
+          "borderWidth": 0
+        },
+        "backgroundImage": {
+          "source": {
+            "kind": "url",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MjAgMzAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBzbGljZSI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMEYyQTNBIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDA3QTc4Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjUyMCIgaGVpZ2h0PSIzMDAiIGZpbGw9InVybCgjZykiLz48L3N2Zz4="
+          },
+          "style": {
+            "fit": "cover"
+          }
+        }
+      },
+      {
+        "id": "kpi-wrap-avg-bill",
+        "kind": "container",
+        "style": {
+          "borderRadius": "round",
+          "borderWidth": 0
+        },
+        "backgroundImage": {
+          "source": {
+            "kind": "url",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MjAgMzAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBzbGljZSI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMUUzQTRDIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDBBNUEyIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjUyMCIgaGVpZ2h0PSIzMDAiIGZpbGw9InVybCgjZykiLz48L3N2Zz4="
+          },
+          "style": {
+            "fit": "cover"
+          }
+        }
+      },
+      {
+        "id": "kpi-wrap-avg-pay",
+        "kind": "container",
+        "style": {
+          "borderRadius": "round",
+          "borderWidth": 0
+        },
+        "backgroundImage": {
+          "source": {
+            "kind": "url",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MjAgMzAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBzbGljZSI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMEYyQTNBIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMUUzQTRDIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjUyMCIgaGVpZ2h0PSIzMDAiIGZpbGw9InVybCgjZykiLz48L3N2Zz4="
+          },
+          "style": {
+            "fit": "cover"
+          }
+        }
+      },
+      {
+        "id": "kpi-wrap-avg-spread",
+        "kind": "container",
+        "style": {
+          "borderRadius": "round",
+          "borderWidth": 0
+        },
+        "backgroundImage": {
+          "source": {
+            "kind": "url",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MjAgMzAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBzbGljZSI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMDA3QTc4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNUJCRkI4Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjUyMCIgaGVpZ2h0PSIzMDAiIGZpbGw9InVybCgjZykiLz48L3N2Zz4="
+          },
+          "style": {
+            "fit": "cover"
+          }
+        }
+      },
+      {
+        "id": "kpi-wrap-contract-value",
+        "kind": "container",
+        "style": {
+          "borderRadius": "round",
+          "borderWidth": 0
+        },
+        "backgroundImage": {
+          "source": {
+            "kind": "url",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MjAgMzAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBzbGljZSI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMUUzQTRDIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDA3QTc4Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjUyMCIgaGVpZ2h0PSIzMDAiIGZpbGw9InVybCgjZykiLz48L3N2Zz4="
+          },
+          "style": {
+            "fit": "cover"
+          }
+        }
+      },
+      {
+        "id": "kpi-wrap-cancelled",
+        "kind": "container",
+        "style": {
+          "borderRadius": "round",
+          "borderWidth": 0
+        },
+        "backgroundImage": {
+          "source": {
+            "kind": "url",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MjAgMzAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBzbGljZSI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMEYyQTNBIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDBBNUEyIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjUyMCIgaGVpZ2h0PSIzMDAiIGZpbGw9InVybCgjZykiLz48L3N2Zz4="
+          },
+          "style": {
+            "fit": "cover"
+          }
+        }
+      }
+    ],
+    "pages": [
+      {
+        "id": "page-overview",
+        "name": "Assignment Overview"
+      },
+      {
+        "id": "page-detail",
+        "name": "Assignment Pipeline & Detail"
+      }
+    ],
+    "kind": "workbook",
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-overview\">\n  <Container elementId=\"container-hdr-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p1\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p1\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"text-subtitle-p1\" gridColumn=\"6 / 20\" gridRow=\"3 / 5\"/>\n  </Container>\n  <Container elementId=\"container-filters-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 8\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 7\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-state\" gridColumn=\"7 / 13\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"13 / 19\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-status\" gridColumn=\"19 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Container elementId=\"container-kpi-p1\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"8 / 16\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Container elementId=\"kpi-wrap-booked\" type=\"grid\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\" gridTemplateColumns=\"repeat(4, 1fr)\" gridTemplateRows=\"repeat(8, 1fr)\">\n      <Element elementId=\"kpi-booked\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    </Container>\n    <Container elementId=\"kpi-wrap-avg-bill\" type=\"grid\" gridColumn=\"5 / 9\" gridRow=\"1 / 9\" gridTemplateColumns=\"repeat(4, 1fr)\" gridTemplateRows=\"repeat(8, 1fr)\">\n      <Element elementId=\"kpi-avg-bill\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    </Container>\n    <Container elementId=\"kpi-wrap-avg-pay\" type=\"grid\" gridColumn=\"9 / 13\" gridRow=\"1 / 9\" gridTemplateColumns=\"repeat(4, 1fr)\" gridTemplateRows=\"repeat(8, 1fr)\">\n      <Element elementId=\"kpi-avg-pay\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    </Container>\n    <Container elementId=\"kpi-wrap-avg-spread\" type=\"grid\" gridColumn=\"13 / 17\" gridRow=\"1 / 9\" gridTemplateColumns=\"repeat(4, 1fr)\" gridTemplateRows=\"repeat(8, 1fr)\">\n      <Element elementId=\"kpi-avg-spread\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    </Container>\n    <Container elementId=\"kpi-wrap-contract-value\" type=\"grid\" gridColumn=\"17 / 21\" gridRow=\"1 / 9\" gridTemplateColumns=\"repeat(4, 1fr)\" gridTemplateRows=\"repeat(8, 1fr)\">\n      <Element elementId=\"kpi-contract-value\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    </Container>\n    <Container elementId=\"kpi-wrap-cancelled\" type=\"grid\" gridColumn=\"21 / 25\" gridRow=\"1 / 9\" gridTemplateColumns=\"repeat(4, 1fr)\" gridTemplateRows=\"repeat(8, 1fr)\">\n      <Element elementId=\"kpi-cancelled\" gridColumn=\"1 / 5\" gridRow=\"1 / 9\"/>\n    </Container>\n  </Container>\n  <Element elementId=\"ctrl-grain\" gridColumn=\"1 / 5\" gridRow=\"16 / 19\"/>\n  <Element elementId=\"chart-trend\" gridColumn=\"5 / 25\" gridRow=\"16 / 32\"/>\n  <Element elementId=\"chart-rate-by-specialty\" gridColumn=\"1 / 13\" gridRow=\"32 / 48\"/>\n  <Element elementId=\"chart-by-state\" gridColumn=\"13 / 25\" gridRow=\"32 / 48\"/>\n  <Element elementId=\"chart-cancel-trend\" gridColumn=\"1 / 19\" gridRow=\"48 / 64\"/>\n  <Element elementId=\"text-note-p1\" gridColumn=\"19 / 25\" gridRow=\"48 / 64\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-detail\">\n  <Container elementId=\"container-hdr-p2\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"1 / 5\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"logo-p2\" gridColumn=\"1 / 6\" gridRow=\"1 / 5\"/>\n    <Element elementId=\"text-title-p2\" gridColumn=\"6 / 16\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"text-subtitle-p2\" gridColumn=\"6 / 20\" gridRow=\"3 / 5\"/>\n    <Element elementId=\"ctrl-status-p2\" gridColumn=\"16 / 21\" gridRow=\"2 / 5\"/>\n    <Element elementId=\"ctrl-specialty-p2\" gridColumn=\"21 / 25\" gridRow=\"2 / 5\"/>\n  </Container>\n  <Element elementId=\"pivot-specialty-status\" gridColumn=\"1 / 25\" gridRow=\"5 / 21\"/>\n  <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"21 / 45\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 25\" gridRow=\"45 / 47\"/>\n</Page>\n",
+    "settings": {
+      "theme": {
+        "overrides": {
+          "colors": {
+            "text": "#41454D",
+            "highlight": "#00A5A2",
+            "success": "#007A78",
+            "warning": "#E1A32D",
+            "danger": "#D64545",
+            "darkMode": "hidden"
+          },
+          "colorOverrides": {
+            "backgroundCanvas": "#EEF4F4",
+            "canvasBackground": "#EEF4F4"
+          },
+          "categoricalScheme": [
+            "#00A5A2",
+            "#007A78",
+            "#1E3A4C",
+            "#5BBFB8",
+            "#2D6B6A",
+            "#7A8E99",
+            "#8FD4D2",
+            "#1A5050"
+          ],
+          "backgroundColor": "#EEF4F4",
+          "elementBackgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderRadius": "round",
+          "space": {
+            "unit": "small",
+            "showElementPadding": "shown"
+          },
+          "fonts": {
+            "dataFont": "Inter",
+            "textFont": "Inter"
+          }
+        }
+      }
+    }
+  }
+}
