@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Hampton Roads Branch Performance — BayPort Sigma Plugin</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#0A2B57;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 14px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#1E7F4D}
+  #meta{font-size:11px;color:#5B6B7F}
+  #meta b{color:#0A2B57}
+  #body{flex:1;display:flex;gap:10px;min-height:0}
+  #mapwrap{flex:1;position:relative;min-width:0}
+  svg{width:100%;height:100%;display:block}
+  .loc{stroke:#fff;stroke-width:.35;cursor:default;transition:opacity .1s}
+  .loc:hover{opacity:.82;stroke:#0A2B57;stroke-width:.9}
+  #side{flex:0 0 182px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;padding-top:2px}
+  #side .h{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#8592a3;font-weight:700}
+  .trow{display:flex;align-items:center;gap:7px;font-size:11px}
+  .sw{width:10px;height:10px;border-radius:2px;flex:0 0 10px}
+  .tn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .tv{color:#42506a;font-variant-numeric:tabular-nums}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#5B6B7F}
+  #ramp{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#C0392B,#EEC9A6,#EEF2F7,#8FD1B5,#1E7F4D)}
+  #tip{position:fixed;pointer-events:none;background:#0A2B57;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#8FD1B5}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Hampton Roads Branch Performance</div><div id="meta"><b id="lcount">0</b> localities · <b id="btotal">—</b> branches</div></div>
+  <div id="body">
+    <div id="mapwrap"><svg id="map" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div id="side"><div class="h">Top by balances</div><div id="tops"></div></div>
+  </div>
+  <div id="legend"><span>declining</span><div id="ramp"></div><span>growing</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  // Real Virginia Peninsula & Southside (Hampton Roads) locality shapes,
+  // pre-projected at build time from us-atlas's counties-albers-10m.json via
+  // d3-geo + topojson-client (Node, offline) -- never hand-authored, per
+  // standing convention. Matching by FIPS id at build time sidesteps the
+  // Franklin/Richmond county-vs-city name collision in Virginia; only the
+  // final label + path ships here.
+  var GEO = {"viewBox":[817.3648884190995,283.23268269910926,53.44076014206303,50.058996439635735],"feats":[
+    {"label":"Newport News","d":"M842.806,304.867L842.928,303.745L843.354,303.502L844.41,304.267L845.791,305.799L846.217,305.846L846.248,307.182L847.547,308.031L846.918,308.624L846.024,307.461L844.035,306.707L842.897,305.959Z","cx":845.18,"cy":306.06},
+    {"label":"Hampton","d":"M846.217,305.846L846.857,305.425L847.801,305.466L848.715,304.796L849.151,305.472L848.958,307.461L847.547,308.031L846.248,307.182Z","cx":847.68,"cy":306.41},
+    {"label":"York County","d":"M840.979,300.255L842.299,301.531L844.42,302.801L845.009,303.258L846.329,302.771L846.552,304.149L846.857,305.425L846.217,305.846L845.791,305.799L844.41,304.267L843.354,303.502L842.928,303.745L842.644,303.234L841.507,303.157L840.979,302.302L840.116,302.172L839.568,300.783Z","cx":843.21,"cy":303.05},
+    {"label":"Poquoson","d":"M846.552,304.149L847.385,303.828L848.715,304.796L847.801,305.466L846.857,305.425Z","cx":847.63,"cy":304.65},
+    {"label":"Williamsburg","d":"M840.116,302.172L840.979,302.302L841.507,303.157L840.38,303.418Z","cx":840.81,"cy":302.80},
+    {"label":"James City County","d":"M836.695,301.192L836.654,299.922L837.761,299.269L838.776,299.429L839.121,298.604L839.801,299.299L840.979,300.255L839.568,300.783L840.116,302.172L840.38,303.418L841.507,303.157L842.644,303.234L842.928,303.745L842.806,304.867L841.872,303.798L840.481,304.249L840.116,304.843L839.304,304.083L837.74,303.709L837.273,301.359Z","cx":839.79,"cy":301.74},
+    {"label":"Gloucester","d":"M840.024,295.233L841.111,295.363L844.217,296.444L844.481,298.598L845.324,298.883L844.776,299.792L846.278,301.376L846.887,301.513L844.42,302.801L842.299,301.531L840.979,300.255L839.801,299.299L840.715,297.945L840.106,296.942Z","cx":843.34,"cy":299.02},
+    {"label":"Mathews","d":"M844.217,296.444L844.705,295.85L845.598,295.85L845.74,296.349L846.979,296.016L847.76,297.269L848.177,298.598L848.004,300.433L846.674,299.447L845.324,298.883L844.481,298.598Z","cx":846.20,"cy":298.14},
+    {"label":"Isle of Wight","d":"M839.395,316.305L840.045,314.299L840.014,312.809L840.39,311.462L839.415,310.494L839.395,309.562L841.771,307.603L841.852,305.644L842.248,307.384L842.796,307.93L843.872,307.876L845.974,309.23L846.136,309.746L845.405,310.185L840.167,317.635L839.933,317.588Z","cx":842.77,"cy":311.64},
+    {"label":"Suffolk","d":"M840.167,317.635L845.405,310.185L846.136,309.746L846.309,310.476L847.649,310.168L847.557,310.916L847.141,312.204L847.77,318.252L846.897,318.448L840.268,319.766Z","cx":843.97,"cy":314.76},
+    {"label":"Portsmouth","d":"M847.649,310.168L848.461,309.402L849.029,310.073L850.055,311.426L850.126,311.96L848.715,312.548L848.339,311.426L847.557,310.916Z","cx":848.84,"cy":310.97},
+    {"label":"Norfolk","d":"M849.029,310.073L848.755,308.482L849.77,308.149L851.364,308.601L851.659,310.945L851.1,310.785L850.055,311.426Z","cx":850.21,"cy":309.79},
+    {"label":"Chesapeake","d":"M847.557,310.916L848.339,311.426L848.715,312.548L850.126,311.96L850.055,311.426L851.1,310.785L851.821,312.275L852.948,312.334L854.237,313.106L854.633,313.842L853.76,314.305L854.298,316.881L850.928,317.599L847.77,318.252L847.141,312.204Z","cx":850.89,"cy":314.52},
+    {"label":"Virginia Beach","d":"M851.1,310.785L851.659,310.945L851.364,308.601L853.07,308.755L854.4,307.959L854.887,308.322L856.339,311.515L857.993,314.216L858.806,315.92L854.298,316.881L853.76,314.305L854.633,313.842L854.237,313.106L852.948,312.334L851.821,312.275Z","cx":854.95,"cy":312.42},
+    {"label":"Southampton","d":"M830.471,318.098L835.273,313.611L837.811,311.094L839.395,309.562L839.415,310.494L840.39,311.462L840.014,312.809L840.045,314.299L839.395,316.305L838.674,316.573L838.918,317.344L839.933,317.588L840.167,317.635L840.268,319.766L840.299,319.956L835.893,320.787L833.558,321.292L832.482,321.286L832.228,320.247L830.979,319.25L829.365,319.184Z","cx":834.88,"cy":315.43},
+    {"label":"Franklin","d":"M839.395,316.305L839.933,317.588L838.918,317.344L838.674,316.573Z","cx":839.30,"cy":316.95}
+  ]};
+
+  var client=(window.SigmaPlugin&&window.SigmaPlugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'locality',type:'column',source:'source',label:'Locality'},
+    {name:'branches',type:'column',source:'source',allowedTypes:['number','integer'],label:'Branches'},
+    {name:'balances',type:'column',source:'source',allowedTypes:['number','integer'],label:'Balances ($M)'},
+    {name:'growth',type:'column',source:'source',allowedTypes:['number'],label:'Member Growth %'},
+    {name:'status',type:'column',source:'source',label:'Status'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var tip=document.getElementById('tip');
+  function fmt$(n){ return '$'+Math.round(n)+'M'; }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+  // Diverging red -> pale -> green, same scale shape as the legend gradient
+  function colorFor(g, lo, hi){
+    var mid=0;
+    if(g==null||isNaN(g)) return '#C9D3E0';
+    var t;
+    if(g<=mid){ t=Math.max(0,Math.min(1,(g-lo)/(mid-lo||1))); return mix('#C0392B','#EEF2F7',t); }
+    t=Math.max(0,Math.min(1,(g-mid)/(hi-mid||1))); return mix('#EEF2F7','#1E7F4D',t);
+  }
+  function mix(a,b,t){
+    function h2r(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+    var A=h2r(a),B=h2r(b);
+    var r=Math.round(A[0]+(B[0]-A[0])*t), g=Math.round(A[1]+(B[1]-A[1])*t), bl=Math.round(A[2]+(B[2]-A[2])*t);
+    return 'rgb('+r+','+g+','+bl+')';
+  }
+
+  function synth(){
+    // Mirrors company.py's _BAYPORT_LOCALITIES so the unbound preview reads
+    // as real BayPort data, not placeholder rows.
+    var rows=[
+      ["Newport News",5,640,4.2,"Ahead"],["Hampton",4,480,2.1,"On plan"],
+      ["York County",3,310,5.8,"Ahead"],["Poquoson",1,85,1.4,"On plan"],
+      ["Williamsburg",2,260,6.4,"Ahead"],["James City County",2,240,3.9,"On plan"],
+      ["Gloucester",1,78,-1.2,"Behind"],["Mathews",0,22,-3.4,"Behind"],
+      ["Isle of Wight",1,96,2.8,"On plan"],["Suffolk",2,210,7.1,"Ahead"],
+      ["Portsmouth",2,175,-2.6,"Behind"],["Norfolk",2,205,1.9,"On plan"],
+      ["Chesapeake",2,230,5.2,"Ahead"],["Virginia Beach",2,260,4.6,"Ahead"],
+      ["Southampton",0,38,-0.8,"On plan"],["Franklin",0,26,-4.1,"Behind"]
+    ];
+    return rows.map(function(r){return {locality:r[0],branches:r[1],balances:r[2],growth:r[3],status:r[4]};});
+  }
+
+  function render(data){
+    var byName={};
+    data.forEach(function(d){ byName[d.locality]=d; });
+    var growths=data.map(function(d){return d.growth;}).filter(function(v){return v!=null && !isNaN(v);});
+    var lo=Math.min.apply(null, growths.concat([-1])), hi=Math.max.apply(null, growths.concat([1]));
+
+    var svg=document.getElementById('map');
+    var vb=GEO.viewBox;
+    svg.setAttribute('viewBox', vb.join(' '));
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+
+    var totalBranches=0;
+    GEO.feats.forEach(function(f){
+      var d=byName[f.label] || {branches:0,balances:0,growth:null,status:'—'};
+      totalBranches += (d.branches||0);
+      var path=document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', f.d);
+      path.setAttribute('class','loc');
+      path.setAttribute('fill', colorFor(d.growth, lo, hi));
+      path.addEventListener('mousemove', function(e){
+        tip.style.opacity=1;
+        tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+10)+'px';
+        tip.innerHTML='<b>'+esc(f.label)+'</b><br>'+ (d.branches||0) +' branches &middot; '+fmt$(d.balances||0)+
+          '<br>Member growth: '+((d.growth==null)?'—':(d.growth>0?'+':'')+d.growth.toFixed(1)+'%')+
+          '<br>Status: '+esc(d.status||'—');
+      });
+      path.addEventListener('mouseleave', function(){ tip.style.opacity=0; });
+      svg.appendChild(path);
+    });
+
+    document.getElementById('lcount').textContent = GEO.feats.length;
+    document.getElementById('btotal').textContent = totalBranches;
+
+    var top=data.slice().sort(function(a,b){return (b.balances||0)-(a.balances||0);}).slice(0,8);
+    var tops=document.getElementById('tops');
+    tops.innerHTML='';
+    top.forEach(function(d){
+      var row=document.createElement('div'); row.className='trow';
+      var sw=document.createElement('div'); sw.className='sw'; sw.style.background=colorFor(d.growth,lo,hi);
+      var tn=document.createElement('div'); tn.className='tn'; tn.textContent=d.locality;
+      var tv=document.createElement('div'); tv.className='tv'; tv.textContent=fmt$(d.balances||0);
+      row.appendChild(sw); row.appendChild(tn); row.appendChild(tv);
+      tops.appendChild(row);
+    });
+  }
+
+  var unsub=null;
+  function bind(cfg){
+    if(unsub){ unsub(); unsub=null; }
+    if(!client || !cfg || !cfg.source || !cfg.locality){ render(synth()); return; }
+    unsub = client.elements.subscribeToElementData(cfg.source, function(elData){
+      if(!elData || !elData[cfg.locality]){ render(synth()); return; }
+      var n=elData[cfg.locality].length;
+      var rows=[];
+      for(var i=0;i<n;i++){
+        rows.push({
+          locality: elData[cfg.locality][i],
+          branches: cfg.branches ? Number(elData[cfg.branches][i]) : null,
+          balances: cfg.balances ? Number(elData[cfg.balances][i]) : 0,
+          growth: cfg.growth ? Number(elData[cfg.growth][i]) : null,
+          status: cfg.status ? elData[cfg.status][i] : null
+        });
+      }
+      render(rows);
+    });
+  }
+
+  if(client){
+    client.config.subscribe(function(cfg){ bind(cfg); });
+  } else {
+    render(synth());
+  }
+
+  // ResizeObserver on the stage element, not a window resize listener, and no
+  // animation loop -- headless PNG export must be able to reach idle.
+  var ro=new ResizeObserver(function(){ /* SVG viewBox is scale-invariant */ });
+  ro.observe(document.getElementById('wrap'));
+})();
+</script>
+</body>
+</html>
