@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Network &times; Daypart Ratings Heatmap — Fox Media Sigma Plugin</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#001D3D;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 14px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#BD232F}
+  #meta{font-size:11px;color:#5B6B7F}
+  #meta b{color:#001D3D}
+  #grid{flex:1;min-height:0;display:grid;gap:4px}
+  .rowlabel{display:flex;align-items:center;font-size:11px;font-weight:700;color:#001D3D;padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .collabel{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#5B6B7F}
+  .cell{position:relative;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:default;transition:transform .08s;min-height:0}
+  .cell:hover{transform:scale(1.04)}
+  .idx{font-size:15px;font-weight:800;line-height:1}
+  .st{position:absolute;left:6px;right:6px;bottom:5px;height:4px;border-radius:2px;background:rgba(255,255,255,.35)}
+  .st > i{display:block;height:100%;border-radius:2px;background:#00B9EA}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#5B6B7F}
+  #ramp{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#7C2333,#F0F0F0,#0EA394)}
+  #tip{position:fixed;pointer-events:none;background:#001D3D;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#00B9EA}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Network &times; Daypart Ratings</div><div id="meta"><b id="ncount">0</b> networks &middot; avg sell-through <b id="stavg">&mdash;</b></div></div>
+  <div id="grid"></div>
+  <div id="legend">Rating index vs plan<div id="ramp"></div><span>below plan &middot; on plan &middot; above plan</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var DAYPARTS = ["Early Morning","Daytime","Early Fringe","Primetime","Late Night"];
+
+  var client = (window.SigmaPlugin && window.SigmaPlugin.client) || null;
+  var defs = [
+    {name:'source', type:'element'},
+    {name:'network', type:'column', source:'source', label:'Network'},
+    {name:'daypart', type:'column', source:'source', label:'Daypart'},
+    {name:'rating', type:'column', source:'source', allowedTypes:['number','integer'], label:'Rating Index'},
+    {name:'sellthrough', type:'column', source:'source', allowedTypes:['number','integer'], label:'Sell-Through %'},
+    {name:'status', type:'column', source:'source', label:'Status'}
+  ];
+  if (client) client.config.configureEditorPanel(defs);
+
+  var tip = document.getElementById('tip');
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+  // Diverging red -> pale -> teal, centred on 100 (plan)
+  function colorFor(idx){
+    if (idx==null || isNaN(idx)) return '#EEF2F7';
+    var lo=65, mid=100, hi=145;
+    if (idx<=mid){ var t=Math.max(0,Math.min(1,(idx-lo)/(mid-lo))); return mix('#7C2333','#F0F0F0',t); }
+    var t2=Math.max(0,Math.min(1,(idx-mid)/(hi-mid))); return mix('#F0F0F0','#0EA394',t2);
+  }
+  function mix(a,b,t){
+    function h2r(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+    var A=h2r(a),B=h2r(b);
+    var r=Math.round(A[0]+(B[0]-A[0])*t), g=Math.round(A[1]+(B[1]-A[1])*t), bl=Math.round(A[2]+(B[2]-A[2])*t);
+    return 'rgb('+r+','+g+','+bl+')';
+  }
+  function textOn(idx){ return (idx!=null && idx>=100) ? '#0B3B33' : '#3A1015'; }
+
+  function synth(){
+    // Mirrors company.py's daypart_ratings_sql() so the unbound preview reads
+    // as real Fox Media data, not placeholder rows.
+    var rows = [
+      ["FOX News Media","Early Morning",128.4,92.1,"Ahead"],
+      ["FOX News Media","Daytime",104.2,86.4,"On plan"],
+      ["FOX News Media","Early Fringe",111.6,89.7,"Ahead"],
+      ["FOX News Media","Primetime",142.8,96.3,"Ahead"],
+      ["FOX News Media","Late Night",96.4,81.2,"On plan"],
+      ["FS1/FS2","Early Morning",82.6,74.8,"Behind"],
+      ["FS1/FS2","Daytime",91.3,79.5,"On plan"],
+      ["FS1/FS2","Early Fringe",118.7,90.2,"Ahead"],
+      ["FS1/FS2","Primetime",124.5,93.6,"Ahead"],
+      ["FS1/FS2","Late Night",88.9,77.3,"Behind"],
+      ["Big Ten Network","Early Morning",71.2,68.4,"Behind"],
+      ["Big Ten Network","Daytime",84.6,75.1,"Behind"],
+      ["Big Ten Network","Early Fringe",96.8,82.9,"On plan"],
+      ["Big Ten Network","Primetime",118.3,88.6,"Ahead"],
+      ["Big Ten Network","Late Night",79.4,70.2,"Behind"],
+      ["FOX Network","Early Morning",89.7,80.3,"On plan"],
+      ["FOX Network","Daytime",93.5,81.9,"On plan"],
+      ["FOX Network","Early Fringe",121.4,91.8,"Ahead"],
+      ["FOX Network","Primetime",156.2,98.4,"Ahead"],
+      ["FOX Network","Late Night",97.8,85.6,"On plan"],
+      ["Owned Television Stations","Early Morning",108.6,87.2,"Ahead"],
+      ["Owned Television Stations","Daytime",95.3,83.1,"On plan"],
+      ["Owned Television Stations","Early Fringe",132.7,94.5,"Ahead"],
+      ["Owned Television Stations","Primetime",119.4,90.8,"Ahead"],
+      ["Owned Television Stations","Late Night",102.1,85.9,"On plan"],
+      ["Tubi","Early Morning",68.4,71.2,"Behind"],
+      ["Tubi","Daytime",86.7,79.8,"On plan"],
+      ["Tubi","Early Fringe",97.5,84.3,"On plan"],
+      ["Tubi","Primetime",112.8,89.1,"Ahead"],
+      ["Tubi","Late Night",106.3,86.7,"Ahead"]
+    ];
+    return rows.map(function(r){ return {network:r[0], daypart:r[1], rating:r[2], sellthrough:r[3], status:r[4]}; });
+  }
+
+  function render(data){
+    var networks = [];
+    data.forEach(function(d){ if (networks.indexOf(d.network)===-1) networks.push(d.network); });
+    var byKey = {};
+    data.forEach(function(d){ byKey[d.network+'|||'+d.daypart] = d; });
+
+    var grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = '128px repeat(' + DAYPARTS.length + ', 1fr)';
+    grid.style.gridTemplateRows = '22px repeat(' + networks.length + ', 1fr)';
+
+    var corner = document.createElement('div');
+    grid.appendChild(corner);
+    DAYPARTS.forEach(function(dp){
+      var h = document.createElement('div'); h.className='collabel'; h.textContent = dp;
+      grid.appendChild(h);
+    });
+
+    var stSum = 0, stN = 0;
+    networks.forEach(function(net){
+      var rl = document.createElement('div'); rl.className='rowlabel'; rl.textContent = net;
+      grid.appendChild(rl);
+      DAYPARTS.forEach(function(dp){
+        var d = byKey[net+'|||'+dp];
+        var cell = document.createElement('div'); cell.className='cell';
+        var idx = d ? d.rating : null;
+        cell.style.background = colorFor(idx);
+        var num = document.createElement('div'); num.className='idx';
+        num.style.color = textOn(idx);
+        num.textContent = (idx==null) ? '—' : Math.round(idx);
+        cell.appendChild(num);
+        if (d && d.sellthrough!=null){
+          var bar = document.createElement('div'); bar.className='st';
+          var fill = document.createElement('i'); fill.style.width = Math.max(0,Math.min(100,d.sellthrough)) + '%';
+          bar.appendChild(fill); cell.appendChild(bar);
+          stSum += d.sellthrough; stN++;
+        }
+        cell.addEventListener('mousemove', function(e){
+          tip.style.opacity = 1;
+          tip.style.left = (e.clientX+14)+'px'; tip.style.top=(e.clientY+10)+'px';
+          tip.innerHTML = '<b>'+esc(net)+'</b> &middot; '+esc(dp)+
+            '<br>Rating index: '+((idx==null)?'—':idx.toFixed(1))+' vs 100 plan'+
+            '<br>Sell-through: '+((d&&d.sellthrough!=null)?d.sellthrough.toFixed(1)+'%':'—')+
+            '<br>Status: '+esc((d&&d.status)||'—');
+        });
+        cell.addEventListener('mouseleave', function(){ tip.style.opacity = 0; });
+        grid.appendChild(cell);
+      });
+    });
+
+    document.getElementById('ncount').textContent = networks.length;
+    document.getElementById('stavg').textContent = stN ? (stSum/stN).toFixed(1)+'%' : '—';
+  }
+
+  var unsub = null;
+  function bind(cfg){
+    if (unsub){ unsub(); unsub = null; }
+    if (!client || !cfg || !cfg.source || !cfg.network || !cfg.daypart){ render(synth()); return; }
+    unsub = client.elements.subscribeToElementData(cfg.source, function(elData){
+      if (!elData || !elData[cfg.network]){ render(synth()); return; }
+      var n = elData[cfg.network].length;
+      var rows = [];
+      for (var i=0; i<n; i++){
+        rows.push({
+          network: elData[cfg.network][i],
+          daypart: elData[cfg.daypart][i],
+          rating: cfg.rating ? Number(elData[cfg.rating][i]) : null,
+          sellthrough: cfg.sellthrough ? Number(elData[cfg.sellthrough][i]) : null,
+          status: cfg.status ? elData[cfg.status][i] : null
+        });
+      }
+      render(rows);
+    });
+  }
+
+  if (client){
+    client.config.subscribe(function(cfg){ bind(cfg); });
+  } else {
+    render(synth());
+  }
+
+  // ResizeObserver on the stage element, not a window resize listener, and no
+  // animation loop -- headless PNG export must be able to reach idle.
+  var ro = new ResizeObserver(function(){ /* CSS grid reflows on its own */ });
+  ro.observe(document.getElementById('wrap'));
+})();
+</script>
+</body>
+</html>
