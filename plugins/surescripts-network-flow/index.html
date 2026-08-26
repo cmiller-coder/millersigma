@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Network Message Flow — Surescripts Sigma Plugin</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#122B33;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:10px 14px;gap:4px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#005677}
+  #meta{font-size:11px;color:#5B6E74}
+  #stage{flex:1;min-height:0;position:relative}
+  svg{width:100%;height:100%;display:block}
+  .edge{stroke-linecap:round;opacity:.88}
+  .pulse{fill:#fff;opacity:0}
+  .node-ring{fill:#fff;stroke:#005677;stroke-width:2.5}
+  .node-lbl{font-size:12px;font-weight:700;fill:#122B33;text-anchor:middle;dominant-baseline:middle}
+  .edge-lbl{font-size:11px;fill:#5B6E74;text-anchor:middle}
+  #hub{fill:#00334A}
+  #hub-lbl{fill:#fff;text-anchor:middle;font-weight:800;font-size:11px}
+  #cap{flex:0 0 auto;font-size:10px;color:#8592a3}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Network Message Flow</div><div id="meta"><b id="tot">—</b> total monthly volume across lines</div></div>
+  <div id="stage"><svg id="svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 460"></svg></div>
+  <div id="cap">Node size and edge width scale with real message volume. Pulses animate the direction of flow.</div>
+</div>
+<script>
+(function(){
+  var client = (window.SigmaPlugin && window.SigmaPlugin.client) || null;
+  var defs = [
+    {name:'source', type:'element'},
+    {name:'productLine', type:'column', source:'source', label:'Product line'},
+    {name:'fromNode', type:'column', source:'source', label:'From node (EHR/Provider/Pharmacy/Payer)'},
+    {name:'toNode', type:'column', source:'source', label:'To node (EHR/Provider/Pharmacy/Payer)'},
+    {name:'volume', type:'column', source:'source', allowedTypes:['number','integer'], label:'Monthly volume'}
+  ];
+  if (client) client.config.configureEditorPanel(defs);
+
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(n, a) { var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); return e; }
+  function fmtVol(v) {
+    if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M/mo';
+    if (v >= 1e3) return Math.round(v / 1e3) + 'K/mo';
+    return String(Math.round(v));
+  }
+
+  // Synthetic fallback -- same shape the real build's native SVG image uses,
+  // so the plugin looks right unbound in the editor before data is wired up.
+  function synth() {
+    return [
+      {productLine: 'e-Prescribing', fromNode: 'Provider', toNode: 'Pharmacy', volume: 154000000},
+      {productLine: 'RxTransfer', fromNode: 'Pharmacy', toNode: 'Pharmacy', volume: 854268},
+      {productLine: 'RTPB + Prior Auth + Specialty', fromNode: 'Provider', toNode: 'Payer', volume: 143510000},
+      {productLine: 'Electronic Case Reporting', fromNode: 'EHR', toNode: 'Payer', volume: 2600000}
+    ];
+  }
+
+  var NODES = {
+    EHR: [0.12, 0.22], Provider: [0.5, 0.10], Pharmacy: [0.88, 0.22], Payer: [0.5, 0.90]
+  };
+  var COLORS = ['#005677', '#1FB6A6', '#4FA6C4', '#B4791E', '#00334A', '#7A93A0'];
+
+  function widthFor(vol, maxVol) {
+    var lg = Math.log10(Math.max(vol, 1) / 1e5 + 1);
+    var lgMax = Math.log10(Math.max(maxVol, 1) / 1e5 + 1) || 1;
+    return 2.5 + 13.5 * (lg / lgMax);
+  }
+
+  var svg = document.getElementById('svg');
+  var pulseTimers = [];
+
+  function render(rows) {
+    pulseTimers.forEach(function (t) { clearInterval(t); });
+    pulseTimers = [];
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    if (!rows || !rows.length) rows = synth();
+
+    var W = 1200, H = 460, cx = W * 0.5, cy = H * 0.52;
+    var maxVol = Math.max.apply(null, rows.map(function (r) { return r.volume || 0; }));
+    var total = rows.reduce(function (s, r) { return s + (r.volume || 0); }, 0);
+    document.getElementById('tot').textContent = fmtVol(total);
+
+    // structural EHR<->Provider feed (no volume -- always thin/dashed)
+    var ehrP = NODES.EHR, provP = NODES.Provider;
+    var structPath = el('path', {
+      d: 'M' + ehrP[0] * W + ' ' + ehrP[1] * H + ' Q ' + (ehrP[0] * W + cx) / 2 + ' ' + (ehrP[1] * H + cy) / 2 +
+         ' ' + provP[0] * W + ' ' + provP[1] * H,
+      stroke: '#DCE3E6', 'stroke-width': 1.5, 'stroke-dasharray': '3,4', fill: 'none'
+    });
+    svg.appendChild(structPath);
+
+    rows.forEach(function (r, i) {
+      var color = COLORS[i % COLORS.length];
+      var w = widthFor(r.volume || 0, maxVol);
+      var a = NODES[r.fromNode] || NODES.Provider, b = NODES[r.toNode] || NODES.Payer;
+      var ax = a[0] * W, ay = a[1] * H, bx = b[0] * W, by = b[1] * H;
+      var path, midX, midY;
+      if (r.fromNode === r.toNode) {
+        path = el('path', {
+          class: 'edge', d: 'M' + (ax - 38) + ' ' + (ay - 6) + ' C ' + (ax - 90) + ' ' + (ay - 70) +
+                 ' ' + (ax + 90) + ' ' + (ay - 70) + ' ' + (ax + 38) + ' ' + (ay - 6),
+          stroke: color, 'stroke-width': w, fill: 'none'
+        });
+        midX = ax; midY = ay - 55;
+      } else {
+        var mx = (ax + cx) / 2, my = (ay + cy) / 2, nx = (bx + cx) / 2, ny = (by + cy) / 2;
+        path = el('path', {
+          class: 'edge', d: 'M' + ax + ' ' + ay + ' Q ' + mx + ' ' + my + ' ' + cx + ' ' + cy +
+                 ' Q ' + nx + ' ' + ny + ' ' + bx + ' ' + by,
+          stroke: color, 'stroke-width': w, fill: 'none'
+        });
+        var t = 0.32;
+        midX = ax + (bx - ax) * t; midY = ay + (by - ay) * t;
+        var ox = midX - cx, oy = midY - cy, norm = Math.max(1, Math.sqrt(ox * ox + oy * oy));
+        midX += (ox / norm) * 22; midY += (oy / norm) * 22;
+      }
+      svg.appendChild(path);
+      var label = el('text', {
+        class: 'edge-lbl', x: midX, y: midY
+      });
+      label.textContent = r.productLine + ' · ' + fmtVol(r.volume || 0);
+      svg.appendChild(label);
+
+      // A bounded pulse: a small circle that travels the path a fixed number
+      // of times, then stops -- keeps the plugin lively without an infinite
+      // JS animation loop that would block headless PNG export from idling.
+      var pulse = el('circle', { class: 'pulse', r: Math.max(3, w / 3) });
+      svg.appendChild(pulse);
+      animatePulse(pulse, path, 6);
+    });
+
+    // hub + participant nodes drawn last so they sit above every edge
+    var hub = el('circle', { id: 'hub', cx: cx, cy: cy, r: 34 });
+    svg.appendChild(hub);
+    var hubLbl = el('text', { id: 'hub-lbl', x: cx, y: cy - 3 });
+    hubLbl.textContent = 'SURESCRIPTS';
+    svg.appendChild(hubLbl);
+    var hubLbl2 = el('text', { id: 'hub-lbl', x: cx, y: cy + 12, style: 'font-size:9px' });
+    hubLbl2.textContent = 'NETWORK';
+    svg.appendChild(hubLbl2);
+
+    Object.keys(NODES).forEach(function (name) {
+      var p = NODES[name], x = p[0] * W, y = p[1] * H;
+      svg.appendChild(el('circle', { class: 'node-ring', cx: x, cy: y, r: 26 }));
+      var lbl = el('text', { class: 'node-lbl', x: x, y: y });
+      lbl.textContent = name;
+      svg.appendChild(lbl);
+    });
+  }
+
+  function animatePulse(pulseEl, pathEl, cycles) {
+    var len = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
+    if (!len) return;
+    var done = 0, dur = 1400, start = null;
+    function step(ts) {
+      if (start === null) start = ts;
+      var elapsed = (ts - start) % dur;
+      var frac = elapsed / dur;
+      var pt = pathEl.getPointAtLength(frac * len);
+      pulseEl.setAttribute('cx', pt.x);
+      pulseEl.setAttribute('cy', pt.y);
+      pulseEl.setAttribute('opacity', frac < 0.05 || frac > 0.95 ? 0 : 0.85);
+      if (ts - start < dur * cycles) {
+        requestAnimationFrame(step);
+      } else {
+        pulseEl.setAttribute('opacity', 0);
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function resize() { /* viewBox scaling handles resize; no-op kept for clarity */ }
+  if (window.ResizeObserver) {
+    new ResizeObserver(resize).observe(document.getElementById('stage'));
+  }
+
+  var unsub = null;
+  if (client) {
+    client.config.subscribe(function (cfg) {
+      if (unsub) { unsub(); unsub = null; }
+      if (!cfg || !cfg.source || !cfg.productLine || !cfg.fromNode || !cfg.toNode || !cfg.volume) {
+        render(synth());
+        return;
+      }
+      unsub = client.elements.subscribeToElementData(cfg.source, function (data) {
+        var pl = data[cfg.productLine] || [], fn = data[cfg.fromNode] || [],
+            tn = data[cfg.toNode] || [], vol = data[cfg.volume] || [];
+        var rows = pl.map(function (_, i) {
+          return {productLine: pl[i], fromNode: fn[i], toNode: tn[i], volume: Number(vol[i]) || 0};
+        });
+        render(rows.length ? rows : synth());
+      });
+    });
+  } else {
+    render(synth());
+  }
+})();
+</script>
+</body>
+</html>
