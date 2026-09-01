@@ -114,19 +114,19 @@ Previously-documented-as-unsupported and now **confirmed working**:
 ```json
 {"effect": "navigate",  "target": {"type": "page", "page": "pg2"}}
 
-{"effect": "select-tab", "tabbedContainer": "tc-main",
+{"effect": "select-tab", "tabbedContainerElementId": "tc-main",
  "selectedTab": {"type": "tab", "index": 1}}
 // or {"type": "direction", "direction": "next" | "previous"}
 
-{"effect": "update-rows", "table": "it-drivers",
+{"effect": "update-rows", "tableElementId": "it-drivers",
  "whichRows": {"type": "formula", "formula": "True"},
  "values": {"d-growth": {"type": "formula", "formula": "... + 2"}}}
 
-{"effect": "delete-rows", "table": "it-segments",
+{"effect": "delete-rows", "tableElementId": "it-segments",
  "whichRows": {"type": "formula", "formula": "True"}}
 
 // Cross-document navigation — can target a REPORT, not just a workbook.
-{"effect": "open-document", "document": "<reportId>",
+{"effect": "open-document", "documentId": "<reportId>",
  "documentType": "report", "openTarget": "_blank"}
 ```
 
@@ -136,14 +136,14 @@ Previously-documented-as-unsupported and now **confirmed working**:
 `clear-control` is the odd one out — it takes a **`scope`**, not a `control`:
 
 ```json
-{"effect": "clear-control", "scope": {"type": "control", "control": "SegmentName"}}
+{"effect": "clear-control", "scope": {"type": "control", "controlId": "SegmentName"}}
 ```
 `scope.type` ∈ `control | container | page | workbook`.
 
 Value shapes for `set-control-value` / row effects:
 `{"type": "constant", "value": {"type": "text"|"number"|"boolean"|"date"|..., "value": ...}}`,
 `{"type": "control", "control": "..."}`, `{"type": "formula", "formula": "..."}`,
-`{"type": "column", "column": "..."}`, `{"type": "agent-input", "inputName": "..."}`.
+`{"type": "column", "columnId": "..."}`, `{"type": "agent-input", "inputName": "..."}`.
 
 ## 6. Conditional triggers + success toasts
 
@@ -153,7 +153,7 @@ A trigger can be a bare string or an object with a condition:
 "actions": [{
   "id": "a1",
   "trigger": {"on": "on-select",
-              "condition": {"type": "column", "column": "dw-lob", "condition": "IsNotNull"}},
+              "condition": {"type": "column", "columnId": "dw-lob", "condition": "IsNotNull"}},
   "successToast": {"showMessage": "shown", "title": "Filtered",
                    "message": "Command center scoped to that line of business."},
   "effects": [ ... ]
@@ -164,7 +164,7 @@ Triggers: `on-click`, `on-select`, `on-primary-cta-click`,
 `on-secondary-cta-click`, `on-close`.
 
 Condition is either
-`{type: "column", column, condition: "IsNull"|"IsNotNull"|"="|"!="|">"|">="|"<"|"<="|"Contains"|"NotContains"|"StartsWith"|"EndsWith" (+value) | "Between"|"NotBetween" (+low/high)}`
+`{type: "column", columnId, condition: "IsNull"|"IsNotNull"|"="|"!="|">"|">="|"<"|"<="|"Contains"|"NotContains"|"StartsWith"|"EndsWith" (+value) | "Between"|"NotBetween" (+low/high)}`
 or `{type: "constant", cond: "="|"In", value: {...}}`.
 
 **There is no `control` condition type** — a conditional trigger needs row

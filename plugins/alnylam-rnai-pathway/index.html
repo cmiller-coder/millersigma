@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>RNAi Silencing Pathway — Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,"Segoe UI",Roboto,Arial,sans-serif;
+       background:#FFFFFF;color:#1A3967;overflow:hidden}
+  #wrap{height:100%;width:100%;position:relative;
+        border:1px solid #DCE4EE;border-radius:10px;background:#fff;overflow:hidden}
+  #hd{position:absolute;top:12px;left:16px;z-index:2}
+  #hd .t{font-size:13px;font-weight:800;letter-spacing:.01em;color:#1A3967}
+  #hd .s{font-size:10.5px;font-weight:600;color:#8A98A8;margin-top:2px}
+  #lg{position:absolute;top:12px;right:16px;z-index:2;display:flex;gap:14px;align-items:center}
+  #lg .i{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#5B6B7F}
+  #lg .sw{width:9px;height:9px;border-radius:50%}
+  canvas{display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hd"><div class="t">RNAi silencing pathway</div>
+    <div class="s">mRNA strands enter RISC · node size = net product revenue · pulse rate = YoY growth</div></div>
+  <div id="lg">
+    <div class="i"><span class="sw" style="background:#0F9BD7"></span>mRNA transcript</div>
+    <div class="i"><span class="sw" style="background:#00B3A4"></span>Silenced (cleaved)</div>
+  </div>
+  <canvas id="cv"></canvas>
+</div>
+<script>
+(function () {
+  var client = (window.sigmaComputing && window.sigmaComputing.plugin
+                && window.sigmaComputing.plugin.client) || null;
+
+  // Fallback data so the plugin looks right unbound in the editor.
+  function synth() {
+    return [
+      {name: "AMVUTTRA", revenue: 23.14, growth: 0.85, margin: 0.86},
+      {name: "ONPATTRO", revenue: 1.73, growth: -0.30, margin: 0.80},
+      {name: "GIVLAARI", revenue: 3.09, growth: 0.21, margin: 0.83},
+      {name: "OXLUMO", revenue: 1.99, growth: 0.15, margin: 0.83}
+    ];
+  }
+
+  var rows = synth(), nodes = [], strands = [], t0 = performance.now();
+  var cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+  var W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  if (client) {
+    client.config.configureEditorPanel([
+      {name: "source",  type: "element"},
+      {name: "product", type: "column", source: "source", allowMultiple: false},
+      {name: "revenue", type: "column", source: "source", allowedTypes: ["number", "integer"], allowMultiple: false},
+      {name: "pulse",   type: "column", source: "source", allowedTypes: ["number", "integer"], allowMultiple: false}
+    ]);
+    client.elements.subscribeToElementData("source", function (data) {
+      try {
+        var cfg = client.config.get ? client.config.get() : {};
+        var pick = function (k) { return cfg[k] && data[cfg[k]] ? data[cfg[k]] : null; };
+        var p = pick("product"), r = pick("revenue"), pl = pick("pulse");
+        if (!p || !r) return;
+        var out = [];
+        for (var i = 0; i < p.length; i++) {
+          // "pulse" is plan attainment (goal_pct), centred on 1.0 -- read it
+          // as a growth-like signed signal (>1 ahead of plan, <1 behind).
+          var pulseVal = pl ? Number(pl[i]) || 1.0 : 1.0;
+          out.push({name: String(p[i]), revenue: Number(r[i]) || 0,
+                    growth: pulseVal - 1.0, margin: 0.82});
+        }
+        if (out.length) { rows = out; layout(); }
+      } catch (e) { /* keep the fallback rendering rather than blanking */ }
+    });
+  }
+
+  function resize() {
+    var r = cv.getBoundingClientRect();
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    layout();
+  }
+
+  function layout() {
+    var cx = W / 2, cy = H / 2 + 12;
+    var RX = Math.max(90, Math.min(W * 0.38, 460));
+    var RY = Math.max(60, (H - 140) / 2);
+    var maxRev = 1;
+    rows.forEach(function (d) { if (d.revenue > maxRev) maxRev = d.revenue; });
+
+    nodes = rows.map(function (d, i) {
+      var a = (-Math.PI / 2) + (i * 2 * Math.PI / rows.length);
+      return {
+        name: d.name, revenue: d.revenue, growth: d.growth, margin: d.margin,
+        a: a, x: cx + RX * Math.cos(a), y: cy + RY * Math.sin(a),
+        r: 14 + 24 * Math.sqrt(d.revenue / maxRev),
+        speed: 0.14 + 0.5 * Math.max(0, d.growth)
+      };
+    });
+    nodes.cx = cx; nodes.cy = cy; nodes.RX = RX; nodes.RY = RY;
+
+    // Each node emits mRNA strands travelling INWARD to the RISC hub, where
+    // they get "cleaved" (silenced) -- a double-helix-to-dot collapse.
+    strands = [];
+    nodes.forEach(function (n, i) {
+      var count = Math.max(3, Math.round(4 + 5 * (n.margin || 0.8)));
+      for (var k = 0; k < count; k++) strands.push({n: i, p: k / count});
+    });
+  }
+
+  function drawHelix(ctx, x, y, len, phase, alpha, color) {
+    // A short double-helix glyph representing the siRNA duplex, oriented
+    // along its direction of travel.
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.6;
+    var n = 6, amp = 3.4;
+    for (var strand = 0; strand < 2; strand++) {
+      ctx.beginPath();
+      for (var i = 0; i <= n; i++) {
+        var t = i / n;
+        var yy = (t - 0.5) * len;
+        var xx = amp * Math.sin(t * Math.PI * 2.4 + phase + strand * Math.PI);
+        if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function frame(now) {
+    var t = (now - t0) / 1000;
+    ctx.clearRect(0, 0, W, H);
+    if (!nodes.length) { requestAnimationFrame(frame); return; }
+    var cx = nodes.cx, cy = nodes.cy, RX = nodes.RX, RY = nodes.RY;
+
+    ctx.strokeStyle = "#EDF1F6"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(cx, cy, RX, RY, 0, 0, 2 * Math.PI); ctx.stroke();
+
+    nodes.forEach(function (n) {
+      ctx.strokeStyle = "#E6EDF5"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(n.x, n.y); ctx.stroke();
+    });
+
+    // mRNA strands travel from node to hub; near the hub they collapse into
+    // a single "silenced" dot -- the RNAi mechanism, not decoration.
+    strands.forEach(function (st) {
+      var n = nodes[st.n];
+      var u = (st.p + t * n.speed) % 1;
+      var f = 1 - u; // 1 = at node, 0 = at hub
+      var x = cx + (n.x - cx) * f, y = cy + (n.y - cy) * f;
+      var fade = Math.sin(Math.PI * u);
+      var silenced = u > 0.82;
+      if (silenced) {
+        ctx.globalAlpha = 0.5 + 0.4 * fade;
+        ctx.fillStyle = "#00B3A4";
+        ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 2 * Math.PI); ctx.fill();
+        ctx.globalAlpha = 1;
+      } else {
+        var ang = Math.atan2(n.y - cy, n.x - cx);
+        drawHelix(ctx, x, y, 13, t * 3 + st.p * 7, 0.3 + 0.55 * fade, "#0F9BD7");
+      }
+    });
+
+    // RISC hub
+    var pulse = 1 + 0.03 * Math.sin(t * 1.6);
+    var hr = Math.max(36, Math.min(RY, RX) * 0.40) * pulse;
+    var grad = ctx.createLinearGradient(cx - hr, cy - hr, cx + hr, cy + hr);
+    grad.addColorStop(0, "#1A3967"); grad.addColorStop(1, "#0F9BD7");
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx, cy, hr, 0, 2 * Math.PI); ctx.fill();
+
+    var total = 0;
+    nodes.forEach(function (n) { total += n.revenue; });
+    ctx.fillStyle = "#FFFFFF"; ctx.textAlign = "center";
+    ctx.font = "800 " + Math.round(hr * 0.36) + "px -apple-system, Inter, Arial";
+    ctx.fillText("$" + total.toFixed(1) + "B", cx, cy + 1);
+    ctx.font = "700 " + Math.round(hr * 0.17) + "px -apple-system, Inter, Arial";
+    ctx.fillStyle = "#B7E3F7";
+    ctx.fillText("RISC", cx, cy + hr * 0.34);
+
+    nodes.forEach(function (n) {
+      ctx.fillStyle = n.growth >= 0 ? "#0F9BD7" : "#C0392B";
+      ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 2 * Math.PI); ctx.fill();
+      ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 2.5; ctx.stroke();
+
+      ctx.fillStyle = "#FFFFFF"; ctx.textAlign = "center";
+      ctx.font = "800 " + Math.max(9, Math.round(n.r * 0.42)) + "px -apple-system, Inter, Arial";
+      ctx.fillText("$" + n.revenue.toFixed(1) + "B", n.x, n.y + n.r * 0.16);
+
+      ctx.font = "700 10.5px -apple-system, Inter, Arial";
+      var tw = ctx.measureText(n.name).width, half = tw / 2 + 6;
+      var ux = n.x - cx, uy = n.y - cy, lx, ly;
+      if (Math.abs(ux) >= Math.abs(uy)) {
+        lx = n.x + Math.sign(ux) * (n.r + half + 8);
+        ly = n.y;
+      } else {
+        lx = n.x;
+        ly = n.y + Math.sign(uy) * (n.r + 22);
+      }
+      lx = Math.min(Math.max(lx, half + 4), W - half - 4);
+      ly = Math.min(Math.max(ly, 13), H - 13);
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.beginPath();
+      var rr = 9, rx = lx - half, ry = ly - 9, rw = tw + 12, rh = 18;
+      ctx.moveTo(rx + rr, ry);
+      ctx.arcTo(rx + rw, ry, rx + rw, ry + rh, rr);
+      ctx.arcTo(rx + rw, ry + rh, rx, ry + rh, rr);
+      ctx.arcTo(rx, ry + rh, rx, ry, rr);
+      ctx.arcTo(rx, ry, rx + rw, ry, rr);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#1A3967"; ctx.textAlign = "center";
+      ctx.fillText(n.name, lx, ly + 4);
+    });
+
+    requestAnimationFrame(frame);
+  }
+
+  new ResizeObserver(resize).observe(document.getElementById("wrap"));
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

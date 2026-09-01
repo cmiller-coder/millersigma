@@ -170,7 +170,7 @@ as a reskin, which is the exact failure the asset exists to avoid.
 | `provision_rate` | credit/refund provision | |
 | `delinq_rate` | the risk metric → `driver_risk` | |
 | `opex_ratio` | overhead | |
-| `units_base` | the count metric → `kpi_units` | **displayed ≈ max(units_base) × max(state_share) × 1.157** |
+| `units_base` | the count metric → `kpi_units` | **the raw config number IS already in THOUSANDS of the counted unit** (SoFi's SoFi Money = 4600 means 4.6M accountholders, not 4,600). displayed ≈ max(units_base) × max(state_share) × 1.157 — that formula's OUTPUT under a "(K)" label is thousands too, so read it the same way. BayPort's first pass set this to a raw headcount (138000) and the KPI rendered as "92,372" under "Members (K)" — i.e. 92 MILLION members against a real ~156K. Divide a raw headcount by ~1000 before typing it in. |
 | `phase` | seasonal phase offset | 0.0–2.2 |
 | `goal_pct` | plan attainment, drives map colour + status | ~0.87–1.09 |
 
@@ -307,6 +307,21 @@ and blocked on the next `update` — all four cases behaved as designed.
 If someone hides a column and you `FORCE=1` past the warning, that hide is
 still gone. The gate's entire job is making the overwrite a decision someone
 makes on purpose, not something that happens silently.
+
+**When the refusal fires, don't just re-run with `FORCE=1`.** The gate only
+tells you *that* the live workbook moved and *who*/*when* — it doesn't show
+you *what* changed. Before deciding, actually pull the live spec
+(`S.get_workbook(workbook_id)`, which calls `GET /v2/workbooks/{id}/spec`)
+and skim it for what's different from what `company.py` would generate, so
+FORCE is an informed decision instead of a reflex to unblock yourself. This is
+the same "pull the latest version before you start reasoning about changes"
+discipline Sigma's own code-rep PM (Matt Jones) recommended for every editing
+session on 2026-08-28 — a coding agent that only has an earlier, cached copy
+of a workbook in its context will confidently generate against a shape that's
+already stale, with no error to signal it. Applies beyond this gate too: any
+session that resumes work on an **existing** workbook — not a fresh `create`
+— should re-pull the spec at session start even if an earlier turn in the
+same conversation already has one cached.
 
 ---
 

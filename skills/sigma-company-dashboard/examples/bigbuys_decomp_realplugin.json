@@ -1,0 +1,287 @@
+{
+  "name": "Big Buys - Category Decomposition (real plugin)",
+  "folderId": "e743bac0-a372-497c-b012-859a613340c4",
+  "document": {
+    "schemaVersion": 1,
+    "kind": "workbook",
+    "elements": [
+      {
+        "id": "txt-title",
+        "kind": "text",
+        "body": "## Category Decomposition \u2014 Big Buys reshaped to Fuel / Merch / LFK / QSR\nTotal box (the **real, already-registered** Metric Decomposition Tree plugin) next to a native **pivot-table** \u2014 same underlying data, two views.",
+        "verticalAlign": "middle"
+      },
+      {
+        "id": "decomp",
+        "kind": "plugin",
+        "pluginId": "02320519-246f-4bc9-8dbd-a3af6974fd69",
+        "config": {
+          "source": {
+            "kind": "element",
+            "elementId": "wide_row"
+          },
+          "columns": [
+            "w-total-profit",
+            "w-total-prior",
+            "w-fuel-profit",
+            "w-fuel-prior",
+            "w-fuel-loy",
+            "w-fuel-nonloy",
+            "w-merch-profit",
+            "w-merch-prior",
+            "w-merch-loy",
+            "w-merch-nonloy",
+            "w-lfk-profit",
+            "w-lfk-prior",
+            "w-lfk-loy",
+            "w-lfk-nonloy",
+            "w-qsr-profit",
+            "w-qsr-prior",
+            "w-qsr-loy",
+            "w-qsr-nonloy"
+          ],
+          "config": "{\"version\": 1, \"scaleToFit\": true, \"roots\": [{\"id\": \"total\", \"title\": \"Total\", \"valueCol\": \"w-total-profit\", \"valueAgg\": \"sum\", \"valueFmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"varMode\": \"pct\", \"varianceCol\": \"\", \"varianceAgg\": \"avg\", \"comparisonCol\": \"w-total-prior\", \"comparisonAgg\": \"sum\", \"varFmt\": {\"type\": \"percent\", \"decimals\": 1, \"prefix\": \"\", \"suffix\": \"\"}, \"higherIsBetter\": true, \"c1Label\": \"\", \"c1Col\": \"\", \"c1Agg\": \"sum\", \"c1Fmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"c2Label\": \"\", \"c2Col\": \"\", \"c2Agg\": \"sum\", \"c2Fmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"selectValue\": \"\", \"children\": [{\"id\": \"fuel\", \"title\": \"Fuel\", \"valueCol\": \"w-fuel-profit\", \"valueAgg\": \"sum\", \"valueFmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"varMode\": \"pct\", \"varianceCol\": \"\", \"varianceAgg\": \"avg\", \"comparisonCol\": \"w-fuel-prior\", \"comparisonAgg\": \"sum\", \"varFmt\": {\"type\": \"percent\", \"decimals\": 1, \"prefix\": \"\", \"suffix\": \"\"}, \"higherIsBetter\": true, \"c1Label\": \"Loyalty\", \"c1Col\": \"w-fuel-loy\", \"c1Agg\": \"sum\", \"c1Fmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"c2Label\": \"Non-Loyalty\", \"c2Col\": \"w-fuel-nonloy\", \"c2Agg\": \"sum\", \"c2Fmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"selectValue\": \"Fuel\", \"children\": []}, {\"id\": \"merch\", \"title\": \"Merch\", \"valueCol\": \"w-merch-profit\", \"valueAgg\": \"sum\", \"valueFmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"varMode\": \"pct\", \"varianceCol\": \"\", \"varianceAgg\": \"avg\", \"comparisonCol\": \"w-merch-prior\", \"comparisonAgg\": \"sum\", \"varFmt\": {\"type\": \"percent\", \"decimals\": 1, \"prefix\": \"\", \"suffix\": \"\"}, \"higherIsBetter\": true, \"c1Label\": \"Loyalty\", \"c1Col\": \"w-merch-loy\", \"c1Agg\": \"sum\", \"c1Fmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"c2Label\": \"Non-Loyalty\", \"c2Col\": \"w-merch-nonloy\", \"c2Agg\": \"sum\", \"c2Fmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"selectValue\": \"Merch\", \"children\": []}, {\"id\": \"lfk\", \"title\": \"LFK\", \"valueCol\": \"w-lfk-profit\", \"valueAgg\": \"sum\", \"valueFmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"varMode\": \"pct\", \"varianceCol\": \"\", \"varianceAgg\": \"avg\", \"comparisonCol\": \"w-lfk-prior\", \"comparisonAgg\": \"sum\", \"varFmt\": {\"type\": \"percent\", \"decimals\": 1, \"prefix\": \"\", \"suffix\": \"\"}, \"higherIsBetter\": true, \"c1Label\": \"Loyalty\", \"c1Col\": \"w-lfk-loy\", \"c1Agg\": \"sum\", \"c1Fmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"c2Label\": \"Non-Loyalty\", \"c2Col\": \"w-lfk-nonloy\", \"c2Agg\": \"sum\", \"c2Fmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"selectValue\": \"LFK\", \"children\": []}, {\"id\": \"qsr\", \"title\": \"QSR\", \"valueCol\": \"w-qsr-profit\", \"valueAgg\": \"sum\", \"valueFmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"varMode\": \"pct\", \"varianceCol\": \"\", \"varianceAgg\": \"avg\", \"comparisonCol\": \"w-qsr-prior\", \"comparisonAgg\": \"sum\", \"varFmt\": {\"type\": \"percent\", \"decimals\": 1, \"prefix\": \"\", \"suffix\": \"\"}, \"higherIsBetter\": true, \"c1Label\": \"Loyalty\", \"c1Col\": \"w-qsr-loy\", \"c1Agg\": \"sum\", \"c1Fmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"c2Label\": \"Non-Loyalty\", \"c2Col\": \"w-qsr-nonloy\", \"c2Agg\": \"sum\", \"c2Fmt\": {\"type\": \"compact\", \"decimals\": 1, \"prefix\": \"$\", \"suffix\": \"\"}, \"selectValue\": \"QSR\", \"children\": []}]}]}",
+          "selectVar": "drillCategory"
+        }
+      },
+      {
+        "kind": "control",
+        "controlId": "drillCategory",
+        "id": "ctrl-drill",
+        "name": "Drill Category",
+        "controlType": "text",
+        "mode": "equals",
+        "case": "insensitive",
+        "includeNulls": "when-no-value-is-selected",
+        "showOperators": false,
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "cat_long"
+            },
+            "columnId": "l-cat"
+          }
+        ]
+      },
+      {
+        "id": "txt-readout",
+        "kind": "text",
+        "body": "Drilled into: **{{[drillCategory]}}** _(click a box above; click Total, or its breadcrumb, to clear)_",
+        "verticalAlign": "middle"
+      },
+      {
+        "id": "pivot",
+        "kind": "pivot-table",
+        "name": "Profit by Category x Loyalty Segment",
+        "source": {
+          "elementId": "cat_long",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "pv-cat",
+            "formula": "[Category x Loyalty (long)/Category]",
+            "name": "Category"
+          },
+          {
+            "id": "pv-loy",
+            "formula": "[Category x Loyalty (long)/Loyalty Segment]",
+            "name": "Loyalty Segment"
+          },
+          {
+            "id": "pv-profit",
+            "formula": "Sum([Category x Loyalty (long)/Profit])",
+            "name": "Profit",
+            "format": {
+              "kind": "number",
+              "formatString": "$.3~s",
+              "decimalSymbol": ".",
+              "digitGroupingSymbol": ",",
+              "digitGroupingSize": [
+                3
+              ],
+              "currencySymbol": "$"
+            }
+          }
+        ],
+        "rowsBy": [
+          {
+            "id": "pv-cat"
+          }
+        ],
+        "columnsBy": [
+          {
+            "id": "pv-loy"
+          }
+        ],
+        "values": [
+          "pv-profit"
+        ]
+      },
+      {
+        "id": "wide_row",
+        "kind": "table",
+        "name": "Category Totals (single row)",
+        "visibleAsSource": true,
+        "source": {
+          "connectionId": "bee6615c-7d11-435c-8819-e32207b27fe4",
+          "kind": "sql",
+          "statement": "SELECT 4488000 AS TOTAL_PROFIT, 4410000 AS TOTAL_PRIOR, 1306000 AS FUEL_PROFIT, 1220000 AS FUEL_PRIOR, 812000 AS FUEL_LOY, 494000 AS FUEL_NONLOY, 1825000 AS MERCH_PROFIT, 1900000 AS MERCH_PRIOR, 1180000 AS MERCH_LOY, 645000 AS MERCH_NONLOY, 520000 AS LFK_PROFIT, 480000 AS LFK_PRIOR, 322000 AS LFK_LOY, 198000 AS LFK_NONLOY, 837000 AS QSR_PROFIT, 810000 AS QSR_PRIOR, 566000 AS QSR_LOY, 271000 AS QSR_NONLOY"
+        },
+        "columns": [
+          {
+            "id": "w-total-profit",
+            "formula": "[Custom SQL/TOTAL_PROFIT]",
+            "name": "Total Profit"
+          },
+          {
+            "id": "w-total-prior",
+            "formula": "[Custom SQL/TOTAL_PRIOR]",
+            "name": "Total Prior"
+          },
+          {
+            "id": "w-fuel-profit",
+            "formula": "[Custom SQL/FUEL_PROFIT]",
+            "name": "Fuel Profit"
+          },
+          {
+            "id": "w-fuel-prior",
+            "formula": "[Custom SQL/FUEL_PRIOR]",
+            "name": "Fuel Prior"
+          },
+          {
+            "id": "w-fuel-loy",
+            "formula": "[Custom SQL/FUEL_LOY]",
+            "name": "Fuel Loyalty"
+          },
+          {
+            "id": "w-fuel-nonloy",
+            "formula": "[Custom SQL/FUEL_NONLOY]",
+            "name": "Fuel Non-Loyalty"
+          },
+          {
+            "id": "w-merch-profit",
+            "formula": "[Custom SQL/MERCH_PROFIT]",
+            "name": "Merch Profit"
+          },
+          {
+            "id": "w-merch-prior",
+            "formula": "[Custom SQL/MERCH_PRIOR]",
+            "name": "Merch Prior"
+          },
+          {
+            "id": "w-merch-loy",
+            "formula": "[Custom SQL/MERCH_LOY]",
+            "name": "Merch Loyalty"
+          },
+          {
+            "id": "w-merch-nonloy",
+            "formula": "[Custom SQL/MERCH_NONLOY]",
+            "name": "Merch Non-Loyalty"
+          },
+          {
+            "id": "w-lfk-profit",
+            "formula": "[Custom SQL/LFK_PROFIT]",
+            "name": "LFK Profit"
+          },
+          {
+            "id": "w-lfk-prior",
+            "formula": "[Custom SQL/LFK_PRIOR]",
+            "name": "LFK Prior"
+          },
+          {
+            "id": "w-lfk-loy",
+            "formula": "[Custom SQL/LFK_LOY]",
+            "name": "LFK Loyalty"
+          },
+          {
+            "id": "w-lfk-nonloy",
+            "formula": "[Custom SQL/LFK_NONLOY]",
+            "name": "LFK Non-Loyalty"
+          },
+          {
+            "id": "w-qsr-profit",
+            "formula": "[Custom SQL/QSR_PROFIT]",
+            "name": "QSR Profit"
+          },
+          {
+            "id": "w-qsr-prior",
+            "formula": "[Custom SQL/QSR_PRIOR]",
+            "name": "QSR Prior"
+          },
+          {
+            "id": "w-qsr-loy",
+            "formula": "[Custom SQL/QSR_LOY]",
+            "name": "QSR Loyalty"
+          },
+          {
+            "id": "w-qsr-nonloy",
+            "formula": "[Custom SQL/QSR_NONLOY]",
+            "name": "QSR Non-Loyalty"
+          }
+        ],
+        "order": [
+          "w-total-profit",
+          "w-total-prior",
+          "w-fuel-profit",
+          "w-fuel-prior",
+          "w-fuel-loy",
+          "w-fuel-nonloy",
+          "w-merch-profit",
+          "w-merch-prior",
+          "w-merch-loy",
+          "w-merch-nonloy",
+          "w-lfk-profit",
+          "w-lfk-prior",
+          "w-lfk-loy",
+          "w-lfk-nonloy",
+          "w-qsr-profit",
+          "w-qsr-prior",
+          "w-qsr-loy",
+          "w-qsr-nonloy"
+        ]
+      },
+      {
+        "id": "cat_long",
+        "kind": "table",
+        "name": "Category x Loyalty (long)",
+        "visibleAsSource": true,
+        "source": {
+          "connectionId": "bee6615c-7d11-435c-8819-e32207b27fe4",
+          "kind": "sql",
+          "statement": "SELECT * FROM VALUES\n  ('Fuel','Loyalty',812000),('Fuel','Non-Loyalty',494000),\n  ('Merch','Loyalty',1180000),('Merch','Non-Loyalty',645000),\n  ('LFK','Loyalty',322000),('LFK','Non-Loyalty',198000),\n  ('QSR','Loyalty',566000),('QSR','Non-Loyalty',271000)\nAS t(CATEGORY, LOYALTY_SEGMENT, PROFIT)"
+        },
+        "columns": [
+          {
+            "id": "l-cat",
+            "formula": "[Custom SQL/CATEGORY]",
+            "name": "Category"
+          },
+          {
+            "id": "l-loy",
+            "formula": "[Custom SQL/LOYALTY_SEGMENT]",
+            "name": "Loyalty Segment"
+          },
+          {
+            "id": "l-profit",
+            "formula": "[Custom SQL/PROFIT]",
+            "name": "Profit"
+          }
+        ],
+        "order": [
+          "l-cat",
+          "l-loy",
+          "l-profit"
+        ]
+      }
+    ],
+    "pages": [
+      {
+        "id": "pg",
+        "name": "Decomposition"
+      }
+    ],
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"pg\">\n  <Element elementId=\"txt-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Element elementId=\"decomp\" gridColumn=\"1 / 25\" gridRow=\"3 / 18\"/>\n  <Element elementId=\"ctrl-drill\" gridColumn=\"1 / 7\" gridRow=\"18 / 21\"/>\n  <Element elementId=\"txt-readout\" gridColumn=\"7 / 25\" gridRow=\"18 / 21\"/>\n  <Element elementId=\"pivot\" gridColumn=\"1 / 25\" gridRow=\"21 / 36\"/>\n  <Element elementId=\"wide_row\" gridColumn=\"1 / 25\" gridRow=\"36 / 44\"/>\n  <Element elementId=\"cat_long\" gridColumn=\"1 / 25\" gridRow=\"44 / 54\"/>\n</Page>\n"
+  }
+}

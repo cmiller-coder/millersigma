@@ -65,6 +65,36 @@ ambiguous, e.g. a retailer could plausibly want either):
    that ID isn't defined anywhere in the GET-back spec and can't be replicated —
    inline the real effects instead).
 
+## Activation, not approval
+
+`sigma-input-table-app`'s data-app patterns (scenario/reallocation/commission
+modelers) all bundle the Draft → Submitted → Approved/Adjust/Rejected
+approval workflow by default, because those are "propose a number → someone
+signs off on it" tools. A cohort builder is a different shape — there's
+nothing to approve, just a population to push somewhere — so its default
+bolt-on is **activation**, not approval:
+[`surfaces/cohort_activation.py`](surfaces/cohort_activation.py).
+
+**There is no real outbound integration.** Verified against the live
+OpenAPI schema 2026-08-13: a workbook action's effect is one of exactly 12
+values (Open URL, Open/Close Overlay, Set/Clear Control, Insert/Update/
+Delete Rows, Refresh Element, Navigate, Open Document, Select Tab) — no
+`call-api`, and no native toast/notification component either. So
+"Activate cohort → sent to Iterable" is **simulated**: an `insert-rows` into
+a persistent Activation Log (the truthful, auditable part) plus an
+`open-overlay` confirmation modal (the "toast" a demo needs). Say this out
+loud to a prospect — the workbook records that an activation was requested,
+it does not actually call Iterable's (or Braze's, or Salesforce Marketing
+Cloud's) API. Wiring a real send means a Sigma webhook/orchestration layer
+downstream of the Activation Log table, outside the workbook spec itself.
+
+**`destinations` has no sensible default — ask which platform(s) the
+prospect actually uses** (Iterable, Braze, Salesforce Marketing Cloud,
+HubSpot, an ad platform's audience API, ...) the same way you'd ask which
+warehouse connection to build against. Confirmation text and the audit log
+both reference the destination control live, so it updates correctly if the
+prospect uses more than one platform.
+
 ## Non-negotiable defaults — build these every time
 
 1. **Snapshot a WIDE set of scalar numbers at Save time — never try to serialize the
@@ -105,8 +135,8 @@ ambiguous, e.g. a retailer could plausibly want either):
    displayed column at the SAME grain as the raw data (no real aggregation, just a
    sort lever) and give it a compact fixed height so only the top rows show without
    scrolling.
-6. **`inputMode:"explore"` on the saved-cohorts input table** (not the default
-   `"edit"`) if you want it editable by non-editor viewers in the PUBLISHED
+6. **`inputMode:"view"` on the saved-cohorts input table** (not the default
+   `"edit"`; `"explore"` also works but restricts to explore-or-greater) if you want it editable by non-editor viewers in the PUBLISHED
    workbook — `"edit"` restricts writes to workbook editors in DRAFT mode only, which
    silently breaks a published agent/button Save for anyone else. `inputMode` enum:
    `edit` (editors, draft only) · `explore` (explore-or-greater, published) · `view`
@@ -180,9 +210,25 @@ value is trivially that value). Don't assume every `<Agg>If` naming pattern exis
    and confirm any `groupings[].sort` you added kept its `direction` value
    (`"ascending"`/`"descending"`, not the abbreviated `"asc"`/`"desc"` — the
    abbreviated form silently vanishes on GET-back).
-4. Hand the user the URL — you can't render Sigma from a headless session, so the one
-   thing you can't verify yourself is the actual on-screen layout; ask them to
-   confirm it after any layout-affecting change.
+4. **Render it and look at it.** Sigma renders headlessly — this is how you catch
+   overlapping elements, clipped headings, cramped cards and off-page content,
+   none of which are visible in the spec:
+
+   ```bash
+   # workbook -> PNG (pageId optional; omit for the whole workbook)
+   curl -sS -X POST "$SIGMA_BASE_URL/v2/workbooks/$WB/export" \
+     -H "Authorization: Bearer $SIGMA_API_TOKEN" -H 'Content-Type: application/json' \
+     -d '{"format":{"type":"png"},"pageId":"pg1"}'
+   # -> {"queryId": "..."} then poll the SAME download endpoint used for CSV:
+   curl -sS "$SIGMA_BASE_URL/v2/query/$QUERY_ID/download" \
+     -H "Authorization: Bearer $SIGMA_API_TOKEN" -H 'Accept: */*' -o shot.png
+   ```
+
+   Zero bytes means *not ready*, not failed — sleep ~3s and retry. Reports export
+   **PDF only** (`{"format":{"type":"pdf","layout":"portrait"}}`); PNG is rejected
+   and `layout` is required. A page containing a plugin that fetches externally or
+   animates never reaches idle and will time out — render a plugin-free clone of
+   that page instead.
 
 ## Files
 - `examples/build_cohort_builder_reference.py` — the canonical generator: synthetic

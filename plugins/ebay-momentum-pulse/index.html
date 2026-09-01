@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Auction Momentum Pulse Grid — eBay Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#F2F2F2;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:14px 16px;gap:10px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#3665F3}
+  #meta{font-size:11px;color:#9AA3AE}
+  #meta b{color:#fff;font-size:13px}
+  #grid{flex:1;display:grid;gap:6px;place-items:stretch;min-height:0}
+  .cellwrap{position:relative;display:flex;align-items:center;justify-content:center;min-height:0;min-width:0}
+  .ring{position:absolute;border-radius:50%;pointer-events:none;opacity:0}
+  .circle{border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:default;transition:filter .15s;text-align:center}
+  .circle:hover{filter:brightness(1.18)}
+  .clabel{font-weight:800;letter-spacing:.02em;line-height:1.15;padding:0 6%;white-space:normal}
+  .cval{font-weight:600;opacity:.92;line-height:1.1}
+  #legend{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px;color:#9AA3AE}
+  #legend .grp{display:flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  #tip{position:fixed;pointer-events:none;background:#111417;border:1px solid #2B3138;border-radius:8px;padding:8px 10px;font-size:11px;color:#F2F2F2;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  #tip b{color:#3665F3}
+  @keyframes pulseScale{0%{transform:scale(1)}50%{transform:scale(1.14)}100%{transform:scale(1)}}
+  @keyframes ringOut{0%{opacity:.55;transform:scale(.72)}100%{opacity:0;transform:scale(1.55)}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl">Auction Momentum Pulse</div>
+    <div id="meta"><span id="cnt">0</span> categories · fastest close <b id="fastV">—</b></div>
+  </div>
+  <div id="grid"></div>
+  <div id="legend">
+    <div class="grp"><i class="dot" style="background:#2FBF71"></i>growing</div>
+    <div class="grp"><i class="dot" style="background:#9AA3AE"></i>flat</div>
+    <div class="grp"><i class="dot" style="background:#E0393E"></i>declining</div>
+    <div class="grp">size = GMV &nbsp;·&nbsp; pulse speed = bid/sale velocity</div>
+  </div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'category',type:'column',source:'source',label:'Category'},
+    {name:'gmv',type:'column',source:'source',allowedTypes:['number','integer'],label:'GMV'},
+    {name:'growth',type:'column',source:'source',allowedTypes:['number','integer'],label:'Growth % (YoY)'},
+    {name:'velocity',type:'column',source:'source',allowedTypes:['number','integer'],label:'Bid/Sale Velocity (events per min)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hex(c){return ('0'+Math.max(0,Math.min(255,Math.round(c))).toString(16)).slice(-2);}
+  // growth -> color: red (declining) -> slate (flat) -> green (growing)
+  function growthColor(g){
+    var t=Math.max(-1,Math.min(1,g/25)); // +/-25% maps to full saturation
+    var neg=[224,57,62], mid=[122,130,140], pos=[47,191,113];
+    var c = t<0 ? [lerp(mid[0],neg[0],-t),lerp(mid[1],neg[1],-t),lerp(mid[2],neg[2],-t)]
+                : [lerp(mid[0],pos[0],t),lerp(mid[1],pos[1],t),lerp(mid[2],pos[2],t)];
+    return '#'+hex(c[0])+hex(c[1])+hex(c[2]);
+  }
+  function fmtMoney(v){
+    if(v==null||isNaN(v)) return '—';
+    var a=Math.abs(v), s=v<0?'-':'';
+    if(a>=1e9) return s+'$'+(a/1e9).toFixed(1)+'B';
+    if(a>=1e6) return s+'$'+(a/1e6).toFixed(1)+'M';
+    if(a>=1e3) return s+'$'+(a/1e3).toFixed(0)+'K';
+    return s+'$'+a.toFixed(0);
+  }
+
+  var tip=document.getElementById('tip');
+  var lastCats=null;
+
+  function draw(cats){
+    var grid=document.getElementById('grid');
+    var n=cats.length||1;
+    var cols=Math.max(1,Math.ceil(Math.sqrt(n*1.35)));
+    var rows=Math.ceil(n/cols);
+    grid.style.gridTemplateColumns='repeat('+cols+',1fr)';
+    grid.style.gridTemplateRows='repeat('+rows+',1fr)';
+    grid.innerHTML='';
+
+    var maxGmv=Math.max.apply(null,cats.map(function(c){return c.gmv;}).concat([1]));
+    var maxV=Math.max.apply(null,cats.map(function(c){return c.velocity;}).concat([1]));
+    var fastest=cats.slice().sort(function(a,b){return b.velocity-a.velocity;})[0];
+
+    cats.forEach(function(c){
+      var wrap=document.createElement('div'); wrap.className='cellwrap';
+      var sizePct = 46 + 46*Math.sqrt(Math.max(0,c.gmv)/maxGmv); // 46%..92% of cell
+      var color = growthColor(c.growth);
+      // pulse period: faster velocity -> shorter period (more energetic). Range ~0.6s (hottest) to 3.2s (coldest).
+      var vFrac = Math.max(0.02, c.velocity/maxV);
+      var period = Math.max(0.55, 3.2 - vFrac*2.65);
+
+      var ringCount = 2;
+      for(var i=0;i<ringCount;i++){
+        var ring=document.createElement('div'); ring.className='ring';
+        ring.style.width=sizePct+'%'; ring.style.height=sizePct+'%';
+        ring.style.border='2px solid '+color;
+        ring.style.animation='ringOut '+period+'s ease-out infinite';
+        ring.style.animationDelay=(i*period/ringCount)+'s';
+        wrap.appendChild(ring);
+      }
+
+      var circ=document.createElement('div'); circ.className='circle';
+      circ.style.width=sizePct+'%'; circ.style.height=sizePct+'%';
+      circ.style.background='radial-gradient(circle at 34% 30%, '+color+'F2, '+color+'B8 60%, '+color+'85 100%)';
+      circ.style.boxShadow='0 0 '+(10+vFrac*22)+'px '+color+'99, inset 0 0 14px rgba(255,255,255,.18)';
+      circ.style.animation='pulseScale '+period+'s ease-in-out infinite';
+
+      var fontPx = Math.max(10, Math.min(16, sizePct*0.155));
+      var label=document.createElement('div'); label.className='clabel'; label.style.fontSize=fontPx+'px'; label.style.color='#0B0D0F';
+      label.textContent=c.category;
+      var val=document.createElement('div'); val.className='cval'; val.style.fontSize=Math.max(9,fontPx*0.78)+'px'; val.style.color='#0B0D0F';
+      val.textContent=fmtMoney(c.gmv);
+      circ.appendChild(label); circ.appendChild(val);
+
+      circ.addEventListener('mousemove',function(e){
+        tip.innerHTML='<b>'+c.category+'</b><br>GMV '+fmtMoney(c.gmv)+
+          '<br>Growth '+(c.growth>=0?'+':'')+c.growth.toFixed(1)+'% YoY'+
+          '<br>Velocity '+c.velocity.toFixed(1)+' events/min';
+        tip.style.opacity=1; tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY+12)+'px';
+      });
+      circ.addEventListener('mouseleave',function(){tip.style.opacity=0;});
+
+      wrap.appendChild(circ);
+      grid.appendChild(wrap);
+    });
+
+    document.getElementById('cnt').textContent=n;
+    document.getElementById('fastV').textContent=fastest?fastest.category:'—';
+  }
+
+  function synth(){
+    var cats=[
+      {category:'Electronics',gmv:2650000000,growth:8.4,velocity:41},
+      {category:'Fashion',gmv:1810000000,growth:-3.1,velocity:22},
+      {category:'Collectibles & Art',gmv:1120000000,growth:14.7,velocity:63},
+      {category:'Home & Garden',gmv:960000000,growth:2.2,velocity:18},
+      {category:'Motors & Parts',gmv:2140000000,growth:-1.4,velocity:12},
+      {category:'Trading Cards',gmv:640000000,growth:22.9,velocity:78}
+    ];
+    return cats;
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){
+    var c=st.cfg||{};
+    if(st.data && c.category && st.data[c.category]){
+      var cat=st.data[c.category]||[], gmv=(c.gmv&&st.data[c.gmv])||[],
+          growth=(c.growth&&st.data[c.growth])||[], velocity=(c.velocity&&st.data[c.velocity])||[];
+      var out=cat.map(function(name,i){return {
+        category:String(name),
+        gmv:Number(gmv[i])||0,
+        growth:Number(growth[i])||0,
+        velocity:Number(velocity[i])||0
+      };});
+      if(out.length){ draw(out); return; }
+    }
+    draw(synth());
+  }
+  if(client){
+    client.config.subscribe(function(cfg){
+      st.cfg=cfg||{};
+      if(st.unsub){st.unsub();st.unsub=null;}
+      if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();});}
+      recompute();
+    });
+  }else{ recompute(); }
+
+  // Sigma sizes the panel AFTER first paint -- redraw on any container resize.
+  var ro=new ResizeObserver(function(){ recompute(); });
+  ro.observe(document.getElementById('wrap'));
+})();
+</script>
+</body>
+</html>

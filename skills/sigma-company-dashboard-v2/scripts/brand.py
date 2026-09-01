@@ -30,8 +30,9 @@ def apply(cfg):
     SOFI_CYAN, SOFI_MINT = pal["accent"], pal["mint"]
     TEXT_DARK = pal["navy"]
     COMPANY, LOGO_DOMAIN = cfg["name"], cfg["logo_domain"]
-    global LOGO_PREFIX
+    global LOGO_PREFIX, LOGO_CHIP
     LOGO_PREFIX = {"mcd": "mcd"}.get(cfg["key"], cfg["key"])
+    LOGO_CHIP = cfg.get("logo_chip", False)
     CATEGORICAL = [SOFI_BRIGHT, SOFI_MINT, NAVY, SOFI_CYAN,
                    SOFI_BLUE, "#7CC7E8", "#4A90E2", "#0A4E8B"]
 
@@ -57,6 +58,9 @@ def datauri_svg(svg: str) -> str:
 
 
 LOGO_PREFIX = "sofi"
+LOGO_CHIP = False  # True for a multi-colour brand mark that must not be
+                   # recoloured white (see the eBay/Fox News Media exception
+                   # in HANDOFF.md sec 17) -- rendered on a white chip instead.
 
 
 def _uri(name: str) -> str:
@@ -78,6 +82,21 @@ def logo_navy():
 
 def logo_blue():
     return _uri("blue")
+
+
+def logo_chip():
+    return LOGO_CHIP
+
+
+def logo_img_style():
+    """Style for the header/modal logo image. Multi-colour marks (LOGO_CHIP)
+    sit on a white chip instead of being recoloured white -- flattening a
+    logo that carries its own brand colour blocks (e.g. Fox News Media's
+    blue/red bands) to solid white makes the wordmark unreadable."""
+    style = {"fit": "contain", "align": "start", "padding": "none"}
+    if LOGO_CHIP:
+        style.update({"backgroundColor": "#FFFFFF", "borderRadius": "round"})
+    return style
 
 
 def header_bg(width=1600, height=240) -> str:

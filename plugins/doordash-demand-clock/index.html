@@ -109,6 +109,8 @@
     recompute(); });
   } else { recompute(); }
   window.addEventListener('resize',function(){ recompute(); });
+  var stage=document.getElementById('stage');
+  if(window.ResizeObserver && stage){ new ResizeObserver(function(){ recompute(); }).observe(stage); }
 })();
 </script>
 </body>

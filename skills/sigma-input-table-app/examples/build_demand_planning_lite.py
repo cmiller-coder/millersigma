@@ -180,7 +180,7 @@ elements = [
                 "effects": [
                     {
                         "effect": "update-rows",
-                        "table": "assum3",
+                        "tableElementId": "assum3",
                         "whichRows": {"type": "formula", "formula": "True"},
                         "values": {
                             "ia-season3": {"type": "constant", "value": {"type": "number", "value": None}},
@@ -207,7 +207,7 @@ elements = [
                 "effects": [
                     {
                         "effect": "update-rows",
-                        "table": "assum3",
+                        "tableElementId": "assum3",
                         "whichRows": {"type": "formula", "formula": "[RelMonth] >= 0"},
                         "values": {"ia-growth3": {"type": "constant", "value": {"type": "number", "value": 10}}},
                     }

@@ -542,8 +542,8 @@ add({"id": "map-geo", "kind": "region-map",
                "domain": {"min": 0.25, "mid": 0.35, "max": 0.45}},
      "legend": {"visibility": "shown"},
      "actions": [{"id": "a-map-sel",
-                  "trigger": {"on": "on-select", "condition": {"type": "column", "column": "gm-st", "condition": "IsNotNull"}},
-                  "effects": [{"effect": "set-control-value", "control": "StateFilter", "value": {"type": "column", "column": "gm-st"}}]}],
+                  "trigger": {"on": "on-select", "condition": {"type": "column", "columnId": "gm-st", "condition": "IsNotNull"}},
+                  "effects": [{"effect": "set-control-value", "control": "StateFilter", "value": {"type": "column", "columnId": "gm-st"}}]}],
      "style": panel()})
 
 add({"kind": "control", "id": "ctrl-state", "controlId": "StateFilter", "name": "State",

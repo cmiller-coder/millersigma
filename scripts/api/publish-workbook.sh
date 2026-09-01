@@ -5,14 +5,19 @@
 #
 # Usage:
 #   scripts/api/publish-workbook.sh post     <spec-file>
+#   scripts/api/publish-workbook.sh update   <workbook-id> <spec-file>
 #   scripts/api/publish-workbook.sh get-spec <workbook-id>
 #   scripts/api/publish-workbook.sh get-meta <workbook-id>
 #
 # Auth, Accept: application/json header, and 401 auto-retry are all handled
 # by the sigma_curl helper in _env.sh. Spec validation runs automatically on
-# `post` (calls scripts/validate-spec.py). No `delete` subcommand here —
-# deletion stays on the direct-curl path so it always hits the DELETE ask
-# pattern in .claude/settings.json.
+# both `post` and `update` (calls scripts/validate-spec.py). No `delete`
+# subcommand here — deletion stays on the direct-curl path so it always hits
+# the DELETE ask pattern in .claude/settings.json.
+#
+# `update` is what scripts/api/patch-element.sh uses for cheap, surgical
+# iteration (GET -> patch one element -> sanitize -> PUT) instead of
+# regenerating and POSTing a whole new workbook for a one-field tweak.
 set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 
@@ -31,6 +36,20 @@ case "$cmd" in
       --data-binary "@$spec" \
       "$SIGMA_BASE_URL/v2/workbooks/spec"
     ;;
+  update)
+    wb_id="${2:?usage: publish-workbook.sh update <workbook-id> <spec-file>}"
+    spec="${3:?usage: publish-workbook.sh update <workbook-id> <spec-file>}"
+    if [ ! -f "$spec" ]; then
+      echo "publish-workbook: spec file not found: $spec" >&2
+      exit 2
+    fi
+    repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+    python3 "$repo_root/scripts/validate-spec.py" "$spec"
+    sigma_curl -X PUT \
+      -H "Content-Type: application/json" \
+      --data-binary "@$spec" \
+      "$SIGMA_BASE_URL/v2/workbooks/$wb_id/spec"
+    ;;
   get-spec)
     wb_id="${2:?usage: publish-workbook.sh get-spec <workbook-id>}"
     sigma_curl "$SIGMA_BASE_URL/v2/workbooks/$wb_id/spec"
@@ -43,6 +62,7 @@ case "$cmd" in
     cat >&2 <<'USAGE'
 usage:
   publish-workbook.sh post     <spec-file>
+  publish-workbook.sh update   <workbook-id> <spec-file>
   publish-workbook.sh get-spec <workbook-id>
   publish-workbook.sh get-meta <workbook-id>
 USAGE

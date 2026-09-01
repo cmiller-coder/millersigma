@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Vulnerability Severity Heatmap — Snyk Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#211547;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#8D1FF4}
+  #meta{font-size:11px;color:#8177A3}
+  #meta b{color:#211547}
+  #grid{flex:1;display:grid;gap:4px;min-height:0}
+  .lbl{font-size:11px;color:#4B3E7A;display:flex;align-items:center;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hlbl{font-size:11px;color:#8177A3;display:flex;align-items:flex-end;justify-content:center;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .cell{border-radius:4px;min-height:6px;transition:transform .08s;cursor:default;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700}
+  .cell:hover{transform:scale(1.08);z-index:5;outline:1.5px solid #211547;border-radius:3px}
+  .peak{box-shadow:0 0 0 1.5px #211547}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#8177A3}
+  #bar{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#FDECEC,#F7A6A0,#E8433A,#8A140E)}
+  #tip{position:fixed;pointer-events:none;background:#211547;border:1px solid #441C99;border-radius:8px;padding:8px 10px;font-size:11px;color:#F1E9FF;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip b{color:#C79BFF}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Vulnerability severity — by project</div><div id="meta">highest cell <b id="peak">&mdash;</b> &middot; avg <b id="tot">&mdash;</b></div></div>
+  <div id="grid"></div>
+  <div id="legend"><span>fewer vulns</span><div id="bar"></div><span>more vulns</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var SEV=['Low','Medium','High','Critical'];
+  var PROJECTS=['payments-api','auth-service','web-frontend','mobile-app-ios','checkout-svc','data-pipeline','notification-svc','admin-portal'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'project',type:'column',source:'source',label:'Project / Repo'},
+    {name:'severity',type:'column',source:'source',label:'Severity (Low/Medium/High/Critical)'},
+    {name:'value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Vulnerability Count'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hx(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  function heat(t){ // 0..1 pale -> deep red/orange
+    t=Math.max(0,Math.min(1,t));
+    var s=[[253,236,236],[247,166,160],[232,67,58],[138,20,14]];
+    var seg=t*3,i=Math.min(2,Math.floor(seg)),f=seg-i;
+    return '#'+hx(lerp(s[i][0],s[i+1][0],f))+hx(lerp(s[i][1],s[i+1][1],f))+hx(lerp(s[i][2],s[i+1][2],f)); }
+  function fmtN(v){ v=Math.round(v); if(v>=1e3)return (v/1e3).toFixed(1)+'k'; return String(v); }
+  var tip=document.getElementById('tip');
+  function draw(m,projs){
+    var cols=SEV.length;
+    var grid=document.getElementById('grid'); grid.innerHTML='';
+    grid.style.gridTemplateColumns='150px repeat('+cols+',1fr)';
+    grid.style.gridTemplateRows='20px repeat('+projs.length+',1fr)';
+    var max=0,sum=0,n=0,pk={v:-1,r:0,c:0};
+    for(var r=0;r<projs.length;r++)for(var c=0;c<cols;c++){var v=(m[r]&&m[r][c])||0; if(v>max)max=v; if(v>0){sum+=v;n++;} if(v>pk.v){pk={v:v,r:r,c:c};}}
+    max=max||1;
+    var corner=document.createElement('div'); grid.appendChild(corner);
+    for(var c=0;c<cols;c++){ var hl=document.createElement('div'); hl.className='hlbl'; hl.textContent=SEV[c]; grid.appendChild(hl); }
+    for(var r=0;r<projs.length;r++){
+      var lab=document.createElement('div'); lab.className='lbl'; lab.title=projs[r]; lab.textContent=projs[r]; grid.appendChild(lab);
+      for(var c=0;c<cols;c++){ (function(r,c){
+        var v=(m[r]&&m[r][c])||0, cell=document.createElement('div');
+        cell.className='cell'+(r===pk.r&&c===pk.c?' peak':'');
+        cell.style.background= v>0 ? heat(v/max) : '#F7F4FC';
+        cell.textContent = v>0 ? fmtN(v) : '';
+        cell.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+          tip.innerHTML='<b>'+projs[r]+' &middot; '+SEV[c]+'</b><br>'+fmtN(v)+' open vulnerabilities'; });
+        cell.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+        grid.appendChild(cell);
+      })(r,c); }
+    }
+    document.getElementById('peak').textContent=projs[pk.r]+' · '+SEV[pk.c];
+    document.getElementById('tot').textContent= n>0 ? fmtN(sum/n)+' avg/cell' : '—';
+  }
+  function synth(){
+    // Realistic-ish: web-facing + auth surfaces skew toward Critical/High; internal tools lighter.
+    var base={
+      'payments-api':      [4,10,14,9],
+      'auth-service':      [3,8,17,12],
+      'web-frontend':      [12,20,15,6],
+      'mobile-app-ios':    [9,14,8,3],
+      'checkout-svc':      [5,11,13,8],
+      'data-pipeline':     [14,18,7,2],
+      'notification-svc':  [10,9,4,1],
+      'admin-portal':      [7,12,10,5]
+    };
+    return {m:PROJECTS.map(function(k){return base[k];}),projs:PROJECTS};
+  }
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{},d=st.data;
+    if(d&&c.value&&d[c.value]&&c.project&&d[c.project]&&c.severity&&d[c.severity]){
+      var proj=d[c.project]||[],sev=d[c.severity]||[],val=d[c.value]||[];
+      var projs=[]; for(var i=0;i<proj.length;i++){ var pv=String(proj[i]); if(projs.indexOf(pv)<0) projs.push(pv); }
+      var m=[]; for(var i=0;i<projs.length;i++){m[i]=[0,0,0,0];}
+      var any=false;
+      for(var i=0;i<val.length;i++){ var ri=projs.indexOf(String(proj[i])); var ck=SEV.indexOf(String(sev[i]));
+        if(ri>=0&&ck>=0){ m[ri][ck]=Number(val[i])||0; any=true; } }
+      if(any){ draw(m,projs); return; } }
+    var s=synth(); draw(s.m,s.projs);
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(dd){ st.data=dd; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+})();
+</script>
+</body>
+</html>

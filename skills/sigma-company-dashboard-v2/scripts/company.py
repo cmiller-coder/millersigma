@@ -1237,6 +1237,164 @@ PLUGINS["delta"] = {
 COMPANIES["delta"] = DELTA
 
 
+# ---------------------------------------------------------------------------
+# BayPort Credit Union — member-owned credit union, Newport News VA
+# (Virginia Peninsula & Southside / Hampton Roads). Real public figures:
+# ~$2.7B in assets, 156,000+ members, 29 branches, founded 1928.
+#
+#   product -> loan/deposit line, using BayPort's own site product names
+#   volume  -> avg balances ($MM) -- loans AND shares both carry a balance
+#   yield   -> loan APR (asset side) / 0 for share (deposit) lines
+#   funding -> cost of funds -- for share lines this IS the dividend paid
+#   spread  -> net interest margin, same shape as every other bank/CU built
+#   fee     -> interchange, service charges, ancillary (MONTHLY, $MM)
+#   risk    -> delinquency
+#   shock   -> parallel rate shock (bps), same modeler as sofi/boa unchanged
+# A member-owned CU pays "dividends," not "interest," on deposits -- VOCAB
+# below carries that word choice into the agent so it doesn't read as a bank.
+# ---------------------------------------------------------------------------
+BAYPORT = {
+    "key": "bayport",
+    "name": "BayPort Credit Union",
+    "title": "Member & Lending Command Center",
+    "domain": "member-owned credit union",
+    "unit_noun": "member",
+    "volume_noun": "balances",
+    "logo_domain": "bayportcu.org",
+    "base_table": "Member Ledger",
+    # navy + green sampled from BayPort's own wordmark (bayport-logo.png)
+    "palette": {
+        "navy": "#0A2B57", "navy_deep": "#051A38",
+        "primary": "#1E7F4D", "secondary": "#0D6E9C",
+        "accent": "#2FA766", "mint": "#17A793",
+    },
+    "products": [
+        ("Checking & Savings", 1, "Deposits", 1550, 0.0, .0140, 2.6, 0.0, 0.0,
+         .460, .024, 225, 0.0, "Free rewards checking & regular shares",
+         "APY", .978, "On plan"),
+        ("Share Certificates", 2, "Deposits", 800, 0.0, .0410, 0.3, 0.0, 0.0,
+         .180, .086, 39, 1.7, "12-60 month share & IRA certificates",
+         "APY", 1.092, "Ahead"),
+        ("Vehicle Loans", 3, "Loans", 600, .0680, .0300, 0.9, .0075, .0068,
+         .300, .041, 55, 1.1, "New, used & refinance auto lending",
+         "Avg APR", 1.028, "Ahead"),
+        ("Mortgages & Home Equity", 4, "Loans", 1030, .0615, .0300, 1.4, .0018, .0032,
+         .240, .026, 16, 2.2, "Fixed, balloon/hybrid & home equity",
+         "Avg APR", .946, "Behind"),
+        ("Personal Loans", 5, "Loans", 175, .1120, .0300, 0.25, .0180, .0145,
+         .360, .052, 34, 0.6, "Signature & Take-Back® lending",
+         "Avg APR", 1.014, "On plan"),
+        ("Credit Cards", 6, "Loans", 135, .1780, .0300, 0.6, .0420, .0225,
+         .420, .037, 67, 2.8, "Visa Platinum & Rewards card programs",
+         "Avg APR", .881, "Behind"),
+    ],
+    "alerts": [
+        ("critical", "Straw-purchase indicators flagged",
+         "Fraud pattern detected across 86 recently funded Vehicle Loans",
+         "24m ago", "Financial Crimes", 86, "loans flagged"),
+        ("critical", "Certificate maturity wall",
+         "$42M of Share Certificates mature within 30 days at risk of non-renewal",
+         "1h ago", "Treasury", 42, "$M maturing at risk"),
+        ("warning", "Mortgage pipeline aging",
+         "218 mortgage applications past the 21-day underwriting SLA",
+         "3h ago", "Lending Ops", 218, "apps past SLA"),
+        ("warning", "Credit card delinquency drift",
+         "Visa Platinum 30-day delinquency up 34 bps quarter over quarter",
+         "6h ago", "Risk", 34, "bps QoQ"),
+        ("info", "Dividend rate change published",
+         "Regular Shares dividend moved 1.25% to 1.40% APY for all members",
+         "1d ago", "Product", 15, "bps APY increase"),
+    ],
+    "agent": ("You are an analyst covering BayPort Credit Union's lending, "
+              "deposit and member business. Answer with numbers from the workbook."),
+}
+
+BAYPORT["subs"] = {
+    "Checking & Savings": [("Free Rewards Checking", .42, -15, 2.4, "Ahead"),
+                           ("Regular Shares (Savings)", .34, 5, 1.1, "On plan"),
+                           ("Money Market", .16, 20, 3.6, "Ahead"),
+                           ("Youth & Student Accounts", .08, -20, 0.8, "On plan")],
+    "Share Certificates": [("12-Month Certificate", .38, 10, 8.4, "Ahead"),
+                           ("24-Month Certificate", .27, 15, 6.9, "Ahead"),
+                           ("36-60 Month Certificate", .22, -10, 4.2, "On plan"),
+                           ("IRA Certificate", .13, 5, 5.1, "Ahead")],
+    "Vehicle Loans": [("New Auto", .46, -20, 4.8, "Ahead"),
+                      ("Used Auto", .38, 10, 3.1, "On plan"),
+                      ("Auto Refinance", .11, -30, 6.2, "Ahead"),
+                      ("Boat & RV", .05, 40, -1.2, "Behind")],
+    "Mortgages & Home Equity": [("Fixed-Rate Purchase", .44, 15, -2.1, "Behind"),
+                                ("Refinance", .21, -25, -4.6, "Behind"),
+                                ("Home Equity Line", .24, 20, 3.8, "Ahead"),
+                                ("Balloon & Hybrid", .11, 30, -0.6, "On plan")],
+    "Personal Loans": [("Debt Consolidation", .52, -10, 3.4, "Ahead"),
+                       ("Take-Back® Loan", .27, 0, 5.6, "Ahead"),
+                       ("Signature/Unsecured", .21, 25, -1.8, "Behind")],
+    "Credit Cards": [("Visa Platinum Rewards", .58, 20, -2.4, "Behind"),
+                     ("Visa Platinum Low Rate", .29, -15, 1.2, "On plan"),
+                     ("Secured Builder Card", .13, 60, 4.8, "Ahead")],
+}
+
+# Field-of-membership footprint: heavily Virginia Peninsula & Southside
+# (Hampton Roads), plus a national tail from members who relocated -- Hampton
+# Roads is a major Navy homeport, so PCS moves scatter former members
+# nationwide the way no ordinary regional bank's footprint would.
+FOOTPRINTS["bayport"] = [("VA", .580), ("NC", .062), ("MD", .048), ("FL", .042),
+                         ("TX", .034), ("GA", .028), ("SC", .026), ("CA", .024),
+                         ("PA", .022), ("TN", .020), ("OH", .018), ("NY", .016),
+                         ("WA", .014), ("AZ", .012), ("CO", .010)]
+
+LABELS["bayport"] = {
+    "personas": ["Executive", "Member Experience"],
+    "seg_product": "Primary Product", "seg_credit": "Credit Band",
+    "seg_dd": "Direct Deposit", "seg_engage": "Engagement",
+    "seg_held": "Products held", "cohort_name": "Cohort name",
+    "kpi_cohort_size": "Members in Cohort",
+    "kpi_cohort_vol": "Cohort Balances", "kpi_cohort_rev": "Revenue per Member",
+    "kpi_cohort_risk": "Avg Attrition Risk",
+    "modeler_page": "Rate Planning", "cohort_page": "Member Segments",
+    "modeler_title": "Dividend & Loan Rate Scenario Modeler",
+    "shock_label": "Parallel rate shock (bps)",
+    "kpi_revenue": "Net revenue ($M)", "kpi_margin": "Contribution ($M)",
+    "kpi_volume": "Avg balances ($M)", "kpi_units": "Members (K)",
+    "driver_nim": "Net interest margin", "driver_risk": "30-day delinquency",
+    "driver_cost": "Cost of funds", "driver_eff": "Efficiency ratio",
+}
+
+SEGMENTS["bayport"] = {"Near Prime": "Building Credit", "Prime": "Established",
+                       "Super Prime": "Preferred Member", "Exceptional": "Elite Member",
+                       "Daily": "Highly Engaged", "Weekly": "Active",
+                       "Monthly": "Occasional", "Dormant": "Inactive"}
+
+VOCAB["bayport"] = {
+    "econ": ("Vehicle, mortgage, personal and card loans carry an asset yield "
+             "against a blended cost of funds; checking, savings and certificate "
+             "lines pay a member dividend and earn fee income instead."),
+    "metrics": "net revenue, contribution profit, provision and delinquency",
+    "bands": ("Credit bands: Building Credit (640-679), Established (680-719), "
+              "Preferred Member (720-779), Elite Member (780+). Engagement: "
+              "Highly Engaged, Active, Occasional, Inactive."),
+    "cohort_report": "cohort size, balances and average attrition risk",
+}
+
+# _default POP (retail-banking dollar bases) fits a credit union as-is -- no
+# override needed, unlike Nuvia (dental) or Delta (airline lifetime spend).
+
+PLUGINS["bayport"] = {
+    "hero": "2a077d2f-1519-4514-81e3-cc4e71fee9b8",
+    "hero_label": "HAMPTON ROADS BRANCH PERFORMANCE",
+    "ticker": None,
+    # Real Virginia locality shapes, not the product-card table -- see
+    # branch_performance_sql() and plugins/bayport-branch-map.
+    "hero_table": {"name": "Branch Performance", "file": "branch_performance.sql",
+                   "prefix": "h", "cols": ["Locality", "Branches", "Balances",
+                                           "Member Growth Pct", "Status"]},
+    "hero_config": {"locality": "h0", "branches": "h1", "balances": "h2",
+                    "growth": "h3", "status": "h4"},
+}
+
+COMPANIES["bayport"] = BAYPORT
+
+
 def hub_banks_sql(cfg):
     """Arrival/departure banks at the primary hub, by hour. Explicit UNION ALL
     rather than a generator so it stays portable across warehouses."""
@@ -1262,6 +1420,48 @@ def hub_banks_sql(cfg):
                 rows.append("    %s %d, '%s', %d, %d, %d"
                             % (lead, h, label, flights, seats, conn))
     return "SELECT * FROM (\n" + "\n".join(rows) + "\n) AS hub_banks"
+
+
+# BayPort's hero plugin needs Hampton Roads / Peninsula-Southside locality
+# data, not the product-card table -- same pattern as Delta's hub_banks_sql.
+# Branch counts sum to the real public figure (29 branches). Locality names
+# are the exact labels baked into the plugin's Virginia county-shape paths
+# (see plugins/bayport-branch-map) -- renaming one here without renaming it
+# there is the display-label trap from HANDOFF.md section 8.
+_BAYPORT_LOCALITIES = [
+    ("Newport News", 5, 640, 4.2, "Ahead"),
+    ("Hampton", 4, 480, 2.1, "On plan"),
+    ("York County", 3, 310, 5.8, "Ahead"),
+    ("Poquoson", 1, 85, 1.4, "On plan"),
+    ("Williamsburg", 2, 260, 6.4, "Ahead"),
+    ("James City County", 2, 240, 3.9, "On plan"),
+    ("Gloucester", 1, 78, -1.2, "Behind"),
+    ("Mathews", 0, 22, -3.4, "Behind"),
+    ("Isle of Wight", 1, 96, 2.8, "On plan"),
+    ("Suffolk", 2, 210, 7.1, "Ahead"),
+    ("Portsmouth", 2, 175, -2.6, "Behind"),
+    ("Norfolk", 2, 205, 1.9, "On plan"),
+    ("Chesapeake", 2, 230, 5.2, "Ahead"),
+    ("Virginia Beach", 2, 260, 4.6, "Ahead"),
+    ("Southampton", 0, 38, -0.8, "On plan"),
+    ("Franklin", 0, 26, -4.1, "Behind"),
+]
+
+
+def branch_performance_sql(cfg):
+    rows = []
+    for i, (name, branches, bal, growth, status) in enumerate(_BAYPORT_LOCALITIES):
+        lead = "SELECT" if i == 0 else "UNION ALL SELECT"
+        cols = ("" if i else
+                " AS \"Locality\", %d AS \"Branches\", %d AS \"Balances\","
+                " %s AS \"Member Growth Pct\", '%s' AS \"Status\"")
+        if i == 0:
+            rows.append("    %s '%s'%s" % (lead, name, cols % (
+                branches, bal, growth, status)))
+        else:
+            rows.append("    %s '%s', %d, %d, %s, '%s'"
+                        % (lead, name, branches, bal, growth, status))
+    return "SELECT * FROM (\n" + "\n".join(rows) + "\n) AS branch_performance"
 
 
 # ---------------------------------------------------------------------------
@@ -1348,6 +1548,43 @@ STATEMENTS = {
                    "from a Sigma report specification — synthetic data, not a "
                    "real account."),
     },
+    "sigma_motors": {
+        "spec_name": "Sigma Motors — Reservation Statement (July 2026)",
+        "page_name": "Reservation Statement",
+        "page2_title": "# Reservation & service activity",
+        "manage_url": "sigmamotors.com/account",
+        "service_label": "Reservation Support",
+        "service_phone": "1-888-EV-SIGMA",
+        "period": "07/01 – 07/31/2026",
+        "sect_rewards": "SIGMA REWARDS SUMMARY",
+        "sect_summary": "RESERVATION SUMMARY",
+        "sect_category": "ACTIVITY BY CATEGORY",
+        "sect_activity": "RESERVATION & SERVICE ACTIVITY",
+        "sect_messages": "YOUR SIGMA MOTORS MESSAGES",
+        "headline": [("Sigma Rewards Points", None),
+                     ("Reservation Activity This Period", None),
+                     ("Estimated Delivery Window", "Q1 2027")],
+        "button_label": "Reservation statement ↗",
+        "rewards_total": "Total Sigma Rewards points available",
+        "h_formulas": [("src-rw", 'Sum([Rewards Summary/Points])', "NUM0"),
+                       ("src", 'Sum([Statement Activity/Amount])', "MONEY0")],
+        "msg_body": ("Beginning September 2026, Sigma Motors is expanding EV "
+                     "production capacity in the West and Southwest regions to "
+                     "reduce reservation wait times. Reservation holders in "
+                     "affected regions may see their estimated delivery window "
+                     "move earlier automatically. No action is required to "
+                     "receive an updated estimate."),
+        "warn1": ("**Delivery Estimate Notice:** Delivery windows may shift as "
+                  "capacity is reallocated across regions. Your deposit remains "
+                  "fully refundable prior to build confirmation."),
+        "warn2": ("**Sigma Rewards Terms:** Points are earned on reservations, "
+                  "upgrades, and referrals, and do not expire while your "
+                  "reservation is active. Redeem for merchandise or service "
+                  "credit."),
+        "footer": ("Sigma Motors is a fictional EV/Hybrid automaker. "
+                   "Illustrative statement generated from a Sigma report "
+                   "specification — synthetic data, not a real account."),
+    },
     "veraset": {
         "spec_name": "Veraset — Data License Invoice (July 2026)",
         "page_name": "Invoice Summary",
@@ -1382,6 +1619,79 @@ STATEMENTS = {
                    "under a data processing agreement with each customer. "
                    "Illustrative invoice generated from a Sigma report "
                    "specification — synthetic data, not a real account."),
+    },
+    "bayport": {
+        "spec_name": "BayPort Credit Union — Free Rewards Checking Statement (July 2026)",
+        "page_name": "Member Statement",
+        "manage_url": "www.bayportcu.org/account",
+        "service_label": "Member Services",
+        "service_phone": "1-757-928-8850",
+        "period": "07/01 – 07/31/2026",
+        "sect_rewards": "BAYPORT REWARDS SUMMARY",
+        "sect_summary": "ACCOUNT SUMMARY",
+        "sect_category": "SPEND BY CATEGORY",
+        "sect_activity": "TRANSACTIONS",
+        "sect_messages": "YOUR ACCOUNT MESSAGES",
+        "headline": [("New Balance", None), ("Dividends Earned YTD", None),
+                     ("Statement Closing Date", "07/31/2026")],
+        "button_label": "Member statement ↗",
+        "rewards_total": "Total BayPort Rewards points available",
+        "h_formulas": [("src", 'Sum([Statement Activity/Amount])', "MONEY"),
+                       ("src", 'Round(Sum([Statement Activity/Amount]) * 0.015, 2)',
+                        "MONEY")],
+        "msg_body": ("Starting 09/01/2026, BayPort Rewards points earned on debit "
+                     "card purchases increase from 1 point per $2 spent to 1 point "
+                     "per $1 spent on groceries and fuel, with no cap. Points "
+                     "continue to be redeemable for statement credit, a deposit "
+                     "into any BayPort share account, or loan principal payments. "
+                     "No action is required to keep earning at the new rate."),
+        "warn1": ("**Overdraft Notice:** If your Free Rewards Checking balance "
+                  "goes negative, an overdraft fee of up to $29.00 per item may "
+                  "apply. Enroll in Courtesy Pay for free automatic overdraft "
+                  "transfer from savings."),
+        "warn2": ("**Dividend Rate Notice:** Dividend rates on regular shares and "
+                  "money market accounts are set by the Board and may change at "
+                  "any time. Current rates are posted at bayportcu.org."),
+        "footer": ("BayPort Credit Union is federally insured by NCUA. "
+                   "Illustrative statement generated from a Sigma report "
+                   "specification — synthetic data, not a real account."),
+    },
+    "clickhouse": {
+        "spec_name": "ClickHouse Cloud — Usage Invoice (July 2026)",
+        "page_name": "Usage Invoice",
+        "manage_url": "clickhouse.cloud/billing",
+        "service_label": "Cloud Support",
+        "service_phone": "support@clickhouse.com",
+        "period": "07/01 – 07/31/2026",
+        "sect_rewards": "USAGE SUMMARY",
+        "sect_summary": "ACCOUNT SUMMARY",
+        "sect_category": "SPEND BY CATEGORY",
+        "sect_activity": "USAGE DETAIL",
+        "sect_messages": "YOUR ACCOUNT MESSAGES",
+        "headline": [("Invoice Total", None), ("Overage Charges", None),
+                     ("Payment Due Date", "08/15/2026")],
+        "button_label": "Usage invoice ↗",
+        "rewards_total": "Total CHU-hours consumed",
+        "h_formulas": [("src", 'Sum([Statement Activity/Amount])', "MONEY"),
+                       ("src", 'Round(Sum([Statement Activity/Amount]) * 0.08, 2)',
+                        "MONEY")],
+        "msg_body": ("Beginning 09/01/2026, ClickHouse Cloud is expanding "
+                     "committed-use credit tiers so customers exceeding 500 "
+                     "CHU-hours per month qualify for an additional 10% discount "
+                     "on overage compute. No action is required to receive the "
+                     "new rate."),
+        "warn1": ("**Late Payment Notice:** If payment is not received within 15 "
+                  "days of the invoice date, a 1.5% monthly late fee may apply "
+                  "and compute may be throttled until the account is brought "
+                  "current."),
+        "warn2": ("**Overage Notice:** Compute consumed beyond your committed "
+                  "CHU-hours is billed monthly in arrears at the current "
+                  "on-demand rate. Contact your account team to adjust your "
+                  "committed tier and avoid overage charges."),
+        "footer": ("ClickHouse Cloud is billed based on compute (ClickHouse "
+                   "Units) and storage consumed. Illustrative invoice generated "
+                   "from a Sigma report specification — synthetic data, not a "
+                   "real account."),
     },
 }
 
@@ -1491,7 +1801,145 @@ _VR_CONTRACT = [
 ]
 
 
+# --- Sigma Motors: one reservation holder's monthly account activity -------
+# Same reframe as Veraset -- this is ONE customer's reservation/service/rewards
+# activity, not the company's whole-fleet EV waitlist numbers from the command
+# center workbook (those are aggregate/regional, a different persona entirely).
+# "Points Earned" here is Sigma Rewards loyalty points (1pt/$1 plus referral
+# bonuses), "Merchant Name" holds the activity description.
+_SM_ACTIVITY = [
+    ("07/02", "07/03", "Reserve — Meridian EV Sedan (West Region)", "Reservation", 500.00, 500),
+    ("07/05", "07/06", "Configurator — Extended Range Battery Pack upgrade", "Reservation", 3200.00, 3200),
+    ("07/09", "07/10", "Referral bonus — J. Alvarez reservation confirmed", "Referral", 0.00, 1000),
+    ("07/12", "07/13", "Service — 12-month software update & inspection", "Service", 149.00, 149),
+    ("07/15", "07/16", "Sigma Charging Network — 500 kWh prepaid credit", "Charging", 175.00, 350),
+    ("07/19", "07/20", "Merchandise — Sigma Motors apparel bundle", "Merchandise", 86.00, 86),
+    ("07/22", "07/23", "Configurator — Performance wheel package upgrade", "Reservation", 1450.00, 1450),
+    ("07/25", "07/26", "Priority Build Slot — queue advancement fee", "Reservation", 250.00, 250),
+    ("07/29", "07/30", "Sigma Charging Network — 500 kWh prepaid credit", "Charging", 175.00, 350),
+]
+
+_SM_REWARDS = [
+    (1, "Points earned from reservation & configuration", 5400),
+    (2, "Points earned from referrals", 1000),
+    (3, "Points earned from charging network purchases", 700),
+    (4, "Points earned from service & merchandise", 235),
+    (5, "Points redeemed for Priority Build Slot upgrade", -250),
+    (6, "Points redeemed for merchandise bundle", -86),
+    (7, "Balance carried forward", 22_340),
+]
+
+_SM_SUMMARY = [
+    (1, "Reservation ID", "SM-RES-88214"),
+    (2, "Vehicle configuration", "Meridian EV Sedan, Ext. Range"),
+    (3, "Region", "West"),
+    (4, "Queue position", "1,120 of 4,120 (West Region)"),
+    (5, "Estimated delivery window", "Q1 2027"),
+    (6, "Deposit status", "Fully refundable, on file"),
+    (7, "Sigma Rewards tier", "Gold"),
+    (8, "Reservation holder since", "2025"),
+]
+
+
+# --- BayPort: one member's Free Rewards Checking monthly statement ---------
+# "Points Earned" is BayPort Rewards points (1pt/$2 debit spend); "Merchant
+# Name" holds the transaction description. Represents ONE member's checking
+# activity, not the credit union's whole balance sheet from the command
+# center workbook (same reframe as Veraset/Sigma Motors above).
+_BP_ACTIVITY = [
+    ("07/01", "07/02", "Payroll Deposit — Huntington Ingalls Industries", "Deposit", 2840.00, 0),
+    ("07/02", "07/03", "Kroger #4417 Newport News VA", "Groceries", -96.42, 48),
+    ("07/03", "07/03", "Wawa Fuel #0231 Hampton VA", "Fuel", -52.10, 26),
+    ("07/05", "07/06", "BayPort Mobile Deposit — Check #1042", "Deposit", 640.00, 0),
+    ("07/07", "07/08", "Amazon.com Purchase", "Shopping", -128.77, 64),
+    ("07/08", "07/09", "Dominion Energy Virginia — Auto Pay", "Utilities", -184.33, 0),
+    ("07/10", "07/11", "Chick-fil-A Oyster Point", "Dining", -14.86, 7),
+    ("07/11", "07/12", "Vehicle Loan Payment — Auto", "Loan Payment", -412.60, 0),
+    ("07/12", "07/13", "Food Lion #0219 Williamsburg VA", "Groceries", -88.15, 44),
+    ("07/15", "07/16", "Payroll Deposit — Huntington Ingalls Industries", "Deposit", 2840.00, 0),
+    ("07/16", "07/17", "Transfer to Share Certificate", "Transfer", -500.00, 0),
+    ("07/18", "07/19", "Cox Communications", "Utilities", -142.99, 0),
+    ("07/20", "07/21", "Target T-2281 Hampton VA", "Shopping", -76.24, 38),
+    ("07/22", "07/23", "BJ's Wholesale Fuel", "Fuel", -61.30, 30),
+    ("07/25", "07/26", "ATM Withdrawal — BayPort Way Branch", "Cash", -100.00, 0),
+    ("07/29", "07/30", "Dividend Paid — Regular Shares", "Dividend", 4.62, 0),
+]
+
+_BP_REWARDS = [
+    (1, "Points earned from debit card purchases", 257),
+    (2, "Points earned from mobile & bill pay activity", 40),
+    (3, "Points earned from referral bonus", 250),
+    (4, "Points redeemed for statement credit", -200),
+    (5, "Points redeemed for merchandise", -75),
+    (6, "Balance carried forward", 6840),
+]
+
+_BP_SUMMARY = [
+    (1, "Membership Number", "BP-441207"),
+    (2, "Account Type", "Free Rewards Checking"),
+    (3, "Current Dividend Rate (Regular Shares)", "1.40% APY"),
+    (4, "Direct Deposit Status", "Active — Huntington Ingalls Industries"),
+    (5, "Share Certificates on File", "2 (12-mo, 24-mo)"),
+    (6, "Vehicle Loan Balance", "$18,240.55"),
+    (7, "Member Since", "2014"),
+    (8, "Branch of Record", "One BayPort Way, Newport News"),
+]
+
+# --- ClickHouse: one Cloud customer's monthly usage invoice -----------------
+# Same reframe as Veraset -- this is ONE mid-market ClickHouse Cloud account's
+# monthly bill (compute/storage/transfer/support), not the company-wide ARR
+# numbers on the command-center workbook (those are aggregate, a different
+# persona entirely).
+_CH_ACTIVITY = [
+    ("07/01", "07/02", "Compute -- Scale tier (142 CHU-hours)", "Compute", 3245.00, 142),
+    ("07/01", "07/02", "Storage -- Primary + replicas (8.2 TB)", "Storage", 1890.00, 0),
+    ("07/08", "07/09", "Compute -- Scale tier (156 CHU-hours)", "Compute", 3564.00, 156),
+    ("07/08", "07/09", "Data Transfer -- Egress (1.1 TB)", "Data Transfer", 220.00, 0),
+    ("07/12", "07/13", "Support -- Enterprise SLA (monthly)", "Support", 1500.00, 0),
+    ("07/15", "07/16", "Compute -- Scale tier (148 CHU-hours)", "Compute", 3382.00, 148),
+    ("07/15", "07/16", "Storage -- Primary + replicas (8.6 TB)", "Storage", 1978.00, 0),
+    ("07/18", "07/19", "Data Transfer -- Egress (0.9 TB)", "Data Transfer", 180.00, 0),
+    ("07/22", "07/23", "Compute -- Scale tier (161 CHU-hours)", "Compute", 3679.00, 161),
+    ("07/26", "07/27", "Committed-use credit applied", "Compute", -850.00, 0),
+    ("07/29", "07/30", "Compute -- Scale tier (139 CHU-hours)", "Compute", 3176.00, 139),
+]
+_CH_USAGE = [
+    (1, "Committed monthly compute (CHU-hours)", 500),
+    (2, "+ Compute consumed this cycle", 746),
+    (3, "+ Storage consumed (TB-months)", 25),
+    (4, "Overage compute hours this cycle", 246),
+    (5, "Committed-use credits applied", 85),
+    (6, "Carryover credits from prior cycle", 40),
+    (7, "Credit balance carried forward", 526),
+]
+_CH_CONTRACT = [
+    (1, "Account ID", "CH-2026-08821"),
+    (2, "Plan tier", "Scale"),
+    (3, "Committed monthly spend", "$18,000"),
+    (4, "Contract renewal date", "02/01/2027"),
+    (5, "Account manager", "T. Nakamura"),
+    (6, "Primary region", "us-west-2 (AWS)"),
+    (7, "Support plan", "Enterprise SLA"),
+]
+
+
 def statement_activity_sql(cfg):
+    if cfg["key"] == "bayport":
+        cols = ["Transaction Date", "Post Date",
+                "Merchant Name or Transaction Description", "Category", "Amount",
+                "Points Earned"]
+        rows = [("'%s/2026'" % t, "'%s/2026'" % pd, "'%s'" % d.replace("'", "''"),
+                 "'%s'" % c, "%.2f" % amt, str(pts))
+                for t, pd, d, c, amt, pts in _BP_ACTIVITY]
+        return _union(rows, cols)
+    if cfg["key"] == "sigma_motors":
+        cols = ["Transaction Date", "Post Date",
+                "Merchant Name or Transaction Description", "Category", "Amount",
+                "Points Earned"]
+        rows = [("'%s/2026'" % t, "'%s/2026'" % pd, "'%s'" % d.replace("'", "''"),
+                 "'%s'" % c, "%.2f" % amt, str(pts))
+                for t, pd, d, c, amt, pts in _SM_ACTIVITY]
+        return _union(rows, cols)
     if cfg["key"] == "veraset":
         cols = ["Transaction Date", "Post Date",
                 "Merchant Name or Transaction Description", "Category", "Amount",
@@ -1499,6 +1947,22 @@ def statement_activity_sql(cfg):
         rows = [("'%s/2026'" % t, "'%s/2026'" % pd, "'%s'" % d.replace("'", "''"),
                  "'%s'" % c, "%.2f" % amt, str(pts))
                 for t, pd, d, c, amt, pts in _VR_ACTIVITY]
+        return _union(rows, cols)
+    if cfg["key"] == "clickhouse":
+        cols = ["Transaction Date", "Post Date",
+                "Merchant Name or Transaction Description", "Category", "Amount",
+                "Points Earned"]
+        rows = [("'%s/2026'" % t, "'%s/2026'" % pd, "'%s'" % d.replace("'", "''"),
+                 "'%s'" % c, "%.2f" % amt, str(pts))
+                for t, pd, d, c, amt, pts in _CH_ACTIVITY]
+        return _union(rows, cols)
+    if cfg["key"] == "foxmedia":
+        cols = ["Transaction Date", "Post Date",
+                "Merchant Name or Transaction Description", "Category", "Amount",
+                "Points Earned"]
+        rows = [("'%s/2026'" % t, "'%s/2026'" % pd, "'%s'" % d.replace("'", "''"),
+                 "'%s'" % c, "%.2f" % amt, str(pts))
+                for t, pd, d, c, amt, pts in _FM_ACTIVITY]
         return _union(rows, cols)
     if cfg["key"] != "delta":
         return None
@@ -1512,8 +1976,20 @@ def statement_activity_sql(cfg):
 
 
 def rewards_summary_sql(cfg):
+    if cfg["key"] == "bayport":
+        rows = [(str(o), "'%s'" % d, str(p)) for o, d, p in _BP_REWARDS]
+        return _union(rows, ["Line Order", "Description", "Points"])
+    if cfg["key"] == "sigma_motors":
+        rows = [(str(o), "'%s'" % d, str(p)) for o, d, p in _SM_REWARDS]
+        return _union(rows, ["Line Order", "Description", "Points"])
     if cfg["key"] == "veraset":
         rows = [(str(o), "'%s'" % d, str(p)) for o, d, p in _VR_USAGE]
+        return _union(rows, ["Line Order", "Description", "Points"])
+    if cfg["key"] == "clickhouse":
+        rows = [(str(o), "'%s'" % d, str(p)) for o, d, p in _CH_USAGE]
+        return _union(rows, ["Line Order", "Description", "Points"])
+    if cfg["key"] == "foxmedia":
+        rows = [(str(o), "'%s'" % d, str(p)) for o, d, p in _FM_ADUNITS]
         return _union(rows, ["Line Order", "Description", "Points"])
     if cfg["key"] != "delta":
         return None
@@ -1522,8 +1998,20 @@ def rewards_summary_sql(cfg):
 
 
 def account_summary_sql(cfg):
+    if cfg["key"] == "bayport":
+        rows = [(str(o), "'%s'" % m, "'%s'" % v) for o, m, v in _BP_SUMMARY]
+        return _union(rows, ["Line Order", "Metric", "Value"])
+    if cfg["key"] == "sigma_motors":
+        rows = [(str(o), "'%s'" % m, "'%s'" % v) for o, m, v in _SM_SUMMARY]
+        return _union(rows, ["Line Order", "Metric", "Value"])
     if cfg["key"] == "veraset":
         rows = [(str(o), "'%s'" % m, "'%s'" % v) for o, m, v in _VR_CONTRACT]
+        return _union(rows, ["Line Order", "Metric", "Value"])
+    if cfg["key"] == "clickhouse":
+        rows = [(str(o), "'%s'" % m, "'%s'" % v) for o, m, v in _CH_CONTRACT]
+        return _union(rows, ["Line Order", "Metric", "Value"])
+    if cfg["key"] == "foxmedia":
+        rows = [(str(o), "'%s'" % m, "'%s'" % v) for o, m, v in _FM_SUMMARY]
         return _union(rows, ["Line Order", "Metric", "Value"])
     if cfg["key"] != "delta":
         return None
@@ -2138,6 +2626,165 @@ POP["nvidia"] = {"bases": (85000, 420000, 2100000, 9800000), "rev_rate": 0.78,
 PLUGINS["nvidia"] = {"hero": None, "hero_label": None, "ticker": None}
 
 COMPANIES["nvidia"] = NVIDIA
+
+
+# ---------------------------------------------------------------------------
+# ClickHouse Inc. -- real-time OLAP database company. Privately held (no
+# 10-K), so calibrated against the real publicly-reported figures instead:
+# $250M ARR (May 2026, TechCrunch, "tripled" YoY), Series D Jan 2026 ($400M
+# at ~$15B valuation), 4,000 customers (May 2026, up from ~3,000 Jan 2026).
+# Segment split (Cloud/Enterprise/Services) and the exact revenue-per-segment
+# numbers are NOT disclosed by the company -- the 65/25/10 split and margins
+# below are a reasonable estimate, not a confirmed figure, same caveat as
+# every other company here whose card/alert numbers are illustrative dressing
+# on a real total. bal_base values are back-solved (not naive) against the
+# actual 24-month growth+seasonal grid so month 12-23 sums hit the target ARR
+# exactly -- same method as NVIDIA's units_base, see HANDOFF section 20.
+#
+# NOTE: this company has NO Snowflake-dialect SQL file wired up (there is no
+# clickhouse_book.sql -- porting loan_book.sql's SEQ4()/DATEADD()/HASH() to
+# ClickHouse SQL is real work, not a config-only change). This entry is
+# consumed by examples/build_clickhouse_v2_command_center.py, a standalone
+# script that reuses company.py's config + the portable literal-value
+# generators (products_cte, product_cards_sql, notifications_sql,
+# product_skus_sql -- CAST(...AS VARCHAR/NUMBER) shimmed to ClickHouse's
+# String/Decimal) but computes the product x state x month grid in pure
+# Python and emits it as literal SELECT/UNION ALL rows, so no vendor-specific
+# SQL function is needed at all. NOT build_sofi.py-compatible as-is.
+CLICKHOUSE = {
+    "key": "clickhouse",
+    "name": "ClickHouse",
+    "title": "Revenue & Customer Command Center",
+    "domain": "real-time OLAP analytics",
+    "unit_noun": "customer",
+    "volume_noun": "ARR",
+    "logo_domain": "clickhouse.com",
+    "base_table": "Revenue Book",
+    "palette": {
+        "navy": "#161616", "navy_deep": "#0B0B0B",
+        "primary": "#FCFF74", "secondary": "#D9B400",
+        "accent": "#FFE873", "mint": "#00C48C",
+    },
+    "products": [
+        # name, order, balance_type, bal_base($MM/mo, back-solved), yield
+        # (gross margin, funding=0 same as NVIDIA -- no cost-of-funds concept
+        # for a software business), funding, fee_base(unused, 0), provision
+        # (unused, 0), delinq(unused, 0), opex_ratio, annual_growth,
+        # units_base(customers), phase, tagline, rate_label, goal_pct, status
+        ("ClickHouse Cloud", 1, "Cloud", 1.057, .6500, 0.0, 0.0, 0.0, 0.0,
+         .5500, 1.80, 2600, 0.0, "Managed real-time analytics, usage-based",
+         "Gross margin", 1.08, "Ahead"),
+        ("Enterprise & Support", 2, "License", 2.3535, .7800, 0.0, 0.0, 0.0, 0.0,
+         .3500, 0.55, 1000, 1.1, "On-prem licensing & dedicated support",
+         "Gross margin", 1.04, "Ahead"),
+        ("Training & Services", 3, "Services", 1.2525, .5500, 0.0, 0.0, 0.0, 0.0,
+         .4200, 0.35, 400, 2.2, "Certification, training & professional services",
+         "Gross margin", 0.92, "Behind"),
+    ],
+    "alerts": [
+        ("critical", "Cloud infrastructure margin compression",
+         "ClickHouse Cloud gross margin sits at 65%, the thinnest of the three "
+         "lines, as usage growth outpaces compute/storage cost optimization",
+         "31m ago", "Cloud Platform", 65, "pct gross margin"),
+        ("critical", "Hyperscaler account concentration",
+         "A small number of hyperscaler accounts (OpenAI, Anthropic, Meta-scale "
+         "workloads) represent an outsized share of Enterprise & Support revenue",
+         "1h ago", "Enterprise Sales", 3, "top accounts flagged"),
+        ("warning", "Training & Services margin lag",
+         "Training & Services gross margin is 55%, the only line behind its "
+         "own target and the thinnest of the three overall",
+         "4h ago", "Professional Services", 55, "pct gross margin"),
+        ("warning", "Headcount scaling risk",
+         "Headcount grew roughly 72% year over year; onboarding and support "
+         "coverage are at risk of lagging revenue growth",
+         "6h ago", "People Ops", 72, "pct YoY headcount growth"),
+        ("info", "Series D milestone",
+         "Closed a $400M Series D at a ~$15B valuation as ARR tripled "
+         "year over year to $250M and the customer base passed 4,000",
+         "1d ago", "Finance", 250, "$M ARR"),
+    ],
+    "agent": ("You are an analyst covering ClickHouse Inc.'s business across "
+              "ClickHouse Cloud, Enterprise & Support, and Training & Services. "
+              "Answer with numbers from the workbook."),
+}
+
+# US states weighted toward ClickHouse's real footprint: SF Bay Area /
+# Portland heritage, remote-first team, and a customer base concentrated in
+# the same AI/tech hubs as its named hyperscaler customers (OpenAI, Anthropic,
+# Meta, Tesla).
+FOOTPRINTS["clickhouse"] = [("CA", .25), ("NY", .13), ("WA", .10), ("TX", .09),
+                            ("MA", .07), ("IL", .05), ("GA", .05), ("CO", .04),
+                            ("VA", .04), ("OR", .03), ("NC", .03), ("FL", .03),
+                            ("PA", .03), ("OH", .03), ("AZ", .03)]
+
+PLUGINS["clickhouse"] = {"hero": None, "hero_label": None, "ticker": None}
+
+COMPANIES["clickhouse"] = CLICKHOUSE
+
+# ---------------------------------------------------------------------------
+# SynergenRx -- independent specialty pharmacy (Doraville, GA) serving rare &
+# complex therapies (oncology, orphan/rare disease, autoimmune/rheumatology)
+# via manufacturer hub services, prior-auth support and adherence programs.
+# LIGHTWEIGHT build: single dashboard page, no map/plugin/scenario-modeler --
+# see build_synergenrx_command_center.py.
+# ---------------------------------------------------------------------------
+SYNERGENRX = {
+    "key": "synergenrx",
+    "name": "SynergenRx",
+    "title": "Patient Access & Therapy Performance Command Center",
+    "domain": "independent specialty pharmacy — rare & complex therapies",
+    "unit_noun": "patient",
+    "volume_noun": "scripts filled",
+    "logo_domain": "synergenrx.com",
+    "base_table": "Dispensing Book",
+    # Real brand colors, pulled from the company's own logo SVG
+    # (synergenrx.com/wp-content/uploads/Synergen_logo.svg): navy-blue
+    # #00518E is the wordmark fill, #289500 is the leaf/vitality accent.
+    "palette": {
+        "navy": "#0B2F4A", "navy_deep": "#061A2C",
+        "primary": "#00518E", "secondary": "#289500",
+        "accent": "#4FA8D8", "mint": "#289500",
+    },
+    "products": [
+        # name, order, balance_type, bal_base(monthly compounding seed,
+        # back-solved against _ANNUAL_TARGETS in the build script -- same
+        # technique as ClickHouse), gross margin, funding(unused,0),
+        # fee_base(unused,0), provision(unused,0), delinq(unused,0),
+        # opex_ratio, annual_growth, units_base(active patients), phase,
+        # tagline, rate_label, goal_pct, status
+        ("Oncology & Hematology", 1, "Therapy", 0.924437, .2200, 0.0, 0.0, 0.0, 0.0,
+         .6800, 0.18, 500, 0.0, "Oral & infused oncology, complex hematology support",
+         "Gross margin", 1.05, "Ahead"),
+        ("Rare & Orphan Disease", 2, "Therapy", 0.481688, .2600, 0.0, 0.0, 0.0, 0.0,
+         .6300, 0.35, 250, 1.4, "High-touch hub services for ultra-rare, high-cost therapies",
+         "Gross margin", 1.12, "Ahead"),
+        ("Autoimmune & Rheumatology", 3, "Therapy", 0.593141, .2400, 0.0, 0.0, 0.0, 0.0,
+         .6500, 0.08, 350, 2.6, "Biologics adherence & injection-training support",
+         "Gross margin", 0.91, "Behind"),
+    ],
+    "alerts": [
+        ("critical", "Prior authorization turnaround rising",
+         "Average prior-authorization turnaround climbed to 6.2 days across "
+         "rare-disease referrals, above the 3-day target and risking treatment "
+         "delays for new patient starts.",
+         "45m ago", "Patient Access Team", 6, "avg PA days"),
+        ("warning", "Autoimmune & Rheumatology margin behind plan",
+         "Autoimmune & Rheumatology gross margin is 24%, trailing Oncology and "
+         "Rare Disease as payer rebate pressure increases on biologics.",
+         "2h ago", "Payer Contracting", 24, "pct gross margin"),
+        ("info", "Rare & Orphan Disease enrollment accelerating",
+         "New patient starts in Rare & Orphan Disease are up 35% year over "
+         "year, the fastest-growing therapy line and the primary driver of "
+         "company growth.",
+         "3h ago", "Clinical Intake", 35, "pct YoY growth"),
+    ],
+    "agent": ("You are an analyst covering SynergenRx's specialty pharmacy "
+              "business across Oncology & Hematology, Rare & Orphan Disease, "
+              "and Autoimmune & Rheumatology. Answer with numbers from the "
+              "workbook."),
+}
+
+COMPANIES["synergenrx"] = SYNERGENRX
 
 
 # ---------------------------------------------------------------------------
@@ -2912,3 +3559,371 @@ POP["pura"] = {"bases": (80, 180, 350, 750), "rev_rate": 0.65, "fee_per_product"
 PLUGINS["pura"] = {"hero": None, "hero_label": None, "ticker": None}
 
 COMPANIES["pura"] = PURA
+
+# --- Sigma Motors -- statement-only entry (no workbook build via this skill) -
+# The Sigma Motors command center (EV/Hybrid demand, backlog, scenario modeler)
+# already exists as its own hand-built workbook, not one generated by this
+# skill's build_sofi.py. This entry exists ONLY so build_statement.py can
+# produce a companion pixel-perfect PDF -- palette pulled directly from that
+# live workbook's own brand colors (navy header, blue accent, green "good"),
+# not invented fresh. logo_domain is unused (Sigma Motors is fictional, no
+# real site to fetch from) -- assets/sigma_motors_logo_{navy,white}.datauri.txt
+# were extracted from the live workbook's own header image via Playwright.
+SIGMA_MOTORS = {
+    "key": "sigma_motors",
+    "name": "Sigma Motors",
+    "logo_domain": "sigmamotors.example.com",
+    "palette": {
+        "navy": "#0B1B3A", "navy_deep": "#071022",
+        "primary": "#1B4FD6", "secondary": "#0F9F6E",
+        "accent": "#7FA3E8", "mint": "#0F9F6E",
+    },
+}
+COMPANIES["sigma_motors"] = SIGMA_MOTORS
+
+# ---------------------------------------------------------------------------
+# Fox Corporation (FOXA) -- broadcast & cable media conglomerate. Real 10-K
+# segment structure: Cable Network Programming (FOX News Media, FS1/FS2, the
+# Big Ten Network) and Television (the FOX broadcast network, owned & operated
+# stations, Tubi AVOD). "Products" here are the real properties within each
+# segment, not the two statutory segments themselves -- same choice BofA made
+# (six lines of business inside two segments) so the persona tabs and product
+# cards have something to differentiate.
+#
+#   product -> network / property (tagged with its real 10-K segment)
+#   volume  -> a notional distribution & advertising base ($MM) -- there is no
+#              single public "system-wide sales" analog for media the way
+#              there is for a franchisor, so this plays that role
+#   yield   -> blended monetization rate (affiliate + retrans + advertising)
+#   cost    -> programming & content cost rate against that same base
+#   spread  -> segment operating income -- a real, disclosed media metric,
+#              NOT total revenue (see the Delta/NVIDIA spread trap in
+#              HANDOFF.md sec 8 -- this is the same shape, mapped correctly
+#              up front instead of getting caught by render)
+#   fee     -> small ancillary revenue: digital licensing & syndication
+#              (MONTHLY, $MM -- the ×12 trap that hit Nuvia)
+#   risk    -> affiliate subscriber erosion / cord-cutting (delinq_rate)
+#   shock   -> ad market / upfront pricing shock (bps), same cross-join
+#              modeler as every other company, unchanged
+#
+# Tubi is fee-only in spirit (ad-supported, no affiliate/retrans fee) but is
+# NOT modeled as yield=funding=0 the way SoFi Money is -- its ad revenue has
+# real content-acquisition and ad-tech cost against it, so it gets a genuine
+# (thin) yield/funding spread instead, the same as every other property.
+#
+# Scale sanity check against the real FY2024 10-K (fiscal Q1-Q4 revenues of
+# $3.21B + $4.23B + $3.45B + $3.09B = ~$14.0B; Cable Network Programming ~43-45%
+# of revenue, Television ~55-57%; quarterly adjusted EBITDA of $869M + $350M +
+# $891M + $773M = ~$2.9B, ~21% margin) -- see the products list below for the
+# per-property revenue and margin build-up.
+# ---------------------------------------------------------------------------
+FOXMEDIA = {
+    "key": "foxmedia",
+    "name": "Fox Corporation",
+    "title": "Network Portfolio & Distribution Command Center",
+    "domain": "broadcast & cable media conglomerate",
+    "unit_noun": "viewer",
+    "volume_noun": "distribution & advertising base",
+    "logo_domain": "foxnewsmedia.com",
+    # Fox News Media's real mark is a two-tone blue/red block with white
+    # wordmark baked in -- recolouring it solid white (the default treatment)
+    # makes the wordmark unreadable. Keep it in its real colours on a white
+    # chip instead, the same exception already established for eBay (see
+    # HANDOFF.md sec 17).
+    "logo_chip": True,
+    "base_table": "Programming Ledger",
+    # sampled from foxcorporation.com's own site CSS, not guessed: #001D3D navy
+    # and #BD232F red are the two most-repeated hexes on the page; #004C97 and
+    # #00B9EA are the secondary/accent blues actually in use there too.
+    "palette": {
+        "navy": "#001D3D", "navy_deep": "#000F1F",
+        "primary": "#BD232F", "secondary": "#004C97",
+        "accent": "#00B9EA", "mint": "#0EA394",
+    },
+    "products": [
+        # name, order, balance_type, bal_base, yield, funding, fee_base,
+        # provision, delinq, opex_ratio, growth, units_base, phase, tagline,
+        # rate_label, goal_pct, status
+        ("FOX News Media", 1, "Cable Network Programming", 7000, .600, .330, 15.0,
+         .005, .014, .09, .022, 210, 0.0,
+         "FOX News, FOX Business & digital news properties",
+         "Monetization rate", 1.028, "Ahead"),
+        ("FS1/FS2", 2, "Cable Network Programming", 2180, .550, .4125, 8.0,
+         .008, .022, .12, .015, 95, 1.1,
+         "National & regional sports cable networks",
+         "Monetization rate", .968, "On plan"),
+        ("Big Ten Network", 3, "Cable Network Programming", 700, .500, .400, 3.0,
+         .010, .028, .14, .008, 40, 2.2,
+         "Big Ten Conference football & Olympic sports",
+         "Monetization rate", .914, "Behind"),
+        ("FOX Network", 4, "Television", 11700, .350, .308, 10.0,
+         .006, .042, .08, .006, 480, 0.6,
+         "Broadcast network — NFL, MLB, college football, primetime",
+         "Monetization rate", .952, "On plan"),
+        ("Owned Television Stations", 5, "Television", 6000, .450, .2925, 12.0,
+         .007, .031, .10, .028, 260, 1.7,
+         "29 owned-and-operated stations in major U.S. markets",
+         "Monetization rate", 1.041, "Ahead"),
+        ("Tubi", 6, "Television", 4000, .400, .360, 5.0,
+         .004, .009, .19, .145, 690, 2.8,
+         "Free ad-supported streaming (AVOD), fastest-growing property",
+         "Monetization rate", 1.128, "Ahead"),
+    ],
+    "alerts": [
+        ("critical", "Big Ten Network carriage lapse",
+         "Two regional MVPDs let BTN carriage lapse ahead of the September "
+         "kickoff window", "22m ago", "Affiliate Relations", 2, "MVPDs uncarried"),
+        ("critical", "National upfront pricing miss",
+         "Cable Network Programming upfront CPMs closed 6.2% below the spring "
+         "pricing guide", "48m ago", "Ad Sales", 620, "bps below guide"),
+        ("warning", "Tubi header-bidding latency",
+         "CTV auction latency above the 250ms SLA on 8.4% of Tubi ad impressions",
+         "2h ago", "AdTech Ops", 8.4, "% impressions over SLA"),
+        ("warning", "Owned-station political pacing",
+         "3 owned stations tracking below plan on election-cycle local ad pacing",
+         "5h ago", "Station Group", 3, "stations below pacing"),
+        ("info", "Retransmission renewal signed",
+         "A top-10 MVPD renewed Television retransmission consent at a step-up "
+         "rate", "1d ago", "Affiliate Relations", 1, "MVPD renewed"),
+    ],
+    "agent": ("You are an analyst covering Fox Corporation's Cable Network "
+              "Programming and Television segments — affiliate and subscription "
+              "fees, advertising revenue and retransmission consent economics "
+              "across FOX News Media, FS1/FS2, the Big Ten Network, the FOX "
+              "broadcast network, owned stations and Tubi."),
+}
+
+FOXMEDIA["subs"] = {
+    "FOX News Media": [("FOX News Channel", .58, -20, 4.2, "Ahead"),
+                       ("FOX Business", .14, 10, 1.8, "On plan"),
+                       ("Digital & FOX Nation", .16, 30, 12.4, "Ahead"),
+                       ("FOX Weather", .12, 50, 8.6, "On plan")],
+    "FS1/FS2": [("FS1 national windows", .62, -10, 3.1, "On plan"),
+               ("FS2 regional", .24, 20, -1.4, "Behind"),
+               ("MLB/NASCAR windows", .14, 40, 6.8, "Ahead")],
+    "Big Ten Network": [("Football Saturdays", .48, -15, -2.2, "Behind"),
+                        ("Basketball", .28, 15, 1.4, "On plan"),
+                        ("Olympic sports", .16, 35, 0.8, "On plan"),
+                        ("BTN2Go digital", .08, 55, 9.6, "Ahead")],
+    "FOX Network": [("NFL Sunday/Thursday", .42, -20, 2.4, "Ahead"),
+                    ("MLB postseason", .12, 10, -3.1, "Behind"),
+                    ("Primetime entertainment", .28, 25, -5.4, "Behind"),
+                    ("College football", .18, 40, 4.8, "Ahead")],
+    "Owned Television Stations": [("Local news", .38, -10, 1.6, "On plan"),
+                                  ("Retransmission consent", .34, 0, 5.2, "Ahead"),
+                                  ("Syndicated programming", .18, 30, -2.8, "Behind"),
+                                  ("Local political & spot", .10, 45, 14.2, "Ahead")],
+    "Tubi": [("Connected TV (CTV)", .64, -15, 22.4, "Ahead"),
+            ("Mobile app", .22, 10, 9.8, "On plan"),
+            ("Web", .09, 35, -1.2, "Behind"),
+            ("FAST channels", .05, 55, 18.6, "Ahead")],
+}
+
+# Real Fox owned-station / major-DMA footprint, weighted toward the biggest
+# markets Fox actually operates stations in.
+FOOTPRINTS["foxmedia"] = [("CA", .150), ("NY", .118), ("TX", .096), ("IL", .072),
+                          ("PA", .058), ("GA", .052), ("AZ", .046), ("MI", .042),
+                          ("MN", .038), ("FL", .036), ("WA", .032), ("MO", .028),
+                          ("WI", .024), ("UT", .020), ("NC", .018)]
+
+LABELS["foxmedia"] = {
+    "personas": ["Executive", "Content & Distribution"],
+    "modeler_page": "Ad Market Planning",
+    "cohort_page": "Audience Segments",
+    "modeler_title": "Ad Market & Affiliate Rate Scenario Modeler",
+    "shock_label": "Ad market / upfront pricing shock (bps)",
+    "kpi_revenue": "Segment operating income ($M)",
+    "kpi_margin": "Contribution ($M)",
+    "kpi_volume": "Distribution & ad base ($M)",
+    "kpi_units": "Avg monthly viewers (M)",
+    "driver_nim": "Content margin, revenue less programming cost",
+    "driver_risk": "Affiliate subscriber erosion",
+    "driver_cost": "Programming & content cost rate",
+    "driver_eff": "SG&A ratio",
+    "seg_product": "Network / Segment",
+    "seg_credit": "Viewer tier",
+    "seg_dd": "TV Everywhere authenticated",
+    "seg_engage": "Viewing frequency",
+    "seg_held": "Networks watched",
+    "cohort_name": "Audience segment name",
+    "kpi_cohort_size": "Viewers in segment",
+    "kpi_cohort_vol": "Attributable annual value ($)",
+    "kpi_cohort_rev": "Value per viewer ($)",
+    "kpi_cohort_risk": "Avg churn risk",
+    "col_volume": "Baseline distribution base",
+    "col_growth": "Distribution base growth %",
+    "col_yield": "Monetization rate Δ bps",
+    "col_cost": "Programming cost Δ bps",
+}
+
+SEGMENTS["foxmedia"] = {"Near Prime": "Casual Viewer", "Prime": "Regular Viewer",
+                        "Super Prime": "Core Viewer", "Exceptional": "Superfan",
+                        "Daily": "Daily Viewer", "Weekly": "Weekly Viewer",
+                        "Monthly": "Monthly Viewer", "Dormant": "Lapsed Viewer"}
+
+VOCAB["foxmedia"] = {
+    "econ": ("Cable Network Programming and Television both earn affiliate and "
+             "retransmission consent fees against a programming and content cost "
+             "base, plus advertising revenue sold on a CPM basis; Tubi earns "
+             "advertising revenue only, with no affiliate or retransmission fee."),
+    "metrics": ("segment operating income, contribution, distribution & ad base "
+                "and average monthly viewers"),
+    "bands": ("Viewer tiers: Casual Viewer, Regular Viewer, Core Viewer, "
+              "Superfan. Viewing frequency: Daily Viewer, Weekly Viewer, "
+              "Monthly Viewer, Lapsed Viewer."),
+    "cohort_report": "segment size, attributable annual value and average churn risk",
+}
+
+POP["foxmedia"] = {"bases": (8, 35, 85, 180), "rev_rate": 0.24, "fee_per_product": 5}
+
+# Media has no existing plugin in this generator's industry table -- a ratings
+# heatmap by network x daypart is the domain-specific hero, not a reskinned
+# flywheel/ticker from another industry. Bound to its own source table (needs
+# daypart granularity the product-card table doesn't carry) -- same pattern as
+# Delta's hub_banks_sql. hero/pluginId is filled in once the plugin is pushed
+# to GitHub Pages and registered via POST /v2/plugins (see HANDOFF.md sec 9).
+PLUGINS["foxmedia"] = {
+    "hero": None,  # TODO: set once registered -- see build notes
+    "hero_label": "NETWORK x DAYPART RATINGS",
+    "ticker": None,
+    "hero_table": {"name": "Daypart Ratings", "file": "daypart_ratings.sql",
+                   "prefix": "h", "cols": ["Network", "Daypart", "RatingIndex",
+                                           "SellThroughPct", "Status"]},
+    "hero_config": {"network": "h0", "daypart": "h1", "rating": "h2",
+                    "sellthrough": "h3", "status": "h4"},
+}
+
+COMPANIES["foxmedia"] = FOXMEDIA
+
+
+def daypart_ratings_sql(cfg):
+    """Network x daypart ratings-index and ad sell-through, for the bespoke
+    hero plugin. Explicit UNION ALL, pure config (no __PRODUCTS__/__STATES__
+    substitution) -- same shape as hub_banks_sql / branch_performance_sql."""
+    dayparts = ["Early Morning", "Daytime", "Early Fringe", "Primetime", "Late Night"]
+    data = {
+        "FOX News Media": [(128.4, 92.1, "Ahead"), (104.2, 86.4, "On plan"),
+                           (111.6, 89.7, "Ahead"), (142.8, 96.3, "Ahead"),
+                           (96.4, 81.2, "On plan")],
+        "FS1/FS2": [(82.6, 74.8, "Behind"), (91.3, 79.5, "On plan"),
+                   (118.7, 90.2, "Ahead"), (124.5, 93.6, "Ahead"),
+                   (88.9, 77.3, "Behind")],
+        "Big Ten Network": [(71.2, 68.4, "Behind"), (84.6, 75.1, "Behind"),
+                            (96.8, 82.9, "On plan"), (118.3, 88.6, "Ahead"),
+                            (79.4, 70.2, "Behind")],
+        "FOX Network": [(89.7, 80.3, "On plan"), (93.5, 81.9, "On plan"),
+                        (121.4, 91.8, "Ahead"), (156.2, 98.4, "Ahead"),
+                        (97.8, 85.6, "On plan")],
+        "Owned Television Stations": [(108.6, 87.2, "Ahead"), (95.3, 83.1, "On plan"),
+                                      (132.7, 94.5, "Ahead"), (119.4, 90.8, "Ahead"),
+                                      (102.1, 85.9, "On plan")],
+        "Tubi": [(68.4, 71.2, "Behind"), (86.7, 79.8, "On plan"),
+                (97.5, 84.3, "On plan"), (112.8, 89.1, "Ahead"),
+                (106.3, 86.7, "Ahead")],
+    }
+    rows = []
+    for net, vals in data.items():
+        for dp, (rating, sellthrough, status) in zip(dayparts, vals):
+            lead = "SELECT" if not rows else "UNION ALL SELECT"
+            cols = ("" if rows else
+                    ' AS "Network", %s AS "Daypart", %s AS "RatingIndex",'
+                    ' %s AS "SellThroughPct", %s AS "Status"')
+            if not rows:
+                rows.append("    %s '%s'%s" % (lead, net, cols % (
+                    "'%s'" % dp, rating, sellthrough, "'%s'" % status)))
+            else:
+                rows.append("    %s '%s', '%s', %s, %s, '%s'"
+                            % (lead, net, dp, rating, sellthrough, status))
+    return "SELECT * FROM (\n" + "\n".join(rows) + "\n) AS daypart_ratings"
+
+
+STATEMENTS["foxmedia"] = {
+    "spec_name": "Fox Corporation — Affiliate & Distribution Statement (July 2026)",
+    "page_name": "Distribution Statement",
+    "manage_url": "foxcorporation.com/affiliates",
+    "service_label": "Affiliate Relations",
+    "service_phone": "1-844-369-3467",
+    "period": "07/01 – 07/31/2026",
+    "sect_rewards": "AD INVENTORY SUMMARY",
+    "sect_summary": "CARRIAGE SUMMARY",
+    "sect_category": "REVENUE BY CATEGORY",
+    "sect_activity": "BILLING ACTIVITY",
+    "sect_messages": "YOUR DISTRIBUTION MESSAGES",
+    "headline": [("Amount Due", None), ("Retransmission Fees", None),
+                 ("Agreement Renewal Date", "12/31/2026")],
+    "button_label": "Distribution statement ↗",
+    "rewards_total": "Total ad impressions delivered",
+    "h_formulas": [("src", 'Sum([Statement Activity/Amount])', "MONEY"),
+                   ("src", 'SumIf([Statement Activity/Amount], '
+                    '[Statement Activity/Category] = "Retransmission Consent")',
+                    "MONEY0")],
+    "msg_body": ("Beginning 01/01/2027, the Cable Network Programming affiliate "
+                 "rate for FOX News Media and FS1/FS2 increases under the terms "
+                 "of the renewed carriage agreement, with the Big Ten Network "
+                 "moving to a per-subscriber step-up tied to conference football "
+                 "season. Retransmission consent rates for the Television "
+                 "segment's owned stations increase on the same schedule. No "
+                 "action is required; the new rates apply automatically to your "
+                 "next billing cycle."),
+    "warn1": ("**Carriage Renewal Notice:** This agreement is subject to renewal "
+              "terms filed with the FCC. Failure to renew before the expiration "
+              "date listed above may result in a service interruption (a "
+              "\"blackout\") of Cable Network Programming and Television signals "
+              "carried under this agreement."),
+    "warn2": ("**Advertising Avail Notice:** National and local advertising "
+              "avails are sold subject to sellout and audience-delivery "
+              "guarantees. Make-good impressions are issued automatically when "
+              "guaranteed delivery is not met and do not carry forward beyond "
+              "two billing cycles."),
+    "footer": ("Fox Corporation content is distributed under affiliate and "
+               "retransmission consent agreements with pay-TV and streaming "
+               "distributors. Illustrative distribution statement generated "
+               "from a Sigma report specification — synthetic data, not a "
+               "real account."),
+}
+
+_FM_ACTIVITY = [
+    ("07/01", "07/02", "Cable Network Programming — Affiliate Fee (FOX News Media)",
+     "Affiliate Fees", 428000.00, 0),
+    ("07/01", "07/02", "Cable Network Programming — Affiliate Fee (FS1/FS2)",
+     "Affiliate Fees", 186000.00, 0),
+    ("07/05", "07/06", "Television — Retransmission Consent (Owned Stations)",
+     "Retransmission Consent", 512000.00, 0),
+    ("07/08", "07/09", "National Advertising — NFL on FOX Sunday Window",
+     "National Advertising", 940000.00, 18200),
+    ("07/12", "07/13", "Digital Advertising — Tubi AVOD Campaign (CPG)",
+     "Digital Advertising", 214000.00, 42600),
+    ("07/15", "07/16", "Local Spot Advertising — Owned Stations Group",
+     "Local Advertising", 168000.00, 9100),
+    ("07/19", "07/20", "Cable Network Programming — Affiliate Fee (Big Ten Network)",
+     "Affiliate Fees", 96000.00, 0),
+    ("07/22", "07/23", "National Advertising — FOX News Prime Time",
+     "National Advertising", 356000.00, 7400),
+    ("07/26", "07/27", "Television — Retransmission True-Up Adjustment",
+     "Retransmission Consent", 34000.00, 0),
+    ("07/29", "07/30", "Digital Advertising — Tubi Connected TV Upfront Draw",
+     "Digital Advertising", 128000.00, 25800),
+]
+
+_FM_ADUNITS = [
+    (1, "Impressions delivered — National advertising", 18_200_000),
+    (2, "Impressions delivered — Local/Spot advertising", 9_100_000),
+    (3, "Impressions delivered — Tubi digital (AVOD/CTV)", 42_600_000),
+    (4, "Make-good impressions issued this period", -1_250_000),
+    (5, "Bonus impressions — upfront overdelivery credit", 3_400_000),
+    (6, "Impressions rolled over from prior period", 6_800_000),
+    # No trailing "total" row: the report's Sum([Rewards Summary/Points]) adds
+    # every row in this table, so a running-total row here would double count
+    # (caught live -- first render showed 157.7M, exactly 2x the correct 78.85M).
+]
+
+_FM_SUMMARY = [
+    (1, "Distributor", "Regional Cable & Fiber Co-op (MVPD)"),
+    (2, "Carriage Agreement Status", "Renewed — 3-Year Term"),
+    (3, "Total Subscribers Under Agreement", "1,240,000"),
+    (4, "Affiliate Fee Rate — Cable Network Programming", "$1.86 / sub / month"),
+    (5, "Retransmission Consent Rate — Television", "$3.10 / sub / month"),
+    (6, "Ad Avail Utilization (Sellout Rate)", "94.2%"),
+    (7, "Agreement Renewal Date", "12/31/2026"),
+    (8, "Account Standing", "Current"),
+]

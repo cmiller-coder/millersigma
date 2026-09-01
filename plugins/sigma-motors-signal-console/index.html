@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Market Signal Console — Sigma Motors Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#0b1b3a;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;padding:4px 2px;min-height:0}
+  .lane{flex:1;display:flex;flex-direction:column;min-width:0;padding:0 14px;position:relative}
+  .lane + .lane{border-left:1px solid #ECEFF3}
+  .lane-head{display:flex;align-items:center;gap:7px}
+  .lane-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .lane-icon svg{width:12px;height:12px}
+  .lane-label{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:#5b6b7f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lane-chart{flex:1;min-height:0;position:relative;margin:4px 0 2px}
+  .lane-chart svg{width:100%;height:100%;display:block;overflow:visible}
+  .lane-foot{display:flex;align-items:baseline;gap:8px}
+  .lane-value{font-size:24px;font-weight:800;color:#0b1b3a;line-height:1}
+  .lane-delta{font-size:11px;font-weight:700;display:flex;align-items:center;gap:2px}
+  .lane-delta svg{width:9px;height:9px}
+  #legend{flex:0 0 auto}
+</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'month',type:'column',source:'source',label:'Month'},
+    {name:'ev_waitlist',type:'column',source:'source',allowedTypes:['number','integer'],label:'EV Waitlist'},
+    {name:'hybrid_waitlist',type:'column',source:'source',allowedTypes:['number','integer'],label:'Hybrid Waitlist'},
+    {name:'backlog_weeks',type:'column',source:'source',allowedTypes:['number','integer'],label:'Longest Backlog (wks)'},
+    {name:'margin_at_risk',type:'column',source:'source',allowedTypes:['number','integer'],label:'Margin at Risk ($)'},
+    {name:'regions_at_risk',type:'column',source:'source',allowedTypes:['number','integer'],label:'Regions at Risk'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var RISK_UP='#D14343', RISK_DOWN='#1F9D55', RISK_FLAT='#8A8F9C', BLUE='#1B4FD6';
+
+  var ICONS={
+    car:'<path d="M3 13l1.5-4.5A2 2 0 016.4 7h11.2a2 2 0 011.9 1.5L21 13"/><path d="M3 13h18v4a1 1 0 01-1 1h-1a1 1 0 01-1-1v-1H6v1a1 1 0 01-1 1H4a1 1 0 01-1-1v-4z"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>',
+    leaf:'<path d="M11 20A7 7 0 019.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>',
+    dollar:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>',
+    pin:'<path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>'
+  };
+
+  function iconSvg(name,color){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'+ICONS[name]+'</svg>';
+  }
+
+  function fmtInt(v){ return Math.round(v).toLocaleString('en-US'); }
+  function fmtDec1(v){ return v.toFixed(1); }
+  function fmtMoneyCompact(v){
+    if(Math.abs(v)>=1e6) return '$'+(v/1e6).toFixed(v>=1e7?0:1)+'M';
+    if(Math.abs(v)>=1e3) return '$'+(v/1e3).toFixed(0)+'K';
+    return '$'+Math.round(v);
+  }
+
+  var METRICS=[
+    {key:'ev_waitlist', label:'EV WAITLIST', icon:'car', fmt:fmtInt},
+    {key:'hybrid_waitlist', label:'HYBRID WAITLIST', icon:'leaf', fmt:fmtInt},
+    {key:'backlog_weeks', label:'LONGEST BACKLOG', icon:'clock', fmt:function(v){return fmtDec1(v)+' wks';}},
+    {key:'margin_at_risk', label:'MARGIN AT RISK', icon:'dollar', fmt:fmtMoneyCompact},
+    {key:'regions_at_risk', label:'REGIONS AT RISK', icon:'pin', fmt:fmtInt}
+  ];
+
+  // Catmull-Rom -> cubic Bezier, so the 6 monthly points read as one smooth
+  // signal instead of a jagged polyline.
+  function smoothPath(pts){
+    if(pts.length<2) return '';
+    var d='M'+pts[0][0]+','+pts[0][1];
+    for(var i=0;i<pts.length-1;i++){
+      var p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+      var c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+      var c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+      d+=' C'+c1x+','+c1y+' '+c2x+','+c2y+' '+p2[0]+','+p2[1];
+    }
+    return d;
+  }
+
+  function laneSVG(months, values, uid, color){
+    var W=120,H=44,padY=6;
+    var min=Math.min.apply(null,values), max=Math.max.apply(null,values);
+    if(min===max){ min-=1; max+=1; }
+    var span=max-min;
+    var pts=values.map(function(v,i){
+      return [ (i/(values.length-1))*W, H-padY-((v-min)/span)*(H-padY*2) ];
+    });
+    var linePath=smoothPath(pts);
+    var areaPath=linePath+' L'+pts[pts.length-1][0]+','+H+' L'+pts[0][0]+','+H+' Z';
+    var last=pts[pts.length-1];
+    var dots=pts.map(function(p,i){
+      return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="5" fill="transparent"><title>'+months[i]+': '+values[i].toLocaleString('en-US')+'</title></circle>';
+    }).join('');
+    return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'+
+      '<defs><linearGradient id="g'+uid+'" x1="0" y1="0" x2="0" y2="1">'+
+        '<stop offset="0%" stop-color="'+color+'" stop-opacity="0.28"/>'+
+        '<stop offset="100%" stop-color="'+color+'" stop-opacity="0"/>'+
+      '</linearGradient></defs>'+
+      '<path d="'+areaPath+'" fill="url(#g'+uid+')" stroke="none"/>'+
+      '<path d="'+linePath+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<circle cx="'+last[0]+'" cy="'+last[1]+'" r="3" fill="'+color+'">'+
+        '<animate attributeName="r" values="3;7;3" dur="1.8s" repeatCount="indefinite"/>'+
+        '<animate attributeName="opacity" values="0.9;0.15;0.9" dur="1.8s" repeatCount="indefinite"/>'+
+      '</circle>'+
+      '<circle cx="'+last[0]+'" cy="'+last[1]+'" r="3" fill="'+color+'"/>'+
+      dots+
+      '</svg>';
+  }
+
+  function draw(rows){
+    // Row order via subscribeToElementData doesn't reliably match the
+    // source's own ORDER BY -- sort by month here, same fix used in the
+    // Regional Demand Pulse plugin.
+    rows = rows.slice().sort(function(a,b){ return new Date(a.month) - new Date(b.month); });
+    var months = rows.map(function(r){
+      var d=new Date(r.month);
+      return isNaN(d) ? String(r.month) : d.toLocaleString('en-US',{month:'short'});
+    });
+    var wrap=document.getElementById('wrap');
+    wrap.innerHTML='';
+    METRICS.forEach(function(m,mi){
+      var values=rows.map(function(r){ return Number(r[m.key])||0; });
+      var current=values[values.length-1], prior=values[values.length-2];
+      var delta=(prior===undefined) ? 0 : current-prior;
+      var dir = delta>0 ? 'up' : (delta<0 ? 'down' : 'flat');
+      var color = dir==='up' ? RISK_UP : (dir==='down' ? RISK_DOWN : RISK_FLAT);
+      var arrow = dir==='up'
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="6 11 12 5 18 11"/></svg>'
+        : dir==='down'
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="18 13 12 19 6 13"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+      var deltaText = prior===undefined ? '' : m.fmt(Math.abs(delta)) + ' vs prior';
+      var lane=document.createElement('div');
+      lane.className='lane';
+      lane.innerHTML=
+        '<div class="lane-head">'+
+          '<div class="lane-icon" style="background:'+color+'22">'+iconSvg(m.icon,color)+'</div>'+
+          '<div class="lane-label">'+m.label+'</div>'+
+        '</div>'+
+        '<div class="lane-chart">'+laneSVG(months,values,mi,color)+'</div>'+
+        '<div class="lane-foot">'+
+          '<div class="lane-value">'+m.fmt(current)+'</div>'+
+          '<div class="lane-delta" style="color:'+color+'">'+arrow+' '+deltaText+'</div>'+
+        '</div>';
+      wrap.appendChild(lane);
+    });
+  }
+
+  function synth(){
+    var rows=[
+      ['2025-01-01',2140,380,4.1,950000,1],['2025-02-01',2480,420,4.4,1100000,1],
+      ['2025-03-01',2860,470,4.8,1250000,1],['2025-04-01',3280,520,5.3,1450000,2],
+      ['2025-05-01',3720,570,5.8,1620000,2],['2025-06-01',4120,610,6.2,1800000,2]
+    ];
+    return rows.map(function(r){ return {month:r[0], ev_waitlist:r[1], hybrid_waitlist:r[2], backlog_weeks:r[3], margin_at_risk:r[4], regions_at_risk:r[5]}; });
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){
+    var c=st.cfg||{};
+    if(st.data && c.month && st.data[c.month]){
+      var month=st.data[c.month]||[],
+          ev=(c.ev_waitlist&&st.data[c.ev_waitlist])||[],
+          hy=(c.hybrid_waitlist&&st.data[c.hybrid_waitlist])||[],
+          bk=(c.backlog_weeks&&st.data[c.backlog_weeks])||[],
+          mg=(c.margin_at_risk&&st.data[c.margin_at_risk])||[],
+          rk=(c.regions_at_risk&&st.data[c.regions_at_risk])||[];
+      var out=month.map(function(mo,i){ return {
+        month:mo, ev_waitlist:Number(ev[i])||0, hybrid_waitlist:Number(hy[i])||0,
+        backlog_weeks:Number(bk[i])||0, margin_at_risk:Number(mg[i])||0, regions_at_risk:Number(rk[i])||0
+      };});
+      if(out.length>1){ draw(out); return; }
+    }
+    draw(synth());
+  }
+  if(client){
+    client.config.subscribe(function(cfg){
+      st.cfg=cfg||{};
+      if(st.unsub){st.unsub();st.unsub=null;}
+      if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();});}
+      recompute();
+    });
+  }else{ recompute(); }
+
+  var ro=new ResizeObserver(function(){ recompute(); });
+  ro.observe(document.getElementById('wrap'));
+})();
+</script>
+</body>
+</html>

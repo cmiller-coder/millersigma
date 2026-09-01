@@ -9,9 +9,9 @@ and KPI/pivot/control gotchas — this file is about *what goes where*.
 
 | Block | Element(s) | Required | Notes |
 |-------|-----------|----------|-------|
-| Header | `container-header` | ✅ | Holds logo+title (left), Date Range + grain control (right). |
-| — logo | `image` element | ✅ | `{kind:"image", url:"…"}` in the header (NOT a markdown image — `text` doesn't render those). See brand-kit. |
-| — title | `text` (markdown) | ✅ | `## **<Title>**` + one-line subtitle (omit brand name when the logo is present). |
+| Header | `container-header` | ✅ | **Compact chrome band — logo left, `navigation` centre, one action right.** See "Header: chrome, not a title block" below. |
+| — logo | `image` element | ✅ | `{kind:"image", source:{kind:"url", url:"…"}}` in the header (NOT a markdown image — `text` doesn't render those). See brand-kit. |
+| — nav | `navigation` element | ✅ | `mode: "manual"`, `optionStyle.style: "pill"`. One instance **per page** — element ids are workbook-unique, so it cannot be shared. |
 | — date range | `control` `date-range` | ✅ | Bound to the base table's date column. |
 | — grain | `control` `segmented` | ✅ | `controlId: c-dategrain`, values `Day/Week/Month`, default `Month`. Drives the trend's `DateTrunc`. |
 | Filters | `container-filters` | ✅ | A single row of `list` controls, all bound to the base table. |
@@ -19,6 +19,33 @@ and KPI/pivot/control gotchas — this file is about *what goes where*.
 | Trend | `line-chart` (or combo) | ✅ | x = `DateTrunc([c-dategrain], [<base>/<Date>])`; y = the funnel/headline series. |
 | Detail | `pivot-table` (wide) | ✅ | Analytical dimensions as `rowsBy`; every metric in `values`; grand totals on. |
 | Base | `table` (the source) | ✅ | The two-tier root; placed bare at the bottom (acts as drill/detail + source). |
+
+## Header: chrome, not a title block
+
+The band is **navigation chrome**, not a place to restate the page name. A
+full-width H1 + subtitle burns 6–8 grid rows above the fold, and the nav pill
+already says which page you are on.
+
+```
+rows 1-5   logo (cols 1-6)   ·   navigation (cols 8-18)   ·   action (cols 20-25)
+rows 5-9   a live element spanning the full width — ticker, marquee, status strip
+```
+
+- **No `# Title` / subtitle pair** in the band. The workbook name and the
+  selected nav pill carry it.
+- **Put something live in the band.** A ticker/marquee plugin inside the header
+  is the single cheapest way to make a dashboard read as a real product rather
+  than a report. Give it the band's colour (`style.backgroundColor` must be a
+  **hex** — `"transparent"` is rejected) and theme the plugin's own CSS dark to
+  match, otherwise a white plugin card punches a hole in the gradient.
+- **One action button, right-aligned.** More than one and the band starts
+  competing with the filter row.
+- A `navigation` element beats one nav `button` per page: `mode: "manual"` keeps
+  the order curated and lets you leave hidden utility pages out.
+
+> Trade-off: a plugin in the header means the page can no longer be rendered
+> headlessly if that plugin does an external fetch or runs an infinite
+> animation — the renderer never reaches idle. Keep a plugin-free clone for QA.
 
 ## Two-tier sourcing (the spine)
 

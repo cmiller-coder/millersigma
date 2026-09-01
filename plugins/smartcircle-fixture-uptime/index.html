@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Fixture Uptime — SmartCircle Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#0a2530;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 15px;gap:9px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#0891b2}
+  #meta{font-size:11px;color:#5e747c}
+  #meta b{color:#0a2530}
+  #meta .off{color:#ef4444;font-weight:700}
+  #grid{flex:1;display:grid;gap:3px;grid-auto-rows:1fr;align-content:stretch;min-height:0}
+  .cell{border-radius:3px;position:relative;transition:transform .08s;cursor:default;min-height:7px}
+  .cell:hover{transform:scale(1.4);z-index:5;outline:1px solid #0a2530}
+  .cell.off{box-shadow:0 0 0 1.5px #ef4444, 0 0 6px #ef4444}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#5e747c}
+  #bar{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#ef4444,#f59e0b,#22d3ee,#0891b2)}
+  #tip{position:fixed;pointer-events:none;background:#04222c;border:1px solid #0e5063;border-radius:8px;padding:8px 10px;font-size:11px;color:#e6fbff;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+  #tip b{color:#22d3ee}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Fixture Uptime</div><div id="meta">fleet avg <b id="avg">—</b> · <span id="cnt">0</span> fixtures · <span class="off"><span id="off">0</span> offline</span></div></div>
+  <div id="grid"></div>
+  <div id="legend"><span>offline</span><div id="bar"></div><span>healthy</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'fixture',type:'column',source:'source',label:'Fixture ID'},
+    {name:'uptime',type:'column',source:'source',allowedTypes:['number','integer'],label:'Uptime %'},
+    {name:'retailer',type:'column',source:'source',label:'Retailer'},
+    {name:'category',type:'column',source:'source',label:'Device category'},
+    {name:'offlineAt',type:'text',label:'Offline threshold %',defaultValue:'50'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hex(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  function upColor(u){ // 0..100 -> red -> amber -> cyan -> teal
+    var t=Math.max(0,Math.min(1,u/100));
+    var s=[[239,68,68],[245,158,11],[34,211,238],[8,145,178]];
+    var seg=t*3, i=Math.min(2,Math.floor(seg)), f=seg-i;
+    return '#'+hex(lerp(s[i][0],s[i+1][0],f))+hex(lerp(s[i][1],s[i+1][1],f))+hex(lerp(s[i][2],s[i+1][2],f)); }
+  var tip=document.getElementById('tip');
+  function draw(fx,offAt){
+    var grid=document.getElementById('grid'); grid.innerHTML='';
+    var n=fx.length||1, cols=Math.max(6,Math.ceil(Math.sqrt(n*2.4)));
+    grid.style.gridTemplateColumns='repeat('+cols+',1fr)';
+    var sum=0,off=0;
+    fx.forEach(function(f){ sum+=f.up; var isOff=f.up<offAt; if(isOff)off++;
+      var c=document.createElement('div'); c.className='cell'+(isOff?' off':''); c.style.background=upColor(f.up);
+      c.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+        tip.innerHTML='<b>'+f.id+'</b><br>'+f.ret+' · '+f.cat+'<br>Uptime '+f.up+'%'+(isOff?'<br><span style="color:#ff8080">⚠ offline</span>':''); });
+      c.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+      grid.appendChild(c); });
+    document.getElementById('avg').textContent=(n?Math.round(sum/n):0)+'%';
+    document.getElementById('cnt').textContent=n;
+    document.getElementById('off').textContent=off;
+  }
+  function synth(){
+    var rets=['Best Buy','Walmart','Target','Costco','Verizon','AT&T','Sams Club','Micro Center'];
+    var cats=['Smartphones','Tablets','Laptops','Wearables','Headphones','Cameras','Smart Home'];
+    var out=[]; for(var i=0;i<220;i++){ var u=Math.round(30+69*Math.abs(Math.sin(i*1.3)));
+      out.push({id:'FX-'+('000'+i).slice(-4),ret:rets[i%rets.length],cat:cats[i%cats.length],up:u}); } return out;
+  }
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{}; var offAt=parseFloat(c.offlineAt)||50;
+    if(st.data&&c.uptime&&st.data[c.uptime]){
+      var up=st.data[c.uptime]||[],id=(c.fixture&&st.data[c.fixture])||[],ret=(c.retailer&&st.data[c.retailer])||[],cat=(c.category&&st.data[c.category])||[];
+      var fx=up.map(function(u,i){return {id:id[i]!=null?String(id[i]):('FX-'+i),ret:ret[i]!=null?String(ret[i]):'—',cat:cat[i]!=null?String(cat[i]):'—',up:Math.round(Number(u)||0)};});
+      if(fx.length){ draw(fx,offAt); return; }
+    }
+    draw(synth(),offAt);
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ st.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+})();
+</script>
+</body>
+</html>

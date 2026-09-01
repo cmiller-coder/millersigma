@@ -1,0 +1,205 @@
+{
+  "name": "Big Buys \u2014 Category Decomposition Demo",
+  "folderId": "e743bac0-a372-497c-b012-859a613340c4",
+  "document": {
+    "schemaVersion": 1,
+    "kind": "workbook",
+    "elements": [
+      {
+        "id": "txt-title",
+        "kind": "text",
+        "body": "## Category Decomposition \u2014 Big Buys reshaped to Fuel / Merch / LFK / QSR\nTotal box (native decomposition-tree **plugin**, click any box to drill) next to a native **pivot-table** \u2014 same underlying data, two views.",
+        "verticalAlign": "middle"
+      },
+      {
+        "id": "decomp",
+        "kind": "plugin",
+        "pluginId": "ee6eb4bf-b05f-496a-8e49-040360c15129",
+        "config": {
+          "source": {
+            "kind": "element",
+            "elementId": "cat_wide"
+          },
+          "category": "w-cat",
+          "value": "w-profit",
+          "aggregation": "sum",
+          "priorValue": "w-prior",
+          "cornerLeft": "w-loy",
+          "cornerLeftLabel": "Loyalty",
+          "cornerRight": "w-nonloy",
+          "cornerRightLabel": "Non-Loyalty",
+          "totalLabel": "All Categories",
+          "valueFormat": "currency",
+          "clickTarget": "drillCategory"
+        }
+      },
+      {
+        "kind": "control",
+        "controlId": "drillCategory",
+        "id": "ctrl-drill",
+        "name": "Drill Category",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "single",
+        "includeNulls": "when-no-value-is-selected",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "cat_long"
+            },
+            "columnId": "l-cat"
+          }
+        ],
+        "source": {
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "cat_long"
+          },
+          "columnId": "l-cat"
+        }
+      },
+      {
+        "id": "txt-readout",
+        "kind": "text",
+        "body": "Drilled into: **{{[drillCategory]}}** _(click a box above; click it again, or the Total box, to clear)_",
+        "verticalAlign": "middle"
+      },
+      {
+        "id": "pivot",
+        "kind": "pivot-table",
+        "name": "Profit by Category x Loyalty Segment",
+        "source": {
+          "elementId": "cat_long",
+          "kind": "table"
+        },
+        "columns": [
+          {
+            "id": "pv-cat",
+            "formula": "[Category x Loyalty (long)/Category]",
+            "name": "Category"
+          },
+          {
+            "id": "pv-loy",
+            "formula": "[Category x Loyalty (long)/Loyalty Segment]",
+            "name": "Loyalty Segment"
+          },
+          {
+            "id": "pv-profit",
+            "formula": "Sum([Category x Loyalty (long)/Profit])",
+            "name": "Profit",
+            "format": {
+              "kind": "number",
+              "formatString": "$.3~s",
+              "decimalSymbol": ".",
+              "digitGroupingSymbol": ",",
+              "digitGroupingSize": [
+                3
+              ],
+              "currencySymbol": "$"
+            }
+          }
+        ],
+        "rowsBy": [
+          {
+            "id": "pv-cat"
+          }
+        ],
+        "columnsBy": [
+          {
+            "id": "pv-loy"
+          }
+        ],
+        "values": [
+          "pv-profit"
+        ]
+      },
+      {
+        "id": "cat_wide",
+        "kind": "table",
+        "name": "Category Decomposition (wide)",
+        "visibleAsSource": true,
+        "source": {
+          "connectionId": "bee6615c-7d11-435c-8819-e32207b27fe4",
+          "kind": "sql",
+          "statement": "SELECT * FROM VALUES\n  ('Fuel',   1306000, 1220000,  812000, 494000),\n  ('Merch',  1825000, 1900000, 1180000, 645000),\n  ('LFK',     520000,  480000,  322000, 198000),\n  ('QSR',     837000,  810000,  566000, 271000)\nAS t(CATEGORY, PROFIT, PRIOR_PROFIT, LOYALTY_PROFIT, NONLOYALTY_PROFIT)"
+        },
+        "columns": [
+          {
+            "id": "w-cat",
+            "formula": "[Custom SQL/CATEGORY]",
+            "name": "Category"
+          },
+          {
+            "id": "w-profit",
+            "formula": "[Custom SQL/PROFIT]",
+            "name": "Profit"
+          },
+          {
+            "id": "w-prior",
+            "formula": "[Custom SQL/PRIOR_PROFIT]",
+            "name": "Prior Profit"
+          },
+          {
+            "id": "w-loy",
+            "formula": "[Custom SQL/LOYALTY_PROFIT]",
+            "name": "Loyalty Profit"
+          },
+          {
+            "id": "w-nonloy",
+            "formula": "[Custom SQL/NONLOYALTY_PROFIT]",
+            "name": "Non-Loyalty Profit"
+          }
+        ],
+        "order": [
+          "w-cat",
+          "w-profit",
+          "w-prior",
+          "w-loy",
+          "w-nonloy"
+        ]
+      },
+      {
+        "id": "cat_long",
+        "kind": "table",
+        "name": "Category x Loyalty (long)",
+        "visibleAsSource": true,
+        "source": {
+          "connectionId": "bee6615c-7d11-435c-8819-e32207b27fe4",
+          "kind": "sql",
+          "statement": "SELECT * FROM VALUES\n  ('Fuel','Loyalty',812000),('Fuel','Non-Loyalty',494000),\n  ('Merch','Loyalty',1180000),('Merch','Non-Loyalty',645000),\n  ('LFK','Loyalty',322000),('LFK','Non-Loyalty',198000),\n  ('QSR','Loyalty',566000),('QSR','Non-Loyalty',271000)\nAS t(CATEGORY, LOYALTY_SEGMENT, PROFIT)"
+        },
+        "columns": [
+          {
+            "id": "l-cat",
+            "formula": "[Custom SQL/CATEGORY]",
+            "name": "Category"
+          },
+          {
+            "id": "l-loy",
+            "formula": "[Custom SQL/LOYALTY_SEGMENT]",
+            "name": "Loyalty Segment"
+          },
+          {
+            "id": "l-profit",
+            "formula": "[Custom SQL/PROFIT]",
+            "name": "Profit"
+          }
+        ],
+        "order": [
+          "l-cat",
+          "l-loy",
+          "l-profit"
+        ]
+      }
+    ],
+    "pages": [
+      {
+        "id": "pg",
+        "name": "Decomposition"
+      }
+    ],
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"pg\">\n  <Element elementId=\"txt-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Element elementId=\"decomp\" gridColumn=\"1 / 25\" gridRow=\"3 / 16\"/>\n  <Element elementId=\"ctrl-drill\" gridColumn=\"1 / 7\" gridRow=\"16 / 19\"/>\n  <Element elementId=\"txt-readout\" gridColumn=\"7 / 25\" gridRow=\"16 / 19\"/>\n  <Element elementId=\"pivot\" gridColumn=\"1 / 25\" gridRow=\"19 / 34\"/>\n  <Element elementId=\"cat_wide\" gridColumn=\"1 / 25\" gridRow=\"34 / 44\"/>\n  <Element elementId=\"cat_long\" gridColumn=\"1 / 25\" gridRow=\"44 / 54\"/>\n</Page>\n"
+  }
+}

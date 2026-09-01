@@ -18,7 +18,7 @@ Bisect by element index; compare the offending element to a GET-back exemplar.
 - **region-map:** `{kind:"region-map", source:{elementId,kind:"table"}, columns:[{id,formula},...], region:{id:<stateColId>, regionType:"us-state"}, color:{by:"scale", column:<metricColId>}}`.
 - **pivot-table:** `rowsBy:[{id}]`, `columnsBy:[{id}]`, `values:["<colId>"]` (exact — objects-as-values rejected).
 - **container:** `{kind:"container", style?, backgroundImage?}`. Its children are placed INSIDE its `<GridContainer>` in the layout XML.
-- **image:** `{kind:"image", url:"<https or data-URI>", style:{fit:"cover"|"scale-down"}}`.
+- **image:** `{kind:"image", source:{kind:"url", url:"<https or data-URI>"}, style:{fit:"cover"|"scale-down"}}`. **Shape changed 2026-07-30**: the old top-level `url` field (no `source` wrapper) is now rejected as a masked `Invalid kind: "image"` — verified via a live A/B POST against staging. If you see that error and the spec otherwise looks right, check this first.
 - **text:** `{kind:"text", body:"<markdown, supports {{formula}} incl CallText>", verticalAlign:"middle"}`.
 - **control:** `{kind:"control", controlId (workbook-unique), controlType:"list"|"date-range"|"text-area"|..., filters:[{source:{kind:"table",elementId},columnId}], source:{kind:"source",source:{...},columnId}}`.
 - **plugin (needs a registered pluginId):** `{kind:"plugin", pluginId, config:{source:{kind:"element",elementId}, <binding>:"<columnId>"}}`. VERIFIED: each column binding is a **BARE columnId string**, not an object — the `{kind:"column",columnId,source}` object form is REJECTED (masked as `Invalid kind:"plugin"`). Binding keys must match the plugin's `configureEditorPanel` variable names. Register a plugin from code via `POST /v2/plugins {name,description,url,type:"element"}` → returns `pluginId` (no admin UI needed). List with `GET /v2/plugins`.
@@ -26,7 +26,9 @@ Bisect by element index; compare the offending element to a GET-back exemplar.
 ## style vocabulary (rounds-trips on containers/kpi/chart/image)
 `backgroundColor` (hex or `{kind:"theme",ref:"colors-..."}`), `borderColor`,
 `borderWidth` (0/1/3), `borderRadius` (`"pill"|"round"|"square"`), `padding` (only
-`"none"`), `backgroundImage` (top-level, `{url, style:{fit}}`), `fit`, `color`,
+`"none"`), `backgroundImage` (top-level, `{source:{kind:"url",url}, style:{fit}}` —
+same 2026-07-30 shape change as the `image` element above, `backgroundImage.source`
+is required now, a bare `url` key is rejected), `fit`, `color`,
 `strokeStyle`, `textWrap`, `align`, `bold`, `fontSize`/`fontWeight` (on kpi/chart `name`).
 
 ## Column format (POSTS FINE — the "format is rejected" doc is stale)

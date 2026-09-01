@@ -1,15 +1,6 @@
 {
-  "workbookId": "6510c976-e8f1-4fcb-9fb5-80fbf394c2ff",
   "name": "Plugs Overview Dashboard",
-  "url": "https://staging.sigmacomputing.io/papercranestaging/workbook/Plugs-Overview-Dashboard-34HTASYvMtpOaWYwo6qAN1",
-  "documentVersion": 2,
-  "latestDocumentVersion": 2,
-  "ownerId": "7d9y50O9V9qLDpdThAY5tdHncEaM2",
-  "folderId": "eb548e3b-81e4-46d9-adfd-488ae1dfb0bb",
-  "createdBy": "7d9y50O9V9qLDpdThAY5tdHncEaM2",
-  "updatedBy": "7d9y50O9V9qLDpdThAY5tdHncEaM2",
-  "createdAt": "2026-05-07T17:00:10.040Z",
-  "updatedAt": "2026-05-07T18:10:22.299Z",
+  "folderId": "REPLACE_WITH_YOUR_FOLDER_ID",
   "schemaVersion": 1,
   "pages": [
     {

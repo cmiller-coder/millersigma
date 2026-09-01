@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Value Creation Bridge — Shore Capital Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#14243a;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:13px 18px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#1b3a5b}
+  #meta{font-size:11px;color:#5b6b80}
+  #meta b{color:#14243a}
+  #meta .moic{color:#a8811f;font-weight:800}
+  #chart{flex:1;position:relative;min-height:0;margin-top:4px}
+  .bar{position:absolute;border-radius:4px 4px 0 0;transition:filter .1s;cursor:default;box-shadow:0 1px 4px rgba(0,0,0,.14)}
+  .bar:hover{filter:brightness(1.08)}
+  .amt{position:absolute;font-size:11px;font-weight:800;text-align:center;color:#14243a}
+  .conn{position:absolute;border-top:1.5px dashed #9aa7b8;height:0}
+  .xl{position:absolute;font-size:10px;font-weight:600;color:#5b6b80;text-align:center;line-height:1.15}
+  #tip{position:fixed;pointer-events:none;background:#0a1c30;border-radius:8px;padding:8px 10px;font-size:11px;color:#eaf0f7;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip b{color:#e8c65a}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Value Creation Bridge</div><div id="meta"><span class="moic" id="moic">—</span> MOIC · <b id="created">—</b> value created</div></div>
+  <div id="chart"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'step',type:'column',source:'source',label:'Step'},
+    {name:'amount',type:'column',source:'source',allowedTypes:['number','integer'],label:'Amount'},
+    {name:'order',type:'column',source:'source',allowedTypes:['number','integer'],label:'Step order'},
+    {name:'kind',type:'column',source:'source',label:'Kind (base/increase/total)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  var tip=document.getElementById('tip');
+  function fmt$(n){ var a=Math.abs(n); if(a>=1e9)return '$'+(n/1e9).toFixed(2)+'B'; if(a>=1e6)return '$'+(n/1e6).toFixed(0)+'M'; if(a>=1e3)return '$'+(n/1e3).toFixed(0)+'K'; return '$'+Math.round(n); }
+
+  function draw(steps){
+    var chart=document.getElementById('chart'); chart.innerHTML='';
+    if(!steps.length) return;
+    var running=0, mx=0;
+    steps.forEach(function(s){
+      if(s.kind==='increase'){ s.b0=running; s.b1=running+s.amt; running=s.b1; }
+      else if(s.kind==='total'){ s.b0=0; s.b1=s.amt; }
+      else { s.b0=0; s.b1=s.amt; running=s.b1; }
+      if(s.b1>mx)mx=s.b1;
+    });
+    mx=mx*1.14||1;
+    var n=steps.length, colW=100/n, barW=colW*0.60, PADB=20; // px reserve for x labels
+    var H=chart.clientHeight-PADB;
+    function y(v){ return (v/mx)*H; } // px from bottom of chart area (above labels)
+    steps.forEach(function(s,i){
+      var left=i*colW + (colW-barW)/2;
+      var col = s.kind==='increase' ? '#C9A227' : (s.kind==='total' ? '#0C2233' : '#1B3A5B');
+      var bar=document.createElement('div'); bar.className='bar';
+      bar.style.left=left+'%'; bar.style.width=barW+'%';
+      bar.style.bottom=(PADB+y(s.b0))+'px'; bar.style.height=Math.max(2,y(s.b1)-y(s.b0))+'px'; bar.style.background=col;
+      bar.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+        tip.innerHTML='<b>'+esc(s.step)+'</b><br>'+(s.kind==='increase'?'+':'')+fmt$(s.amt)+(s.kind==='increase'?'<br>cumulative '+fmt$(s.b1):''); });
+      bar.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+      chart.appendChild(bar);
+      var amt=document.createElement('div'); amt.className='amt';
+      amt.style.left=left+'%'; amt.style.width=barW+'%'; amt.style.bottom=(PADB+y(s.b1)+4)+'px';
+      amt.textContent=(s.kind==='increase'?'+':'')+fmt$(s.amt); chart.appendChild(amt);
+      var xl=document.createElement('div'); xl.className='xl'; xl.style.left=(i*colW)+'%'; xl.style.width=colW+'%'; xl.style.bottom='0px';
+      xl.textContent=s.step; chart.appendChild(xl);
+      // connector to next increase
+      var nx=steps[i+1];
+      if(nx && nx.kind==='increase'){ var c=document.createElement('div'); c.className='conn';
+        c.style.left=(left+barW)+'%'; c.style.width=(colW-barW)+'%'; c.style.bottom=(PADB+y(s.b1))+'px'; chart.appendChild(c); }
+    });
+    var entry=steps[0]?steps[0].b1:0, total=running;
+    var totStep=steps.filter(function(s){return s.kind==='total';})[0]; if(totStep) total=totStep.b1;
+    document.getElementById('moic').textContent=entry?(total/entry).toFixed(2)+'x':'—';
+    document.getElementById('created').textContent=fmt$(total-entry);
+  }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];}); }
+
+  function synth(){ return [
+    {step:'Entry Equity',amt:820e6,ord:1,kind:'base'},
+    {step:'EBITDA Growth',amt:640e6,ord:2,kind:'increase'},
+    {step:'Multiple Expansion',amt:310e6,ord:3,kind:'increase'},
+    {step:'Debt Paydown',amt:240e6,ord:4,kind:'increase'},
+    {step:'Current NAV',amt:2010e6,ord:5,kind:'total'}
+  ]; }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{};
+    if(st.data&&c.step&&st.data[c.step]&&c.amount){
+      var sn=st.data[c.step]||[],am=st.data[c.amount]||[],od=(c.order&&st.data[c.order])||[],kd=(c.kind&&st.data[c.kind])||[];
+      var rows=sn.map(function(nm,i){ return {step:nm!=null?String(nm):('Step '+i),amt:Number(am[i])||0,ord:od[i]!=null?Number(od[i]):i,kind:kd[i]!=null?String(kd[i]).toLowerCase():'increase'}; });
+      if(rows.length){ rows.sort(function(a,b){return a.ord-b.ord;}); draw(rows); return; }
+    }
+    draw(synth());
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ st.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+  window.addEventListener('resize',function(){ recompute(); });
+})();
+</script>
+</body>
+</html>

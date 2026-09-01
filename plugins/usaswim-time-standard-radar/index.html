@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Event Time-Standard Radar — USA Swimming Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#002D62;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px 8px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#BA0C2F}
+  #meta{font-size:11px;color:#687481}
+  #meta b{color:#002D62}
+  #stage{flex:1;position:relative;overflow:hidden}
+  svg{width:100%;height:100%;display:block}
+  .grid{fill:none;stroke:#E3E7EE;stroke-width:1}
+  .stdring{fill:none;stroke:#00B3E4;stroke-width:1.6;stroke-dasharray:4 3;opacity:.85}
+  .spoke{stroke:#E3E7EE;stroke-width:1}
+  .axlab{font-size:10.5px;font-weight:700;fill:#4a5568}
+  .poly{fill-opacity:.16;stroke-width:2.2;transition:fill-opacity .12s,stroke-width .12s}
+  .poly.hi{fill-opacity:.34;stroke-width:3.2}
+  .poly.dim{opacity:.15}
+  .dot{r:3.4;transition:opacity .12s}
+  #legend{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:10.5px;color:#4a5560;align-items:center;justify-content:center}
+  #legend .li{display:flex;align-items:center;gap:5px;cursor:default}
+  .dot2{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+  .dot2.ring{width:9px;height:9px;border-radius:50%;background:transparent;border:2px dashed #00B3E4}
+  #tip{position:fixed;pointer-events:none;background:#002D62;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#7FD9F5}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Time-standard achievement by event</div><div id="meta"><b id="cnt">0</b> athletes · <b id="axn">0</b> events</div></div>
+  <div id="stage"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div id="legend"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var NS='http://www.w3.org/2000/svg', TAU=Math.PI*2, tip=document.getElementById('tip');
+  // USA Swimming brand: navy, red, cyan (pool accent), plus supporting hues for multi-athlete overlay
+  var PALETTE=['#BA0C2F','#002D62','#00B3E4','#5E5E6C','#F0872E','#0E7C7B','#9A1B6B','#2E9B6B'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'athlete',type:'column',source:'source',label:'Athlete / team (series)'},
+    {name:'eventName',type:'column',source:'source',label:'Event name (axis)'},
+    {name:'pctOfStandard',type:'column',source:'source',allowedTypes:['number','integer'],label:'% of qualifying standard (100 = at standard)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&lt;','>':'&gt;','<':'&lt;'}[m]||m;}); }
+  function el(t,a){ var e=document.createElementNS(NS,t); for(var k in a)e.setAttribute(k,a[k]); return e; }
+  function P(cx,cy,r,a){ return [cx+r*Math.sin(a), cy-r*Math.cos(a)]; }
+  // Scale: axis radius spans 70 -> 130 (% of standard), so 100% (the qualifying cut) sits at a fixed ring 60% out.
+  var LO=70, HI=130;
+  function rad(v,R){ var f=(Math.max(LO,Math.min(HI,v))-LO)/(HI-LO); return R*f; }
+  function draw(models,axes,mat){ // mat[model][axis] = % of standard (100=at cut, >100=faster)
+    var svg=document.getElementById('svg'); while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var st=document.getElementById('stage'), W=st.clientWidth||600, H=st.clientHeight||340;
+    var n=axes.length; if(n<3||!models.length) return;
+    var cx=W/2-70, cy=H/2, R=Math.min(W*0.42,H/2)-26;
+    var g=el('g',{}); svg.appendChild(g);
+    [0.25,0.5,0.75,1].forEach(function(f){
+      var pts=[]; for(var i=0;i<n;i++){ var p=P(cx,cy,R*f,i*TAU/n); pts.push(p[0].toFixed(1)+','+p[1].toFixed(1)); }
+      g.appendChild(el('polygon',{points:pts.join(' '),class:'grid'}));
+    });
+    for(var i=0;i<n;i++){ var a=i*TAU/n; var p=P(cx,cy,R,a);
+      g.appendChild(el('line',{x1:cx,y1:cy,x2:p[0].toFixed(1),y2:p[1].toFixed(1),class:'spoke'}));
+      var lp=P(cx,cy,R+16,a), anchor=(Math.sin(a)<-0.15)?'end':(Math.sin(a)>0.15?'start':'middle');
+      var words=String(axes[i]).split(' '); var t=el('text',{x:lp[0],y:lp[1],'text-anchor':anchor}); t.setAttribute('class','axlab');
+      if(words.length>1){ var l1=words.slice(0,Math.ceil(words.length/2)).join(' '), l2=words.slice(Math.ceil(words.length/2)).join(' ');
+        var ts1=el('tspan',{x:lp[0],dy:'0'}); ts1.textContent=l1; t.appendChild(ts1);
+        var ts2=el('tspan',{x:lp[0],dy:'12'}); ts2.textContent=l2; t.appendChild(ts2);
+      } else t.textContent=axes[i];
+      g.appendChild(t);
+    }
+    // Qualifying-standard ring: 100% of standard, drawn as a dashed cyan ring at its scaled radius
+    var stdR=rad(100,R); var stdPts=[];
+    for(var i=0;i<n;i++){ var p=P(cx,cy,stdR,i*TAU/n); stdPts.push(p[0].toFixed(1)+','+p[1].toFixed(1)); }
+    g.appendChild(el('polygon',{points:stdPts.join(' '),class:'stdring'}));
+    var polys=[];
+    models.forEach(function(m,mi){
+      var col=PALETTE[mi%PALETTE.length], pts=[], dots=[];
+      for(var i=0;i<n;i++){ var v=mat[mi][i]||0; var p=P(cx,cy,rad(v,R),i*TAU/n); pts.push(p); }
+      var poly=el('polygon',{points:pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' '),fill:col,stroke:col});
+      poly.classList.add('poly'); poly.dataset.m=mi;
+      poly.addEventListener('mouseenter',function(){ polys.forEach(function(p2){ p2.el.classList.toggle('dim', p2.el!==poly); p2.el.classList.toggle('hi', p2.el===poly); }); });
+      poly.addEventListener('mouseleave',function(){ polys.forEach(function(p2){ p2.el.classList.remove('dim','hi'); }); });
+      g.appendChild(poly); polys.push({el:poly,mi:mi});
+      pts.forEach(function(p,i){ var d=el('circle',{cx:p[0].toFixed(1),cy:p[1].toFixed(1),fill:col}); d.classList.add('dot');
+        d.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+          tip.innerHTML='<b>'+esc(m)+'</b><br>'+esc(axes[i])+': '+mat[mi][i].toFixed(1)+'% of standard'; });
+        d.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+        g.appendChild(d); });
+    });
+    document.getElementById('cnt').textContent=models.length;
+    document.getElementById('axn').textContent=n;
+    var lg=document.getElementById('legend'); lg.innerHTML='';
+    models.forEach(function(m,mi){ var li=document.createElement('div'); li.className='li'; li.innerHTML='<span class="dot2" style="background:'+PALETTE[mi%PALETTE.length]+'"></span>'+esc(m); lg.appendChild(li); });
+    var ringli=document.createElement('div'); ringli.className='li'; ringli.innerHTML='<span class="dot2 ring"></span>Qualifying standard (100%)'; lg.appendChild(ringli);
+  }
+  function synth(){
+    var axes=['50 Free','100 Free','200 Free','100 Back','100 Breast','100 Fly','200 IM'];
+    var models=['Team Average','Top Qualifier'];
+    var mat=[[94,96,91,89,93,90,92],[108,112,105,101,103,107,106]];
+    return {models:models,axes:axes,mat:mat};
+  }
+  function build(mArr,axArr,vArr){
+    var mi={}, ai={}, models=[], axes=[];
+    function gm(x){ var s=String(x); if(mi[s]==null){mi[s]=models.length;models.push(s);} return mi[s]; }
+    function ga(x){ var s=String(x); if(ai[s]==null){ai[s]=axes.length;axes.push(s);} return ai[s]; }
+    var pts=[];
+    for(var i=0;i<mArr.length;i++){ var v=Number(vArr[i]); if(isNaN(v)) continue; pts.push([gm(mArr[i]),ga(axArr[i]),v]); }
+    var mat=models.map(function(){return axes.map(function(){return 0;});});
+    pts.forEach(function(p){ mat[p[0]][p[1]]=p[2]; });
+    return {models:models,axes:axes,mat:mat};
+  }
+  var stt={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=stt.cfg||{};
+    if(stt.data&&c.athlete&&c.eventName&&c.pctOfStandard&&stt.data[c.athlete]){
+      var g=build(stt.data[c.athlete]||[], stt.data[c.eventName]||[], stt.data[c.pctOfStandard]||[]);
+      if(g.models.length&&g.axes.length>=3){ draw(g.models,g.axes,g.mat); return; }
+    }
+    var s=synth(); draw(s.models,s.axes,s.mat);
+  }
+  if(client){ client.config.subscribe(function(cfg){ stt.cfg=cfg||{};
+    if(stt.unsub){stt.unsub();stt.unsub=null;}
+    if(cfg&&cfg.source){ stt.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ stt.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+  window.addEventListener('resize',function(){ recompute(); });
+  if(window.ResizeObserver){ new ResizeObserver(function(){ recompute(); }).observe(document.getElementById('stage')); }
+})();
+</script>
+</body>
+</html>

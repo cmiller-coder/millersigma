@@ -24,6 +24,105 @@ description: >-
 Given a company name, produce a polished branded Sigma workbook + a domain plugin,
 entirely from code. Proven across multiple retail, CPG, and tech companies.
 
+> ### The spec envelope changed in August 2026 — read this before writing any spec
+>
+> See **`sigma-workbook-conventions/reference/schema-2026-08-breaking-changes.md`**.
+> Short version: everything except `name`/`folderId` lives under **`document{}`**,
+> `document.pages[].elements` is **gone** (elements are a flat `document.elements`
+> list), the layout tags are now **`<Element>`/`<Container>`** (the old names fail
+> with a *masked 500*), and modals/drawers live in **`document.overlays`**.
+>
+> `examples/build_company_command_center.py` has been migrated and re-verified
+> against this schema — clone it, don't reconstruct from memory.
+>
+> **New things worth putting in a build:** a **drawer** for row-level drill,
+> `navigate` buttons between pages, `select-tab` to drive a tabbed container,
+> `update-rows`/`delete-rows` on input tables, `successToast` on any action,
+> conditional `on-select` triggers, and **`open-document`** to hand off from the
+> interactive app to a pixel-perfect **report** — reports are now code-representable
+> too, same envelope with `kind: "report"`.
+>
+> Also: **`POST /spec/verify` is weaker than `create`** — it skips SQL resolution and
+> duplicate/dangling-id checks. Always create or update to truly validate.
+>
+> And **every input table you build gets `inputMode: "view"`**. `inputMode` IS the
+> data-entry permission, and the default `"edit"` means *workbook editors only, in
+> draft mode* — so a published scenario modeler looks broken to a viewer, and any
+> button or agent `insert-rows` / `update-rows` against it silently fails for
+> everyone but you. Enum: `edit` (editors, draft only) · `explore` (explore-or-
+> greater, published) · **`view` (everyone, published — use this)**.
+
+## The shape of this skill: one name in, whole app out
+
+The user says **"McDonald's"** and that is all they should have to say. You
+infer their segments, economics, palette, alerts, persona names and plugin —
+asking for those defeats the point. See
+**`reference/one-generator-many-prospects.md`** for the derivation table, the
+per-industry plugin picker, and what genuinely still needs a human.
+
+Keep company specifics in ONE config dict and the layout universal, so the same
+generator retargets with a config edit. Proven across three live builds — a
+consumer fintech, a universal bank and a healthcare payer — from one codebase.
+
+## STOP — prompt the user before you build
+
+**This is a hard gate, not a suggestion.** Before writing any spec, call
+**`AskUserQuestion`** with the two questions below and wait for real answers.
+Do not infer them from the request, do not pick a default and mention it, and do
+not start generating "while you wait". Getting either wrong wastes an entire
+build.
+
+Ask both in a single `AskUserQuestion` call — two questions, one round trip:
+
+```
+Q1 header "Target org"  → Demo org (ours) | Prospect's org
+Q2 header "Pages"       → Command center | + Scenario modeler |
+                          + Cohort builder | All three
+                          (multiSelect: true)
+```
+
+The only time you may skip the gate is when the user has *already* stated both
+answers explicitly in their message.
+
+### 1. Demo org, or the prospect's org?
+
+The answer decides which feature set is safe to use, because **feature
+availability is per-workspace** — a spec that builds fine in our staging org gets
+rejected in theirs with `... is not enabled for this workspace`.
+
+| | **Demo org** (ours) | **Prospect org** |
+|---|---|---|
+| Newest kinds — `waterfall-chart`, `progress`, `repeated-container`, `navigation` | use freely | confirm first, or avoid |
+| Drawers / modals (`document.overlays`) | yes | usually yes — verify |
+| Page headers / sidebars (`settings.navigation`) | only where enabled | assume **no** |
+| Agents + `chat` elements | yes | **often not enabled** — have the no-agent fallback ready |
+| Reports as code | staging only today | assume **no** |
+| Registered bespoke plugin | yes | needs someone with plugin-registration rights in *their* org |
+
+**How to find out rather than guess:** build the feature-rich version, and if a
+create fails with a "not enabled for this workspace" error, drop that feature and
+re-post. Keep the two variants in one generator behind a flag (e.g.
+`RICH = os.environ.get("DEMO_ORG") == "1"`) so the same script produces both —
+don't fork the file.
+
+### 2. Which pages do they want?
+
+> *"Command center, scenario modeler, cohort builder — or a combination?"*
+
+Never assume all three. Each is a real chunk of build time and they suit
+different audiences:
+
+- **Command center** — the branded overview. Almost always wanted; this is the
+  page that carries the logo, KPI cards, AI insight and the bespoke plugin.
+- **Scenario modeler** — project a number forward under adjustable drivers.
+  Finance, manufacturing, insurance, supply chain, lending.
+- **Cohort / segment builder** — filter a population down to a saveable segment.
+  Marketing, healthcare, HR, education, SaaS, consumer fintech.
+
+If they say "all three", confirm it's worth the build time before starting.
+
+---
+
 ## The flow (four moves)
 1. **Data model** — reshape a sample warehouse table (e.g. Big Buys POS) into the
    company's domain via **custom SQL** so the data "makes sense."
@@ -259,8 +358,10 @@ or two side-by-side tables), so this risk never comes up on this page. See
 - Reshape realistically (weight the dominant segment) so the data is believable.
 - POST with direct curl (a stale local validator may flag `format`, which the API
   actually accepts). Get the URL from `GET /v2/workbooks/{id}`.
-- You can't render Sigma from here — after each POST, hand the user the URL and
-  iterate from their screenshot.
+- **Render after every POST and look at the image.** `POST /v2/workbooks/{id}/export`
+  with `{"format":{"type":"png"}}` then poll `GET /v2/query/{queryId}/download`
+  (zero bytes = not ready, retry). Layout defects are invisible in the spec — a
+  valid spec with valid SQL can still render clipped, overlapping or off-page.
 
 ## Files
 - `reference/api-cheatsheet.md` — verified element shapes + every gotcha. READ FIRST.

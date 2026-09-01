@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Service Territory Map — Omnia Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#0f1b2d;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 14px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#1d4ed8}
+  #meta{font-size:11px;color:#6b7686}
+  #meta b{color:#0f1b2d}
+  #body{flex:1;display:flex;gap:10px;min-height:0}
+  #mapwrap{flex:1;position:relative;min-width:0}
+  svg{width:100%;height:100%;display:block}
+  .state{stroke:#fff;stroke-width:.6;cursor:default;transition:opacity .1s}
+  .state:hover{opacity:.85;stroke:#0f1b2d;stroke-width:1.2}
+  #side{flex:0 0 176px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;padding-top:2px}
+  #side .h{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#8592a3;font-weight:700}
+  .trow{display:flex;align-items:center;gap:7px;font-size:11px}
+  .sw{width:10px;height:10px;border-radius:2px;flex:0 0 10px}
+  .tn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .tv{color:#42506a;font-variant-numeric:tabular-nums}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#6b7686}
+  #ramp{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#eaf1fb,#93b4f0,#3b82f6,#1d4ed8,#0a2540)}
+  #tip{position:fixed;pointer-events:none;background:#0f1b2d;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#7fb0ff}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Service Territory</div><div id="meta"><b id="stc">0</b> states · <b id="tot">—</b> bookings</div></div>
+  <div id="body">
+    <div id="mapwrap"><svg id="map"></svg></div>
+    <div id="side"><div class="h">Top territories</div><div id="tops"></div></div>
+  </div>
+  <div id="legend"><span>low</span><div id="ramp"></div><span>high</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'state',type:'column',source:'source',label:'State (full name)'},
+    {name:'bookings',type:'column',source:'source',allowedTypes:['number','integer'],label:'Bookings'},
+    {name:'jobs',type:'column',source:'source',allowedTypes:['number','integer'],label:'Jobs'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var tip=document.getElementById('tip'), usPromise=null, feats=null;
+  function loadUS(){ if(!usPromise) usPromise=d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+      .then(function(us){ feats=topojson.feature(us,us.objects.states).features; return feats; }); return usPromise; }
+  function fmt$(n){ if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B'; if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M'; if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'K'; return '$'+Math.round(n); }
+  function fmtN(n){ return n>=1e3?(n/1e3).toFixed(1)+'K':String(Math.round(n)); }
+  function color(t){ // 0..1 -> light blue to navy
+    var s=[[234,241,251],[147,180,240],[59,130,246],[29,78,216],[10,37,64]];
+    var seg=Math.max(0,Math.min(1,t))*4, i=Math.min(3,Math.floor(seg)), f=seg-i;
+    function m(a,b){return Math.round(a+(b-a)*f);}
+    return 'rgb('+m(s[i][0],s[i+1][0])+','+m(s[i][1],s[i+1][1])+','+m(s[i][2],s[i+1][2])+')'; }
+
+  function draw(byState){
+    loadUS().then(function(features){
+      var svg=d3.select('#map'); svg.selectAll('*').remove();
+      var el=document.getElementById('mapwrap'); var W=el.clientWidth||600,H=el.clientHeight||360;
+      var proj=d3.geoAlbersUsa().fitSize([W,H],{type:'FeatureCollection',features:features});
+      var path=d3.geoPath(proj);
+      var vals=Object.keys(byState).map(function(k){return byState[k].b;}); var mx=d3.max(vals)||1;
+      svg.attr('viewBox','0 0 '+W+' '+H);
+      svg.selectAll('path').data(features).enter().append('path').attr('class','state').attr('d',path)
+        .attr('fill',function(d){ var v=byState[d.properties.name]; return v?color(v.b/mx):'#f0f3f8'; })
+        .on('mousemove',function(e,d){ var v=byState[d.properties.name]||{b:0,j:0};
+          tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+          tip.innerHTML='<b>'+d.properties.name+'</b><br>Bookings '+fmt$(v.b)+'<br>Jobs '+fmtN(v.j); })
+        .on('mouseleave',function(){ tip.style.opacity=0; });
+      // side list
+      var tops=Object.keys(byState).map(function(k){return {n:k,b:byState[k].b};}).sort(function(a,b){return b.b-a.b;}).slice(0,10);
+      var box=document.getElementById('tops'); box.innerHTML='';
+      tops.forEach(function(t){ var r=document.createElement('div'); r.className='trow';
+        r.innerHTML='<span class="sw" style="background:'+color(t.b/mx)+'"></span><span class="tn">'+t.n+'</span><span class="tv">'+fmt$(t.b)+'</span>'; box.appendChild(r); });
+      document.getElementById('stc').textContent=Object.keys(byState).length;
+      document.getElementById('tot').textContent=fmt$(vals.reduce(function(a,b){return a+b;},0));
+    });
+  }
+
+  function synth(){
+    var s=['California','Texas','Florida','New York','Illinois','Pennsylvania','Ohio','Georgia','North Carolina','Michigan','Arizona','Washington','Colorado','Tennessee','Massachusetts','Virginia','Indiana','Missouri','Wisconsin','Minnesota','Oregon','Nevada','Utah','Kansas'];
+    var o={}; for(var i=0;i<s.length;i++){ var b=300000+((i*733991)%4200000); o[s[i]]={b:b,j:Math.round(b/9000)}; } return o;
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{};
+    if(st.data&&c.state&&st.data[c.state]&&c.bookings){
+      var stn=st.data[c.state]||[], bk=st.data[c.bookings]||[], jb=(c.jobs&&st.data[c.jobs])||[];
+      var by={}; for(var i=0;i<stn.length;i++){ var k=stn[i]; if(k==null)continue; k=String(k);
+        if(!by[k])by[k]={b:0,j:0}; by[k].b+=Number(bk[i])||0; by[k].j+=Number(jb[i])||0; }
+      if(Object.keys(by).length){ draw(by); return; }
+    }
+    draw(synth());
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ st.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+  window.addEventListener('resize',function(){ recompute(); });
+})();
+</script>
+</body>
+</html>

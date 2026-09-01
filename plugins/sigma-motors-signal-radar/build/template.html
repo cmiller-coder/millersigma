@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Regional Signal Map — Sigma Motors Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#0b1b3a;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:2px 4px 0;gap:2px}
+  #stage{flex:1;min-height:0}
+  #stage svg{width:100%;height:100%;display:block}
+  #legend{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 18px;font-size:10.5px;color:#5b6b7f;line-height:1.3;padding-bottom:2px}
+  #legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+  .st{stroke:#ffffff;stroke-width:0.7;vector-effect:non-scaling-stroke}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage"></div>
+  <div id="legend">
+    <span><i class="dot" style="background:#D14343"></i>At risk (&gt;5wk backlog)</span>
+    <span><i class="dot" style="background:#1B4FD6"></i>Tracking on pace</span>
+    <span>Region shade = backlog severity &middot; Pulse speed = EV growth rate</span>
+  </div>
+</div>
+<script>
+/*__US_MAP_DATA__*/
+</script>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'region',type:'column',source:'source',label:'Region'},
+    {name:'ev_backlog',type:'column',source:'source',allowedTypes:['number','integer'],label:'EV Backlog (units)'},
+    {name:'hybrid_backlog',type:'column',source:'source',allowedTypes:['number','integer'],label:'Hybrid Backlog (units)'},
+    {name:'ev_share',type:'column',source:'source',allowedTypes:['number','integer'],label:'EV Share (0-1)'},
+    {name:'backlog_weeks',type:'column',source:'source',allowedTypes:['number','integer'],label:'Backlog (weeks)'},
+    {name:'growth_pct',type:'column',source:'source',allowedTypes:['number','integer'],label:'EV Backlog Growth % (30d)'},
+    {name:'at_risk',type:'column',source:'source',allowedTypes:['number','integer'],label:'At Risk Flag (0/1)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var RED='#D14343', RED_TINT='#E8927F', BLUE='#1B4FD6', BLUE_TINT='#7FA3E8';
+  var W=US_MAP.w, H=US_MAP.h;
+  var REGION_NAMES=Object.keys(US_MAP.regions);
+
+  // ---------------------------------------------------------------- static geometry
+  // The map's geometry never changes, and because everything lives in viewBox
+  // units it's resolution-independent -- so this is built exactly once and the
+  // per-refresh work is reduced to setting a fill on 5 <g> nodes plus
+  // rewriting one small overlay group. (Re-serializing ~290KB of real state
+  // path data on every data tick / resize would visibly jank.)
+  function buildOnce(){
+    var s=[];
+    s.push('<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">');
+    s.push('<defs>'+
+      '<filter id="landShadow" x="-8%" y="-8%" width="116%" height="116%">'+
+        '<feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#16233D" flood-opacity="0.22"/>'+
+      '</filter>'+
+    '</defs>');
+
+    // Nation silhouette twice: once purely to cast a soft shadow (a filter
+    // needs a fully opaque source to throw a visible shadow), then an opaque
+    // base so region tints read as tint-on-white rather than tint-on-shadow.
+    s.push('<path d="'+US_MAP.nation+'" fill="#ffffff" filter="url(#landShadow)"/>');
+    s.push('<path d="'+US_MAP.nation+'" fill="#F4F6FA"/>');
+
+    // One <g> per region holding its real state polygons; fill is set later
+    // from the data, and inherits down to every state in the group.
+    REGION_NAMES.forEach(function(rn){
+      s.push('<g id="rf-'+rn+'" fill="#E6EAF2">');
+      US_MAP.states.filter(function(st){return st.r===rn;}).forEach(function(st){
+        s.push('<path class="st" d="'+st.d+'"><title>'+st.n+' · '+rn+'</title></path>');
+      });
+      s.push('</g>');
+    });
+
+    // Borders come from pre-computed topojson meshes (each shared edge drawn
+    // once): hairline white between states inside a region, a heavier line
+    // between regions, and a crisp outer coastline.
+    s.push('<path d="'+US_MAP.stateBorders+'" fill="none" stroke="#ffffff" stroke-width="1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>');
+    s.push('<path d="'+US_MAP.regionBorders+'" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>');
+    s.push('<path d="'+US_MAP.nation+'" fill="none" stroke="#93A3BD" stroke-width="1.1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>');
+
+    s.push('<g id="overlay"></g>');
+    s.push('</svg>');
+    document.getElementById('stage').innerHTML=s.join('');
+  }
+
+  // ---------------------------------------------------------------- data layer
+  function draw(regions){
+    var maxWeeks=Math.max.apply(null,regions.map(function(r){return r.backlog_weeks;}).concat([1]));
+
+    var seen={};
+    var ov=[];
+    regions.forEach(function(r){
+      if(!US_MAP.regions[r.region]) return;
+      seen[r.region]=true;
+      var atRisk=!!r.at_risk;
+      var color=atRisk?RED:BLUE, tint=atRisk?RED_TINT:BLUE_TINT;
+      // Severity drives fill strength, so the eye lands on the worst region
+      // before reading a single number.
+      var severity=(0.30+0.55*(r.backlog_weeks/maxWeeks)).toFixed(2);
+      var g=document.getElementById('rf-'+r.region);
+      if(g){ g.setAttribute('fill',tint); g.setAttribute('fill-opacity',severity); }
+
+      var c=US_MAP.regions[r.region].c, cx=c[0], cy=c[1];
+      var pulse=(r.growth_pct>25?1.15:2.6)+'s';
+      var evPct=Math.round((r.ev_share!==undefined?r.ev_share*100:0));
+      var rIn=27, rOut=40;
+
+      ov.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+rOut+'" fill="'+color+'" fill-opacity="0.20">'+
+        '<animate attributeName="r" values="'+rOut+';'+(rOut+16)+';'+rOut+'" dur="'+pulse+'" repeatCount="indefinite"/>'+
+        '<animate attributeName="fill-opacity" values="0.20;0;0.20" dur="'+pulse+'" repeatCount="indefinite"/>'+
+      '</circle>');
+      ov.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+rIn+'" fill="'+color+'" stroke="#ffffff" stroke-width="2.5"/>');
+      ov.push('<text x="'+cx+'" y="'+(cy+7)+'" text-anchor="middle" fill="#ffffff" font-weight="800" font-size="20">'+evPct+'%</text>');
+
+      // Labels sit below the marker, nudged inward near the right edge so a
+      // long name (e.g. "Northeast") can't run off the viewBox.
+      var anchor='middle', lx=cx;
+      if(cx>W-95){ anchor='end'; lx=Math.min(cx+45,W-6); }
+      else if(cx<95){ anchor='start'; lx=Math.max(cx-45,6); }
+      var ly=cy+rIn+26;
+      ov.push('<text x="'+lx+'" y="'+ly+'" text-anchor="'+anchor+'" fill="#0b1b3a" font-weight="800" font-size="21">'+r.region+'</text>');
+      ov.push('<text x="'+lx+'" y="'+(ly+21)+'" text-anchor="'+anchor+'" fill="'+color+'" font-weight="700" font-size="16">'+r.backlog_weeks.toFixed(1)+' wks backlog</text>');
+    });
+
+    // Any region absent from the data renders as plain unfilled land rather
+    // than keeping a stale color from the previous tick.
+    REGION_NAMES.forEach(function(rn){
+      if(seen[rn]) return;
+      var g=document.getElementById('rf-'+rn);
+      if(g){ g.setAttribute('fill','#E6EAF2'); g.setAttribute('fill-opacity','1'); }
+    });
+
+    document.getElementById('overlay').innerHTML=ov.join('');
+  }
+
+  function synth(){
+    return [
+      {region:'West', ev_backlog:1120, hybrid_backlog:110, ev_share:0.91, backlog_weeks:6.2, growth_pct:42, at_risk:1},
+      {region:'Southwest', ev_backlog:1412, hybrid_backlog:74, ev_share:0.95, backlog_weeks:5.1, growth_pct:51, at_risk:1},
+      {region:'Midwest', ev_backlog:780, hybrid_backlog:148, ev_share:0.84, backlog_weeks:3.8, growth_pct:18, at_risk:0},
+      {region:'Northeast', ev_backlog:468, hybrid_backlog:140, ev_share:0.77, backlog_weeks:2.9, growth_pct:9, at_risk:0},
+      {region:'South', ev_backlog:340, hybrid_backlog:138, ev_share:0.71, backlog_weeks:2.4, growth_pct:6, at_risk:0}
+    ];
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){
+    var c=st.cfg||{};
+    if(st.data && c.region && st.data[c.region]){
+      var region=st.data[c.region]||[],
+          ev=(c.ev_backlog&&st.data[c.ev_backlog])||[],
+          hy=(c.hybrid_backlog&&st.data[c.hybrid_backlog])||[],
+          share=(c.ev_share&&st.data[c.ev_share])||[],
+          weeks=(c.backlog_weeks&&st.data[c.backlog_weeks])||[],
+          growth=(c.growth_pct&&st.data[c.growth_pct])||[],
+          risk=(c.at_risk&&st.data[c.at_risk])||[];
+      var out=region.map(function(name,i){ return {
+        region:String(name), ev_backlog:Number(ev[i])||0, hybrid_backlog:Number(hy[i])||0,
+        ev_share:Number(share[i])||0, backlog_weeks:Number(weeks[i])||0,
+        growth_pct:Number(growth[i])||0, at_risk:Number(risk[i])||0
+      };});
+      if(out.length){ draw(out); return; }
+    }
+    draw(synth());
+  }
+
+  buildOnce();
+  if(client){
+    client.config.subscribe(function(cfg){
+      st.cfg=cfg||{};
+      if(st.unsub){st.unsub();st.unsub=null;}
+      if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();});}
+      recompute();
+    });
+  }else{ recompute(); }
+  // No ResizeObserver needed: the SVG viewBox makes every coordinate above
+  // resolution-independent, so the browser rescales on resize for free.
+})();
+</script>
+</body>
+</html>

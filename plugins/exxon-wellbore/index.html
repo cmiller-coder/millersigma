@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Wellbore & Formation Explorer — Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;
+       background:linear-gradient(180deg,#0b1220 0%,#0a0f18 100%);color:#e9eef6;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px}
+  #top{display:flex;justify-content:space-between;align-items:baseline}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#fff}
+  #ttl b{color:#E4002B}
+  #sub{font-size:12px;color:#93a1b5}#sub b{color:#fff}
+  #stage{flex:1;position:relative;min-height:0}
+  svg{position:absolute;inset:0;width:100%;height:100%}
+  .band{transition:opacity .2s}
+  .fname{font-size:11px;font-weight:600;fill:#f3f6fb;paint-order:stroke;stroke:#000;stroke-width:2.4px;stroke-opacity:.35}
+  .dax{font-size:10px;fill:#8595ab}
+  #tip{position:fixed;pointer-events:none;background:#0b1220;border:1px solid #E4002B;border-radius:8px;padding:8px 10px;font-size:11px;color:#e9eef6;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap}
+  #tip b{color:#ff7d8f}#tip .big{font-size:14px;color:#fff;font-weight:700}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl"><b>◤</b> Wellbore &amp; Formation Explorer</div>
+    <div id="sub"><span id="td">—</span> TD · <b id="prod">—</b> boe/d · <span id="pay">0</span> pay zones</div>
+  </div>
+  <div id="stage"><svg id="svg" preserveAspectRatio="none"></svg></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'label',type:'column',source:'source',label:'Formation'},
+    {name:'thk',type:'column',source:'source',allowedTypes:['number','integer'],label:'Thickness (ft)'},
+    {name:'prod',type:'column',source:'source',allowedTypes:['number','integer'],label:'Production (boe/d)'},
+    {name:'filterVar',type:'variable',label:'Click formation → control'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  var SVG='http://www.w3.org/2000/svg', tip=document.getElementById('tip'), sel=null;
+  function setFilter(v){ if(!client||!st.cfg||!st.cfg.filterVar) return;
+    try{ if(v==null) client.config.setVariable('filterVar'); else client.config.setVariable('filterVar', v); }catch(e){} }
+  function el(n,at){var e=document.createElementNS(SVG,n);for(var k in at)e.setAttribute(k,at[k]);return e;}
+  function fmt(v){v=+v||0;var a=Math.abs(v);if(a>=1e6)return (v/1e6).toFixed(1)+'M';if(a>=1e3)return (v/1e3).toFixed(0)+'k';return ''+Math.round(v);}
+  // earthy strata palette (top→deep)
+  var EARTH=[[168,142,102],[150,120,84],[132,104,72],[110,92,68],[92,78,60],[120,96,70],[86,74,58],[70,62,52]];
+  function rgb(a){return 'rgb('+a[0]+','+a[1]+','+a[2]+')';}
+
+  function render(rows){
+    var svg=document.getElementById('svg'); svg.innerHTML='';
+    var W=svg.clientWidth||760, H=svg.clientHeight||420; svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    var defsE=el('defs',{});
+    defsE.innerHTML='<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>'+
+      '<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16233a"/><stop offset="1" stop-color="#0c1526"/></linearGradient>';
+    svg.appendChild(defsE);
+    var axX=52, rightPad=8, topY=10, botY=H-6, bx=axX+(W-axX-rightPad)*0.42; // bore x
+    var T=rows.reduce(function(s,r){return s+r.thk;},0)||1;
+    var maxP=Math.max.apply(null,rows.map(function(r){return r.prod;}).concat([1]));
+    function Y(d){return topY+(d/T)*(botY-topY);}
+    // strata bands
+    var cum=0, deepestPayY=null;
+    rows.forEach(function(r,i){
+      var y0=Y(cum), y1=Y(cum+r.thk); r._y0=y0; r._y1=y1; r._mid=(y0+y1)/2;
+      var pay=r.prod>=maxP*0.28; r._pay=pay;
+      var base=EARTH[i%EARTH.length];
+      var g=el('g',{class:'band'});
+      if(sel!=null && r.label!==sel) g.setAttribute('opacity','0.32');
+      g.appendChild(el('rect',{x:axX,y:y0,width:W-axX-rightPad,height:Math.max(1,y1-y0),fill:rgb(base)}));
+      // pay-zone red saturation overlay by production intensity
+      if(pay){
+        var t=Math.min(1,r.prod/maxP);
+        g.appendChild(el('rect',{x:axX,y:y0,width:W-axX-rightPad,height:Math.max(1,y1-y0),fill:'#E4002B','fill-opacity':(0.12+0.30*t).toFixed(2)}));
+        deepestPayY=r._mid;
+      }
+      // subtle top bedding line
+      g.appendChild(el('line',{x1:axX,y1:y0,x2:W-rightPad,y2:y0,stroke:'#000','stroke-opacity':0.25}));
+      // formation label
+      if(y1-y0>14){var tx=el('text',{x:axX+10,y:r._mid+4,class:'fname'}); tx.textContent=r.label+(pay?'  ●':''); if(pay)tx.setAttribute('fill','#ffd7dd'); g.appendChild(tx);}
+      // hover/click
+      var hit=el('rect',{x:axX,y:y0,width:W-axX-rightPad,height:Math.max(1,y1-y0),fill:'transparent',style:'cursor:pointer'});
+      hit.addEventListener('mousemove',function(e){tip.innerHTML='<div class="big">'+r.label+'</div>Depth '+Math.round(cum)+'–'+Math.round(cum+r.thk)+' ft<br>Thickness '+Math.round(r.thk)+' ft<br><b>'+fmt(r.prod)+' boe/d</b>'+(pay?' · pay zone':'');tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';});
+      hit.addEventListener('mouseleave',function(){tip.style.opacity=0;});
+      (function(rr){hit.addEventListener('click',function(ev){ev.stopPropagation();sel=(sel===rr.label)?null:rr.label;setFilter(sel);render(rows);});})(r);
+      g.appendChild(hit);
+      svg.appendChild(g);
+      cum+=r.thk;
+    });
+    // depth axis ticks
+    for(var t2=0;t2<=4;t2++){var d=T*t2/4, y=Y(d); svg.appendChild(el('line',{x1:axX-4,y1:y,x2:axX,y2:y,stroke:'#4a5a72'})); var tl=el('text',{x:axX-8,y:y+3,'text-anchor':'end',class:'dax'}); tl.textContent=fmt(d)+"'"; svg.appendChild(tl);}
+    svg.appendChild(el('line',{x1:axX,y1:topY,x2:axX,y2:botY,stroke:'#4a5a72'}));
+    // wellbore: surface pad + casing down, deviate to a lateral through deepest pay
+    var latY=deepestPayY||botY-20;
+    svg.appendChild(el('rect',{x:bx-16,y:topY-2,width:32,height:6,fill:'#c9d3e0'})); // wellhead
+    // casing (two walls) vertical to lateral kickoff, then curve to horizontal lateral
+    var kick=Math.min(latY, botY-24);
+    var path='M '+(bx-4)+' '+topY+' L '+(bx-4)+' '+(kick-18)+' Q '+(bx-4)+' '+kick+' '+(bx+18)+' '+kick+' L '+(W-rightPad-14)+' '+latY;
+    var path2='M '+(bx+4)+' '+topY+' L '+(bx+4)+' '+(kick-10)+' Q '+(bx+4)+' '+(kick+8)+' '+(bx+22)+' '+(kick+8)+' L '+(W-rightPad-14)+' '+(latY+8);
+    svg.appendChild(el('path',{d:path,fill:'none',stroke:'#e7edf5','stroke-width':3}));
+    svg.appendChild(el('path',{d:path2,fill:'none',stroke:'#aab6c8','stroke-width':2.4}));
+    // perforations along the lateral
+    for(var px=bx+26;px<W-rightPad-16;px+=18){svg.appendChild(el('line',{x1:px,y1:latY-6,x2:px,y2:latY-1,stroke:'#ffb0bb','stroke-width':2}));svg.appendChild(el('line',{x1:px,y1:latY+9,x2:px,y2:latY+14,stroke:'#ffb0bb','stroke-width':2}));}
+    // hydrocarbons flowing up the bore (SMIL) — density by total production
+    var flowPath='M '+(W-rightPad-40)+' '+latY+' L '+(bx)+' '+(latY)+' Q '+(bx)+' '+(kick)+' '+(bx)+' '+(kick-18)+' L '+bx+' '+topY;
+    var np=Math.max(6,Math.min(22,Math.round(rows.reduce(function(s,r){return s+r.prod;},0)/maxP*4)));
+    for(var i2=0;i2<np;i2++){
+      var c=el('circle',{r:2.6,fill:i2%3?'#ffcf33':'#E4002B'});
+      var mo=el('animateMotion',{dur:(2.6+ (i2%5)*0.5)+'s',repeatCount:'indefinite',begin:(-(i2*0.35))+'s',path:flowPath,rotate:'0','keyPoints':'0;1','keyTimes':'0;1','calcMode':'linear'});
+      c.appendChild(mo);
+      var op=el('animate',{attributeName:'opacity',values:'0;1;1;0.2',keyTimes:'0;0.1;0.85;1',dur:(2.6+(i2%5)*0.5)+'s',repeatCount:'indefinite',begin:(-(i2*0.35))+'s'});
+      c.appendChild(op); svg.appendChild(c);
+    }
+    svg.addEventListener('click',function(){if(sel!=null){sel=null;setFilter(null);render(rows);}});
+    // header stats
+    document.getElementById('td').textContent=fmt(T)+" ft";
+    document.getElementById('prod').textContent=fmt(rows.reduce(function(s,r){return s+r.prod;},0));
+    document.getElementById('pay').textContent=rows.filter(function(r){return r._pay;}).length;
+  }
+  function synth(){
+    return [['Rustler',380,0],['Delaware',720,120],['Bone Spring 1',540,3100],['Bone Spring 2',610,4200],
+    ['Bone Spring 3',560,2600],['Wolfcamp A',480,8600],['Wolfcamp B',520,7400],['Wolfcamp C',430,3900],
+    ['Wolfcamp D',360,1200],['Barnett',300,300]].map(function(r){return {label:r[0],thk:r[1],prod:r[2]*1e0};});
+  }
+  var st={cfg:{},data:null,unsub:null,rt:null};
+  function recompute(){var c=st.cfg||{};
+    if(st.data&&c.thk&&c.label&&st.data[c.thk]){
+      var thk=st.data[c.thk]||[],lab=st.data[c.label]||[],pr=(c.prod&&st.data[c.prod])||[];
+      var rows=thk.map(function(v,i){return {label:lab[i]!=null?String(lab[i]):('Zone '+i),thk:Number(v)||0,prod:Number(pr[i])||0};}).filter(function(r){return r.thk>0;});
+      if(rows.length){render(rows);return;}
+    }
+    render(synth());
+  }
+  window.addEventListener('resize',function(){clearTimeout(st.rt);st.rt=setTimeout(recompute,120);});
+  if(client){client.config.subscribe(function(cfg){st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();});}
+    recompute();});
+  }else{recompute();}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "plugin-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8099", "--directory", "/Users/cmiller/Desktop/millersigma/plugins/sigma-motors-signal-console"],
+      "port": 8099
+    }
+  ]
+}

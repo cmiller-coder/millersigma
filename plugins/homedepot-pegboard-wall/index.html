@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Category Pegboard Performance Wall — Home Depot Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#3A2A1E;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#F96302}
+  #meta{font-size:11px;color:#8A6A52}
+  #meta b{color:#3A2A1E}
+  #board{flex:1;position:relative;min-height:0;border-radius:10px;overflow:hidden;
+    background-color:#C97A3D;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.16) 1.6px, transparent 1.6px),
+      linear-gradient(#B8672E, #A85A26);
+    background-size:26px 26px, 100% 100%;
+    background-position:13px 13px, 0 0;
+    box-shadow:inset 0 0 40px rgba(0,0,0,0.35);
+  }
+  #grid{position:absolute;inset:0;display:grid;padding:18px;gap:4px}
+  .peg{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0}
+  .peg .hook{position:absolute;top:2px;width:8px;height:8px;border-radius:50%;background:#5A4632;box-shadow:0 1px 2px rgba(0,0,0,0.5), inset 0 0 0 1.5px #7A6248}
+  .peg .icon-wrap{display:flex;align-items:center;justify-content:center;transition:transform .15s ease;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.35))}
+  .peg:hover .icon-wrap{transform:scale(1.08)}
+  .peg .badge{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;background:rgba(20,14,10,0.72);color:#fff;white-space:nowrap;letter-spacing:.01em}
+  .peg .lbl{position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:rgba(255,255,255,0.85);text-shadow:0 1px 2px rgba(0,0,0,0.5);white-space:nowrap}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#8A6A52}
+  #bar{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#6b4a34,#c9631f,#F96302,#FFC220)}
+  #tip{position:fixed;pointer-events:none;background:#2A1D14;border:1px solid #6b4a34;border-radius:8px;padding:8px 10px;font-size:11px;color:#FFE8D6;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  #tip b{color:#FFC220}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl">Category Pegboard Performance Wall</div>
+    <div id="meta"><span id="cnt">0</span> categories · avg comp growth <b id="avgV">—</b></div>
+  </div>
+  <div id="board"><div id="grid"></div></div>
+  <div id="legend">
+    <span>declining</span><div id="bar"></div><span>strong growth</span>
+  </div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'category',type:'column',source:'source',label:'Category'},
+    {name:'growth',type:'column',source:'source',allowedTypes:['number','integer'],label:'Comp Sales Growth % (drives size/glow)'},
+    {name:'sales',type:'column',source:'source',allowedTypes:['number','integer'],label:'Net Sales (badge, optional)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  // Tool silhouette per Home Depot category, drawn as inline SVG paths (viewBox 0 0 100 100).
+  var TOOL_ICONS = {
+    'Lumber & Building Materials': iconHammer,
+    'Appliances': iconWrench,
+    'Paint': iconRoller,
+    'Garden & Outdoor': iconShovel,
+    'Tools & Hardware': iconWrench,
+    'Electrical & Plumbing': iconWrench2
+  };
+  var FALLBACK_ORDER = [iconHammer, iconRoller, iconWrench, iconShovel, iconWrench2, iconSaw];
+
+  function iconHammer(fill){
+    return '<svg viewBox="0 0 100 100" width="100%" height="100%"><g fill="'+fill+'" stroke="none">'+
+      '<rect x="38" y="34" width="14" height="58" rx="6" transform="rotate(-35 45 63)"/>'+
+      '<path d="M20 10 L82 10 C88 10 92 15 92 21 L92 33 C92 39 88 44 82 44 L58 44 L46 34 L34 44 L20 44 C14 44 10 39 10 33 L10 21 C10 15 14 10 20 10 Z" transform="rotate(-8 51 27)"/>'+
+      '</g></svg>';
+  }
+  function iconRoller(fill){
+    return '<svg viewBox="0 0 100 100" width="100%" height="100%"><g fill="none" stroke="'+fill+'" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">'+
+      '<rect x="14" y="16" width="60" height="24" rx="6" fill="'+fill+'" stroke="none"/>'+
+      '<line x1="60" y1="40" x2="60" y2="58"/>'+
+      '<line x1="60" y1="58" x2="80" y2="58"/>'+
+      '<line x1="80" y1="58" x2="80" y2="90"/>'+
+      '<circle cx="80" cy="90" r="4" fill="'+fill+'" stroke="none"/>'+
+      '</g></svg>';
+  }
+  function iconWrench(fill){
+    return '<svg viewBox="0 0 100 100" width="100%" height="100%"><g fill="'+fill+'" stroke="none">'+
+      '<path d="M70 8 C58 8 48 18 48 30 C48 33.6 48.9 37 50.5 40 L14 76 C10 80 10 86 14 90 C18 94 24 94 28 90 L64 53.5 C67 55.1 70.4 56 74 56 C86 56 96 46 96 34 C96 30.9 95.3 28 94.1 25.4 L82 37.5 C78.7 40.8 73.3 40.8 70 37.5 C66.7 34.2 66.7 28.8 70 25.5 L82.1 13.4 C79.5 12.2 76.5 8 70 8 Z"/>'+
+      '</g></svg>';
+  }
+  function iconWrench2(fill){
+    // Pipe wrench silhouette (electrical & plumbing) -- bold, high-contrast geometry
+    return '<svg viewBox="0 0 100 100" width="100%" height="100%"><g fill="'+fill+'" stroke="none">'+
+      '<rect x="40" y="38" width="18" height="54" rx="6" transform="rotate(38 49 65)"/>'+
+      '<path d="M28 4 C13 4 4 15 4 28 C4 41 13 50 26 50 C31 50 36 48.5 40 45.5 L47 52.5 L57 42.5 L50 35.5 C53 31.5 54.5 26.5 54.5 21 C54.5 12 43 4 28 4 Z M28 16 C36 16 42 21 42 27 C42 33 36 38 28 38 C20 38 16 33 16 27 C16 21 20 16 28 16 Z"/>'+
+      '</g></svg>';
+  }
+  function iconShovel(fill){
+    return '<svg viewBox="0 0 100 100" width="100%" height="100%"><g fill="none" stroke="'+fill+'" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">'+
+      '<line x1="66" y1="10" x2="34" y2="62"/>'+
+      '<path d="M20 62 C14 72 14 84 22 92 C30 84 42 76 46 66 C50 56 44 48 36 50 C28 52 24 56 20 62 Z" fill="'+fill+'" stroke="none"/>'+
+      '</g></svg>';
+  }
+  function iconSaw(fill){
+    return '<svg viewBox="0 0 100 100" width="100%" height="100%"><g fill="none" stroke="'+fill+'" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">'+
+      '<path d="M10 78 L70 22" stroke-width="7"/>'+
+      '<path d="M70 22 L92 14 L88 34 L70 40 Z" fill="'+fill+'" stroke="none"/>'+
+      '<path d="M10 78 L26 82 L22 66 Z" fill="'+fill+'" stroke="none"/>'+
+      '</g></svg>';
+  }
+
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hx(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  function growthColor(t){ // t 0..1 -> muted tan (weak, still legible) -> HD orange -> bright gold (strong)
+    t=Math.max(0,Math.min(1,t));
+    var s=[[214,178,140],[228,140,60],[249,99,2],[255,194,32]];
+    var seg=t*3,i=Math.min(2,Math.floor(seg)),f=seg-i;
+    return '#'+hx(lerp(s[i][0],s[i+1][0],f))+hx(lerp(s[i][1],s[i+1][1],f))+hx(lerp(s[i][2],s[i+1][2],f));
+  }
+  function fmtPct(v){ return (v>=0?'+':'')+v.toFixed(1)+'%'; }
+  function fmtSales(v){ v=Number(v)||0; if(v>=1e9)return '$'+(v/1e9).toFixed(1)+'B'; if(v>=1e6)return '$'+(v/1e6).toFixed(0)+'M'; if(v>=1e3)return '$'+(v/1e3).toFixed(0)+'K'; return '$'+v.toFixed(0); }
+
+  var tip=document.getElementById('tip');
+  function draw(rows){
+    var grid=document.getElementById('grid');
+    grid.innerHTML='';
+    var n=rows.length||1;
+    var cols = n<=3 ? n : (n<=6 ? 3 : Math.ceil(Math.sqrt(n*1.6)));
+    grid.style.gridTemplateColumns='repeat('+cols+',1fr)';
+    grid.style.gridTemplateRows='repeat('+Math.ceil(n/cols)+',1fr)';
+
+    var minG=Math.min.apply(null,rows.map(function(r){return r.growth;}));
+    var maxG=Math.max.apply(null,rows.map(function(r){return r.growth;}));
+    var span=(maxG-minG)||1;
+    var sum=0;
+
+    rows.forEach(function(r,i){
+      sum+=r.growth;
+      var t=(r.growth-minG)/span; // 0..1 relative performance
+      var color=growthColor(t);
+      var scale=0.55+0.55*t; // 0.55 -> 1.10
+      var glow=8+26*t;
+      var iconFn = TOOL_ICONS[r.category] || FALLBACK_ORDER[i % FALLBACK_ORDER.length];
+
+      var peg=document.createElement('div');
+      peg.className='peg';
+
+      var hook=document.createElement('div'); hook.className='hook'; peg.appendChild(hook);
+
+      var lbl=document.createElement('div'); lbl.className='lbl'; lbl.textContent=r.category; peg.appendChild(lbl);
+
+      var iw=document.createElement('div'); iw.className='icon-wrap';
+      var sizePx = 'min(9vw, ' + (36+34*t).toFixed(0) + 'px)';
+      iw.style.width=sizePx; iw.style.height=sizePx;
+      iw.style.filter='drop-shadow(0 0 '+glow.toFixed(0)+'px '+color+') drop-shadow(0 3px 4px rgba(0,0,0,0.35))';
+      iw.innerHTML=iconFn(color);
+      peg.appendChild(iw);
+
+      var badge=document.createElement('div'); badge.className='badge';
+      badge.textContent=fmtPct(r.growth);
+      badge.style.background='rgba(20,14,10,0.78)';
+      badge.style.boxShadow='0 0 0 1px '+color+' inset';
+      peg.appendChild(badge);
+
+      peg.addEventListener('mousemove',function(e){
+        tip.innerHTML='<b>'+r.category+'</b><br>Comp sales growth: '+fmtPct(r.growth)+
+          (r.sales!=null?('<br>Net sales: '+fmtSales(r.sales)):'');
+        tip.style.opacity=1; tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY+12)+'px';
+      });
+      peg.addEventListener('mouseleave',function(){tip.style.opacity=0;});
+
+      grid.appendChild(peg);
+    });
+
+    document.getElementById('cnt').textContent=n;
+    document.getElementById('avgV').textContent=fmtPct(sum/n);
+  }
+
+  function synth(){
+    return [
+      {category:'Lumber & Building Materials',growth:6.8,sales:4200000000},
+      {category:'Appliances',growth:-1.4,sales:2600000000},
+      {category:'Paint',growth:4.1,sales:1800000000},
+      {category:'Garden & Outdoor',growth:8.9,sales:3100000000},
+      {category:'Tools & Hardware',growth:2.6,sales:2400000000},
+      {category:'Electrical & Plumbing',growth:1.1,sales:2100000000}
+    ];
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){
+    var c=st.cfg||{};
+    if(st.data && c.category && c.growth && st.data[c.category] && st.data[c.growth]){
+      var cat=st.data[c.category]||[], gr=st.data[c.growth]||[], sales=(c.sales&&st.data[c.sales])||[];
+      var rows=cat.map(function(cName,i){return {
+        category:cName!=null?String(cName):('Category '+i),
+        growth:Number(gr[i])||0,
+        sales: sales[i]!=null? Number(sales[i]) : null
+      };});
+      if(rows.length){draw(rows);return;}
+    }
+    draw(synth());
+  }
+  if(client){
+    client.config.subscribe(function(cfg){
+      st.cfg=cfg||{};
+      if(st.unsub){st.unsub();st.unsub=null;}
+      if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();});}
+      recompute();
+    });
+  } else {
+    recompute();
+  }
+
+  // Sigma sizes the panel after first paint -- always redraw on resize.
+  var ro=new ResizeObserver(function(){ recompute(); });
+  ro.observe(document.getElementById('wrap'));
+})();
+</script>
+</body>
+</html>

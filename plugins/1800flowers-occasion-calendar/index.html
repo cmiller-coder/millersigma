@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Occasion Demand Calendar — 1-800-Flowers Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#1E1647;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:10px 14px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#21571D}
+  #meta{font-size:11px;color:#6B7280}
+  #meta b{color:#1E1647}
+  #stage{flex:1;min-height:0;position:relative}
+  canvas{position:absolute;left:0;top:0}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#6B7280;padding-top:2px}
+  #bar{height:8px;flex:0 0 90px;border-radius:4px;background:linear-gradient(90deg,#EAF1E7,#9CC98D,#3E8637,#1B4517)}
+  #tip{position:fixed;pointer-events:none;background:#1E1647;border:1px solid #3A2C6B;border-radius:8px;padding:8px 10px;font-size:11px;color:#F3E7F4;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip b{color:#B7E3A6}
+  #months{position:absolute;left:0;top:0;pointer-events:none}
+  .mlbl{position:absolute;font-size:10px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.03em}
+  .dlbl{position:absolute;font-size:9px;color:#9AA1AB;font-weight:600}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Occasion demand calendar — orders by day</div><div id="meta">peak day <b id="peak">—</b> · annual orders <b id="tot">—</b></div></div>
+  <div id="stage"><canvas id="cv"></canvas><div id="months"></div></div>
+  <div id="legend"><span>fewer orders</span><div id="bar"></div><span>more orders</span><span id="occlegend" style="margin-left:14px"></span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'date',type:'column',source:'source',allowedTypes:['datetime','date'],label:'Order Date'},
+    {name:'value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Order Volume'},
+    {name:'occasion',type:'column',source:'source',label:'Occasion (optional)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hx(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  function heat(t){ // 0..1 pale green -> mid green -> deep forest green (brand)
+    t=Math.max(0,Math.min(1,t));
+    var s=[[234,241,231],[156,201,141],[62,134,55],[27,69,23]];
+    var seg=t*3,i=Math.min(2,Math.floor(seg)),f=seg-i;
+    return '#'+hx(lerp(s[i][0],s[i+1][0],f))+hx(lerp(s[i][1],s[i+1][1],f))+hx(lerp(s[i][2],s[i+1][2],f)); }
+  function fmt(v){ v=Math.round(v); if(v>=1e6)return (v/1e6).toFixed(1)+'M'; if(v>=1e3)return (v/1e3).toFixed(1)+'k'; return String(v); }
+
+  var tip=document.getElementById('tip');
+  var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  var monthsLayer=document.getElementById('months');
+  var lastCells=[]; // {x,y,w,h,date,value,occasion}
+  var lastDims={weeks:0};
+
+  function dateKey(d){ return d.getUTCFullYear()+'-'+(d.getUTCMonth()+1)+'-'+d.getUTCDate(); }
+
+  function buildYearGrid(rows){
+    // rows: [{date:Date, value:Number, occasion:String}]
+    if(!rows.length) return null;
+    var minD=null,maxD=null;
+    rows.forEach(function(r){ if(!minD||r.date<minD)minD=r.date; if(!maxD||r.date>maxD)maxD=r.date; });
+    // snap to full weeks (Sun-start) for a clean GitHub-style grid
+    var start=new Date(Date.UTC(minD.getUTCFullYear(),minD.getUTCMonth(),minD.getUTCDate()));
+    start.setUTCDate(start.getUTCDate()-start.getUTCDay());
+    var end=new Date(Date.UTC(maxD.getUTCFullYear(),maxD.getUTCMonth(),maxD.getUTCDate()));
+    var byDay={};
+    rows.forEach(function(r){ var k=dateKey(r.date); if(!byDay[k])byDay[k]={value:0,occasion:null,date:r.date};
+      byDay[k].value+=r.value; if(r.occasion && (!byDay[k].occasion || r.value>0)) byDay[k].occasion=r.occasion; });
+    var weeks=[]; var cur=new Date(start);
+    while(cur<=end){
+      var col=[];
+      for(var d=0; d<7; d++){
+        var k=dateKey(cur);
+        var rec=byDay[k];
+        col.push({date:new Date(cur), value:rec?rec.value:0, occasion:rec?rec.occasion:null, inRange: cur>=minD && cur<=maxD});
+        cur.setUTCDate(cur.getUTCDate()+1);
+      }
+      weeks.push(col);
+    }
+    return {weeks:weeks, minD:minD, maxD:maxD};
+  }
+
+  function draw(rows){
+    var stage=document.getElementById('stage');
+    var W=stage.clientWidth, H=stage.clientHeight;
+    if(W<=0||H<=0) return;
+    var dpr=window.devicePixelRatio||1;
+    cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+'px'; cv.style.height=H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    monthsLayer.innerHTML='';
+    monthsLayer.style.width=W+'px'; monthsLayer.style.height=H+'px';
+    lastCells=[];
+
+    var grid=buildYearGrid(rows);
+    if(!grid){ return; }
+    var weeks=grid.weeks;
+    var topPad=16, leftPad=28, rightPad=4, botPad=4;
+    var cols=weeks.length;
+    var cellGap=3;
+    var cellW=Math.max(4,(W-leftPad-rightPad)/cols - cellGap);
+    var cellH=Math.max(4,(H-topPad-botPad)/7 - cellGap);
+    var cell=Math.min(cellW,cellH);
+    var gridW=cols*(cell+cellGap)-cellGap;
+    var gridH=7*(cell+cellGap)-cellGap;
+    var offX=leftPad, offY=topPad;
+
+    // day-of-week labels (Mon/Wed/Fri)
+    [1,3,5].forEach(function(dow){
+      var lbl=document.createElement('div'); lbl.className='dlbl'; lbl.textContent=DOW[dow];
+      lbl.style.left='0px'; lbl.style.top=(offY+dow*(cell+cellGap)+cell/2-5)+'px';
+      monitorLabel(lbl);
+    });
+    function monitorLabel(lbl){ monthsLayer.appendChild(lbl); }
+
+    var max=0,tot=0,pk={v:-1,date:null,occasion:null};
+    weeks.forEach(function(col){ col.forEach(function(c){ if(c.inRange){ if(c.value>max)max=c.value; tot+=c.value;
+      if(c.value>pk.v){ pk={v:c.value,date:c.date,occasion:c.occasion}; } } }); });
+    max=max||1;
+
+    var lastMonth=-1;
+    weeks.forEach(function(col,wi){
+      var firstInRangeDay=col.find(function(c){return c.inRange;});
+      if(firstInRangeDay){
+        var m=firstInRangeDay.date.getUTCMonth();
+        if(m!==lastMonth){
+          lastMonth=m;
+          var lbl=document.createElement('div'); lbl.className='mlbl'; lbl.textContent=MONTHS[m];
+          lbl.style.left=(offX+wi*(cell+cellGap))+'px'; lbl.style.top='0px';
+          monthsLayer.appendChild(lbl);
+        }
+      }
+      col.forEach(function(c,di){
+        var x=offX+wi*(cell+cellGap), y=offY+di*(cell+cellGap);
+        var color = c.inRange ? (c.value>0 ? heat(c.value/max) : '#F1F3EF') : 'transparent';
+        ctx.fillStyle=color;
+        roundRect(ctx,x,y,cell,cell,2);
+        ctx.fill();
+        if(c.inRange){
+          if(pk.date && c.date.getTime()===pk.date.getTime()){
+            ctx.strokeStyle='#1E1647'; ctx.lineWidth=1.5;
+            roundRect(ctx,x,y,cell,cell,2); ctx.stroke();
+          }
+          lastCells.push({x:x,y:y,w:cell,h:cell,date:c.date,value:c.value,occasion:c.occasion});
+        }
+      });
+    });
+
+    document.getElementById('peak').textContent = pk.date ? (MONTHS[pk.date.getUTCMonth()]+' '+pk.date.getUTCDate()+(pk.occasion?(' · '+pk.occasion):'')) : '—';
+    document.getElementById('tot').textContent=fmt(tot);
+
+    // occasion legend swatch — rank by PEAK single-day intensity (not cumulative volume,
+    // which would over-weight everyday/low-spike occasions that simply cover more days)
+    var occMax={};
+    weeks.forEach(function(col){col.forEach(function(c){ if(c.inRange && c.occasion && c.value>0){
+      occMax[c.occasion]=Math.max(occMax[c.occasion]||0, c.value); } });});
+    var occs=Object.keys(occMax).sort(function(a,b){return occMax[b]-occMax[a];}).slice(0,3);
+    document.getElementById('occlegend').textContent = occs.length? ('peaks: '+occs.join(' · ')) : '';
+  }
+
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  cv.addEventListener('mousemove',function(e){
+    var rect=cv.getBoundingClientRect();
+    var mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    var hit=null;
+    for(var i=0;i<lastCells.length;i++){ var c=lastCells[i];
+      if(mx>=c.x&&mx<=c.x+c.w&&my>=c.y&&my<=c.y+c.h){ hit=c; break; } }
+    if(hit){
+      tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+      var dstr=MONTHS[hit.date.getUTCMonth()]+' '+hit.date.getUTCDate()+', '+hit.date.getUTCFullYear();
+      tip.innerHTML='<b>'+dstr+'</b>'+(hit.occasion?(' · '+hit.occasion):'')+'<br>Orders '+fmt(hit.value);
+    } else { tip.style.opacity=0; }
+  });
+  cv.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+
+  function synth(){
+    // synthetic full-year order volume with real gifting-holiday spikes
+    var year=2025;
+    var spikes={ // month(0-based)-day: multiplier & occasion label
+      '1-14':22,   // Valentine's Day
+      '4-11':16,   // Mother's Day (approx 2nd Sun of May)
+      '11-24':8,   // Christmas Eve
+      '11-25':4,
+      '11-20':5,   // Christmas week ramp
+      '11-21':6,
+      '11-22':7,
+      '11-23':7.5,
+      '4-*':0      // placeholder
+    };
+    var rows=[];
+    var start=new Date(Date.UTC(year,0,1)), end=new Date(Date.UTC(year,11,31));
+    var d=new Date(start);
+    function occasionFor(m,day){
+      if(m===1 && day>=7 && day<=14) return "Valentine's Day";
+      if(m===4 && day>=4 && day<=11) return 'Mother\'s Day';
+      if(m===11 && day>=18 && day<=24) return 'Christmas';
+      if(m===9 && day>=25) return 'Sympathy';
+      if(m===5 && day>=10 && day<=17) return "Father's Day";
+      return null;
+    }
+    while(d<=end){
+      var m=d.getUTCMonth(), day=d.getUTCDate();
+      var base=900+400*Math.sin((d.getUTCDay())/7*Math.PI); // mild weekly wobble
+      var mult=1;
+      // Valentine's ramp (Feb 7-14, peak 14th)
+      if(m===1){ if(day>=7&&day<=14){ mult=1+ (day-6)*2.6; if(day===14) mult=24; } }
+      // Mother's Day ramp (~May 4-11, peak 11th, 2nd Sunday)
+      if(m===4){ if(day>=4&&day<=11){ mult=1+(day-3)*2.1; if(day===11) mult=18; } }
+      // Christmas ramp (Dec 15-24)
+      if(m===11){ if(day>=15&&day<=24){ mult=1+(day-14)*0.9; if(day===23||day===24) mult=9; } if(day===25) mult=2; }
+      // Anniversary/Everyday: gentle random noise, Sympathy small steady, Birthday steady with weekend bump
+      var occ=occasionFor(m,day) || (m%3===0? 'Birthday': m%3===1? 'Everyday':'Anniversary');
+      var val=Math.round(base*mult*(0.85+Math.random()*0.3));
+      rows.push({date:new Date(d), value:val, occasion:occ});
+      d.setUTCDate(d.getUTCDate()+1);
+    }
+    return rows;
+  }
+
+  var st={cfg:{},data:null,unsub:null,rows:null};
+  function recompute(){
+    var c=st.cfg||{}, d=st.data;
+    if(d && c.date && d[c.date] && c.value && d[c.value]){
+      var dcol=d[c.date]||[], vcol=d[c.value]||[], occol=c.occasion?(d[c.occasion]||[]):null;
+      var rows=[];
+      for(var i=0;i<dcol.length;i++){
+        var raw=dcol[i]; var dt = raw instanceof Date ? raw : new Date(raw);
+        if(isNaN(dt.getTime())) continue;
+        rows.push({date:new Date(Date.UTC(dt.getUTCFullYear(),dt.getUTCMonth(),dt.getUTCDate())), value:Number(vcol[i])||0, occasion: occol? String(occol[i]) : null});
+      }
+      if(rows.length){ st.rows=rows; draw(rows); return; }
+    }
+    if(!st.rows) st.rows=synth();
+    draw(st.rows);
+  }
+
+  if(client){
+    client.config.subscribe(function(cfg){
+      st.cfg=cfg||{};
+      if(st.unsub){ st.unsub(); st.unsub=null; }
+      if(cfg && cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(dd){ st.data=dd; recompute(); }); }
+      recompute();
+    });
+  } else { recompute(); }
+
+  var ro=new ResizeObserver(function(){ recompute(); });
+  ro.observe(document.getElementById('stage'));
+})();
+</script>
+</body>
+</html>

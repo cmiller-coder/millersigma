@@ -25,8 +25,8 @@ CHECKS = [
     "no-per-page-layout",
     "elements-placed-in-layout",
     "containers-have-children",
-    "no-column-format",
     "control-id-unique",
+    "image-source-wrapper",
 ]
 
 
@@ -62,7 +62,7 @@ def issues_elements_placed(spec: dict, root: ET.Element | None) -> list[str]:
     placed_ids = {
         el.get("elementId")
         for el in root.iter()
-        if el.tag in ("LayoutElement", "GridContainer")
+        if el.tag in ("LayoutElement", "GridContainer", "TabbedContainer")
     }
     issues = []
     for pi, p in enumerate(spec.get("pages", [])):
@@ -100,17 +100,28 @@ def issues_containers_have_children(spec: dict, root: ET.Element | None) -> list
     return issues
 
 
-def issues_no_format(spec: dict) -> list[str]:
+def issues_image_source_wrapper(spec: dict) -> list[str]:
+    """As of 2026-07-30, `image` elements and `backgroundImage` require the url
+    wrapped in `source:{kind:"url",url:...}` — a bare top-level `url` field is
+    rejected by the API as a masked `Invalid kind: "image"` (or
+    `backgroundImage.source: Invalid value: undefined`), verified via a live A/B
+    POST against staging. Catch it here instead of via that masked error."""
     issues = []
     for pi, p in enumerate(spec.get("pages", [])):
         for ei, el in enumerate(p.get("elements", [])):
-            for ci, col in enumerate(el.get("columns", []) or []):
-                if "format" in col:
-                    issues.append(
-                        f"pages[{pi}].elements[{ei}].columns[{ci}] ({col.get('id')}): "
-                        "has `format` field — Sigma rejects with 'Missing \"kind\" field'. "
-                        "Configure currency/percent in the UI after CREATE."
-                    )
+            if el.get("kind") == "image" and "url" in el and "source" not in el:
+                issues.append(
+                    f"pages[{pi}].elements[{ei}] ({el.get('id')}): `image` element has a "
+                    "bare top-level `url` — wrap it as `source:{kind:\"url\",url:...}` "
+                    "or the API rejects it as a masked `Invalid kind: \"image\"`."
+                )
+            bg = el.get("backgroundImage")
+            if isinstance(bg, dict) and "url" in bg and "source" not in bg:
+                issues.append(
+                    f"pages[{pi}].elements[{ei}] ({el.get('id')}): `backgroundImage` has a "
+                    "bare `url` — wrap it as `source:{kind:\"url\",url:...}` or the API "
+                    "rejects it as `backgroundImage.source: Invalid value: undefined`."
+                )
     return issues
 
 
@@ -148,8 +159,8 @@ def main() -> None:
         ("no-per-page-layout",          lambda: issues_per_page_layout(spec)),
         ("elements-placed-in-layout",   lambda: issues_elements_placed(spec, root)),
         ("containers-have-children",    lambda: issues_containers_have_children(spec, root)),
-        ("no-column-format",            lambda: issues_no_format(spec)),
         ("control-id-unique",           lambda: issues_control_id_unique(spec)),
+        ("image-source-wrapper",        lambda: issues_image_source_wrapper(spec)),
     ]:
         for msg in fn():
             all_issues.append((tag, msg))

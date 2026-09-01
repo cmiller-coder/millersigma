@@ -91,6 +91,10 @@ def sql_text(filename):
         return CO.geo_sql(CFG)
     if filename == "hub_banks.sql":
         return CO.hub_banks_sql(CFG)
+    if filename == "branch_performance.sql":
+        return CO.branch_performance_sql(CFG)
+    if filename == "daypart_ratings.sql":
+        return CO.daypart_ratings_sql(CFG)
     raw = (SQL / filename).read_text()
     if filename == "member_population.sql":
         return CO.population_sql(CFG, raw)
@@ -165,6 +169,23 @@ def title(text, size=14):
     return {"text": text, "color": B.TEXT_DARK, "fontWeight": "bold", "fontSize": size}
 
 
+def stmt_button(idx):
+    """The statement-report button, for a header's `buttons` list. Was page-1
+    only; every page gets it now so the report is reachable regardless of
+    which page a viewer lands on. Element/action ids are suffixed by page
+    index -- ids are workbook-unique, so "btn-stmt" can't be reused as-is."""
+    if not (CO.has_statement(CFG) and REPORT_ID_FILE.exists()
+            and REPORT_ID_FILE.read_text().strip()):
+        return []
+    return [{"id": "btn-stmt%d" % idx, "kind": "button",
+             "text": CO.statement(CFG, "button_label"), "appearance": "filled",
+             "actions": [{"id": "a-stmt%d" % idx, "trigger": "on-click",
+                          "effects": [{"effect": "open-document",
+                                       "documentId": REPORT_ID_FILE.read_text().strip(),
+                                       "documentType": "report",
+                                       "openTarget": "_blank"}]}]}]
+
+
 def header(idx, head, subtitle, buttons, titles=True):
     """Brand band. `titles=False` gives the compact chrome-only variant --
     logo + navigation + actions, with the page name carried by the nav pill
@@ -183,7 +204,7 @@ def header(idx, head, subtitle, buttons, titles=True):
          # style (same restriction as plugin.style -- must be a real hex or
          # omitted). Verified against staging 2026-08-14: "Invalid kind:
          # 'image'" is the misleading error for this.
-         "style": {"fit": "contain", "align": "start", "padding": "none"}})
+         "style": B.logo_img_style()})
     # element-level style.color is ignored on text -- colour has to be inline
     # HTML inside the markdown body, or the text renders theme-dark on the
     # dark header and disappears.
@@ -333,16 +354,7 @@ def pri_(col):
 header(1, CFG["title"],
        "Net revenue, margin and %s growth · trailing twelve months vs prior year"
        % CFG["unit_noun"],
-       [nav_el(1)]
-       + ([{"id": "btn-stmt", "kind": "button", "text": CO.statement(CFG, "button_label"),
-            "appearance": "filled",
-            "actions": [{"id": "a-stmt", "trigger": "on-click",
-                         "effects": [{"effect": "open-document",
-                                      "document": REPORT_ID_FILE.read_text().strip(),
-                                      "documentType": "report",
-                                      "openTarget": "_blank"}]}]}]
-           if CO.has_statement(CFG) and REPORT_ID_FILE.exists()
-           and REPORT_ID_FILE.read_text().strip() else []),
+       [nav_el(1)] + stmt_button(1),
        titles=False)
 
 # --- the live rates ticker (registered plugin fetching Treasury yields)
@@ -394,7 +406,7 @@ add({"id": "mc-band", "kind": "container",
      "backgroundImage": {"source": {"kind": "url", "url": B.header_bg()},
                          "style": {"fit": "cover"}}})
 add({"id": "mc-logo", "kind": "image", "source": {"kind": "url", "url": B.logo_white()},
-     "style": {"fit": "contain", "align": "start", "padding": "none"}})
+     "style": B.logo_img_style()})
 add({"id": "mc-title", "kind": "text",
      "body": '## **<span style="color: #FFFFFF">{{[Product SKUs/Product]}}</span>**',
      "style": {"backgroundColor": "transparent", "padding": "none"},
@@ -592,10 +604,10 @@ add({"id": "map-geo", "kind": "region-map",
      "legend": {"visibility": "shown"},
      "actions": [{"id": "a-map-sel",
                   "trigger": {"on": "on-select",
-                              "condition": {"type": "column", "column": "gm-st",
+                              "condition": {"type": "column", "columnId": "gm-st",
                                             "condition": "IsNotNull"}},
                   "effects": [{"effect": "set-control-value", "control": "StateFilter",
-                               "value": {"type": "column", "column": "gm-st"}}]}],
+                               "value": {"type": "column", "columnId": "gm-st"}}]}],
      "style": panel()})
 
 add({"kind": "control", "id": "ctrl-state", "controlId": "StateFilter",
@@ -874,7 +886,7 @@ add({"id": "btn-newscen", "kind": "button", "text": "+ New scenario",
 
 # Finance is its own page again: the modeler needs full width, and it competed
 # with the Analyst columns inside a tab.
-header(2, CO.lab(CFG, "modeler_title"), "", [nav_el(2)], titles=False)
+header(2, CO.lab(CFG, "modeler_title"), "", [nav_el(2)] + stmt_button(2), titles=False)
 
 # --- 1. base book: exactly ONE row per product.
 # A cross join runs against underlying rows, so a grouped view over the 144-row
@@ -1043,9 +1055,9 @@ add({"id": "btn-reset-scen", "kind": "button", "text": "Reset scenarios",
      "appearance": "text",
      "actions": [{"id": "a-reset-scen", "trigger": "on-click",
                   "effects": [
-                      {"effect": "delete-rows", "table": "scen2",
+                      {"effect": "delete-rows", "tableElementId": "scen2",
                        "whichRows": {"type": "formula", "formula": "True"}},
-                      {"effect": "delete-rows", "table": "subs",
+                      {"effect": "delete-rows", "tableElementId": "subs",
                        "whichRows": {"type": "formula", "formula": "True"}},
                       {"effect": "set-control-value", "control": "scenarioSelect",
                        "value": {"type": "constant",
@@ -1058,7 +1070,7 @@ for bid, label, status, appearance in [
          "actions": [{"id": "a-" + bid, "trigger": "on-click",
                       "successToast": {"showMessage": "shown",
                                        "title": "Scenario %s" % status.lower()},
-                      "effects": [{"effect": "insert-rows", "table": "subs",
+                      "effects": [{"effect": "insert-rows", "tableElementId": "subs",
                                    "values": {
                                        "su-scen": {"type": "control",
                                                    "control": "scenarioSelect"},
@@ -1070,7 +1082,7 @@ for bid, label, status, appearance in [
 
 header(3, "Member Cohort Builder",
        "Filter the member base into a saveable cohort",
-       [nav_el(3)], titles=False)
+       [nav_el(3)] + stmt_button(3), titles=False)
 
 # the segment filters; the agent gets one set-control-value tool per dimension
 COHORT_FILTERS = [
@@ -1156,7 +1168,7 @@ add({"id": "btn-save-cohort", "kind": "button", "text": "Save cohort",
      "actions": [{"id": "a-save-cohort", "trigger": "on-click",
                   "successToast": {"showMessage": "shown", "title": "Cohort saved"},
                   "effects": [
-                      {"effect": "insert-rows", "table": "it-cohorts",
+                      {"effect": "insert-rows", "tableElementId": "it-cohorts",
                        "values": {
                            "sc-name": {"type": "control", "control": "CohortName"},
                            "sc-members": {"type": "formula",
@@ -1167,14 +1179,14 @@ add({"id": "btn-save-cohort", "kind": "button", "text": "Save cohort",
                                        "formula": "Avg([%s/Attrition Propensity])" % MP},
                            "sc-owner": {"type": "formula", "formula": "CurrentUserEmail()"}}},
                       {"effect": "clear-control",
-                       "scope": {"type": "control", "control": "CohortName"}}]}]})
+                       "scope": {"type": "control", "controlId": "CohortName"}}]}]})
 
 # delete-rows is only legal against a standalone (non-linked) input table
 add({"id": "btn-clear-cohorts", "kind": "button", "text": "Clear saved cohorts",
      "appearance": "text",
      "actions": [{"id": "a-clear-cohorts", "trigger": "on-click",
                   "successToast": {"showMessage": "shown", "title": "Saved cohorts cleared"},
-                  "effects": [{"effect": "delete-rows", "table": "it-cohorts",
+                  "effects": [{"effect": "delete-rows", "tableElementId": "it-cohorts",
                                "whichRows": {"type": "formula", "formula": "True"}}]}]})
 
 add({"id": "c-secf", "kind": "container", "spacing": "small",
@@ -1228,7 +1240,7 @@ add({"id": "m-band", "kind": "container",
                          "style": {"fit": "cover"}}})
 add({"id": "m-logo", "kind": "image",
      "source": {"kind": "url", "url": B.logo_white()},
-     "style": {"fit": "contain", "align": "start", "padding": "none"}})
+     "style": B.logo_img_style()})
 add({"id": "m-title", "kind": "text",
      "body": '<span style="color: #FFFFFF">**New scenario**</span>',
      "style": {"backgroundColor": "transparent", "padding": "none"},
@@ -1245,7 +1257,7 @@ add({"id": "btn-modal-create", "kind": "button", "text": "Create scenario",
                   "successToast": {"showMessage": "shown", "title": "Scenario created"},
                   # create the scenario row, make it active, clear the field
                   "effects": [
-                      {"effect": "insert-rows", "table": "scen2",
+                      {"effect": "insert-rows", "tableElementId": "scen2",
                        "values": {
                            "sc-name": {"type": "control", "control": "NewScenarioName"},
                            "sc-status": {"type": "constant",
@@ -1253,7 +1265,7 @@ add({"id": "btn-modal-create", "kind": "button", "text": "Create scenario",
                       {"effect": "set-control-value", "control": "scenarioSelect",
                        "value": {"type": "control", "control": "NewScenarioName"}},
                       {"effect": "clear-control",
-                       "scope": {"type": "control", "control": "NewScenarioName"}},
+                       "scope": {"type": "control", "controlId": "NewScenarioName"}},
                       {"effect": "close-overlay"}]}]})
 add({"id": "btn-modal-cancel", "kind": "button", "text": "Cancel", "appearance": "text",
      "actions": [{"id": "a-modal-cancel", "trigger": "on-click",
@@ -1280,11 +1292,11 @@ add({"id": "dw-tbl", "kind": "table", "name": "Product Detail",
                     "sort": [{"columnId": "dw-rev", "direction": "descending"}]}],
      "actions": [{"id": "a-dw-select",
                   "trigger": {"on": "on-select",
-                              "condition": {"type": "column", "column": "dw-prod",
+                              "condition": {"type": "column", "columnId": "dw-prod",
                                             "condition": "IsNotNull"}},
                   "successToast": {"showMessage": "shown", "title": "Filtered to product"},
                   "effects": [{"effect": "set-control-value", "control": "ProductFilter",
-                               "value": {"type": "column", "column": "dw-prod"}},
+                               "value": {"type": "column", "columnId": "dw-prod"}},
                               {"effect": "close-overlay"}]}],
      "style": panel()})
 add({"id": "dw-note", "kind": "text",
@@ -1346,13 +1358,13 @@ agents.append({
                               "inputName": CO.lab(CFG, "shock_label")}}]},
         {"toolId": "t-growth", "kind": "action", "name": "Set balance growth",
          "description": "Write a balance-growth percentage into every assumption row.",
-         "steps": [{"kind": "effect", "effect": "update-rows", "table": "assum",
+         "steps": [{"kind": "effect", "effect": "update-rows", "tableElementId": "assum",
                     "whichRows": {"type": "formula", "formula": "True"},
                     "values": {"ia-growth": {"type": "agent-input",
                                              "inputName": "Balance growth percentage to apply"}}}]},
         {"toolId": "t-newscen", "kind": "action", "name": "Create a scenario",
          "description": "Add a named scenario and make it the active one.",
-         "steps": [{"kind": "effect", "effect": "insert-rows", "table": "scen2",
+         "steps": [{"kind": "effect", "effect": "insert-rows", "tableElementId": "scen2",
                     "values": {"sc-name": {"type": "agent-input",
                                            "inputName": "Name for the new scenario"},
                                "sc-status": {"type": "constant",
@@ -1381,7 +1393,7 @@ agents.append({
     ] + [
         {"toolId": "t-c-save", "kind": "action", "name": "Save the cohort",
          "description": "Persist the current cohort to the Saved Cohorts table.",
-         "steps": [{"kind": "effect", "effect": "insert-rows", "table": "it-cohorts",
+         "steps": [{"kind": "effect", "effect": "insert-rows", "tableElementId": "it-cohorts",
                     "values": {
                         "sc-name": {"type": "agent-input", "inputName": "Name for this cohort"},
                         "sc-members": {"type": "formula",
@@ -1433,7 +1445,7 @@ LAYOUT = """<?xml version="1.0" encoding="utf-8"?>
   <Container elementId="c-hdr1" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="logo1" gridColumn="1 / 6" gridRow="1 / 6"/>
     <Element elementId="nav-main1" gridColumn="13 / 20" gridRow="2 / 6"/>
-__STMT_BUTTON__
+__STMT_BUTTON1__
   </Container>
   <Container elementId="c-rev" type="grid" gridColumn="1 / 7" gridRow="6 / 16" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
     <Element elementId="kc-rev" gridColumn="1 / 7" gridRow="1 / 8"/>
@@ -1499,6 +1511,7 @@ __NOTIF_CARDS__
   <Container elementId="c-hdr2" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="logo2" gridColumn="1 / 6" gridRow="1 / 6"/>
     <Element elementId="nav-main2" gridColumn="13 / 20" gridRow="2 / 6"/>
+__STMT_BUTTON2__
   </Container>
   <Element elementId="ctrl-sel" gridColumn="1 / 7" gridRow="6 / 9"/>
   <Element elementId="ctrl-shock" gridColumn="7 / 15" gridRow="6 / 9"/>
@@ -1516,6 +1529,7 @@ __NOTIF_CARDS__
   <Container elementId="c-hdr3" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="logo3" gridColumn="1 / 6" gridRow="1 / 6"/>
     <Element elementId="nav-main3" gridColumn="13 / 20" gridRow="2 / 6"/>
+__STMT_BUTTON3__
   </Container>
   <Container elementId="c-secf" type="grid" gridColumn="1 / 25" gridRow="6 / 8" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="ico-filters" gridColumn="1 / 2" gridRow="1 / 3"/>
@@ -1647,11 +1661,13 @@ LAYOUT = LAYOUT.replace("__NOTIF_CARDS__", "\n".join(_NOTIF_ROWS))
 
 # The statement button only exists once the report has been created, so its
 # layout slot has to appear and disappear with it -- a layout line referencing a
-# missing element is a hard rejection at create.
-LAYOUT = LAYOUT.replace(
-    "__STMT_BUTTON__",
-    '    <Element elementId="btn-stmt" gridColumn="21 / 25" gridRow="2 / 6"/>'
-    if any(e["id"] == "btn-stmt" for e in elements) else "")
+# missing element is a hard rejection at create. One button per page now
+# (was page-1 only), each with its own element id.
+for _pg in (1, 2, 3):
+    LAYOUT = LAYOUT.replace(
+        "__STMT_BUTTON%d__" % _pg,
+        '    <Element elementId="btn-stmt%d" gridColumn="21 / 25" gridRow="2 / 6"/>' % _pg
+        if any(e["id"] == "btn-stmt%d" % _pg for e in elements) else "")
 
 SETTINGS = {"theme": {"overrides": {
     "colors": {"text": B.TEXT_DARK, "highlight": B.SOFI_BRIGHT, "success": B.GOOD,

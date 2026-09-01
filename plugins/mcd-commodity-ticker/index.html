@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Commodity Basket Ticker — Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,"Segoe UI",Roboto,Arial,sans-serif;
+       background:transparent;color:#FFFFFF;overflow:hidden}
+  /* Dark variant: the ticker sits inside the navy brand band, so the chrome is
+     a translucent white hairline on the band rather than a white card. */
+  /* SOLID navy, not a translucent wash. The strip sits inside a white insight
+     card, so a translucent dark background rendered as white-on-white and the
+     whole ticker was invisible. */
+  #wrap{height:100%;width:100%;display:flex;align-items:center;gap:0;
+        padding:0 4px;border:1px solid #143A5C;border-radius:8px;
+        background:#0B2740;overflow:hidden}
+  #label{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:0 14px 0 12px;height:100%}
+  #label .k{font-size:12px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;color:#9FD0FF}
+  #live{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;
+        letter-spacing:.06em;text-transform:uppercase;color:#39E0B0}
+  #dot{width:6px;height:6px;border-radius:50%;background:#39E0B0;flex:0 0 auto}
+  #dot.stale{background:#E1A32D}
+  #live.stale{color:#E1A32D}
+  /* Marquee: the track holds two identical copies of the cell run, and we
+     translate by exactly -50%. When the first copy has fully exited, the second
+     sits precisely where the first began, so the loop is seamless. */
+  #viewport{flex:1 1 auto;height:100%;overflow:hidden;position:relative}
+  #track{display:flex;align-items:center;height:100%;width:max-content;
+         animation:scroll var(--dur,60s) linear infinite}
+  #viewport:hover #track{animation-play-state:paused}
+  @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-25%)}}
+  @media (prefers-reduced-motion:reduce){#track{animation:none}}
+  .run{display:flex;align-items:center;height:100%;flex:0 0 auto}
+  .cell{flex:0 0 auto;display:flex;align-items:baseline;gap:9px;padding:0 20px;height:100%;
+        border-left:1px solid rgba(255,255,255,.14);white-space:nowrap;line-height:1}
+  .nm{font-size:12.5px;font-weight:700;color:#BFE0FF;letter-spacing:.02em}
+  .vl{font-size:16px;font-weight:800;color:#FFFFFF;font-variant-numeric:tabular-nums}
+  .dl{font-size:12px;font-weight:700;padding:3px 7px;border-radius:5px;font-variant-numeric:tabular-nums}
+  .up{color:#39E0B0;background:rgba(57,224,176,.14)}
+  .dn{color:#FF8A80;background:rgba(255,138,128,.14)}
+  .fl{color:#C7E4F7;background:rgba(255,255,255,.10)}
+  .derived .nm{color:#6FB4FF}
+  #note{flex:0 0 auto;padding:0 12px;font-size:9.5px;color:rgba(255,255,255,.45);white-space:nowrap}
+  #err{padding:0 14px;font-size:11px;color:#FF8A80}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="label">
+    <span class="k">Commodities</span>
+    <span id="live"><span id="dot"></span><span id="livetxt">live</span></span>
+  </div>
+  <div id="viewport"><div id="track"></div></div>
+  <div id="note">food &amp; paper basket · indicative</div>
+</div>
+<script>
+(function () {
+  var client = (window.sigmaComputing && window.sigmaComputing.plugin && window.sigmaComputing.plugin.client) || null;
+
+  // Optional fallback binding: if the live fetch fails we render whatever rate
+  // series the workbook hands us instead of showing an empty strip.
+  var defs = [
+    { key: "BEEF",   name: "Ground beef",  value: 3.42, delta: 0.11 },
+    { key: "CHICKEN",name: "Chicken",      value: 1.68, delta: -0.03 },
+    { key: "POTATO", name: "Potatoes",     value: 0.54, delta: 0.02 },
+    { key: "CHEESE", name: "Cheese",       value: 2.11, delta: 0.07 },
+    { key: "WHEAT",  name: "Wheat (buns)", value: 6.24, delta: -0.09 },
+    { key: "COFFEE", name: "Coffee",       value: 4.38, delta: 0.21 },
+    { key: "PAPER",  name: "Packaging",    value: 1.29, delta: 0.04 },
+  ];
+  if (client) client.config.configureEditorPanel(defs);
+
+  var track = document.getElementById('track');
+  var dot = document.getElementById('dot');
+  var live = document.getElementById('live');
+  var livetxt = document.getElementById('livetxt');
+  var note = document.getElementById('note');
+
+  // US Treasury publishes the daily par yield curve with
+  // Access-Control-Allow-Origin: *, so a plugin can read it straight from the
+  // browser -- no key, no proxy, no warehouse round trip.
+  var TREASURY = 'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml'
+               + '?data=daily_treasury_yield_curve&field_tdr_date_value=';
+
+  var WANT = [
+    { key: 'BC_1MONTH', name: '1M' },
+    { key: 'BC_3MONTH', name: '3M' },
+    { key: 'BC_1YEAR',  name: '1Y' },
+    { key: 'BC_2YEAR',  name: '2Y' },
+    { key: 'BC_5YEAR',  name: '5Y' },
+    { key: 'BC_10YEAR', name: '10Y' },
+    { key: 'BC_30YEAR', name: '30Y' }
+  ];
+  // Indicative 30-year mortgage = 10Y Treasury + a primary/secondary spread.
+  // Clearly derived, not a quoted rate -- flagged in the UI as such.
+  var MTG_SPREAD = 1.77;
+
+  function fmt(n, d) { return (n === null || isNaN(n)) ? '--' : n.toFixed(d === undefined ? 2 : d); }
+
+  function cell(name, value, delta, derived) {
+    var d = document.createElement('div');
+    d.className = 'cell' + (derived ? ' derived' : '');
+    var cls = delta === null ? 'fl' : (delta > 0.0001 ? 'up' : (delta < -0.0001 ? 'dn' : 'fl'));
+    var arrow = delta === null ? '' : (delta > 0.0001 ? '▲ ' : (delta < -0.0001 ? '▼ ' : '– '));
+    var dtxt = delta === null ? '—' : (delta > 0 ? '+' : '') + fmt(delta, 2);
+    d.innerHTML = '<span class="nm">' + name + '</span>'
+                + '<span class="vl">' + fmt(value) + '%</span>'
+                + '<span class="dl ' + cls + '">' + arrow + dtxt + '</span>';
+    return d;
+  }
+
+  function render(rows, isLive, asOf) {
+    track.innerHTML = '';
+    if (!rows.length) { note.textContent = 'no rate data'; return; }
+    // Four copies, translating -25%: two copies only just span a narrow tile, so
+    // on a full-width workbook the run ended mid-strip and left dead space on
+    // the right. Four always overflow the viewport, and -25% still lands each
+    // copy exactly where the previous one began, so the loop stays seamless.
+    for (var copy = 0; copy < 4; copy++) {
+      var run = document.createElement('div');
+      run.className = 'run';
+      run.setAttribute('aria-hidden', copy ? 'true' : 'false');
+      rows.forEach(function (r) { run.appendChild(cell(r.name, r.value, r.delta, r.derived)); });
+      track.appendChild(run);
+    }
+    // Constant speed (~55px/s) regardless of how many benchmarks came back,
+    // measured after layout so the duration matches real rendered width.
+    requestAnimationFrame(function () {
+      var runWidth = track.firstChild ? track.firstChild.getBoundingClientRect().width : 0;
+      if (runWidth > 0) track.style.setProperty('--dur', Math.max(24, runWidth / 55) + 's');
+    });
+    if (isLive) {
+      dot.className = ''; live.className = ''; livetxt.textContent = 'live';
+      note.textContent = 'US Treasury par yield curve' + (asOf ? ' · ' + asOf : '') + ' · mortgage indicative';
+    } else {
+      dot.className = 'stale'; live.className = 'stale'; livetxt.textContent = 'sample';
+      note.textContent = 'illustrative — live feed unavailable';
+    }
+  }
+
+  function parseTreasury(xmlText) {
+    var doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    if (doc.querySelector('parsererror')) return null;
+    var props = doc.getElementsByTagNameNS('*', 'properties');
+    if (!props || props.length < 1) return null;
+
+    function readEntry(el) {
+      var out = {};
+      for (var i = 0; i < el.childNodes.length; i++) {
+        var n = el.childNodes[i];
+        if (n.nodeType === 1) out[n.localName] = n.textContent;
+      }
+      return out;
+    }
+    var last = readEntry(props[props.length - 1]);
+    // Previous business day, for a real day-over-day change rather than a guess.
+    var prev = props.length > 1 ? readEntry(props[props.length - 2]) : null;
+
+    var rows = WANT.map(function (w) {
+      var v = parseFloat(last[w.key]);
+      var p = prev ? parseFloat(prev[w.key]) : NaN;
+      return { name: w.name, value: isNaN(v) ? null : v, delta: (isNaN(v) || isNaN(p)) ? null : +(v - p).toFixed(3) };
+    }).filter(function (r) { return r.value !== null; });
+
+    var ten = rows.filter(function (r) { return r.name === '10Y'; })[0];
+    if (ten) {
+      rows.push({
+        name: '30Y MTG*', value: +(ten.value + MTG_SPREAD).toFixed(2),
+        delta: ten.delta, derived: true
+      });
+    }
+    var asOf = (last.NEW_DATE || '').slice(0, 10);
+    return rows.length ? { rows: rows, asOf: asOf } : null;
+  }
+
+  function fetchLive() {
+    var year = new Date().getUTCFullYear();
+    return fetch(TREASURY + year, { credentials: 'omit' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (t) {
+        var parsed = parseTreasury(t);
+        if (parsed) return parsed;
+        // Early January: this year's file may be empty. Try last year.
+        return fetch(TREASURY + (year - 1), { credentials: 'omit' })
+          .then(function (r) { return r.text(); })
+          .then(function (t2) {
+            var p2 = parseTreasury(t2);
+            if (!p2) throw new Error('no entries');
+            return p2;
+          });
+      });
+  }
+
+  // ---- fallback: whatever rate series the workbook bound to us --------------
+  var bound = null;
+  function renderBound() {
+    if (!bound) { render([], false); return; }
+    var names = bound.names, rates = bound.rates, periods = bound.periods;
+    var latest = {}, prior = {};
+    for (var i = 0; i < names.length; i++) {
+      var k = names[i], p = periods ? periods[i] : i, v = +rates[i];
+      if (!(k in latest) || p > latest[k].p) { prior[k] = latest[k]; latest[k] = { p: p, v: v }; }
+      else if (!(k in prior) || p > prior[k].p) { prior[k] = { p: p, v: v }; }
+    }
+    var rows = Object.keys(latest).map(function (k) {
+      return { name: k, value: latest[k].v,
+               delta: prior[k] ? +(latest[k].v - prior[k].v).toFixed(3) : null };
+    });
+    render(rows, false);
+  }
+
+  if (client) {
+    client.elements.subscribeToElementData('source', function (data) {
+      try {
+        var cfg = client.config.getKey ? null : null;
+        var cols = data || {};
+        var keys = Object.keys(cols);
+        if (!keys.length) return;
+        var conf = (client.config.get && client.config.get()) || {};
+        var nb = cols[conf.benchmark], nr = cols[conf.rate], np = cols[conf.period];
+        if (nb && nr) { bound = { names: nb, rates: nr, periods: np || null }; }
+      } catch (e) { /* binding is optional */ }
+    });
+  }
+
+  fetchLive()
+    .then(function (p) { render(p.rows, true, p.asOf); })
+    .catch(function () { renderBound(); });
+
+  // Sigma sizes the panel after first paint; re-render on resize so the strip
+  // never draws at a stale width.
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () {
+      var run = track.firstChild;
+      if (!run) return;
+      var w = run.getBoundingClientRect().width;
+      if (w > 0) track.style.setProperty('--dur', Math.max(24, w / 55) + 's');
+    }).observe(document.body);
+  }
+})();
+</script>
+</body>
+</html>

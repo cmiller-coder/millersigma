@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Product Portfolio Orbit Chart — Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;
+       background:radial-gradient(120% 120% at 50% 8%,#0d1740 0%,#070c24 55%,#03050f 100%);color:#eaf0ff;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;z-index:3}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff}
+  #ttl b{color:#1428A0;background:#eaf0ff;border-radius:3px;padding:0 4px;margin-right:4px}
+  #sub{font-size:11px;color:#9fb0e0}
+  #sub b{color:#fff;font-size:14px}
+  #stage{flex:1;position:relative;min-height:0}
+  svg{position:absolute;inset:0;width:100%;height:100%}
+  .bubble{cursor:pointer}
+  #tip{position:fixed;pointer-events:none;background:rgba(6,10,28,.96);border:1px solid #1428A0;border-radius:9px;
+       padding:9px 11px;font-size:11px;color:#eaf0ff;opacity:0;transition:opacity .12s;z-index:20;white-space:nowrap;
+       box-shadow:0 10px 30px rgba(20,40,160,.35)}
+  #tip b{color:#7fa0ff}#tip .big{font-size:14px;color:#fff;font-weight:700}
+  #legend{display:flex;align-items:center;gap:8px;font-size:10px;color:#9fb0e0;z-index:3;flex-wrap:wrap}
+  .lg{display:flex;align-items:center;gap:4px}
+  .sw{width:9px;height:9px;border-radius:50%;display:inline-block}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl"><b>S</b> Product Portfolio Orbit</div>
+    <div id="sub"><span id="cnt">0</span> segments · total revenue <b id="tot">—</b><span id="focus"></span></div>
+  </div>
+  <div id="stage"><svg id="svg" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <div id="legend" id="legendRow"><span>bubble size = revenue share</span><span>·</span><span>orbit radius = inverse growth (faster segments orbit tighter)</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'segment',type:'column',source:'source',label:'Segment (label)'},
+    {name:'revenue',type:'column',source:'source',allowedTypes:['number','integer'],label:'Revenue share (bubble size)'},
+    {name:'growth',type:'column',source:'source',allowedTypes:['number','integer'],label:'Growth rate % (orbit speed/radius)'},
+    {name:'filterVar',type:'variable',label:'Click cross-filter → control'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  var SVG='http://www.w3.org/2000/svg';
+  var tip=document.getElementById('tip');
+  var selected=null;
+  var COLORS={
+    'Mobile Experience':'#1428A0',
+    'Visual Display':'#4C6FFF',
+    'Digital Appliances':'#00C2CC',
+    'Memory & Semiconductor':'#7B5CFF',
+    'Display Panel':'#FF7A59'
+  };
+  var PALETTE=['#1428A0','#4C6FFF','#00C2CC','#7B5CFF','#FF7A59','#38B26F'];
+  function colorFor(name,i){return COLORS[name]||PALETTE[i%PALETTE.length];}
+  function el(n,at){var e=document.createElementNS(SVG,n);for(var k in at)e.setAttribute(k,at[k]);return e;}
+  function fmt(v){v=+v||0;var a=Math.abs(v);if(a>=1e9)return '$'+(v/1e9).toFixed(1)+'B';if(a>=1e6)return '$'+(v/1e6).toFixed(0)+'M';if(a>=1e3)return '$'+(v/1e3).toFixed(0)+'K';return '$'+v.toFixed(0);}
+
+  var t0=null, raf=null;
+  var lastSegs=null;
+
+  function layout(segs,W,H){
+    var cx=W/2, cy=H/2;
+    var maxRev=Math.max.apply(null,segs.map(function(s){return s.revenue;}).concat([1]));
+    var minG=Math.min.apply(null,segs.map(function(s){return s.growth;}).concat([0.1]));
+    var maxG=Math.max.apply(null,segs.map(function(s){return s.growth;}).concat([1]));
+    var rMin=Math.min(W,H)*0.16, rMax=Math.min(W,H)*0.46;
+    var bMin=Math.max(14,Math.min(W,H)*0.035), bMax=Math.max(bMin+10,Math.min(W,H)*0.105);
+    return segs.map(function(s,i){
+      // inverse growth -> orbit radius: higher growth = tighter orbit
+      var gNorm=(s.growth-minG)/((maxG-minG)||1); // 0..1, 1 = fastest growth
+      var orbitR=rMax-gNorm*(rMax-rMin);
+      var period=7-gNorm*4.2; // seconds per revolution; faster growth = faster orbit
+      var bubbleR=bMin+(s.revenue/maxRev)*(bMax-bMin);
+      return {name:s.name,revenue:s.revenue,growth:s.growth,orbitR:orbitR,period:period,
+        bubbleR:bubbleR,phase:(i/segs.length)*Math.PI*2,color:colorFor(s.name,i)};
+    });
+  }
+
+  function frame(ts){
+    if(t0==null) t0=ts;
+    var elapsed=(ts-t0)/1000;
+    draw(elapsed);
+    raf=requestAnimationFrame(frame);
+  }
+
+  function draw(elapsed){
+    if(!lastSegs) return;
+    var svg=document.getElementById('svg');
+    var W=svg.clientWidth||760, H=svg.clientHeight||360;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.innerHTML='';
+    var cx=W/2, cy=H/2;
+    var geo=layout(lastSegs,W,H);
+
+    var defsEl=el('defs',{});
+    defsEl.innerHTML='<filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="6"/></filter>'+
+      '<radialGradient id="hubg" cx="0.35" cy="0.3" r="0.75"><stop offset="0" stop-color="#eaf0ff"/><stop offset="0.5" stop-color="#7fa0ff"/><stop offset="1" stop-color="#1428A0"/></radialGradient>';
+    svg.appendChild(defsEl);
+
+    // faint background starfield rings
+    geo.forEach(function(g){
+      svg.appendChild(el('circle',{cx:cx,cy:cy,r:g.orbitR,fill:'none',stroke:'#3450b8',
+        'stroke-opacity':0.28,'stroke-width':1,'stroke-dasharray':'2 5'}));
+    });
+
+    // central hub (Samsung)
+    var hubR=Math.max(20,Math.min(W,H)*0.075);
+    var hubGlow=el('circle',{cx:cx,cy:cy,r:hubR*1.7,fill:'#1428A0',opacity:0.28,filter:'url(#glow)'});
+    svg.appendChild(hubGlow);
+    var hub=el('circle',{cx:cx,cy:cy,r:hubR,fill:'url(#hubg)',stroke:'#eaf0ff','stroke-width':1.5});
+    svg.appendChild(hub);
+    var hubLabel=el('text',{x:cx,y:cy+4,'text-anchor':'middle','font-size':Math.max(10,hubR*0.42),
+      'font-weight':800,fill:'#0a1440','font-family':'Arial,sans-serif'});
+    hubLabel.textContent='SSNG';
+    svg.appendChild(hubLabel);
+
+    // orbiting bubbles
+    geo.forEach(function(g){
+      var ang=g.phase+(elapsed*(2*Math.PI))/g.period;
+      var bx=cx+Math.cos(ang)*g.orbitR, by=cy+Math.sin(ang)*g.orbitR*0.62; // slight ellipse for perspective
+      var dim=(selected!=null && g.name!==selected);
+      var grp=el('g',{class:'bubble',opacity:dim?0.28:1});
+      var glow=el('circle',{cx:bx,cy:by,r:g.bubbleR*1.5,fill:g.color,opacity:0.22,filter:'url(#glow)'});
+      grp.appendChild(glow);
+      var trail=el('circle',{cx:bx,cy:by,r:g.bubbleR,fill:g.color,stroke:'#eaf0ff','stroke-width':1.2});
+      grp.appendChild(trail);
+      var lbl=el('text',{x:bx,y:by+g.bubbleR+14,'text-anchor':'middle','font-size':11,
+        'font-weight':700,fill:'#eaf0ff','font-family':'Arial,sans-serif'});
+      lbl.textContent=g.name;
+      grp.appendChild(lbl);
+      grp.addEventListener('mousemove',function(e){
+        tip.innerHTML='<div class="big">'+g.name+'</div>Revenue share <b>'+fmt(g.revenue)+'</b><br>Growth <b>'+(g.growth*100).toFixed(1)+'%</b><br>Orbit period '+g.period.toFixed(1)+'s';
+        tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';
+      });
+      grp.addEventListener('mouseleave',function(){tip.style.opacity=0;});
+      grp.addEventListener('click',function(e){e.stopPropagation();
+        selected=(selected===g.name)?null:g.name; setFilter(selected);});
+      svg.appendChild(grp);
+    });
+    svg.addEventListener('click',function(){ if(selected!=null){selected=null;setFilter(null);} });
+
+    var tot=lastSegs.reduce(function(s,c){return s+c.revenue;},0);
+    document.getElementById('cnt').textContent=lastSegs.length;
+    document.getElementById('tot').textContent=fmt(tot);
+    var f=document.getElementById('focus'); f.innerHTML=selected?(' · focus <b>'+selected+'</b> ✕'):' · click a segment to focus';
+  }
+
+  function setFilter(seg){
+    if(!client||!st.cfg||!st.cfg.filterVar) return;
+    try{ if(seg==null) client.config.setVariable('filterVar'); else client.config.setVariable('filterVar', seg); }catch(e){}
+  }
+
+  function synth(){
+    var d=[['Mobile Experience',0.34,0.04],['Visual Display',0.19,0.02],
+      ['Digital Appliances',0.12,0.03],['Memory & Semiconductor',0.27,0.14],['Display Panel',0.08,0.09]];
+    return d.map(function(r){return {name:r[0],revenue:r[1]*1e9,growth:r[2]};});
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){
+    var c=st.cfg||{};
+    if(st.data&&c.segment&&st.data[c.segment]){
+      var seg=st.data[c.segment]||[],rev=(c.revenue&&st.data[c.revenue])||[],gr=(c.growth&&st.data[c.growth])||[];
+      var segs=seg.map(function(s,i){return {name:s!=null?String(s):('Segment '+i),
+        revenue:Number(rev[i])||0, growth:Number(gr[i])||0.05};});
+      if(segs.length){lastSegs=segs;return;}
+    }
+    lastSegs=synth();
+  }
+  var rt;
+  function onResize(){clearTimeout(rt);rt=setTimeout(function(){/* redraw uses live clientWidth each frame */},50);}
+  window.addEventListener('resize',onResize);
+  if(window.ResizeObserver){
+    new ResizeObserver(onResize).observe(document.getElementById('stage'));
+  }
+  if(client){
+    client.config.subscribe(function(cfg){st.cfg=cfg||{};
+      if(st.unsub){st.unsub();st.unsub=null;}
+      if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();});}
+      else recompute();
+    });
+  } else { recompute(); }
+  recompute();
+  raf=requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

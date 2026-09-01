@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Risk Stratification Heatmap — Molina Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#0A3A3F;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#00A0AE}
+  #meta{font-size:11px;color:#6B8A8D}
+  #meta b{color:#0A3A3F}
+  #grid{flex:1;display:grid;gap:4px;min-height:0}
+  .lbl{font-size:11px;color:#3A5B5E;display:flex;align-items:center;font-weight:600}
+  .hlbl{font-size:11px;color:#6B8A8D;display:flex;align-items:flex-end;justify-content:center;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .cell{border-radius:4px;min-height:6px;transition:transform .08s;cursor:default;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700}
+  .cell:hover{transform:scale(1.08);z-index:5;outline:1.5px solid #0A3A3F;border-radius:3px}
+  .peak{box-shadow:0 0 0 1.5px #0A3A3F}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#6B8A8D}
+  #bar{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#E5F6F8,#7FD3DB,#00A0AE,#00545C)}
+  #tip{position:fixed;pointer-events:none;background:#0A3A3F;border:1px solid #00707A;border-radius:8px;padding:8px 10px;font-size:11px;color:#E5F6F8;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip b{color:#7FD3DB}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Risk stratification — cost of care</div><div id="meta">highest cell <b id="peak">—</b> · avg <b id="tot">—</b></div></div>
+  <div id="grid"></div>
+  <div id="legend"><span>low cost</span><div id="bar"></div><span>high cost</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var RISK=['Low','Medium','High'];
+  var CONDITIONS=['Diabetes','Hypertension','Behavioral Health','Maternity','Preventive Care'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'condition',type:'column',source:'source',label:'Chronic Condition'},
+    {name:'risk',type:'column',source:'source',label:'Risk Tier (Low/Medium/High)'},
+    {name:'value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Avg Cost of Care'},
+    {name:'members',type:'column',source:'source',allowedTypes:['number','integer'],label:'Member Count'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hx(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  function heat(t){ // 0..1 pale teal -> teal -> deep teal
+    t=Math.max(0,Math.min(1,t));
+    var s=[[229,246,248],[127,211,219],[0,160,174],[0,84,92]];
+    var seg=t*3,i=Math.min(2,Math.floor(seg)),f=seg-i;
+    return '#'+hx(lerp(s[i][0],s[i+1][0],f))+hx(lerp(s[i][1],s[i+1][1],f))+hx(lerp(s[i][2],s[i+1][2],f)); }
+  function fmt(v){ v=Math.round(v); if(v>=1e3)return '$'+(v/1e3).toFixed(1)+'k'; return '$'+v; }
+  function fmtN(v){ v=Math.round(v); if(v>=1e3)return (v/1e3).toFixed(1)+'k'; return String(v); }
+  var tip=document.getElementById('tip');
+  function draw(m,mem,conds){
+    var grid=document.getElementById('grid'); grid.innerHTML='';
+    grid.style.gridTemplateColumns='140px repeat(3,1fr)';
+    grid.style.gridTemplateRows='20px repeat('+conds.length+',1fr)';
+    var max=0,sum=0,n=0,pk={v:-1,r:0,c:0};
+    for(var r=0;r<conds.length;r++)for(var c=0;c<3;c++){var v=(m[r]&&m[r][c])||0; if(v>max)max=v; if(v>0){sum+=v;n++;} if(v>pk.v){pk={v:v,r:r,c:c};}}
+    max=max||1;
+    var corner=document.createElement('div'); grid.appendChild(corner);
+    for(var c=0;c<3;c++){ var hl=document.createElement('div'); hl.className='hlbl'; hl.textContent=RISK[c]; grid.appendChild(hl); }
+    for(var r=0;r<conds.length;r++){
+      var lab=document.createElement('div'); lab.className='lbl'; lab.textContent=conds[r]; grid.appendChild(lab);
+      for(var c=0;c<3;c++){ (function(r,c){
+        var v=(m[r]&&m[r][c])||0, mv=(mem[r]&&mem[r][c])||0, cell=document.createElement('div');
+        cell.className='cell'+(r===pk.r&&c===pk.c?' peak':'');
+        cell.style.background= v>0 ? heat(v/max) : '#F0F6F6';
+        cell.textContent = v>0 ? fmt(v) : '';
+        cell.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+          tip.innerHTML='<b>'+conds[r]+' · '+RISK[c]+'</b><br>Avg cost '+fmt(v)+'<br>Members '+fmtN(mv); });
+        cell.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+        grid.appendChild(cell);
+      })(r,c); }
+    }
+    document.getElementById('peak').textContent=conds[pk.r]+' · '+RISK[pk.c];
+    document.getElementById('tot').textContent= n>0 ? fmt(sum/n) : '—';
+  }
+  function synth(){
+    var base={'Diabetes':[180,420,980],'Hypertension':[150,350,820],'Behavioral Health':[200,500,1100],'Maternity':[300,650,1400],'Preventive Care':[90,180,400]};
+    var memBase={'Diabetes':[220,90,25],'Hypertension':[260,100,20],'Behavioral Health':[140,60,30],'Maternity':[60,25,8],'Preventive Care':[400,150,12]};
+    return {m:CONDITIONS.map(function(k){return base[k];}),mem:CONDITIONS.map(function(k){return memBase[k];}),conds:CONDITIONS};
+  }
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{},d=st.data;
+    if(d&&c.value&&d[c.value]&&c.condition&&d[c.condition]&&c.risk&&d[c.risk]){
+      var cond=d[c.condition]||[],risk=d[c.risk]||[],val=d[c.value]||[],mem=(c.members&&d[c.members])||[];
+      var conds=[]; for(var i=0;i<cond.length;i++){ var cv=String(cond[i]); if(conds.indexOf(cv)<0) conds.push(cv); }
+      var m=[],memM=[]; for(var i=0;i<conds.length;i++){m[i]=[0,0,0]; memM[i]=[0,0,0];}
+      var any=false;
+      for(var i=0;i<val.length;i++){ var ri=conds.indexOf(String(cond[i])); var rk=RISK.indexOf(String(risk[i]));
+        if(ri>=0&&rk>=0){ m[ri][rk]=Number(val[i])||0; memM[ri][rk]=Number(mem[i])||0; any=true; } }
+      if(any){ draw(m,memM,conds); return; } }
+    var s=synth(); draw(s.m,s.mem,s.conds);
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(dd){ st.data=dd; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+})();
+</script>
+</body>
+</html>

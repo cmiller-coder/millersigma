@@ -31,11 +31,40 @@ description: >-
 > formulas → comparison KPIs → bulk-edit buttons), every shape confirmed
 > round-tripping on 2026-08-08.
 >
+> **Adding submit/review/approve workflow?** Use
+> [reference/approval-workflow-pattern.md](reference/approval-workflow-pattern.md)
+> and its runnable
+> [`build_forecast_approval_workflow.py`](examples/build_forecast_approval_workflow.py)
+> example — Draft → Submitted → Approved / Adjust / Rejected, with plan
+> registry, review queue, modal decisions, comments, and insert/update/delete
+> actions. Every write goes through a button + control(s), not a raw cell
+> edit — see the next paragraph for why that matters right now.
+>
+> **Want both — a modeler with a global what-if lever AND an approval
+> lifecycle?** Use
+> [`build_scenario_approval_workbench.py`](examples/build_scenario_approval_workbench.py) —
+> verified live 2026-08-13. Building it surfaced a real, previously
+> undocumented gotcha: a formula column referencing a `control` only resolves
+> if that control's element is declared **earlier** in `document.elements`
+> than the column referencing it — passes verify/create either way, fails
+> only on a real render, with an error message that doesn't mention ordering
+> at all. Full writeup in `scenario-modeler-pattern.md`.
+>
 > Two things in there cause most "it used to work" reports:
 > **`inputMode: "view"`** — the default `edit` makes a published modeler read-only
 > and silently kills every `update-rows` — and **`stacking: "none"`** on the
 > projected-vs-baseline chart, since two y-series stack by default, so the chart
 > renders their sum and looks plausible while being wrong.
+>
+> **`inputMode: "view"` caveat, verified live 2026-08-12/13 on papercranestaging:**
+> it stores and validates, but direct cell-click editing in default (published,
+> non-edit) view is still rejected on this org, even on a from-scratch workbook
+> never touched in the UI. An earlier "verified end-to-end" claim about this
+> setting only checked that the field round-trips on GET, not that the runtime
+> honors it. Button-triggered `insert-rows`/`update-rows`/`delete-rows` actions
+> are unaffected — build every write-back surface that way (controls feeding
+> an action button) rather than relying on a viewer typing directly into a
+> cell, until Sigma confirms the direct-edit path is fixed.
 
 
 Given "let users model / forecast / adjust / write back data," build a working

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Order Volume Heatmap — Amazon Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#171D27;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#FF6201}
+  #meta{font-size:11px;color:#6B7280}
+  #meta b{color:#171D27}
+  #grid{flex:1;display:grid;gap:4px;min-height:0}
+  .lbl{font-size:11px;color:#3A4452;display:flex;align-items:center;font-weight:600}
+  .hlbl{font-size:11px;color:#6B7280;display:flex;align-items:flex-end;justify-content:center;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+  .cell{border-radius:4px;min-height:6px;transition:transform .08s;cursor:default;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700}
+  .cell:hover{transform:scale(1.08);z-index:5;outline:1.5px solid #171D27;border-radius:3px}
+  .peak{box-shadow:0 0 0 1.5px #171D27}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#6B7280}
+  #bar{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#FFE8D1,#FFB673,#FF6201,#B33F00)}
+  #tip{position:fixed;pointer-events:none;background:#171D27;border:1px solid #3A4452;border-radius:8px;padding:8px 10px;font-size:11px;color:#FFE8D1;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip b{color:#FFB673}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Order volume — category x day</div><div id="meta">peak <b id="peak">—</b> · weekly <b id="tot">—</b></div></div>
+  <div id="grid"></div>
+  <div id="legend"><span>low</span><div id="bar"></div><span>high</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var CATS=['Electronics','Home & Kitchen','Grocery','Apparel','Books & Media'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'category',type:'column',source:'source',label:'Category'},
+    {name:'day',type:'column',source:'source',label:'Day of week'},
+    {name:'value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Order Volume'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hx(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  function heat(t){ // 0..1 pale orange -> orange -> deep orange
+    t=Math.max(0,Math.min(1,t));
+    var s=[[255,232,209],[255,182,115],[255,98,1],[179,63,0]];
+    var seg=t*3,i=Math.min(2,Math.floor(seg)),f=seg-i;
+    return '#'+hx(lerp(s[i][0],s[i+1][0],f))+hx(lerp(s[i][1],s[i+1][1],f))+hx(lerp(s[i][2],s[i+1][2],f)); }
+  function fmt(v){ v=Math.round(v); if(v>=1e6)return (v/1e6).toFixed(1)+'M'; if(v>=1e3)return (v/1e3).toFixed(0)+'k'; return String(v); }
+  var tip=document.getElementById('tip');
+  function draw(m,cats){
+    var grid=document.getElementById('grid'); grid.innerHTML='';
+    grid.style.gridTemplateColumns='140px repeat(7,1fr)';
+    grid.style.gridTemplateRows='20px repeat('+cats.length+',1fr)';
+    var max=0,tot=0,pk={v:-1,r:0,c:0};
+    for(var r=0;r<cats.length;r++)for(var c=0;c<7;c++){var v=(m[r]&&m[r][c])||0; if(v>max)max=v; tot+=v; if(v>pk.v){pk={v:v,r:r,c:c};}}
+    max=max||1;
+    var corner=document.createElement('div'); grid.appendChild(corner);
+    for(var c=0;c<7;c++){ var hl=document.createElement('div'); hl.className='hlbl'; hl.textContent=DAYS[c]; grid.appendChild(hl); }
+    for(var r=0;r<cats.length;r++){
+      var lab=document.createElement('div'); lab.className='lbl'; lab.textContent=cats[r]; grid.appendChild(lab);
+      for(var c=0;c<7;c++){ (function(r,c){
+        var v=(m[r]&&m[r][c])||0, cell=document.createElement('div');
+        cell.className='cell'+(r===pk.r&&c===pk.c?' peak':'');
+        cell.style.background= v>0 ? heat(v/max) : '#F5F0EB';
+        cell.textContent = v>0 ? fmt(v) : '';
+        cell.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+          tip.innerHTML='<b>'+cats[r]+' · '+DAYS[c]+'</b><br>Orders '+fmt(v); });
+        cell.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+        grid.appendChild(cell);
+      })(r,c); }
+    }
+    document.getElementById('peak').textContent=cats[pk.r]+' · '+DAYS[pk.c];
+    document.getElementById('tot').textContent=fmt(tot);
+  }
+  function synth(){
+    var base={'Electronics':[9200,8800,9000,9600,11200,15800,13400],
+      'Home & Kitchen':[6100,5900,6200,6600,7400,10200,9100],
+      'Grocery':[7800,7600,7900,8200,8600,9400,11800],
+      'Apparel':[4200,4000,4300,4600,6100,9800,7200],
+      'Books & Media':[2600,2500,2700,2800,3100,4200,3700]};
+    return {m:CATS.map(function(k){return base[k];}),cats:CATS};
+  }
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{},d=st.data;
+    if(d&&c.value&&d[c.value]&&c.category&&d[c.category]&&c.day&&d[c.day]){
+      var cat=d[c.category]||[],day=d[c.day]||[],val=d[c.value]||[];
+      var cats=[]; for(var i=0;i<cat.length;i++){ var cv=String(cat[i]); if(cats.indexOf(cv)<0) cats.push(cv); }
+      var m=[]; for(var i=0;i<cats.length;i++){m[i]=[0,0,0,0,0,0,0];}
+      var any=false;
+      for(var i=0;i<val.length;i++){ var ri=cats.indexOf(String(cat[i])); var ci=DAYS.indexOf(String(day[i]));
+        if(ri>=0&&ci>=0){ m[ri][ci]=Number(val[i])||0; any=true; } }
+      if(any){ draw(m,cats); return; } }
+    var s=synth(); draw(s.m,s.cats);
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(dd){ st.data=dd; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+})();
+</script>
+</body>
+</html>

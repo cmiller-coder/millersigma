@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Member Flywheel — SoFi Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,"Segoe UI",Roboto,Arial,sans-serif;
+       background:#FFFFFF;color:#0B2740;overflow:hidden}
+  #wrap{height:100%;width:100%;position:relative;
+        border:1px solid #DCE4EE;border-radius:10px;background:#fff;overflow:hidden}
+  #hd{position:absolute;top:12px;left:16px;z-index:2}
+  #hd .t{font-size:13px;font-weight:800;letter-spacing:.01em;color:#0B2740}
+  #hd .s{font-size:10.5px;font-weight:600;color:#8A98A8;margin-top:2px}
+  #lg{position:absolute;top:12px;right:16px;z-index:2;display:flex;gap:14px;align-items:center}
+  #lg .i{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#5B6B7F}
+  #lg .sw{width:9px;height:9px;border-radius:50%}
+  canvas{display:block;width:100%;height:100%}
+  #err{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+       font-size:11px;color:#C0392B}
+  @media (prefers-reduced-motion:reduce){canvas{opacity:1}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hd"><div class="t">Balance flywheel</div>
+    <div class="s">Deposits fund lending · ring size = balances, particle rate = goal attainment</div></div>
+  <div id="lg">
+    <div class="i"><span class="sw" style="background:#0074F5"></span>Lending</div>
+    <div class="i"><span class="sw" style="background:#00C08B"></span>Deposits &amp; invest</div>
+  </div>
+  <canvas id="cv"></canvas>
+</div>
+<script>
+(function () {
+  var client = (window.sigmaComputing && window.sigmaComputing.plugin
+                && window.sigmaComputing.plugin.client) || null;
+
+  // The deposit side funds the lending side; that split drives colour and the
+  // direction particles travel along each spoke.
+  var DEPOSIT = {"SoFi Money": 1, "SoFi Invest": 1};
+
+  var FALLBACK = [
+    {name: "Personal Loans",      bal: 18.42, mem: 4.34, goal: 0.912},
+    {name: "Student Refinancing", bal: 10.11, mem: 1.43, goal: 0.784},
+    {name: "Home Loans",          bal:  4.62, mem: 0.44, goal: 1.064},
+    {name: "Credit Card",         bal:  1.28, mem: 1.04, goal: 0.688},
+    {name: "SoFi Money",          bal: 39.85, mem: 5.93, goal: 0.958},
+    {name: "SoFi Invest",         bal: 12.74, mem: 2.54, goal: 0.836}
+  ];
+
+  var rows = FALLBACK, nodes = [], particles = [], t0 = performance.now();
+  var cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+  var W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  if (client) {
+    client.config.configureEditorPanel([
+      {name: "source",  type: "element"},
+      {name: "product", type: "column", source: "source", allowMultiple: false},
+      {name: "balance", type: "column", source: "source", allowMultiple: false},
+      {name: "members", type: "column", source: "source", allowMultiple: false},
+      {name: "goal",    type: "column", source: "source", allowMultiple: false}
+    ]);
+    client.elements.subscribeToElementData("source", function (data) {
+      try {
+        var c = client.config.getKey ? null : null;
+        var cfg = client.config.get ? client.config.get() : {};
+        var pick = function (k) { return cfg[k] && data[cfg[k]] ? data[cfg[k]] : null; };
+        var p = pick("product"), b = pick("balance"),
+            m = pick("members"), g = pick("goal");
+        if (!p || !b) return;
+        var out = [];
+        for (var i = 0; i < p.length; i++) {
+          out.push({name: String(p[i]), bal: Number(b[i]) || 0,
+                    mem: m ? Number(m[i]) || 0 : 0,
+                    goal: g ? Number(g[i]) || 0 : 0.8});
+        }
+        if (out.length) { rows = out; layout(); }
+      } catch (e) { /* keep the fallback rendering rather than blanking */ }
+    });
+  }
+
+  function resize() {
+    var r = cv.getBoundingClientRect();
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    layout();
+  }
+
+  function layout() {
+    var cx = W / 2, cy = H / 2 + 14;
+    // The tile is far wider than it is tall, so the orbit is an ELLIPSE -- a
+    // circle sized to the short axis leaves most of the width empty and pushes
+    // the 12-o'clock / 6-o'clock labels off the top and bottom edges.
+    var RX = Math.max(70, Math.min(W * 0.36, 420));
+    var RY = Math.max(52, (H - 130) / 2);
+    var maxBal = 1;
+    rows.forEach(function (d) { if (d.bal > maxBal) maxBal = d.bal; });
+
+    nodes = rows.map(function (d, i) {
+      var a = (-Math.PI / 2) + (i * 2 * Math.PI / rows.length);
+      var dep = !!DEPOSIT[d.name];
+      return {
+        name: d.name, bal: d.bal, mem: d.mem, goal: d.goal, dep: dep,
+        a: a, x: cx + RX * Math.cos(a), y: cy + RY * Math.sin(a),
+        r: 12 + 20 * Math.sqrt(d.bal / maxBal),
+        color: dep ? "#00C08B" : "#0074F5"
+      };
+    });
+    nodes.cx = cx; nodes.cy = cy; nodes.RX = RX; nodes.RY = RY;
+
+    particles = [];
+    nodes.forEach(function (n, i) {
+      // Goal attainment sets particle density, so a product that is ahead of
+      // plan visibly moves more balance through the hub.
+      var count = Math.max(2, Math.round(3 + 6 * (n.goal || 0.8)));
+      for (var k = 0; k < count; k++) particles.push({n: i, p: k / count});
+    });
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function frame(now) {
+    var t = (now - t0) / 1000;
+    ctx.clearRect(0, 0, W, H);
+    if (!nodes.length) { requestAnimationFrame(frame); return; }
+    var cx = nodes.cx, cy = nodes.cy, RX = nodes.RX, RY = nodes.RY;
+
+    // orbit guide
+    ctx.strokeStyle = "#EDF1F6"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(cx, cy, RX, RY, 0, 0, 2 * Math.PI); ctx.stroke();
+
+    // spokes
+    nodes.forEach(function (n) {
+      ctx.strokeStyle = "#E6EDF5"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(n.x, n.y); ctx.stroke();
+    });
+
+    // particles: deposits travel inward to the hub, lending travels outward
+    particles.forEach(function (pt) {
+      var n = nodes[pt.n];
+      var u = (pt.p + t * 0.22) % 1;
+      var f = n.dep ? (1 - u) : u;                 // 1 = at node, 0 = at hub
+      var x = cx + (n.x - cx) * f, y = cy + (n.y - cy) * f;
+      var fade = Math.sin(Math.PI * u);
+      ctx.globalAlpha = 0.25 + 0.6 * fade;
+      ctx.fillStyle = n.color;
+      ctx.beginPath(); ctx.arc(x, y, 2.4, 0, 2 * Math.PI); ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    // hub
+    var pulse = 1 + 0.03 * Math.sin(t * 1.6);
+    var hr = Math.max(34, Math.min(RY, RX) * 0.42) * pulse;
+    var grad = ctx.createLinearGradient(cx - hr, cy - hr, cx + hr, cy + hr);
+    grad.addColorStop(0, "#0B2740"); grad.addColorStop(1, "#0074F5");
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx, cy, hr, 0, 2 * Math.PI); ctx.fill();
+
+    var total = 0, mem = 0;
+    nodes.forEach(function (n) { total += n.bal; mem += n.mem; });
+    ctx.fillStyle = "#FFFFFF"; ctx.textAlign = "center";
+    ctx.font = "800 " + Math.round(hr * 0.40) + "px -apple-system, Inter, Arial";
+    ctx.fillText("$" + total.toFixed(0) + "B", cx, cy + 1);
+    ctx.font = "700 " + Math.round(hr * 0.20) + "px -apple-system, Inter, Arial";
+    ctx.fillStyle = "#9FD0FF";
+    ctx.fillText(mem.toFixed(1) + "M members", cx, cy + hr * 0.36);
+
+    // product nodes
+    nodes.forEach(function (n) {
+      ctx.fillStyle = n.color;
+      ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 2 * Math.PI); ctx.fill();
+      ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 2.5; ctx.stroke();
+
+      ctx.fillStyle = "#FFFFFF"; ctx.textAlign = "center";
+      ctx.font = "800 " + Math.max(9, Math.round(n.r * 0.46)) + "px -apple-system, Inter, Arial";
+      ctx.fillText("$" + n.bal.toFixed(1) + "B", n.x, n.y + n.r * 0.16);
+
+      // Label sits just outside the node along the radius, then gets clamped
+      // into the canvas -- without the clamp the 12/6 o'clock labels render
+      // past the top and bottom edges and simply vanish.
+      ctx.font = "700 10.5px -apple-system, Inter, Arial";
+      var tw = ctx.measureText(n.name).width, half = tw / 2 + 6;
+      // Placed on the dominant axis with the chip's EDGE clearing the node --
+      // offsetting the chip CENTRE by the radius leaves half the chip sitting
+      // on top of the circle.
+      var ux = n.x - cx, uy = n.y - cy, lx, ly;
+      if (Math.abs(ux) >= Math.abs(uy)) {
+        lx = n.x + Math.sign(ux) * (n.r + half + 8);
+        ly = n.y;
+      } else {
+        lx = n.x;
+        ly = n.y + Math.sign(uy) * (n.r + 22);
+      }
+      lx = Math.min(Math.max(lx, half + 4), W - half - 4);
+      ly = Math.min(Math.max(ly, 13), H - 13);
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      roundRect(lx - half, ly - 9, tw + 12, 18, 9); ctx.fill();
+      ctx.fillStyle = "#0B2740"; ctx.textAlign = "center";
+      ctx.fillText(n.name, lx, ly + 4);
+    });
+
+    requestAnimationFrame(frame);
+  }
+
+  new ResizeObserver(resize).observe(document.getElementById("wrap"));
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Launch Velocity Track — Nike Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Helvetica Neue,Inter,Arial,sans-serif;background:#0B0B0C;color:#F5F5F5;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px 8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:12px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;color:#ACFE0C}
+  #ttl span{color:#8a8f94;font-weight:600;letter-spacing:.02em;text-transform:none;margin-left:8px}
+  #meta{font-size:11px;color:#8a8f94}
+  #meta b{color:#fff}
+  #stage{flex:1;position:relative;min-height:0}
+  svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .lane{fill:none}
+  .lanelabel{font-size:10.5px;font-weight:800;letter-spacing:.04em;fill:#c9c9cc;text-transform:uppercase}
+  .startline{stroke:#F5F5F5;stroke-width:2;stroke-dasharray:3 3;opacity:.5}
+  .marker{cursor:default}
+  .marker circle.core{transition:r .15s}
+  .marker.hot circle.pulse{animation:pulse 1.15s ease-in-out infinite}
+  .marker.steady circle.pulse{animation:pulse 2.1s ease-in-out infinite}
+  .marker.slow circle.pulse{animation:pulse 3.2s ease-in-out infinite;opacity:.35}
+  @keyframes pulse{0%{opacity:.55;stroke-width:1.5}50%{opacity:0;stroke-width:9}100%{opacity:0;stroke-width:9}}
+  #legend{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:4px 18px;font-size:10.5px;color:#a9adb1;align-items:center;justify-content:center;padding-top:4px}
+  #legend .li{display:flex;align-items:center;gap:6px}
+  .dot2{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+  #tip{position:fixed;pointer-events:none;background:#141414;border:1px solid #ACFE0C;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  #tip b{color:#ACFE0C}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Launch Velocity Track<span>sell-through pace by category</span></div><div id="meta"><b id="cnt">0</b> categories on track</div></div>
+  <div id="stage"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div id="legend"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var NS='http://www.w3.org/2000/svg';
+  var TIER_COLOR={hot:'#ACFE0C',steady:'#1151FF',slow:'#8A8F94'};
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'category',type:'column',source:'source',label:'Category (lane)'},
+    {name:'velocity',type:'column',source:'source',allowedTypes:['number','integer'],label:'Sell-through velocity % (position)'},
+    {name:'momentum',type:'column',source:'source',label:'Momentum tier (hot/steady/slow)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  var tip=document.getElementById('tip');
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m]||m;}); }
+  function el(t,a){ var e=document.createElementNS(NS,t); for(var k in a) e.setAttribute(k,a[k]); return e; }
+  function tierOf(m){
+    var s=String(m||'').toLowerCase();
+    if(s.indexOf('hot')>=0) return 'hot';
+    if(s.indexOf('slow')>=0) return 'slow';
+    return 'steady';
+  }
+  // Point on a rounded "stadium" (oval running track) outline at lane radius r,
+  // parameterized 0..1 around the full perimeter starting/ending at the bottom
+  // straight's start line, going counter-clockwise like a real track (viewed from above).
+  function stadiumPoint(cx, cy, straightHalf, r, t){
+    // Perimeter split: two straights (length 2*straightHalf each) + two semicircle turns (length pi*r each)
+    var straight = 2*straightHalf;
+    var turn = Math.PI*r;
+    var total = 2*straight + 2*turn;
+    var d = ((t % 1) + 1) % 1 * total;
+    // Segment order starting at bottom straight, left-to-right, then right turn (bottom->top),
+    // then top straight right-to-left, then left turn (top->bottom).
+    if(d < straight){
+      // bottom straight, moving +x
+      var x = -straightHalf + d;
+      return {x: cx + x, y: cy + r, ang: 0};
+    }
+    d -= straight;
+    if(d < turn){
+      // right semicircle turn, center (cx+straightHalf, cy), from angle 90 to -90 (going up through 0)
+      var a = Math.PI/2 - (d/r); // radians
+      return {x: cx + straightHalf + r*Math.cos(a), y: cy + r*Math.sin(a), ang: a};
+    }
+    d -= turn;
+    if(d < straight){
+      // top straight, moving -x
+      var x = straightHalf - d;
+      return {x: cx + x, y: cy - r, ang: Math.PI};
+    }
+    d -= straight;
+    // left semicircle turn, center (cx-straightHalf, cy), from angle -90 to -270(=90) going down through 180
+    var a2 = -Math.PI/2 - (d/r);
+    return {x: cx - straightHalf + r*Math.cos(a2), y: cy + r*Math.sin(a2), ang: a2};
+  }
+  function stadiumPath(cx, cy, straightHalf, r){
+    var p0=stadiumPoint(cx,cy,straightHalf,r,0);
+    var steps=64, dd='M '+p0.x.toFixed(2)+' '+p0.y.toFixed(2)+' ';
+    for(var i=1;i<=steps;i++){ var p=stadiumPoint(cx,cy,straightHalf,r,i/steps); dd+='L '+p.x.toFixed(2)+' '+p.y.toFixed(2)+' '; }
+    dd+='Z';
+    return dd;
+  }
+  var animT = 0, raf = null, rows = [];
+  function draw(){
+    var svg=document.getElementById('svg'); while(svg.firstChild) svg.removeChild(svg.firstChild);
+    var st=document.getElementById('stage'), W=st.clientWidth||600, H=st.clientHeight||320;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    if(!rows.length){ document.getElementById('cnt').textContent='0'; return; }
+    var n = rows.length;
+    var cx=W/2, cy=H/2;
+    var margin=54, laneGap = Math.max(14, Math.min(26, (Math.min(W,H)/2-margin)/(n+1.6)));
+    var outerR = Math.min(H/2,W*0.32) - margin*0.35;
+    outerR = Math.max(40, outerR);
+    var straightHalf = Math.max(30, W*0.5 - outerR - margin*0.6);
+    var g = el('g',{}); svg.appendChild(g);
+    // field fill (infield)
+    var innerR = outerR - laneGap*(n+0.4);
+    if(innerR>16){
+      var fieldPath = stadiumPath(cx,cy,straightHalf, Math.max(10,innerR));
+      var field = el('path',{d:fieldPath, fill:'#141517'});
+      g.appendChild(field);
+    }
+    var order = rows.slice().sort(function(a,b){ return a.category<b.category?-1:1; });
+    order.forEach(function(row,i){
+      var r = outerR - i*laneGap;
+      var lanePath = stadiumPath(cx,cy,straightHalf,r);
+      var lane = el('path',{d:lanePath,class:'lane',stroke:i%2===0?'#2b2c2f':'#232426','stroke-width':laneGap*0.86});
+      g.appendChild(lane);
+      var laneLine = el('path',{d:lanePath,class:'lane',stroke:'#3a3b3e','stroke-width':1});
+      g.appendChild(laneLine);
+      row._r = r;
+    });
+    // start/finish line across the bottom straight at t=0
+    var sp1=stadiumPoint(cx,cy,straightHalf,order[order.length-1]._r + laneGap*0.5,0.0);
+    var sp2=stadiumPoint(cx,cy,straightHalf,order[0]._r + laneGap*0.5,0.0);
+    g.appendChild(el('line',{x1:sp1.x,y1:sp1.y,x2:sp2.x,y2:sp2.y,class:'startline'}));
+    // lane labels: one per lane, stacked vertically in the infield so they never
+    // collide with each other or the track geometry, ordered outer-lane-first.
+    var infieldCx = cx, infieldTopY = cy - Math.max(18, innerR*0.62);
+    var lineH = Math.min(15, (Math.max(18, innerR*0.62)*2 - 8) / Math.max(1,order.length));
+    order.forEach(function(row,i){
+      var ly = infieldTopY + i*lineH + lineH*0.6;
+      var label = row.category.length>16 ? row.category.slice(0,15)+'…' : row.category;
+      var fsize = Math.max(8, Math.min(10.5, lineH-3));
+      var t = el('text',{x:infieldCx+7, y:ly, class:'lanelabel','text-anchor':'start'});
+      t.setAttribute('fill','#c9c9cc');
+      t.style.fontSize = fsize+'px';
+      t.textContent = label;
+      g.appendChild(t);
+      // small swatch dot showing the lane's momentum tier, left of its label
+      var dot = el('circle',{cx: infieldCx - 6, cy: ly-3.4, r:3, fill: TIER_COLOR[row.tier]||TIER_COLOR.steady});
+      g.appendChild(dot);
+    });
+    // markers: position along the lane encodes sell-through velocity 0..100%,
+    // animT adds a slow common drift so they appear to advance around the circuit.
+    order.forEach(function(row,i){
+      var tier = row.tier;
+      var col = TIER_COLOR[tier] || TIER_COLOR.steady;
+      var frac = Math.max(0, Math.min(1, row.velocity/100));
+      // start a little past the line, travel proportionally to velocity, plus shared slow drift
+      var t = (0.02 + frac*0.94 + animT*0.015) % 1;
+      var p = stadiumPoint(cx,cy,straightHalf,row._r,t);
+      var size = tier==='hot' ? 9 : (tier==='slow' ? 6 : 7.5);
+      var mg = el('g',{class:'marker '+tier, transform:'translate('+p.x.toFixed(2)+','+p.y.toFixed(2)+')'});
+      mg.appendChild(el('circle',{class:'pulse', r:size, fill:'none', stroke:col, 'stroke-width':2}));
+      mg.appendChild(el('circle',{class:'core', r:size, fill:col, stroke:'#0B0B0C','stroke-width':1.6}));
+      mg.appendChild(el('circle',{r:Math.max(2,size*0.32), fill:'#0B0B0C', opacity:0.55}));
+      mg.style.cursor='default';
+      mg.addEventListener('mousemove', (function(row,tier){ return function(e){
+        tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+        tip.innerHTML='<b>'+esc(row.category)+'</b><br>'+Math.round(row.velocity)+'% sold through &middot; '+tier+' momentum';
+      };})(row,tier));
+      mg.addEventListener('mouseleave', function(){ tip.style.opacity=0; });
+      g.appendChild(mg);
+    });
+    document.getElementById('cnt').textContent = String(n);
+    var lg=document.getElementById('legend'); lg.innerHTML='';
+    [['hot','Hot — fast sell-through'],['steady','Steady — on pace'],['slow','Slow — lagging']].forEach(function(pair){
+      var li=document.createElement('div'); li.className='li';
+      li.innerHTML='<span class="dot2" style="background:'+TIER_COLOR[pair[0]]+'"></span>'+pair[1];
+      lg.appendChild(li);
+    });
+  }
+  function loop(){
+    animT += 0.006;
+    draw();
+    raf = requestAnimationFrame(loop);
+  }
+  function startLoop(){ if(raf) cancelAnimationFrame(raf); raf=requestAnimationFrame(loop); }
+  function synth(){
+    return [
+      {category:'Running', velocity:78, tier:'hot'},
+      {category:'Basketball', velocity:52, tier:'steady'},
+      {category:'Training', velocity:34, tier:'slow'},
+      {category:'Lifestyle', velocity:88, tier:'hot'},
+      {category:'Football/Soccer', velocity:46, tier:'steady'},
+      {category:'Golf', velocity:21, tier:'slow'}
+    ];
+  }
+  function build(catArr, velArr, momArr){
+    var byCat = {};
+    for(var i=0;i<catArr.length;i++){
+      var c = String(catArr[i]);
+      var v = Number(velArr[i]);
+      if(isNaN(v)) continue;
+      if(!byCat[c]) byCat[c] = {sum:0,n:0,mom:{}};
+      byCat[c].sum += v; byCat[c].n += 1;
+      var m = tierOf(momArr[i]);
+      byCat[c].mom[m] = (byCat[c].mom[m]||0)+1;
+    }
+    var out = [];
+    Object.keys(byCat).forEach(function(c){
+      var e = byCat[c];
+      var bestTier = 'steady', bestN=-1;
+      Object.keys(e.mom).forEach(function(m){ if(e.mom[m]>bestN){bestN=e.mom[m]; bestTier=m;} });
+      out.push({category:c, velocity:e.sum/e.n, tier:bestTier});
+    });
+    return out;
+  }
+  var stt={cfg:{}, data:null, unsub:null};
+  function recompute(){
+    var c = stt.cfg||{};
+    if(stt.data && c.category && c.velocity){
+      var momCol = c.momentum;
+      var rowsBuilt = build(stt.data[c.category]||[], stt.data[c.velocity]||[], momCol ? (stt.data[momCol]||[]) : []);
+      if(rowsBuilt.length){ rows = rowsBuilt; return; }
+    }
+    rows = synth();
+  }
+  if(client){
+    client.config.subscribe(function(cfg){
+      stt.cfg = cfg||{};
+      if(stt.unsub){ stt.unsub(); stt.unsub=null; }
+      if(cfg && cfg.source){
+        stt.unsub = client.elements.subscribeToElementData(cfg.source, function(d){ stt.data=d; recompute(); });
+      } else { recompute(); }
+    });
+  }
+  recompute();
+  startLoop();
+  window.addEventListener('resize', draw);
+  if(window.ResizeObserver){ new ResizeObserver(draw).observe(document.getElementById('stage')); }
+})();
+</script>
+</body>
+</html>

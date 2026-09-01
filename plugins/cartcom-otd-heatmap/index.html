@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OTD Rate Heatmap — Cart.com Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#0D1F35;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#142A46}
+  #meta{font-size:11px;color:#6B7280}
+  #meta b{color:#0D1F35}
+  #grid{flex:1;display:grid;gap:4px;min-height:0}
+  .lbl{font-size:10px;color:#374151;display:flex;align-items:center;font-weight:600;padding-right:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .hlbl{font-size:9px;color:#6B7280;display:flex;align-items:flex-end;justify-content:center;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+  .cell{border-radius:4px;min-height:6px;transition:transform .08s;cursor:default;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+  .cell:hover{transform:scale(1.06);z-index:5;outline:2px solid #142A46;border-radius:3px}
+  .worst{box-shadow:0 0 0 2px #DC2626}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#6B7280}
+  #bar{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#FEE2E2,#FCD34D,#A7F3D0,#059669)}
+  #tip{position:fixed;pointer-events:none;background:#0D1F35;border:1px solid #1B3A5C;border-radius:8px;padding:8px 10px;font-size:11px;color:#E0ECFF;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip b{color:#7FB3D3}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">OTD Rate — Category &times; Region</div><div id="meta">worst <b id="worst-lbl">—</b> &middot; best <b id="best-lbl">—</b></div></div>
+  <div id="grid"></div>
+  <div id="legend"><span>0%</span><div id="bar"></div><span>100%</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'row',   type:'column',source:'source',label:'Row (Product Category)'},
+    {name:'col',   type:'column',source:'source',label:'Column (DC Region)'},
+    {name:'value', type:'column',source:'source',allowedTypes:['number','integer'],label:'OTD Rate (0-1)'},
+    {name:'count', type:'column',source:'source',allowedTypes:['number','integer'],label:'Shipment Count'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hx(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  function otdColor(r){
+    // 0..1: red -> amber -> green
+    r=Math.max(0,Math.min(1,r));
+    if(r<0.8){var t=r/0.8; var s=[[254,226,226],[252,211,77]]; var f=t; return '#'+hx(lerp(s[0][0],s[1][0],f))+hx(lerp(s[0][1],s[1][1],f))+hx(lerp(s[0][2],s[1][2],f));}
+    else{var t=(r-0.8)/0.2; var s=[[252,211,77],[167,243,208],[5,150,105]]; var seg=t*2,i=Math.min(1,Math.floor(seg)),f2=seg-i;
+      return '#'+hx(lerp(s[i][0],s[i+1][0],f2))+hx(lerp(s[i][1],s[i+1][1],f2))+hx(lerp(s[i][2],s[i+1][2],f2));}
+  }
+  function textColor(r){ return r>0.6?'#065F46':r>0.4?'#92400E':'#991B1B'; }
+  function fmtPct(v){ return (v*100).toFixed(1)+'%'; }
+  function fmtN(v){ v=Math.round(v); return v>=1000?(v/1000).toFixed(1)+'k':String(v); }
+  var tip=document.getElementById('tip');
+  function draw(rows,cols,matrix,counts){
+    var grid=document.getElementById('grid'); grid.innerHTML='';
+    var nr=rows.length,nc=cols.length;
+    grid.style.gridTemplateColumns='110px repeat('+nc+',1fr)';
+    grid.style.gridTemplateRows='18px repeat('+nr+',1fr)';
+    var worst={v:1,r:0,c:0},best={v:0,r:0,c:0};
+    for(var r=0;r<nr;r++)for(var c=0;c<nc;c++){var v=(matrix[r]&&matrix[r][c]);if(v!=null){if(v<worst.v){worst={v:v,r:r,c:c};}if(v>best.v){best={v:v,r:r,c:c};}}}
+    // header row
+    var corner=document.createElement('div'); grid.appendChild(corner);
+    for(var c=0;c<nc;c++){var hl=document.createElement('div'); hl.className='hlbl'; hl.textContent=cols[c]; grid.appendChild(hl);}
+    for(var r=0;r<nr;r++){
+      var lab=document.createElement('div'); lab.className='lbl'; lab.textContent=rows[r]; lab.title=rows[r]; grid.appendChild(lab);
+      for(var c2=0;c2<nc;c2++){(function(r,c){
+        var v=(matrix[r]&&matrix[r][c]),cnt=(counts[r]&&counts[r][c])||0;
+        var cell=document.createElement('div');
+        cell.className='cell'+(r===worst.r&&c===worst.c?' worst':'');
+        if(v!=null){cell.style.background=otdColor(v); cell.style.color=textColor(v); cell.textContent=fmtPct(v);}
+        else{cell.style.background='#F1F5F9';}
+        cell.addEventListener('mousemove',function(e){tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-14)+'px';
+          tip.innerHTML='<b>'+rows[r]+' · '+cols[c]+'</b><br>OTD rate '+(v!=null?fmtPct(v):'n/a')+'<br>Shipments '+fmtN(cnt);});
+        cell.addEventListener('mouseleave',function(){tip.style.opacity=0;});
+        grid.appendChild(cell);
+      })(r,c2);}
+    }
+    document.getElementById('worst-lbl').textContent=rows[worst.r]+' / '+cols[worst.c]+' ('+fmtPct(worst.v)+')';
+    document.getElementById('best-lbl').textContent=rows[best.r]+' / '+cols[best.c]+' ('+fmtPct(best.v)+')';
+  }
+  function synth(){
+    var rows=['Apparel','Electronics','Food & Bev','Home & Garden','Sporting Goods','Toys'];
+    var cols=['Midwest','Northeast','Southeast','South','Southwest','West'];
+    var base={Apparel:[0.94,0.92,0.87,0.89,0.91,0.96],'Electronics':[0.96,0.95,0.91,0.90,0.88,0.97],'Food & Bev':[0.82,0.79,0.75,0.78,0.73,0.84],'Home & Garden':[0.90,0.88,0.84,0.86,0.85,0.92],'Sporting Goods':[0.93,0.91,0.88,0.87,0.90,0.95],'Toys':[0.88,0.86,0.81,0.83,0.85,0.90]};
+    var cnt={Apparel:[420,380,310,290,270,450],'Electronics':[280,310,240,220,200,330],'Food & Bev':[650,580,490,520,440,600],'Home & Garden':[350,320,280,300,260,380],'Sporting Goods':[190,210,170,160,150,220],'Toys':[140,130,110,105,95,150]};
+    var m=rows.map(function(r){return cols.map(function(c){return base[r]?base[r][cols.indexOf(c)]:0.88;})});
+    var mk=rows.map(function(r){return cols.map(function(c){return cnt[r]?cnt[r][cols.indexOf(c)]:200;})});
+    return {rows:rows,cols:cols,matrix:m,counts:mk};
+  }
+  var st={cfg:{},data:null};
+  function recompute(){var c=st.cfg||{},d=st.data;
+    if(d&&c.row&&d[c.row]&&c.col&&d[c.col]&&c.value&&d[c.value]){
+      var rowD=d[c.row]||[],colD=d[c.col]||[],valD=d[c.value]||[],cntD=(c.count&&d[c.count])||[];
+      var rows=[],cols=[];
+      for(var i=0;i<rowD.length;i++){if(rows.indexOf(String(rowD[i]))<0)rows.push(String(rowD[i]));}
+      for(var i=0;i<colD.length;i++){if(cols.indexOf(String(colD[i]))<0)cols.push(String(colD[i]));}
+      rows.sort(); cols.sort();
+      var m=rows.map(function(){return cols.map(function(){return null;})});
+      var mk=rows.map(function(){return cols.map(function(){return 0;})});
+      var any=false;
+      for(var i=0;i<valD.length;i++){var ri=rows.indexOf(String(rowD[i])),ci=cols.indexOf(String(colD[i]));
+        if(ri>=0&&ci>=0){m[ri][ci]=Number(valD[i]);mk[ri][ci]=Number(cntD[i])||0;any=true;}}
+      if(any){draw(rows,cols,m,mk);return;}
+    }
+    var s=synth(); draw(s.rows,s.cols,s.matrix,s.counts);
+  }
+  if(client){
+    client.config.subscribe(function(cfg){st.cfg=cfg;recompute();});
+    client.useVariable('source',function(src){
+      if(st.unsub)st.unsub();
+      st.unsub=client.data.subscribe(src,function(data){st.data=data;recompute();});
+    });
+  } else { recompute(); }
+})();
+</script>
+</body>
+</html>

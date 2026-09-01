@@ -56,10 +56,10 @@ KDEFS=[("REVENUE", f'SumIf([{BASE}/Revenue], [{BASE}/Period Name]="§")', CUR, f
 card_elems=[]; card_layout=[]
 for i,(title,mf,fmt,trend) in enumerate(KDEFS,1):
     cid=f"c-kpi{i}"
-    cont={"id":cid,"kind":"container","style":{"borderRadius":"round"},"backgroundImage":{"url":GRADS[i-1],"style":{"fit":"cover"}}}
-    t_title={"id":f"t{i}","kind":"image","url":timg(title),"style":{"fit":"scale-down"}}
-    lc={"id":f"lc{i}","kind":"image","url":timg("Current Period",30,"#E8FFE0",700),"style":{"fit":"scale-down"}}
-    lp={"id":f"lp{i}","kind":"image","url":timg("Prior Year",30,"#E8FFE0",700),"style":{"fit":"scale-down"}}
+    cont={"id":cid,"kind":"container","style":{"borderRadius":"round"},"backgroundImage":{"source":{"kind":"url","url":GRADS[i-1]},"style":{"fit":"cover"}}}
+    t_title={"id":f"t{i}","kind":"image","source":{"kind":"url","url":timg(title)},"style":{"fit":"scale-down"}}
+    lc={"id":f"lc{i}","kind":"image","source":{"kind":"url","url":timg("Current Period",30,"#E8FFE0",700)},"style":{"fit":"scale-down"}}
+    lp={"id":f"lp{i}","kind":"image","source":{"kind":"url","url":timg("Prior Year",30,"#E8FFE0",700)},"style":{"fit":"scale-down"}}
     def kpi(sfx,period,fmt=fmt):
         return {"id":f"k{i}{sfx}","kind":"kpi-chart","source":{"elementId":"tbl","kind":"table"},
                 "columns":[{"id":f"k{i}{sfx}v","formula":mf.replace("§",period),"name":period,"format":fmt}],
@@ -88,9 +88,9 @@ nvlogo=('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 96" preserveAs
  '<text x="6" y="62" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="42" fill="#76B900" letter-spacing="1">NVIDIA</text></svg>')
 def title_wm(h,s):
     return "data:image/svg+xml;base64,"+b64(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 150" preserveAspectRatio="xMinYMid meet"><text x="6" y="70" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="48" fill="#FFFFFF">{h}</text><text x="8" y="112" font-family="Arial,Helvetica,sans-serif" font-weight="500" font-size="23" fill="#B7E36B">{s}</text></svg>')
-masthead={"id":"c-masthead","kind":"container","style":{"backgroundColor":"#05080A","borderRadius":"round"},"backgroundImage":{"url":hero,"style":{"fit":"cover"}}}
-logo={"id":"img-logo","kind":"image","url":"data:image/svg+xml;base64,"+b64(nvlogo),"style":{"fit":"scale-down"}}
-title={"id":"txt-title","kind":"image","url":title_wm("Commercial Command Center","Segment performance · reshaped from Big Buys POS"),"style":{"fit":"scale-down"}}
+masthead={"id":"c-masthead","kind":"container","style":{"backgroundColor":"#05080A","borderRadius":"round"},"backgroundImage":{"source":{"kind":"url","url":hero},"style":{"fit":"cover"}}}
+logo={"id":"img-logo","kind":"image","source":{"kind":"url","url":"data:image/svg+xml;base64,"+b64(nvlogo)},"style":{"fit":"scale-down"}}
+title={"id":"txt-title","kind":"image","source":{"kind":"url","url":title_wm("Commercial Command Center","Segment performance · reshaped from Big Buys POS")},"style":{"fit":"scale-down"}}
 
 # ---- filters (dark) ----
 filters={"id":"c-filters","kind":"container","style":dict(CARD)}

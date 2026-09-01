@@ -418,6 +418,20 @@ GridContainer layout XML, and the page-structure pattern live in
 the UI after a CREATE — the API doesn't validate cross-element column
 resolution or visualization quality.
 
+## Before editing an EXISTING workbook, re-pull the spec first
+
+If this session is resuming work on a workbook that already exists (as
+opposed to a fresh `post`), run `get-spec` again before making any changes —
+even if an earlier turn in this same conversation already has a copy of the
+spec cached. A workbook can change between sessions, or mid-session if a
+human edits it in the UI while you're working, and a coding agent reasoning
+against a stale cached copy will confidently generate changes against a
+shape that's already wrong with no error to signal it. This is the same
+"pull the latest version at the start of any editing session" discipline
+Sigma's own code-rep PM (Matt Jones) said on 2026-08-28 they'd bake into
+their distributed skills — treat it as standard practice here rather than
+waiting for Sigma to ship it as a forced behavior.
+
 ## Publishing — use `publish-workbook.sh`
 
 Workbook POST/GET goes through the wrapper:

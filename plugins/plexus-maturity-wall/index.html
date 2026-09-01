@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Maturity Wall — Plexus Capital Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#1B2A4A;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px 8px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#2E5A88}
+  #meta{font-size:11px;color:#8a8f94}
+  #meta b{color:#1B2A4A}
+  #stage{flex:1;position:relative;overflow:hidden}
+  svg{width:100%;height:100%;display:block}
+  .seg{transition:opacity .12s}
+  .ax{font-size:10px;font-weight:600;fill:#9aa0a6}
+  .yr{font-size:11px;font-weight:700;fill:#5b6472}
+  .cum{fill:none;stroke:#C9A227;stroke-width:2.5}
+  .cumdot{fill:#C9A227;stroke:#fff;stroke-width:1.5}
+  .peak{fill:none;stroke:#C9A227;stroke-width:1.5;stroke-dasharray:4 3}
+  #legend{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:10.5px;color:#4a5560;align-items:center;justify-content:center}
+  #legend .li{display:flex;align-items:center;gap:5px}
+  .dot{width:10px;height:10px;border-radius:2px;flex:0 0 10px}
+  #tip{position:fixed;pointer-events:none;background:#1B2A4A;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#E8C558}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Portfolio maturity wall</div><div id="meta"><b id="tot">—</b> maturing · WAL <b id="wal">—</b> · peak <b id="pk">—</b></div></div>
+  <div id="stage"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div id="legend"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var NS='http://www.w3.org/2000/svg', tip=document.getElementById('tip');
+  var PALETTE=['#1B2A4A','#2E5A88','#2E8B9E','#C9A227','#6B4E9E','#9A1B2F','#5F6B7A','#3E7C5A'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'year',type:'column',source:'source',allowedTypes:['number','integer'],label:'Maturity year'},
+    {name:'series',type:'column',source:'source',label:'Deal type'},
+    {name:'value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Amount maturing'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  function fmt$(n){ if(n>=1e12)return '$'+(n/1e12).toFixed(2)+'T'; if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B'; if(n>=1e6)return '$'+(n/1e6).toFixed(0)+'M'; if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'K'; return '$'+Math.round(n); }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];}); }
+  function el(t,a){ var e=document.createElementNS(NS,t); for(var k in a)e.setAttribute(k,a[k]); return e; }
+  function draw(years,series,mat){ // mat[s][i]
+    var svg=document.getElementById('svg'); while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var st=document.getElementById('stage'), W=st.clientWidth||900, H=st.clientHeight||300;
+    var mL=8,mR=8,mT=14,mB=24, plotW=W-mL-mR, plotH=H-mT-mB;
+    var n=years.length, ns=series.length; if(n<1||ns<1) return;
+    var yTot=years.map(function(_,i){ var t=0; for(var s=0;s<ns;s++)t+=mat[s][i]; return t; });
+    var grand=yTot.reduce(function(a,b){return a+b;},0); if(grand<=0) return;
+    var maxT=Math.max.apply(null,yTot), sy=plotH/(maxT*1.12);
+    var band=plotW/n, bw=Math.min(band*0.62,68);
+    var baseY=mT+plotH;
+    function cx(i){ return mL + band*i + band/2; }
+    // WAL + peak
+    var minYr=Math.min.apply(null,years);
+    var wal=0; for(var i=0;i<n;i++) wal+=(years[i]-minYr)*yTot[i]; wal=wal/grand;
+    var peakIdx=yTot.indexOf(maxT);
+    // clip grow-up
+    var clip=el('clipPath',{id:'grow'}); var cr=el('rect',{x:0,y:baseY,width:W,height:0}); clip.appendChild(cr); svg.appendChild(clip);
+    var g=el('g',{'clip-path':'url(#grow)'}); svg.appendChild(g);
+    var segs=[];
+    for(i=0;i<n;i++){
+      var yAcc=baseY;
+      for(var s=0;s<ns;s++){
+        var v=mat[s][i]; if(v<=0) continue;
+        var h=v*sy; var x=cx(i)-bw/2; yAcc-=h;
+        var r=el('rect',{x:x.toFixed(1),y:yAcc.toFixed(1),width:bw.toFixed(1),height:h.toFixed(1),fill:PALETTE[s%PALETTE.length],rx:1.5}); r.classList.add('seg');
+        (function(si,ii,vv){ r.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+            tip.innerHTML='<b>'+years[ii]+' · '+esc(series[si])+'</b><br>'+fmt$(vv)+'<br>'+(vv/yTot[ii]*100).toFixed(0)+'% of '+years[ii]+' · '+(vv/grand*100).toFixed(1)+'% of book';
+            segs.forEach(function(sg){ sg.setAttribute('opacity', +sg.dataset.s===si?1:0.32); }); });
+          r.addEventListener('mouseleave',function(){ tip.style.opacity=0; segs.forEach(function(sg){sg.setAttribute('opacity',1);}); });
+        })(s,i,v);
+        r.dataset.s=s; g.appendChild(r); segs.push(r);
+      }
+    }
+    // peak-year "wall" outline
+    if(peakIdx>=0){ var ph=yTot[peakIdx]*sy; svg.appendChild(el('rect',{x:(cx(peakIdx)-bw/2-3).toFixed(1),y:(baseY-ph-6).toFixed(1),width:(bw+6).toFixed(1),height:(ph+6).toFixed(1),class:'peak',rx:3})); }
+    // cumulative % line
+    var cum=0, pts=[]; for(i=0;i<n;i++){ cum+=yTot[i]; pts.push([cx(i), baseY-(cum/grand)*plotH]); }
+    var d='M'+pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' L');
+    svg.appendChild(el('path',{d:d,class:'cum','opacity':0,id:'cumline'}));
+    pts.forEach(function(p){ svg.appendChild(el('circle',{cx:p[0].toFixed(1),cy:p[1].toFixed(1),r:3,class:'cumdot',opacity:0})); });
+    // year axis labels
+    for(i=0;i<n;i++){ var t=el('text',{x:cx(i).toFixed(1),y:H-8,'text-anchor':'middle'}); t.setAttribute('class','yr'); t.textContent=years[i]; svg.appendChild(t); }
+    // meta
+    document.getElementById('tot').textContent=fmt$(grand);
+    document.getElementById('wal').textContent=wal.toFixed(1)+' yrs';
+    document.getElementById('pk').textContent=years[peakIdx]+' ('+fmt$(maxT)+')';
+    var lg=document.getElementById('legend'); lg.innerHTML='';
+    series.forEach(function(nm,s){ var li=document.createElement('div'); li.className='li'; li.innerHTML='<span class="dot" style="background:'+PALETTE[s%PALETTE.length]+'"></span>'+esc(nm); lg.appendChild(li); });
+    // animate: bars grow up, then line fades in
+    var start=null, DUR=750;
+    function step(ts){ if(start==null)start=ts; var p=Math.min(1,(ts-start)/DUR); var h=p*plotH; cr.setAttribute('y',(baseY-h).toFixed(1)); cr.setAttribute('height',h.toFixed(1));
+      if(p>=1){ var cl=document.getElementById('cumline'); if(cl) cl.setAttribute('opacity',1); svg.querySelectorAll('.cumdot').forEach(function(dd){dd.setAttribute('opacity',1);}); }
+      if(p<1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  }
+  function synth(){
+    var types=['Senior Debt','Unitranche','Mezzanine','Equity Co-invest','Second Lien'];
+    var years=[]; var y0=2025; for(var i=0;i<9;i++) years.push(y0+i);
+    var shape=[0.5,0.9,1.4,1.7,1.3,0.9,0.6,0.4,0.25]; // refi wall peaks ~yr 3-4
+    var mat=types.map(function(_,s){ return years.map(function(_,i){ return Math.max(0,(shape[i]*(1-s*0.14))* (60+s*8) )*1e6; }); });
+    return {years:years,series:types,mat:mat};
+  }
+  var stt={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=stt.cfg||{};
+    if(stt.data&&c.year&&c.series&&c.value&&stt.data[c.year]){
+      var ys=stt.data[c.year]||[], ss=stt.data[c.series]||[], vs=stt.data[c.value]||[];
+      var yset={},sset={},ylist=[],slist=[];
+      for(var i=0;i<ys.length;i++){ var y=Math.round(Number(ys[i])); if(!isFinite(y))continue; if(yset[y]==null){yset[y]=1;ylist.push(y);} var sk=String(ss[i]); if(sset[sk]==null){sset[sk]=slist.length;slist.push(sk);} }
+      ylist.sort(function(a,b){return a-b;}); var yi={}; ylist.forEach(function(y,ix){yi[y]=ix;});
+      var mat=slist.map(function(){return ylist.map(function(){return 0;});});
+      for(i=0;i<ys.length;i++){ var yy=Math.round(Number(ys[i])); if(!isFinite(yy))continue; mat[sset[String(ss[i])]][yi[yy]]+=Number(vs[i])||0; }
+      if(ylist.length&&slist.length){ draw(ylist,slist,mat); return; }
+    }
+    var s=synth(); draw(s.years,s.series,s.mat);
+  }
+  if(client){ client.config.subscribe(function(cfg){ stt.cfg=cfg||{};
+    if(stt.unsub){stt.unsub();stt.unsub=null;}
+    if(cfg&&cfg.source){ stt.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ stt.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+  window.addEventListener('resize',function(){ recompute(); });
+  if(window.ResizeObserver){ new ResizeObserver(function(){ recompute(); }).observe(document.getElementById('stage')); }
+})();
+</script>
+</body>
+</html>

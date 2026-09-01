@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Honda — Operations Control Room theme, branded example">
+  <title>Honda — Global Production Command Center</title>
+  <link rel="stylesheet" href="../theme-gallery.css">
+  <style>
+    /* Brand override: identity colors only (primary + a warm hero accent).
+       Semantic status colors (--good/--bad/--warn) stay theme-default so
+       "On plan / Watch" badges and risk dots still read correctly. */
+    body.theme-control {
+      --primary: #E4002B;   /* Honda red */
+      --hero-end: #2a1116;  /* dark red-tinted charcoal, replaces theme's dark teal */
+    }
+  </style>
+</head>
+<body class="theme-control" data-customer="Honda"
+      data-theme="Theme 3 · Operations Control Room"
+      data-subtitle="Global production, quality &amp; delivery command center">
+  <div id="dashboard"></div>
+  <script>
+    window.THEME_CONTENT = {
+      brandMark: "H",
+      navLinks: ["Production command", "Scenario modeler", "Plant cohorts"],
+      summary: "A decision-ready view of production output, quality yield, and plant plan performance.",
+      filters: [["Period", "FY 2026"], ["Region", "All plants"], ["Line", "All lines"]],
+      decisionPrompt: "Where should we reallocate the next production run?",
+      trajectory: {
+        eyebrow: "Production trajectory",
+        title: "Actual vs planned units produced",
+        periods: ["Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"],
+        actual: [220, 228, 235, 241, 248, 255, 262, 268],
+        forecast: [222, 230, 239, 247, 256, 264, 273, 281],
+        legendActual: "Actual",
+        legendForecast: "Planned",
+        ariaTitle: "Actual and planned vehicles produced by month, in thousands",
+        ariaDesc: "Both series rise, with planned production reaching 281 thousand units in October.",
+      },
+      heroKpi: {
+        label: "Vehicles produced", icon: "↗", value: "2.84M", deltaSign: "positive",
+        delta: "▲ 4.6%", deltaSub: "vs plan", ariaLabel: "Vehicles produced rising",
+      },
+      kpi2: {
+        label: "First-pass quality yield", icon: "◎", value: "98.6%", deltaSign: "positive",
+        delta: "▲ 0.4 pts", deltaSub: "vs last cycle", meter: 98.6,
+      },
+      kpi3: {
+        label: "Plant utilization", icon: "✓", value: "94.1%", deltaSign: "positive",
+        delta: "▲ 1.2 pts", deltaSub: "vs target", meter: 94.1,
+      },
+      riskKpi: {
+        label: "Open recall campaigns", icon: "!", value: "6", unit: "campaigns",
+        delta: "● 2 critical", deltaSub: "next 30 days", critical: 2, total: 6,
+        ariaLabel: "Two critical and four watch campaigns",
+      },
+      portfolio: {
+        eyebrow: "Portfolio mix", title: "Production by vehicle category", cta: "View detail →",
+        bars: [
+          ["SUVs & crossovers", 82, "+9.2%"],
+          ["Hybrid & EV", 69, "+21.4%"],
+          ["Sedans & coupes", 58, "−1.8%"],
+          ["Light trucks", 47, "+3.1%"],
+        ],
+        insightTitle: "Planning signal",
+        insightBody: "Hybrid and EV demand explains 38% of projected production growth. Battery-pack supply is the binding constraint in Q4.",
+      },
+      table: {
+        eyebrow: "Operating detail", title: "Plant performance by region",
+        caption: "Regional production performance and quality status",
+        columns: ["Region", "Category", "Units (mo.)", "vs plan", "Yield", "Status"],
+        rows: [
+          ["North America", "SUVs & crossovers", "96,400", "+6.8%", "98.9%", "On plan"],
+          ["Japan", "Hybrid & EV", "71,200", "+18.4%", "99.2%", "On plan"],
+          ["Europe", "Sedans & coupes", "22,900", "−3.1%", "97.1%", "Watch"],
+          ["Asia-Pacific", "Light trucks", "41,600", "+2.4%", "96.4%", "On plan"],
+        ],
+      },
+      footer: { left: "{customer} · Global Operations", right: "Data through Oct 2026" },
+    };
+  </script>
+  <script src="../theme-gallery.js"></script>
+</body>
+</html>

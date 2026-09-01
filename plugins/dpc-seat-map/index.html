@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>House Fill Seat Map — Dr. Phillips Center Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:"Georgia","Times New Roman",serif;background:transparent;color:#0a1730;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:14px 18px 10px;gap:4px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto;font-family:-apple-system,Inter,Arial,sans-serif}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#0a1f44}
+  #ttl b{color:#f26522}
+  #meta{font-size:11px;color:#5e6b83}
+  #meta b{color:#0a1730}
+  #stagewrap{flex:1;min-height:0;position:relative}
+  svg{width:100%;height:100%;display:block}
+  .sec{cursor:default;transition:opacity .1s;}
+  .sec:hover{opacity:.9;}
+  .lbl{font-family:-apple-system,Inter,Arial,sans-serif;pointer-events:none;text-anchor:middle;dominant-baseline:middle}
+  .pct{font-weight:800}
+  .nm{font-weight:600;opacity:.72}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#5e6b83;font-family:-apple-system,Inter,Arial,sans-serif;padding-top:2px}
+  #ramp{height:7px;flex:1;border-radius:4px;background:linear-gradient(90deg,#eef1f6,#f7d9a6,#f5a623,#f26522)}
+  #tip{position:fixed;pointer-events:none;background:#081733;border-radius:9px;padding:9px 11px;font-size:11px;font-family:-apple-system,Inter,Arial,sans-serif;color:#eaf0fb;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+  #tip b{color:#f5a623}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">House <b>Fill</b></div><div id="meta"><b id="fill">—</b> sold · <b id="seats">—</b> seats</div></div>
+  <div id="stagewrap"><svg id="svg" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <div id="legend"><span>empty</span><div id="ramp"></div><span>sold out</span></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'section',type:'column',source:'source',label:'Section'},
+    {name:'capacity',type:'column',source:'source',allowedTypes:['number','integer'],label:'Capacity'},
+    {name:'sold',type:'column',source:'source',allowedTypes:['number','integer'],label:'Sold'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var SVGNS='http://www.w3.org/2000/svg';
+  var CX=500, CY=70, A0=38, A1=142;           // fan focus + angular span (deg, y-down)
+  // tiers radiate outward from the stage; angular weights within each tier sum to 100
+  var TIERS=[
+    {r0:150,r1:330, secs:[['Box Right',11],['Orchestra Right',22],['Orchestra Center',34],['Orchestra Left',22],['Box Left',11]]},
+    {r0:346,r1:462, secs:[['Mezzanine Right',32],['Mezzanine Center',36],['Mezzanine Left',32]]},
+    {r0:478,r1:590, secs:[['Balcony Right',32],['Balcony Center',36],['Balcony Left',32]]}
+  ];
+  var tip=document.getElementById('tip');
+  function pol(r,deg){var a=deg*Math.PI/180;return [CX+r*Math.cos(a),CY+r*Math.sin(a)];}
+  function sector(r0,r1,a0,a1){
+    var p0=pol(r1,a0),p1=pol(r1,a1),p2=pol(r0,a1),p3=pol(r0,a0);
+    return 'M'+p0[0].toFixed(1)+','+p0[1].toFixed(1)+' A'+r1+','+r1+' 0 0 1 '+p1[0].toFixed(1)+','+p1[1].toFixed(1)+
+           ' L'+p2[0].toFixed(1)+','+p2[1].toFixed(1)+' A'+r0+','+r0+' 0 0 0 '+p3[0].toFixed(1)+','+p3[1].toFixed(1)+' Z';
+  }
+  function color(t){ var s=[[238,241,246],[247,217,166],[245,166,35],[242,101,34]];
+    var seg=Math.max(0,Math.min(1,t))*3, i=Math.min(2,Math.floor(seg)), f=seg-i;
+    function m(a,b){return Math.round(a+(b-a)*f);}
+    return 'rgb('+m(s[i][0],s[i+1][0])+','+m(s[i][1],s[i+1][1])+','+m(s[i][2],s[i+1][2])+')'; }
+  function shortN(n){ return n.replace('Orchestra','Orch').replace('Mezzanine','Mezz').replace('Balcony','Balc'); }
+  function el(tag,attrs){var e=document.createElementNS(SVGNS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);return e;}
+
+  function draw(map){
+    var svg=document.getElementById('svg'); while(svg.firstChild)svg.removeChild(svg.firstChild);
+    // defs: stage glow + stage gradient
+    var defs=el('defs',{});
+    defs.innerHTML='<radialGradient id="glow" cx="50%" cy="0%" r="75%">'+
+      '<stop offset="0" stop-color="#f5a623" stop-opacity="0.34"/><stop offset="0.5" stop-color="#f26522" stop-opacity="0.10"/>'+
+      '<stop offset="1" stop-color="#f26522" stop-opacity="0"/></radialGradient>'+
+      '<linearGradient id="stage" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12305c"/><stop offset="1" stop-color="#081733"/></linearGradient>';
+    svg.appendChild(defs);
+    svg.appendChild(el('ellipse',{cx:CX,cy:150,rx:430,ry:300,fill:'url(#glow)'}));
+
+    var totCap=0,totSold=0;
+    TIERS.forEach(function(tier){
+      var sum=tier.secs.reduce(function(a,s){return a+s[1];},0), acc=A0;
+      tier.secs.forEach(function(s){
+        var name=s[0], span=(s[1]/sum)*(A1-A0), a0=acc+0.9, a1=acc+span-0.9; acc+=span;
+        var d=map[name]||{cap:0,sold:0}, fill=d.cap?d.sold/d.cap:0;
+        totCap+=d.cap; totSold+=d.sold;
+        var path=el('path',{d:sector(tier.r0+3,tier.r1-3,a0,a1),fill:d.cap?color(fill):'#eef1f6',
+          stroke:'#ffffff','stroke-width':2,'stroke-linejoin':'round',class:'sec'});
+        path.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+          tip.innerHTML='<b>'+name+'</b><br>'+d.sold.toLocaleString()+' / '+d.cap.toLocaleString()+' seats<br>'+(d.cap?Math.round(fill*100):0)+'% sold'; });
+        path.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+        svg.appendChild(path);
+        var rm=(tier.r0+tier.r1)/2, am=(a0+a1)/2, pos=pol(rm,am);
+        var g=el('text',{x:pos[0],y:pos[1]-6,class:'lbl pct',fill:'#0a1730','font-size':21}); g.textContent=d.cap?Math.round(fill*100)+'%':'—'; svg.appendChild(g);
+        var n=el('text',{x:pos[0],y:pos[1]+12,class:'lbl nm',fill:'#0a1730','font-size':10.5}); n.textContent=shortN(name); svg.appendChild(n);
+      });
+    });
+    // stage
+    svg.appendChild(el('path',{d:sector(96,132,70,110),fill:'url(#stage)',stroke:'#f5a623','stroke-width':2}));
+    var sp=pol(114,90), stg=el('text',{x:sp[0],y:sp[1]+2,class:'lbl',fill:'#f5a623','font-size':13,'letter-spacing':'0.42em','font-weight':800}); stg.textContent='STAGE'; svg.appendChild(stg);
+
+    document.getElementById('fill').textContent=(totCap?Math.round(totSold/totCap*100):0)+'%';
+    document.getElementById('seats').textContent=totSold.toLocaleString()+' / '+totCap.toLocaleString();
+  }
+
+  function synth(){
+    var d={'Orchestra Center':[520,499],'Orchestra Left':[300,258],'Orchestra Right':[300,270],
+      'Box Left':[60,54],'Box Right':[60,45],'Mezzanine Center':[360,306],'Mezzanine Left':[220,163],
+      'Mezzanine Right':[220,178],'Balcony Center':[300,171],'Balcony Left':[180,79],'Balcony Right':[180,92]};
+    var m={}; Object.keys(d).forEach(function(k){ m[k]={cap:d[k][0],sold:d[k][1]}; }); return m;
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{};
+    if(st.data&&c.section&&st.data[c.section]&&c.capacity&&c.sold){
+      var sec=st.data[c.section]||[], cap=st.data[c.capacity]||[], sold=st.data[c.sold]||[];
+      var m={}; for(var i=0;i<sec.length;i++){ var k=sec[i]!=null?String(sec[i]):''; if(!k)continue;
+        if(!m[k])m[k]={cap:0,sold:0}; m[k].cap+=Number(cap[i])||0; m[k].sold+=Number(sold[i])||0; }
+      if(Object.keys(m).length){ draw(m); return; }
+    }
+    draw(synth());
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ st.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+})();
+</script>
+</body>
+</html>

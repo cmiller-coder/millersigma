@@ -1,69 +1,67 @@
-# adMarketplace Brand Kit (for Sigma)
+# Brand Kit Template (for Sigma)
 
-Scraped from admarketplace.com (Webflow). Apply these so a workbook reads as a
-native adMarketplace surface.
+Fill this in per company so a workbook reads as a native surface for that brand.
+Gather tokens from the company's site (see `sigma-embed-portal` for the scrape
+recipe) or their brand guide, then drop them into the table below.
 
-## Tokens
+## Tokens (fill in)
 
 ### Color
 
-| Role | Hex | Source var |
-|------|-----|-----------|
-| Primary accent (indigo-blue) | `#3b45ff` | `--primary--600-new` |
-| Primary deep | `#002eda` | `--primary--800` |
-| Primary darker | `#101c89` | `--primary--900` |
-| Darkest — headings, axis labels, ink | `#00022e` | `--primary--1000` |
-| Secondary accent (purple) | `#7f56d9` | `--untitled-ui--primary600` |
-| Secondary deep (purple) | `#6941c6` | `--untitled-ui--primary700` |
-| Soft blue — card fills, zebra rows, light KPI bg | `#deedff` | — |
-| Tint blue — section bg | `#f1f5ff` | `--primary--100` |
-| Page background | `#ffffff` / `#f8f8f8` | `--primary--background` |
-| Neutral surface | `#fafafa` | — |
-| Muted text / secondary labels | `#758696` | — |
-| Hairline / borders | `#e6e6e6` / `#d9d9d9` | — |
+| Role | Hex | Notes |
+|------|-----|-------|
+| Primary accent | `#______` | the dominant brand color; drives highlights |
+| Primary deep / hover | `#______` | darker shade of the accent |
+| Ink — headings, axis labels | `#______` | darkest; near-black in the brand family |
+| Secondary accent | `#______` | supporting color |
+| Soft fill — cards, zebra rows, light KPI bg | `#______` | a very light tint |
+| Section tint background | `#______` | light |
+| Page background | `#ffffff` / `#______` | usually white / off-white |
+| Muted text / secondary labels | `#______` | grey |
+| Hairline / borders | `#______` | subtle |
 
-**Gradient (signature):** linear blue→purple, `#3b45ff → #7f56d9`. Use once
-(a hero KPI strip or the title bar accent), not as a general fill.
+**Signature gradient (optional):** pick two brand colors for a single
+hero/accent moment — `#______ → #______`. Use it once, not as a general fill.
 
-**Categorical series order** (charts, color-by): `#3b45ff`, `#7f56d9`,
-`#002eda`, `#00022e`, `#758696`, `#deedff`. Sequential/heat: light `#deedff` →
-`#3b45ff` → dark `#00022e`.
+**Categorical series order** (charts, color-by): list the palette in priority
+order so the most important series gets the strongest brand color. Sequential/
+heat: light tint → accent → ink.
 
-**Semantic (if needed):** positive `#3b45ff` (on-brand) or a green only when
-good/bad must read instantly; negative/alert `#6941c6`→ a warm red is off-brand,
-so reserve red strictly for true alerts.
+**Semantic:** reserve a warm red strictly for true alerts if it's off-brand;
+otherwise lean on the accent for positive emphasis.
 
 ### Type
 
-- **Primary: Geist** — headings, KPI numbers, UI. (Google Fonts.)
-- **Secondary: Poppins** — body/labels if a second face is wanted. (Google Fonts.)
-- **Mono: Geist Mono** — code, IDs, raw values.
-- Fallback stack: `Geist, Poppins, "Helvetica Neue", Arial, sans-serif`.
+- **Primary font:** ______ (headings, KPI numbers, UI). Add as a custom font in
+  Sigma if it's not in the default list.
+- **Secondary font:** ______ (body/labels), optional.
+- **Mono:** ______ (code, IDs, raw values), optional.
+- Fallback stack: `<Primary>, "Helvetica Neue", Arial, sans-serif`.
 
 ### Shape & logo
 
-- **Pill buttons / chips** (border-radius ~1000px), generous padding.
-- Soft cards: ~8px radius, light shadow, `#deedff`/`#fafafa` fills on white.
-- Logo: `../assets/admarketplace-logo.svg` (black wordmark). On dark, use the
-  white variant if available; otherwise place on white/very-light only.
+- Button/chip radius, card radius + shadow, fill choices — capture the brand's
+  feel (pill buttons, soft cards, etc.).
+- **Logo:** host the SVG/PNG at a public URL (or upload via the UI image
+  element). Keep a light-background variant for dark placements.
 
 ## How to apply each in Sigma
 
 Sigma splits into **Theme** (global, UI-side) and **spec** (per-element). Know
-which is which:
+which is which — this part is brand-agnostic and always applies:
 
 ### 1. Workbook Theme — set once in the UI (NOT fully in the code spec)
 
 Sigma's font + global color palette live in the workbook **Theme**, which is
 largely UI-side state and does not round-trip in the workbook spec. So:
 
-- Create/select a custom Theme named **"adMarketplace"**:
-  - **Font:** Geist (if not in Sigma's font list, add it as a custom font, or
-    fall back to Poppins → then a system sans).
-  - **Accent / primary:** `#3b45ff`.
+- Create/select a custom Theme named after the company:
+  - **Font:** the primary font (add as a custom font if needed, or fall back to a
+    close Google Font → then a system sans).
+  - **Accent / primary:** the primary accent hex.
   - **Categorical palette:** the series order above.
-  - **Background:** `#ffffff` (page), cards `#f8f8f8`/`#deedff`.
-  - **Text:** headings `#00022e`, body `#00022e`, muted `#758696`.
+  - **Background:** page white/off-white; cards the soft fill.
+  - **Text:** headings + body the ink color, muted the grey.
 - Apply the Theme to the workbook after POST. Re-apply when cloning.
 
 > Because the Theme is UI-side, document it here and set it in the UI — don't
@@ -74,16 +72,19 @@ largely UI-side state and does not round-trip in the workbook spec. So:
 
 - **Logo** = a dedicated **`image` element** (NOT markdown). ⚠️ Sigma `text`
   elements do **not** render markdown images — `![alt](url)` shows the literal
-  `!` and turns the rest into a link. Use an image element with a top-level
-  `url` (verified round-trip shape):
+  `!` and turns the rest into a link. Use an image element with `source.url`
+  (verified round-trip shape — the old top-level `url` field was rejected as a
+  masked `Invalid kind: "image"` starting 2026-07-30):
   ```json
   { "id": "img-logo", "kind": "image",
-    "url": "https://cdn.prod.website-files.com/64d626ea4b535c7a17b83b78/6a1e79c2d7675464a178bed9_adMarketplace-logo.svg" }
+    "source": { "kind": "url", "url": "https://<host>/<company>-logo.svg" } }
   ```
   Place it in the header container (e.g. `gridColumn="1 / 5"`) to the left of the
   title. SVGs are accepted (PNG/JPG/GIF/WebP too); SVGs referencing external
   styles/JS get sanitized, so if it renders oddly upload a PNG via the UI image
-  element instead. Supports a static URL or a `=`-formula dynamic URL in the UI.
+  element instead. A data-URI SVG works too (see `sigma-company-dashboard` for
+  the wordmark/logo-as-data-URI trick). Supports a static URL or a `=`-formula
+  dynamic URL in the UI.
 - **Title** = a `text` element next to the logo: `## **<Dashboard Title>**` +
   a plain one-line subtitle. With the logo present, omit the brand name from the
   title text.
@@ -96,17 +97,17 @@ largely UI-side state and does not round-trip in the workbook spec. So:
 - **Bold, on-brand titles** on every element `name` + the page title text
   element — Title Case, metric-and-slice naming (per conventions).
 
-- **KPI emphasis** — lead with the headline KPI; the Theme accent (`#3b45ff`)
-  carries the highlight, so you don't hand-color tiles in the spec.
+- **KPI emphasis** — lead with the headline KPI; the Theme accent carries the
+  highlight, so you don't hand-color tiles in the spec.
 
 ### 3. What you can't brand in-spec (note + move on)
 
 Font family, global palette, pill-radius, and card shadows are Theme/UI. Set the
 Theme once; don't burn iterations trying to express them in JSON.
 
-## Swapping the brand (reuse for another prospect)
+## Reusing for another company
 
-This kit is the adMarketplace instance of a generic slot. To rebrand: replace
-the token table + logo + font with the prospect's (scrape their site the same
-way — see `sigma-embed-portal` for the scrape recipe), keep the *format*
-(`format.md`) unchanged. Format is constant; brand is the variable.
+This template is a generic slot. To brand for a new company: refill the token
+table + logo + font with the target's (scrape their site the same way — see
+`sigma-embed-portal`), keep the *format* (`format.md`) unchanged. Format is
+constant; brand is the variable.

@@ -697,18 +697,18 @@ client.elements.getElementColumns(configId)                     // Returns Promi
 client.elements.subscribeToElementData(sourceId, callback)      // Subscribe to data, returns unsubscribe fn
 client.elements.subscribeToElementColumns(sourceId, callback)   // Subscribe to columns, returns unsubscribe fn
 
-// --- Variables ---
-client.getVariable(configId)                                    // Get static variable snapshot
-client.setVariable(configId, ...values)                         // Set variable value(s)
-client.subscribeToWorkbookVariable(configId, callback)          // Monitor variable changes
+// --- Variables (VERIFIED under client.config, not top-level — see gotcha below) ---
+client.config.getVariable(configId)                             // Get static variable snapshot
+client.config.setVariable(configId, ...values)                  // Set variable value(s)
+client.config.subscribeToWorkbookVariable(configId, callback)   // Monitor variable changes
 
-// --- Actions ---
-client.triggerAction(configId)                                  // Execute an action trigger
-client.registerEffect(configId, callback)                       // Register an action effect handler
+// --- Actions (also under client.config) ---
+client.config.triggerAction(configId)                           // Execute an action trigger
+client.config.registerEffect(configId, callback)                // Register an action effect handler
 
-// --- Interactions ---
-client.getInteraction(configId)                                 // Get selection state → WorkbookSelection[]
-client.setInteraction(configId, elementId, selection)            // Set selection state
+// --- Interactions (also under client.config; deprecated in favor of the variable pattern) ---
+client.config.getInteraction(configId)                          // Get selection state → WorkbookSelection[]
+client.config.setInteraction(configId, elementId, selection)     // Set selection state
 
 // --- URL Parameters ---
 client.getUrlParameter(configId)                                // Get current URL parameter value
@@ -909,6 +909,7 @@ columns[columnId] = {
 
 ## Tips and Best Practices
 
+- **Variable/interaction/action methods live under `client.config.*`, NOT top-level `client.*`** — verified 2026-07-24 against the published `@sigmacomputing/plugin@1.2.0` type declarations (`dist/cjs/index.d.cts`) and README on npm/unpkg: `client.config.setVariable(configId, ...values)`, `client.config.getVariable`, `client.config.subscribeToWorkbookVariable`, `client.config.triggerAction`, `client.config.registerEffect`, `client.config.getInteraction`/`setInteraction` are all nested under `.config`. Three prior plugins in this repo (amd-chiplet-explorer, exxon-product-explorer, exxon-wellbore) already used the correct nested form — trust that pattern over a bare `client.setVariable(...)` if you see it anywhere.
 - **Always call `configureEditorPanel` at module level** (or use `useEditorPanelConfig` inside a component) — before any rendering or component lifecycle
 - **Handle missing config gracefully** — users configure plugins incrementally; your plugin will render before all fields are set
 - **Use control variables for output** — when your plugin needs to pass data back to the workbook, use variables rather than trying to modify elements directly

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Maturity Wall — Octus Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#1a1329;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7c3aed}
+  #meta{font-size:11px;color:#6b6480}
+  #meta b{color:#1a1329}
+  #chart{flex:1;display:flex;align-items:flex-end;gap:10px;min-height:0;padding-top:6px}
+  .col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;gap:5px;min-width:0}
+  .bar{width:78%;max-width:64px;display:flex;flex-direction:column-reverse;border-radius:4px 4px 0 0;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .seg{width:100%;transition:filter .1s;cursor:default;min-height:0}
+  .seg:hover{filter:brightness(1.12)}
+  .yl{font-size:11px;font-weight:700;color:#42406a}
+  .yt{font-size:9px;color:#8c86a0;margin-top:-3px}
+  #legend{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:#6b6480;align-items:center}
+  #legend .li{display:flex;align-items:center;gap:5px}
+  .sw{width:9px;height:9px;border-radius:2px}
+  #tip{position:fixed;pointer-events:none;background:#160b2e;border-radius:8px;padding:8px 10px;font-size:11px;color:#efe9ff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #tip b{color:#c4b5fd}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Maturity Wall</div><div id="meta"><b id="tot">—</b> maturing · peak <b id="peak">—</b></div></div>
+  <div id="chart"></div>
+  <div id="legend"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var PALETTE=['#7C3AED','#A78BFA','#5B21B6','#22D3EE','#C4B5FD','#8B5CF6','#4C1D95','#38BDF8'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'year',type:'column',source:'source',label:'Maturity year'},
+    {name:'assetClass',type:'column',source:'source',label:'Asset class'},
+    {name:'amount',type:'column',source:'source',allowedTypes:['number','integer'],label:'Maturing debt'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var tip=document.getElementById('tip');
+  function fmt$(n){ if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B'; if(n>=1e6)return '$'+(n/1e6).toFixed(0)+'M'; if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'K'; return '$'+Math.round(n); }
+
+  function draw(byYear, classes){
+    var chart=document.getElementById('chart'); chart.innerHTML='';
+    var years=Object.keys(byYear).sort();
+    if(!years.length) return;
+    var totals=years.map(function(y){ return Object.keys(byYear[y]).reduce(function(a,k){return a+byYear[y][k];},0); });
+    var mx=Math.max.apply(null,totals)||1;
+    var cmap={}; classes.forEach(function(c,i){ cmap[c]=PALETTE[i%PALETTE.length]; });
+    var grand=totals.reduce(function(a,b){return a+b;},0);
+    var peakY=years[totals.indexOf(mx)];
+    years.forEach(function(y,yi){
+      var col=document.createElement('div'); col.className='col';
+      var yt=totals[yi];
+      var bar=document.createElement('div'); bar.className='bar'; bar.style.height=(yt/mx*100)+'%';
+      classes.forEach(function(c){
+        var v=byYear[y][c]||0; if(v<=0) return;
+        var seg=document.createElement('div'); seg.className='seg'; seg.style.height=(v/yt*100)+'%'; seg.style.background=cmap[c];
+        seg.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+          tip.innerHTML='<b>'+esc(c)+' · '+esc(y)+'</b><br>'+fmt$(v)+' maturing<br>'+Math.round(v/yt*100)+'% of '+esc(y); });
+        seg.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+        bar.appendChild(seg);
+      });
+      var yl=document.createElement('div'); yl.className='yl'; yl.textContent=y;
+      var yv=document.createElement('div'); yv.className='yt'; yv.textContent=fmt$(yt);
+      col.appendChild(bar); col.appendChild(yl); col.appendChild(yv); chart.appendChild(col);
+    });
+    document.getElementById('tot').textContent=fmt$(grand);
+    document.getElementById('peak').textContent=peakY+' ('+fmt$(mx)+')';
+    var lg=document.getElementById('legend'); lg.innerHTML='';
+    classes.forEach(function(c){ var li=document.createElement('div'); li.className='li'; li.innerHTML='<span class="sw" style="background:'+cmap[c]+'"></span>'+esc(c); lg.appendChild(li); });
+  }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];}); }
+
+  function synth(){
+    var cls=['Leveraged Loans','High-Yield Bonds','Distressed Debt','Private Credit','CLOs'];
+    var wall={2025:0.4,2026:0.7,2027:1.1,2028:1.5,2029:1.6,2030:1.1,2031:0.7,2032:0.4};
+    var by={},seen={};
+    Object.keys(wall).forEach(function(y,yi){ by[y]={};
+      cls.forEach(function(c,ci){ seen[c]=1; by[y][c]=Math.round((300+((yi*7+ci*13)%9)*90)*wall[y])*1e6; }); });
+    return {by:by,classes:cls};
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{};
+    if(st.data&&c.year&&st.data[c.year]&&c.amount){
+      var yr=st.data[c.year]||[], ac=(c.assetClass&&st.data[c.assetClass])||[], am=st.data[c.amount]||[];
+      var by={},classes=[],seen={};
+      for(var i=0;i<yr.length;i++){ var y=String(yr[i]).replace(/\.0$/,''), k=ac[i]!=null?String(ac[i]):'Other', v=Number(am[i])||0;
+        if(!by[y])by[y]={}; by[y][k]=(by[y][k]||0)+v; if(!seen[k]){seen[k]=1;classes.push(k);} }
+      if(Object.keys(by).length){ draw(by,classes); return; }
+    }
+    var s=synth(); draw(s.by,s.classes);
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ st.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+  window.addEventListener('resize',function(){ recompute(); });
+})();
+</script>
+</body>
+</html>

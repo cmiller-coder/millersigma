@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Customer Journey Sankey — Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#0b1220;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:10px 14px}
+  #ttl{font-size:14px;font-weight:700;color:#0b1220;letter-spacing:.01em}
+  #stage{flex:1;position:relative;min-height:0}
+  svg{position:absolute;inset:0;width:100%;height:100%}
+  .ribbon{transition:opacity .18s}
+  .flow{fill:none;stroke:#fff;stroke-opacity:.55;stroke-dasharray:2 16;animation:flow 2.4s linear infinite}
+  @keyframes flow{to{stroke-dashoffset:-72}}
+  .nlabel{font-size:11px;font-weight:600;fill:#0b1220}
+  .npct{font-size:10px;fill:#5A6473}
+  #tip{position:fixed;pointer-events:none;background:#060d1f;color:#eaf1fb;border:1px solid #2E9BFF;border-radius:8px;padding:7px 10px;font-size:11px;opacity:0;transition:opacity .1s;z-index:9;white-space:nowrap}
+  #tip b{color:#22D3EE}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="ttl">Customer Journey — Acquisition Channel › Network › Product</div>
+  <div id="stage"><svg id="svg" preserveAspectRatio="none"></svg></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'stage1',type:'column',source:'source',label:'Acquisition Channel'},
+    {name:'stage2',type:'column',source:'source',label:'Network'},
+    {name:'stage3',type:'column',source:'source',label:'Product Line'},
+    {name:'value',type:'column',source:'source',allowedTypes:['number','integer'],label:'Value (revenue)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  var SVG='http://www.w3.org/2000/svg', tip=document.getElementById('tip');
+  // palette per stage — navy -> electric blue -> teal
+  var PAL=[['#1E3A8A','#2E9BFF'],['#0E7490','#22D3EE'],['#0F766E','#5EEAD4']];
+  function el(n,at){var e=document.createElementNS(SVG,n);for(var k in at)e.setAttribute(k,at[k]);return e;}
+  function fmt(v){v=+v||0;var a=Math.abs(v);if(a>=1e9)return '$'+(v/1e9).toFixed(2)+'B';if(a>=1e6)return '$'+(v/1e6).toFixed(1)+'M';if(a>=1e3)return '$'+(v/1e3).toFixed(0)+'K';return '$'+v.toFixed(0);}
+
+  function render(rows){
+    var svg=document.getElementById('svg'); svg.innerHTML='';
+    var W=svg.clientWidth||900,H=svg.clientHeight||420; svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    // aggregate
+    var L01={},L12={},v1={},v2={},v3={};
+    rows.forEach(function(r){
+      var a=r.s1,b=r.s2,c=r.s3,v=r.v;
+      L01[a+''+b]=(L01[a+''+b]||0)+v; L12[b+''+c]=(L12[b+''+c]||0)+v;
+      v1[a]=(v1[a]||0)+v; v3[c]=(v3[c]||0)+v;
+    });
+    Object.keys(L01).forEach(function(k){var b=k.split('')[1];v2[b]=(v2[b]||0)+L01[k];});
+    var cols=[Object.keys(v1),Object.keys(v2),Object.keys(v3)].map(function(ks,i){
+      var vals=[v1,v2,v3][i]; ks.sort(function(x,y){return vals[y]-vals[x];}); return ks;});
+    var totals=[sum(v1),sum(v2),sum(v3)]; function sum(o){var s=0;for(var k in o)s+=o[k];return s;}
+    var padT=14,padB=8,nodeW=13, colX=[6,(W/2)-nodeW/2,W-6-nodeW];
+    var gapFrac=0.12;
+    var pos={}; // node -> {x,y0,y1,val,stage}
+    [v1,v2,v3].forEach(function(vals,si){
+      var ks=cols[si],n=ks.length,gap=(H-padT-padB)*gapFrac/Math.max(1,n-1),avail=(H-padT-padB)*(1-gapFrac),y=padT;
+      ks.forEach(function(k){var h=Math.max(3,vals[k]/totals[si]*avail);pos[si+''+k]={x:colX[si],y0:y,y1:y+h,val:vals[k],stage:si,name:k};y+=h+gap;});
+    });
+    // defs gradients
+    var defsE=el('defs',{}); var gi=0; svg.appendChild(defsE);
+    function grad(c0,c1){var id='g'+(gi++);var lg=el('linearGradient',{id:id,x1:'0',y1:'0',x2:'1',y2:'0'});lg.appendChild(el('stop',{offset:'0','stop-color':c0,'stop-opacity':'0.55'}));lg.appendChild(el('stop',{offset:'1','stop-color':c1,'stop-opacity':'0.55'}));defsE.appendChild(lg);return 'url(#'+id+')';}
+    // build ribbons per link with sub-slot stacking
+    function ribbons(linkMap,srcStage){
+      // group by source and by target to stack slots
+      var bySrc={},byTgt={};
+      Object.keys(linkMap).forEach(function(k){var p=k.split('');(bySrc[p[0]]=bySrc[p[0]]||[]).push({k:k,t:p[1],v:linkMap[k]});(byTgt[p[1]]=byTgt[p[1]]||[]).push({k:k,s:p[0],v:linkMap[k]});});
+      var srcOff={},tgtOff={};
+      // order each source's outgoing by target column order
+      var out=[];
+      cols[srcStage].forEach(function(sn){
+        var arr=bySrc[sn]||[]; arr.sort(function(a,b){return cols[srcStage+1].indexOf(a.t)-cols[srcStage+1].indexOf(b.t);});
+        arr.forEach(function(L){out.push(L);});
+      });
+      out.forEach(function(L){
+        var p=L.k.split(''),sn=p[0],tn=p[1];
+        var s=pos[srcStage+''+sn],t=pos[(srcStage+1)+''+tn];
+        var sh=(L.v/s.val)*(s.y1-s.y0), th=(L.v/t.val)*(t.y1-t.y0);
+        var sy=s.y0+(srcOff[sn]=(srcOff[sn]||0)); srcOff[sn]+=sh;
+        var ty=t.y0+(tgtOff[tn]=(tgtOff[tn]||0)); tgtOff[tn]+=th;
+        var x0=s.x+nodeW,x1=t.x,mx=(x0+x1)/2;
+        var d='M'+x0+' '+sy+' C'+mx+' '+sy+' '+mx+' '+ty+' '+x1+' '+ty+' L'+x1+' '+(ty+th)+' C'+mx+' '+(ty+th)+' '+mx+' '+(sy+sh)+' '+x0+' '+(sy+sh)+' Z';
+        var col0=PAL[srcStage][1],col1=PAL[srcStage+1][1];
+        var rb=el('path',{d:d,fill:grad(col0,col1),class:'ribbon','data-s':sn,'data-t':tn});
+        rb.addEventListener('mousemove',function(e){tip.innerHTML='<b>'+sn+'</b> → '+tn+'<br>'+fmt(L.v);tip.style.opacity=1;tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY+12)+'px';
+          svg.querySelectorAll('.ribbon').forEach(function(r){r.style.opacity=(r===rb)?1:0.12;});});
+        rb.addEventListener('mouseleave',function(){tip.style.opacity=0;svg.querySelectorAll('.ribbon').forEach(function(r){r.style.opacity=1;});});
+        svg.appendChild(rb);
+        // flowing centerline
+        var cy0=sy+sh/2,cy1=ty+th/2; svg.appendChild(el('path',{d:'M'+x0+' '+cy0+' C'+mx+' '+cy0+' '+mx+' '+cy1+' '+x1+' '+cy1,class:'flow','stroke-width':Math.max(1,Math.min(3,sh/8))}));
+      });
+    }
+    ribbons(L01,0); ribbons(L12,1);
+    // node bars + labels
+    [0,1,2].forEach(function(si){
+      cols[si].forEach(function(k){
+        var nd=pos[si+''+k];
+        svg.appendChild(el('rect',{x:nd.x,y:nd.y0,width:nodeW,height:Math.max(2,nd.y1-nd.y0),rx:2,fill:PAL[si][0]}));
+        var pct=(nd.val/totals[si]*100).toFixed(0)+'%';
+        var anchor=si===0?'start':(si===2?'end':'start'), lx=si===0?nd.x+nodeW+6:(si===2?nd.x-6:nd.x+nodeW+6);
+        var t1=el('text',{x:lx,y:(nd.y0+nd.y1)/2-1,'text-anchor':anchor,class:'nlabel'}); t1.textContent=(k.length>22?k.slice(0,21)+'…':k)+' ('+pct+')';
+        svg.appendChild(t1);
+      });
+    });
+  }
+  function synth(){
+    var ch=['Paid Search','Paid Social'],net={'Paid Search':['Google','Bing'],'Paid Social':['Facebook','Google']},
+    prod=['Accessories & Peripherals','Audio & Video','Computing Devices','Gaming & Entertainment','Smart Home & IoT'];
+    var out=[]; ch.forEach(function(c){net[c].forEach(function(n){prod.forEach(function(p){out.push({s1:c,s2:n,s3:p,v:Math.round(200+Math.random()*900)});});});});
+    return out;
+  }
+  var st={cfg:{},data:null,unsub:null,rt:null};
+  function recompute(){var c=st.cfg||{};
+    if(st.data&&c.stage1&&c.value&&st.data[c.stage1]){
+      var s1=st.data[c.stage1]||[],s2=st.data[c.stage2]||[],s3=st.data[c.stage3]||[],v=st.data[c.value]||[];
+      var rows=s1.map(function(x,i){return {s1:String(x),s2:String(s2[i]),s3:String(s3[i]),v:Number(v[i])||0};}).filter(function(r){return r.v>0;});
+      if(rows.length){render(rows);return;}
+    }
+    render(synth());
+  }
+  window.addEventListener('resize',function(){clearTimeout(st.rt);st.rt=setTimeout(recompute,120);});
+  if(client){client.config.subscribe(function(cfg){st.cfg=cfg||{};if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();});}recompute();});
+  }else{recompute();}
+})();
+</script>
+</body>
+</html>

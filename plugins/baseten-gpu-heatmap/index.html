@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GPU Cluster Utilization — Baseten Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#E7FBF0;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:14px 16px;gap:10px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#19E76E}
+  #meta{font-size:11px;color:#8FB5A0}
+  #meta b{color:#fff;font-size:13px}
+  #grid{flex:1;display:grid;gap:3px;grid-auto-rows:1fr;align-content:stretch;min-height:0}
+  .cell{border-radius:3px;position:relative;transition:transform .08s;cursor:default;min-height:7px}
+  .cell:hover{transform:scale(1.32);z-index:5;outline:1.5px solid #fff}
+  .cell.hot{box-shadow:0 0 0 1.5px #FF5A4E, 0 0 6px rgba(255,90,78,.7)}
+  .cell.overload{box-shadow:0 0 0 1.5px #FFB020, 0 0 6px rgba(255,176,32,.6)}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:10px;color:#8FB5A0}
+  #bar{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#0B1F16,#0E6B42,#00B86B,#19E76E)}
+  #flags{display:flex;gap:10px;margin-left:8px}
+  #flags span{display:flex;align-items:center;gap:4px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  #tip{position:fixed;pointer-events:none;background:#0A1712;border:1px solid #1E4A34;border-radius:8px;padding:8px 10px;font-size:11px;color:#E7FBF0;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  #tip b{color:#19E76E}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl">GPU Cluster Utilization</div>
+    <div id="meta">Fleet avg <b id="avgV">—</b> · <span id="cnt">0</span> nodes · <span id="hot" style="color:#FF7B70">0 over-temp</span> · <span id="ovl" style="color:#FFC24D">0 overloaded</span></div>
+  </div>
+  <div id="grid"></div>
+  <div id="legend">
+    <span>idle</span><div id="bar"></div><span>saturated</span>
+    <div id="flags">
+      <span><i class="dot" style="background:#FF5A4E"></i>over-temp</span>
+      <span><i class="dot" style="background:#FFB020"></i>overloaded</span>
+    </div>
+  </div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'node',type:'column',source:'source',label:'GPU Node ID'},
+    {name:'model',type:'column',source:'source',label:'Model deployed'},
+    {name:'util',type:'column',source:'source',allowedTypes:['number','integer'],label:'GPU Utilization %'},
+    {name:'latency',type:'column',source:'source',allowedTypes:['number','integer'],label:'p99 Latency (ms)'},
+    {name:'region',type:'column',source:'source',label:'Deployment region'},
+    {name:'hotAt',type:'text',label:'Over-temp threshold (util-implied °C)',defaultValue:'85'},
+    {name:'overloadAt',type:'text',label:'Overload threshold (util %)',defaultValue:'92'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function hex(c){return ('0'+Math.round(c).toString(16)).slice(-2);}
+  function utilColor(u){ // 0..100 -> near-black-green -> Baseten green -> bright green
+    var t=Math.max(0,Math.min(1,u/100));
+    var s=[[11,31,22],[14,107,66],[0,184,107],[25,231,110]];
+    var seg=t*3, i=Math.min(2,Math.floor(seg)), f=seg-i;
+    var r=lerp(s[i][0],s[i+1][0],f),g=lerp(s[i][1],s[i+1][1],f),b=lerp(s[i][2],s[i+1][2],f);
+    return '#'+hex(r)+hex(g)+hex(b);
+  }
+  var tip=document.getElementById('tip');
+  function draw(nodes,hotAt,overloadAt){
+    var grid=document.getElementById('grid'); grid.innerHTML='';
+    var n=nodes.length||1; var cols=Math.ceil(Math.sqrt(n*2.4));
+    grid.style.gridTemplateColumns='repeat('+cols+',1fr)';
+    var sum=0,hot=0,ovl=0;
+    nodes.forEach(function(nd){
+      sum+=nd.util;
+      var derivedTemp=40+nd.util*0.55; // implied thermal proxy from utilization for the over-temp flag
+      var isHot=derivedTemp>=hotAt; var isOvl=nd.util>=overloadAt;
+      if(isHot)hot++; if(isOvl)ovl++;
+      var cls='cell'+(isHot?' hot':(isOvl?' overload':''));
+      var c=document.createElement('div'); c.className=cls;
+      c.style.background=utilColor(nd.util);
+      c.addEventListener('mousemove',function(e){
+        tip.innerHTML='<b>'+nd.node+'</b> · '+nd.model+(nd.region?(' · '+nd.region):'')+
+          '<br>Utilization '+nd.util.toFixed(0)+'%'+(nd.latency?(' · p99 '+nd.latency.toFixed(0)+'ms'):'')+
+          (isHot?'<br><span style="color:#FF7B70">over-temp</span>':'')+(isOvl?'<br><span style="color:#FFC24D">overloaded</span>':'');
+        tip.style.opacity=1; tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY+12)+'px';
+      });
+      c.addEventListener('mouseleave',function(){tip.style.opacity=0;});
+      grid.appendChild(c);
+    });
+    document.getElementById('avgV').textContent=(sum/n).toFixed(0)+'%';
+    document.getElementById('cnt').textContent=n;
+    document.getElementById('hot').textContent=hot+' over-temp';
+    document.getElementById('ovl').textContent=ovl+' overloaded';
+  }
+  function synth(){
+    var models=['Llama-3-70B','Mixtral-8x7B','SDXL','BERT-large','Whisper-v3'];
+    var regions=['us-east-1','us-west-2','eu-central-1'];
+    var out=[];
+    for(var i=0;i<220;i++){
+      var u=28+68*Math.abs(Math.sin(i*0.87));
+      out.push({node:'GPU-'+('000'+i).slice(-4),model:models[i%5],region:regions[i%3],util:u,latency:35+220*Math.abs(Math.sin(i*1.21))});
+    }
+    return out;
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){
+    var c=st.cfg||{};
+    var hotAt=parseFloat(c.hotAt)||85, overloadAt=parseFloat(c.overloadAt)||92;
+    if(st.data&&c.util&&st.data[c.util]){
+      var util=st.data[c.util]||[],node=(c.node&&st.data[c.node])||[],model=(c.model&&st.data[c.model])||[],
+          latency=(c.latency&&st.data[c.latency])||[],region=(c.region&&st.data[c.region])||[];
+      var nodes=util.map(function(u,i){return {
+        node:node[i]!=null?String(node[i]):('#'+i),
+        model:model[i]!=null?String(model[i]):'model',
+        region:region[i]!=null?String(region[i]):'',
+        util:Number(u)||0,
+        latency:Number(latency[i])||0
+      };});
+      if(nodes.length){draw(nodes,hotAt,overloadAt);return;}
+    }
+    draw(synth(),hotAt,overloadAt);
+  }
+  if(client){client.config.subscribe(function(cfg){st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){st.data=d;recompute();});}
+    recompute();});
+  }else{recompute();}
+
+  // ResizeObserver: Sigma sizes the panel after first paint; redraw on any size change.
+  var ro=new ResizeObserver(function(){ recompute(); });
+  ro.observe(document.getElementById('wrap'));
+})();
+</script>
+</body>
+</html>

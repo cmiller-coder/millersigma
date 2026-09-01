@@ -24,6 +24,7 @@ Never bake KPI titles as SVG images.
 import json,sys,os,base64,urllib.request,urllib.error,xml.dom.minidom as _MD
 BASE,TOKEN,CONN,FOLDER=sys.argv[1:5]
 AICONN="SNOWFLAKE.CORTEX.COMPLETE"; CLOCK=os.environ.get("PLUGIN_ID","REPLACE_WITH_YOUR_PLUGIN_ID")
+KPI_STYLE=os.environ.get("KPI_STYLE","gradient")  # "gradient" (default) or "flat" -- see card()
 H={"Authorization":"Bearer "+TOKEN,"Content-Type":"application/json"}
 def b64(s): return base64.b64encode(s.encode()).decode()
 CUR={"kind":"number","formatString":"$.3~s","currencySymbol":"$","decimalSymbol":".","digitGroupingSymbol":",","digitGroupingSize":[3]}
@@ -52,15 +53,18 @@ HDRBG=('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 210" preserveA
   '<g fill="none" stroke="#FFD9CF" stroke-opacity="0.22" stroke-width="1.4" transform="translate(1380,90)"><circle r="42"/><circle r="78"/><circle r="114"/><line x1="-140" y1="0" x2="140" y2="0"/><line x1="0" y1="-140" x2="0" y2="140"/></g>'
   '</svg>')
 HDRBG_URI="data:image/svg+xml;base64,"+b64(HDRBG)
+def imgsrc(url): return {"source":{"kind":"url","url":url}}
+def img_el(elid,url,fit="scale-down"):
+    return {"id":elid,"kind":"image","source":{"kind":"url","url":url},"style":{"fit":fit}}
 def header(sfx,title,subtitle):
-    c={"id":f"c-hdr{sfx}","kind":"container","style":{"borderRadius":"round"},"backgroundImage":{"url":HDRBG_URI,"style":{"fit":"cover"}}}
-    lg={"id":f"logo{sfx}","kind":"image","url":logo_uri,"style":{"fit":"scale-down"}}
-    tt={"id":f"ttl{sfx}","kind":"image","url":timg(title,34,"#FFFFFF",800,"middle"),"style":{"fit":"scale-down"}}
-    sb={"id":f"sub{sfx}","kind":"image","url":timg(subtitle,17,"#FFE1D8",500,"middle"),"style":{"fit":"scale-down"}}
-    lay=(f'  <GridContainer elementId="c-hdr{sfx}" type="grid" gridColumn="1 / 25" gridRow="1 / 5" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="repeat(6,1fr)">\n'
-         f'    <LayoutElement elementId="logo{sfx}" gridColumn="1 / 8" gridRow="2 / 6"/>\n'
-         f'    <LayoutElement elementId="ttl{sfx}" gridColumn="8 / 21" gridRow="2 / 4"/>\n'
-         f'    <LayoutElement elementId="sub{sfx}" gridColumn="8 / 21" gridRow="4 / 6"/>\n  </GridContainer>')
+    c={"id":f"c-hdr{sfx}","kind":"container","style":{"borderRadius":"round"},"backgroundImage":{"source":{"kind":"url","url":HDRBG_URI},"style":{"fit":"cover"}}}
+    lg=img_el(f"logo{sfx}",logo_uri)
+    tt=img_el(f"ttl{sfx}",timg(title,34,"#FFFFFF",800,"middle"))
+    sb=img_el(f"sub{sfx}",timg(subtitle,17,"#FFE1D8",500,"middle"))
+    lay=(f'  <Container elementId="c-hdr{sfx}" type="grid" gridColumn="1 / 25" gridRow="1 / 5" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="repeat(6,1fr)">\n'
+         f'    <Element elementId="logo{sfx}" gridColumn="1 / 8" gridRow="2 / 6"/>\n'
+         f'    <Element elementId="ttl{sfx}" gridColumn="8 / 21" gridRow="2 / 4"/>\n'
+         f'    <Element elementId="sub{sfx}" gridColumn="8 / 21" gridRow="4 / 6"/>\n  </Container>')
     return [c,lg,tt,sb],lay
 def _spark(elid,src,trend):
     return {"id":f"ln-{elid}","kind":"line-chart","source":{"elementId":src,"kind":"table"},
@@ -68,35 +72,50 @@ def _spark(elid,src,trend):
         "xAxis":{"columnId":f"ln-{elid}m","format":{"marks":"none","labels":"hidden"}},
         "yAxis":{"columnIds":[f"ln-{elid}v"],"format":{"labels":"hidden","marks":"none","scale":{"type":"linear","zero":False,"hideZeroLine":True}}},
         "name":{"visibility":"hidden"},"legend":{"visibility":"hidden"},"lineAreaStyle":{"interpolation":"monotone"},"style":{"backgroundColor":"transparent","padding":"none"}}
-def card(elid,src,title,v1f,v2f,v2lab,fmt,g,trend=None,rowband="5 / 13"):
-    # Current value (native white title) + native COMPARISON delta vs prior + Prior value shown side-by-side.
+def card(elid,src,title,v1f,v2f,v2lab,fmt,g,trend=None,rowband="5 / 13",style=None):
+    # style="gradient" (default): background-image gradient (g), white text throughout,
+    # sparkline reads white via theme categoricalScheme[0]="#FFFFFF".
+    # style="flat": white card + hairline border (CARD look), ink value text; the
+    # brand accent is reserved for the delta color only (not flooded across the
+    # card). The sparkline in flat mode still resolves via categoricalScheme[0] --
+    # build() sets that to the accent color instead of white when KPI_STYLE=="flat"
+    # (there's no verified way to set a fixed per-element line-chart stroke color in
+    # this spec dialect independent of the shared theme scheme, so don't invent one).
     cid=f"c-{elid}"
-    cont={"id":cid,"kind":"container","style":{"borderRadius":"round"},"backgroundImage":{"url":g,"style":{"fit":"cover"}}}
+    flat=((style or KPI_STYLE)=="flat")
+    if flat:
+        cont={"id":cid,"kind":"container","style":dict(CARD)}
+        val_color=INK; title_color=SLATE; sub_color=SLATE
+        good,bad="#0F6E56","#A32D2D"
+    else:
+        cont={"id":cid,"kind":"container","style":{"borderRadius":"round"},"backgroundImage":{"source":{"kind":"url","url":g},"style":{"fit":"cover"}}}
+        val_color=W; title_color=W; sub_color=W
+        good,bad="#CDEBB8","#FFCFC7"
     els=[cont]; inner=""
     if v2f:
         left={"id":f"k-{elid}c","kind":"kpi-chart","source":{"elementId":src,"kind":"table"},
           "columns":[{"id":f"k-{elid}cv","formula":v1f,"name":title,"format":fmt},
                      {"id":f"k-{elid}cc","formula":v2f,"name":"vs "+v2lab,"format":fmt}],
-          "value":{"columnId":f"k-{elid}cv","color":W,"fontSize":32},
+          "value":{"columnId":f"k-{elid}cv","color":val_color,"fontSize":32},
           "comparisonColumn":{"columnId":f"k-{elid}cc"},
-          "comparison":{"display":"delta","colorGood":"#CDEBB8","colorBad":"#FFCFC7","fontSize":13},
-          "name":{"text":title,"color":W,"fontSize":15},"layout":{"anchor":"middle"},"style":{"backgroundColor":"transparent","padding":"none"}}
+          "comparison":{"display":"delta","colorGood":good,"colorBad":bad,"fontSize":13},
+          "name":{"text":title,"color":title_color,"fontSize":15},"layout":{"anchor":"middle"},"style":{"backgroundColor":"transparent","padding":"none"}}
         right={"id":f"k-{elid}p","kind":"kpi-chart","source":{"elementId":src,"kind":"table"},
           "columns":[{"id":f"k-{elid}pv","formula":v2f,"name":v2lab,"format":fmt}],
-          "value":{"columnId":f"k-{elid}pv","color":W,"fontSize":28},
-          "name":{"text":v2lab,"color":W,"fontSize":13},"layout":{"anchor":"middle"},"style":{"backgroundColor":"transparent","padding":"none"}}
+          "value":{"columnId":f"k-{elid}pv","color":sub_color,"fontSize":28},
+          "name":{"text":v2lab,"color":title_color,"fontSize":13},"layout":{"anchor":"middle"},"style":{"backgroundColor":"transparent","padding":"none"}}
         els+=[left,right]
-        inner+=(f'    <LayoutElement elementId="k-{elid}c" gridColumn="1 / 7" gridRow="1 / 9"/>\n'
-                f'    <LayoutElement elementId="k-{elid}p" gridColumn="7 / 13" gridRow="1 / 9"/>\n')
+        inner+=(f'    <Element elementId="k-{elid}c" gridColumn="1 / 7" gridRow="1 / 9"/>\n'
+                f'    <Element elementId="k-{elid}p" gridColumn="7 / 13" gridRow="1 / 9"/>\n')
     else:
         left={"id":f"k-{elid}c","kind":"kpi-chart","source":{"elementId":src,"kind":"table"},
           "columns":[{"id":f"k-{elid}cv","formula":v1f,"name":title,"format":fmt}],
-          "value":{"columnId":f"k-{elid}cv","color":W,"fontSize":40},
-          "name":{"text":title,"color":W,"fontSize":16},"layout":{"anchor":"middle"},"style":{"backgroundColor":"transparent","padding":"none"}}
-        els.append(left); inner+=f'    <LayoutElement elementId="k-{elid}c" gridColumn="1 / 13" gridRow="1 / 9"/>\n'
+          "value":{"columnId":f"k-{elid}cv","color":val_color,"fontSize":40},
+          "name":{"text":title,"color":title_color,"fontSize":16},"layout":{"anchor":"middle"},"style":{"backgroundColor":"transparent","padding":"none"}}
+        els.append(left); inner+=f'    <Element elementId="k-{elid}c" gridColumn="1 / 13" gridRow="1 / 9"/>\n'
     if trend:
-        els.append(_spark(elid,src,trend)); inner+=f'    <LayoutElement elementId="ln-{elid}" gridColumn="1 / 13" gridRow="9 / 12"/>\n'
-    lay=(f'  <GridContainer elementId="{cid}" type="grid" gridColumn="{{col}}" gridRow="{rowband}" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="repeat(12,1fr)">\n'+inner+'  </GridContainer>')
+        els.append(_spark(elid,src,trend)); inner+=f'    <Element elementId="ln-{elid}" gridColumn="1 / 13" gridRow="9 / 12"/>\n'
+    lay=(f'  <Container elementId="{cid}" type="grid" gridColumn="{{col}}" gridRow="{rowband}" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="repeat(12,1fr)">\n'+inner+'  </Container>')
     return els,lay
 
 # ============ PAGE 1 DATA (food-delivery reshape) ============
@@ -154,7 +173,7 @@ ai_body=('{{ Replace(CallText("'+AICONN+'", "CLAUDE-4-SONNET", '
  '& Text(Round(Sum(['+MF+'/Revenue])/1000000000,1)) & "B, and a blended take rate of " '
  '& Text(Round(Sum(['+MF+'/Revenue])/Sum(['+MF+'/GOV])*100,1)) & "%. Note the leading category and the daypart demand pattern."), \'"\', \'\') }}')
 ai_box={"id":"c-ai","kind":"container","style":dict(TINT)}
-ai_ic={"id":"ai-ic","kind":"image","url":"data:image/svg+xml;base64,"+b64('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="'+RED+'" stroke="'+RED+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'),"style":{"fit":"contain"}}
+ai_ic=img_el("ai-ic","data:image/svg+xml;base64,"+b64('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="'+RED+'" stroke="'+RED+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'),fit="contain")
 ai_hd={"id":"ai-hd","kind":"text","body":"**AI insight**","verticalAlign":"middle","style":{"color":INK}}
 ai_sum={"id":"txt-ai","kind":"text","body":ai_body,"verticalAlign":"middle","style":{"color":"#3A2C2C"}}
 grain={"kind":"control","controlId":"DateGrain","id":"ctrl-grain","name":"Date Grain","controlType":"segmented","value":"Month","source":{"kind":"manual","valueType":"text","values":["Quarter","Month","Week","Day"]}}
@@ -172,9 +191,9 @@ clock_hd={"id":"clock-hd","kind":"text","body":"**Order demand by hour of day (d
 clock_el={"id":"clockviz","kind":"plugin","pluginId":CLOCK,"config":{"source":{"kind":"element","elementId":"demand"},"hour":"dm-hour","value":"dm-orders"}}
 # Current standard (2026-07): the left column (trend chart / plugin / detail tables)
 # is a TABBED CONTAINER, not stacked -- see sigma-company-dashboard/SKILL.md
-# "Command-center layout" section. NO wrapping GridContainer around the plugin
+# "Command-center layout" section. NO wrapping Container around the plugin
 # inside its Tab (verified to scramble render order) -- the plugin + its header
-# text are both bare LayoutElement children instead.
+# text are both bare Element children instead.
 tc_cc={"id":"tc-cc","kind":"tabbed-container","tabs":[{"name":"GOV Trend"},{"name":"Demand Clock"},{"name":"Detail Tables"}],"tabBar":{"alignment":"start"}}
 heat={"id":"heat","kind":"pivot-table","source":{"elementId":"tbl","kind":"table"},
  "columns":[{"id":"hm","formula":f"[{MF}/Category]","name":"Category"},{"id":"hp","formula":f"[{MF}/Region]","name":"Region"},{"id":"hv","formula":f"Sum([{MF}/GOV])","name":"GOV","format":CUR}],
@@ -195,7 +214,8 @@ AG_COPILOT={"id":"ag-copilot","name":"DoorDash Copilot",
    "Answer questions about gross order value (GOV), revenue, take rate by category, regional mix, orders, active consumers, hour-of-day demand patterns, and how order growth or take-rate changes move the marketplace. Be concise and quantitative."),
  "dataSources":[{"kind":"table","elementId":"tbl"},{"kind":"table","elementId":"book2"}]}
 SCEN_TOOL={"toolId":"create-scenario","kind":"action","name":"Create scenario","description":"Insert a new named scenario row into the Scenarios table so the user can model it.",
- "steps":[{"kind":"effect","effect":"insert-rows","table":"scenarios","values":{"sc-name":{"type":"agent-input"},"sc-status":{"type":"constant","value":{"type":"text","value":"Draft"}}}}]}
+ # every agent-input needs an explicit inputName -- the bare {"type":"agent-input"} is rejected
+ "steps":[{"kind":"effect","effect":"insert-rows","tableElementId":"scenarios","values":{"sc-name":{"type":"agent-input","inputName":"Name for the new scenario"},"sc-status":{"type":"constant","value":{"type":"text","value":"Draft"}}}}]}
 def ag_scenario(with_tool):
     a={"id":"ag-scenario","name":"Scenario Copilot","instructions":("You are a growth & margin scenario copilot for DoorDash. Help model order growth, take-rate changes, and delivery cost by category, and CREATE named scenarios on request using the create-scenario tool."),
        "dataSources":[{"kind":"table","elementId":"book2"}]}
@@ -203,14 +223,14 @@ def ag_scenario(with_tool):
     return a
 def rail(n,with_agent,rows,agent_id):
     c={"id":f"c-chat{n}","kind":"container","style":dict(CARD)}
-    ric={"id":f"chat-ic{n}","kind":"image","url":"data:image/svg+xml;base64,"+b64('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="'+RED+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>'),"style":{"fit":"contain"}}
+    ric=img_el(f"chat-ic{n}","data:image/svg+xml;base64,"+b64('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="'+RED+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>'),fit="contain")
     hdr={"id":f"chat-hdr{n}","kind":"text","body":"**Ask DoorDash AI**","verticalAlign":"middle","style":{"color":INK}}
     if with_agent: inner={"id":f"chat{n}","kind":"chat","agentId":agent_id}
     else: inner={"id":f"chat{n}","kind":"text","verticalAlign":"middle","style":{"color":"#3A2C2C","backgroundColor":"#FCEEEA"},"body":"**Ask AI for Insights**\n\n- Which category drives the most GOV?\n- When does demand peak during the day?\n- What order + take-rate mix hits a revenue target?"}
-    lay=(f'  <GridContainer elementId="c-chat{n}" type="grid" gridColumn="18 / 25" gridRow="{rows}" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">\n'
-         f'    <LayoutElement elementId="chat-ic{n}" gridColumn="1 / 3" gridRow="1 / 2"/>\n'
-         f'    <LayoutElement elementId="chat-hdr{n}" gridColumn="3 / 13" gridRow="1 / 2"/>\n'
-         f'    <LayoutElement elementId="chat{n}" gridColumn="1 / 13" gridRow="2 / 26"/>\n  </GridContainer>')
+    lay=(f'  <Container elementId="c-chat{n}" type="grid" gridColumn="18 / 25" gridRow="{rows}" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">\n'
+         f'    <Element elementId="chat-ic{n}" gridColumn="1 / 3" gridRow="1 / 2"/>\n'
+         f'    <Element elementId="chat-hdr{n}" gridColumn="3 / 13" gridRow="1 / 2"/>\n'
+         f'    <Element elementId="chat{n}" gridColumn="1 / 13" gridRow="2 / 26"/>\n  </Container>')
     return [c,ric,hdr,inner],lay
 h1e,h1l=header("1","Marketplace Command Center","GOV, revenue, orders & take rate across categories")
 def page1(with_agent):
@@ -219,21 +239,21 @@ def page1(with_agent):
     lay=f"""<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg">
 {h1l}
 {chr(10).join(kpilay)}
-  <GridContainer elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="13 / 17" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="repeat(4,1fr)"><LayoutElement elementId="ai-ic" gridColumn="1 / 2" gridRow="1 / 2"/><LayoutElement elementId="ai-hd" gridColumn="2 / 25" gridRow="1 / 2"/><LayoutElement elementId="txt-ai" gridColumn="2 / 25" gridRow="2 / 5"/></GridContainer>
-  <GridContainer elementId="c-filters" type="grid" gridColumn="1 / 25" gridRow="17 / 20" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <LayoutElement elementId="ctrl-grain" gridColumn="1 / 9" gridRow="1 / 4"/><LayoutElement elementId="ctrl-colorby" gridColumn="9 / 17" gridRow="1 / 4"/><LayoutElement elementId="ctrl-catf" gridColumn="17 / 25" gridRow="1 / 4"/>
-  </GridContainer>
+  <Container elementId="c-ai" type="grid" gridColumn="1 / 25" gridRow="13 / 17" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="repeat(4,1fr)"><Element elementId="ai-ic" gridColumn="1 / 2" gridRow="1 / 2"/><Element elementId="ai-hd" gridColumn="2 / 25" gridRow="1 / 2"/><Element elementId="txt-ai" gridColumn="2 / 25" gridRow="2 / 5"/></Container>
+  <Container elementId="c-filters" type="grid" gridColumn="1 / 25" gridRow="17 / 20" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ctrl-grain" gridColumn="1 / 9" gridRow="1 / 4"/><Element elementId="ctrl-colorby" gridColumn="9 / 17" gridRow="1 / 4"/><Element elementId="ctrl-catf" gridColumn="17 / 25" gridRow="1 / 4"/>
+  </Container>
   <TabbedContainer elementId="tc-cc" type="tabbed-container" gridColumn="1 / 18" gridRow="20 / 74">
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-      <LayoutElement elementId="sbar" gridColumn="1 / 25" gridRow="1 / 22"/>
+      <Element elementId="sbar" gridColumn="1 / 25" gridRow="1 / 22"/>
     </Tab>
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-      <LayoutElement elementId="clock-hd" gridColumn="1 / 25" gridRow="1 / 2"/>
-      <LayoutElement elementId="clockviz" gridColumn="1 / 25" gridRow="2 / 22"/>
+      <Element elementId="clock-hd" gridColumn="1 / 25" gridRow="1 / 2"/>
+      <Element elementId="clockviz" gridColumn="1 / 25" gridRow="2 / 22"/>
     </Tab>
     <Tab gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-      <LayoutElement elementId="heat" gridColumn="1 / 13" gridRow="1 / 22"/>
-      <LayoutElement elementId="book" gridColumn="13 / 25" gridRow="1 / 22"/>
+      <Element elementId="heat" gridColumn="1 / 13" gridRow="1 / 22"/>
+      <Element elementId="book" gridColumn="13 / 25" gridRow="1 / 22"/>
     </Tab>
   </TabbedContainer>
 {rl}
@@ -285,13 +305,13 @@ selctrl={"kind":"control","controlId":"scenarioSelect","id":"ctrl-sel","name":"A
  "filters":[{"source":{"kind":"table","elementId":"book2"},"columnId":"bb-scen"}],
  "source":{"kind":"source","source":{"kind":"table","elementId":"book2"},"columnId":"bb-scen"}}
 createbtn_tb={"id":"createbtn_tb","kind":"button","text":"Create scenario","appearance":"filled","actions":[{"id":"o1","trigger":"on-click","effects":[{"effect":"open-overlay","overlayId":"createModal"}]}]}
-submitbtn={"id":"submitbtn","kind":"button","text":"Submit","appearance":"outline","actions":[{"id":"s1","trigger":"on-click","effects":[{"effect":"insert-rows","table":"subs","values":{"su-scen":{"type":"control","control":"scenarioSelect"},"su-status":{"type":"constant","value":{"type":"text","value":"Submitted"}}}}]}]}
-approvebtn={"id":"approvebtn","kind":"button","text":"Approve","appearance":"outline","actions":[{"id":"a1","trigger":"on-click","effects":[{"effect":"insert-rows","table":"subs","values":{"su-scen":{"type":"control","control":"scenarioSelect"},"su-status":{"type":"constant","value":{"type":"text","value":"Approved"}}}}]}]}
+submitbtn={"id":"submitbtn","kind":"button","text":"Submit","appearance":"outline","actions":[{"id":"s1","trigger":"on-click","effects":[{"effect":"insert-rows","tableElementId":"subs","values":{"su-scen":{"type":"control","control":"scenarioSelect"},"su-status":{"type":"constant","value":{"type":"text","value":"Submitted"}}}}]}]}
+approvebtn={"id":"approvebtn","kind":"button","text":"Approve","appearance":"outline","actions":[{"id":"a1","trigger":"on-click","effects":[{"effect":"insert-rows","tableElementId":"subs","values":{"su-scen":{"type":"control","control":"scenarioSelect"},"su-status":{"type":"constant","value":{"type":"text","value":"Approved"}}}}]}]}
 namectrl={"kind":"control","controlId":"newScenarioName","id":"ctrl-name","name":"Scenario name","controlType":"text","mode":"equals","case":"insensitive","includeNulls":"when-no-value-is-selected","showOperators":False}
 createbtn={"id":"createbtn","kind":"button","text":"Create scenario","appearance":"filled","actions":[{"id":"c1","trigger":"on-click","effects":[
-    {"effect":"insert-rows","table":"scenarios","values":{"sc-name":{"type":"control","control":"newScenarioName"},"sc-status":{"type":"constant","value":{"type":"text","value":"Draft"}}}},
+    {"effect":"insert-rows","tableElementId":"scenarios","values":{"sc-name":{"type":"control","control":"newScenarioName"},"sc-status":{"type":"constant","value":{"type":"text","value":"Draft"}}}},
     {"effect":"set-control-value","control":"scenarioSelect","value":{"type":"control","control":"newScenarioName"}},
-    {"effect":"clear-control","scope":{"type":"control","control":"newScenarioName"}},
+    {"effect":"clear-control","scope":{"type":"control","controlId":"newScenarioName"}},
     {"effect":"close-overlay"}]}]}
 cancelbtn={"id":"cancelbtn","kind":"button","text":"Cancel","appearance":"outline","actions":[{"id":"x1","trigger":"on-click","effects":[{"effect":"close-overlay"}]}]}
 mtitle={"id":"mtitle","kind":"text","body":"### New scenario\nName it, then Create. It clones the current book for every category — edit the assumptions in the grid.","verticalAlign":"middle","style":{"color":INK}}
@@ -312,7 +332,7 @@ cbar={"id":"cbar","kind":"bar-chart","source":{"elementId":"book2","kind":"table
  "color":{"by":"category","column":"cb-cat2","scheme":["#EB1700"]},
  "legend":{"visibility":"hidden"},"name":{"text":"Projected revenue by category — active scenario","fontWeight":"bold","fontSize":15,"color":INK},"style":dict(CARD)}
 instr_c={"id":"c-instr","kind":"container","style":dict(TINT)}
-instr_ic={"id":"instr-ic","kind":"image","url":"data:image/svg+xml;base64,"+b64('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="'+RED+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'),"style":{"fit":"contain"}}
+instr_ic=img_el("instr-ic","data:image/svg+xml;base64,"+b64('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="'+RED+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'),fit="contain")
 instr_hd={"id":"instr-hd","kind":"text","body":"**How the scenario modeler works**","verticalAlign":"middle","style":{"color":INK}}
 instr={"id":"instr","kind":"text","body":("**1** — **Create** a named scenario (clones the current book); pick it with **Active scenario**.  **2** — In the grid, type **Order Growth %**, **Take Rate Change %**, **Delivery Cost %** per category.  **3** — Cards, chart & Copilot re-project instantly. **Submit → Approve** to lock a plan. Leave a cell blank to hold a driver flat."),
  "verticalAlign":"middle","style":{"color":"#3A2C2C"}}
@@ -323,32 +343,48 @@ def page2(with_agent):
     elems=[tb_c,sbase,scenarios,spivot,book2,subs]+h2e+[selctrl,createbtn_tb,submitbtn,approvebtn]+C2+[instr_c,instr_ic,instr_hd,instr,cbar,assum]+re
     lay=f"""<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="model">
 {h2l}
-  <GridContainer elementId="c-tb" type="grid" gridColumn="1 / 25" gridRow="5 / 8" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <LayoutElement elementId="ctrl-sel" gridColumn="1 / 10" gridRow="1 / 4"/>
-    <LayoutElement elementId="createbtn_tb" gridColumn="10 / 17" gridRow="1 / 4"/>
-    <LayoutElement elementId="submitbtn" gridColumn="17 / 21" gridRow="1 / 4"/>
-    <LayoutElement elementId="approvebtn" gridColumn="21 / 25" gridRow="1 / 4"/>
-  </GridContainer>
+  <Container elementId="c-tb" type="grid" gridColumn="1 / 25" gridRow="5 / 8" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ctrl-sel" gridColumn="1 / 10" gridRow="1 / 4"/>
+    <Element elementId="createbtn_tb" gridColumn="10 / 17" gridRow="1 / 4"/>
+    <Element elementId="submitbtn" gridColumn="17 / 21" gridRow="1 / 4"/>
+    <Element elementId="approvebtn" gridColumn="21 / 25" gridRow="1 / 4"/>
+  </Container>
 {chr(10).join(C2L)}
-  <GridContainer elementId="c-instr" type="grid" gridColumn="1 / 25" gridRow="17 / 21" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="repeat(4,1fr)"><LayoutElement elementId="instr-ic" gridColumn="1 / 2" gridRow="1 / 2"/><LayoutElement elementId="instr-hd" gridColumn="2 / 25" gridRow="1 / 2"/><LayoutElement elementId="instr" gridColumn="2 / 25" gridRow="2 / 5"/></GridContainer>
-  <LayoutElement elementId="assum" gridColumn="1 / 18" gridRow="21 / 40"/>
-  <LayoutElement elementId="cbar" gridColumn="1 / 18" gridRow="40 / 56"/>
+  <Container elementId="c-instr" type="grid" gridColumn="1 / 25" gridRow="17 / 21" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="repeat(4,1fr)"><Element elementId="instr-ic" gridColumn="1 / 2" gridRow="1 / 2"/><Element elementId="instr-hd" gridColumn="2 / 25" gridRow="1 / 2"/><Element elementId="instr" gridColumn="2 / 25" gridRow="2 / 5"/></Container>
+  <Element elementId="assum" gridColumn="1 / 18" gridRow="21 / 40"/>
+  <Element elementId="cbar" gridColumn="1 / 18" gridRow="40 / 56"/>
 {rl}
 </Page>"""
     return elems,lay
-modal_lay='<Page type="grid" gridTemplateColumns="repeat(24,1fr)" gridTemplateRows="auto" id="createModal"><LayoutElement elementId="mtitle" gridColumn="1 / 25" gridRow="1 / 3"/><LayoutElement elementId="ctrl-name" gridColumn="1 / 25" gridRow="3 / 5"/><LayoutElement elementId="cancelbtn" gridColumn="13 / 19" gridRow="5 / 7"/><LayoutElement elementId="createbtn" gridColumn="19 / 25" gridRow="5 / 7"/></Page>'
+modal_lay='<Page type="grid" gridTemplateColumns="repeat(24,1fr)" gridTemplateRows="auto" id="createModal"><Element elementId="mtitle" gridColumn="1 / 25" gridRow="1 / 3"/><Element elementId="ctrl-name" gridColumn="1 / 25" gridRow="3 / 5"/><Element elementId="cancelbtn" gridColumn="13 / 19" gridRow="5 / 7"/><Element elementId="createbtn" gridColumn="19 / 25" gridRow="5 / 7"/></Page>'
+# categoricalScheme[0] is what an un-colored single-series sparkline resolves to
+# (see card()/_spark()) -- white reads on the gradient cards, but is invisible on a
+# flat white card, so flip it to the brand accent when KPI_STYLE=="flat".
+_SPARK0=RED if KPI_STYLE=="flat" else "#FFFFFF"
 theme={"colors":{"text":INK,"highlight":RED,"success":"#3B7A3B","warning":ORANGE,"danger":"#EB1700","darkMode":"hidden"},
  "colorOverrides":{"backgroundCanvas":"#FFFFFF","canvasBackground":"#F4F1EF"},
- "categoricalScheme":["#FFFFFF","#EB1700","#B3122E","#F0872E","#C0453A","#5B2340","#8A8F94","#2E6FB0"],
+ "categoricalScheme":[_SPARK0,"#EB1700","#B3122E","#F0872E","#C0453A","#5B2340","#8A8F94","#2E6FB0"],
  "fonts":{"textFont":"Inter","dataFont":"Inter"},"pageWidth":"full","tableStyles":{"preset":"presentation","cellSpacing":"small"}}
 def build(mode):
+    """Assemble the 2026-08 spec: a `document{}` envelope with a FLAT element list.
+
+    `document.pages[].elements` was removed, so every element from every page --
+    plus the modal's own elements -- goes into one `document.elements` array, and
+    page membership comes purely from the layout XML. Modals/drawers move to
+    `document.overlays`. See sigma-workbook-conventions/reference/
+    schema-2026-08-breaking-changes.md.
+    """
     wa=mode!="none"
     p1e,p1l=page1(wa); p2e,p2l=page2(wa)
-    s={"name":"DoorDash — Marketplace Command Center","folderId":FOLDER,"schemaVersion":1,
-     "pages":[{"id":"pg","name":"Command Center","elements":p1e},{"id":"model","name":"Scenario Modeler","elements":p2e},modal],
-     "layout":'<?xml version="1.0" encoding="utf-8"?>\n'+p1l+p2l+modal_lay,"themeOverrides":theme}
-    if wa: s["agents"]=[AG_COPILOT, ag_scenario(mode=="tool")]
-    return s
+    overlay=dict(modal); overlay_elements=overlay.pop("elements")
+    doc={"schemaVersion":1,"kind":"workbook",
+     "elements":p1e+p2e+overlay_elements,
+     "pages":[{"id":"pg","name":"Command Center"},{"id":"model","name":"Scenario Modeler"}],
+     "overlays":[overlay],
+     "layout":'<?xml version="1.0" encoding="utf-8"?>\n'+p1l+p2l+modal_lay,
+     "settings":{"theme":{"overrides":theme}}}
+    if wa: doc["agents"]=[AG_COPILOT, ag_scenario(mode=="tool")]
+    return {"name":"DoorDash — Marketplace Command Center","folderId":FOLDER,"document":doc}
 def qa(s):
     def _walk(o):
         if isinstance(o,dict):

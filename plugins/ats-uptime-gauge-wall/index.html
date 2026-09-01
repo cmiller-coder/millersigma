@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Equipment Uptime Gauge Wall — ATS Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#1A1A1A;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px 8px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#D2202F}
+  #meta{font-size:11px;color:#808285}
+  #meta b{color:#1A1A1A}
+  #meta .bad{color:#D2202F;font-weight:700}
+  #stage{flex:1;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:4px;min-height:0;overflow:hidden}
+  .cell{flex:1 1 0;min-width:110px;max-width:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;cursor:default}
+  .cell svg{width:100%;height:auto;max-height:100%}
+  .val{font-size:15px;font-weight:800;fill:#1A1A1A}
+  .lab{font-size:10.5px;font-weight:600;fill:#6b7077;text-transform:uppercase;letter-spacing:.03em}
+  #legend{flex:0 0 auto;display:flex;justify-content:center;gap:16px;font-size:10px;color:#4a5560}
+  #legend .li{display:flex;align-items:center;gap:5px}
+  .dot{width:9px;height:9px;border-radius:2px;flex:0 0 9px}
+  #tip{position:fixed;pointer-events:none;background:#1A1A1A;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#FF8A8A}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Equipment uptime</div><div id="meta"><b id="avg">—</b> avg uptime · <span id="belowwrap"><b class="bad" id="below">0</b> below target</span></div></div>
+  <div id="stage"></div>
+  <div id="legend">
+    <div class="li"><span class="dot" style="background:#D2202F"></span>Critical (&lt;95.0%)</div>
+    <div class="li"><span class="dot" style="background:#F0872E"></span>Watch (95.0–98.0%)</div>
+    <div class="li"><span class="dot" style="background:#3B7A3B"></span>Healthy (98.0%+)</div>
+  </div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var NS='http://www.w3.org/2000/svg', tip=document.getElementById('tip');
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'line',type:'column',source:'source',label:'Plant / production line'},
+    {name:'uptime',type:'column',source:'source',allowedTypes:['number','integer'],label:'Uptime % (0-100)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&lt;','>':'&gt;','<':'&lt;'}[m]||m;}); }
+  function colorFor(v){ return v<95.0?'#D2202F':(v<98.0?'#F0872E':'#3B7A3B'); }
+  function el(t,a){ var e=document.createElementNS(NS,t); for(var k in a)e.setAttribute(k,a[k]); return e; }
+  function arcPath(cx,cy,r,a0,a1){
+    var p0=[cx+r*Math.cos(a0),cy+r*Math.sin(a0)], p1=[cx+r*Math.cos(a1),cy+r*Math.sin(a1)];
+    var large=(a1-a0)>Math.PI?1:0;
+    return 'M'+p0[0].toFixed(1)+','+p0[1].toFixed(1)+' A'+r+','+r+' 0 '+large+' 1 '+p1[0].toFixed(1)+','+p1[1].toFixed(1);
+  }
+  function gaugeSVG(name,v){
+    var W=200,H=132,cx=100,cy=104,r=76;
+    var PI=Math.PI, start=PI, end=2*PI; // semicircle, left to right
+    var pct=Math.max(0,Math.min(1,(v-80)/20)); // scale 80-100% across the arc -- industrial equipment
+    // uptime varies more widely than telecom-SLA-style 95-100%, so use a wider band for visual sensitivity
+    var mid=start+(end-start)*pct;
+    var svg=el('svg',{viewBox:'0 0 '+W+' '+H,xmlns:NS});
+    svg.appendChild(el('path',{d:arcPath(cx,cy,r,start,end),fill:'none',stroke:'#E7E9EC','stroke-width':14,'stroke-linecap':'round'}));
+    var col=colorFor(v);
+    svg.appendChild(el('path',{d:arcPath(cx,cy,r,start,mid),fill:'none',stroke:col,'stroke-width':14,'stroke-linecap':'round'}));
+    var nx=cx+ (r-4)*Math.cos(mid), ny=cy+(r-4)*Math.sin(mid);
+    svg.appendChild(el('line',{x1:cx,y1:cy,x2:nx.toFixed(1),y2:ny.toFixed(1),stroke:'#1A1A1A','stroke-width':2,'stroke-linecap':'round'}));
+    svg.appendChild(el('circle',{cx:cx,cy:cy,r:4,fill:'#1A1A1A'}));
+    var vt=el('text',{x:cx,y:cy-24,'text-anchor':'middle'}); vt.setAttribute('class','val'); vt.textContent=v.toFixed(1)+'%'; svg.appendChild(vt);
+    var lt=el('text',{x:cx,y:cy+20,'text-anchor':'middle'}); lt.setAttribute('class','lab'); lt.textContent=name; svg.appendChild(lt);
+    return svg;
+  }
+  function draw(items){
+    var stage=document.getElementById('stage'); stage.innerHTML='';
+    if(!items.length) return;
+    var tot=0,below=0;
+    items.forEach(function(it){ tot+=it.v; if(it.v<95.0) below++; });
+    items.forEach(function(it){
+      var cell=document.createElement('div'); cell.className='cell';
+      cell.appendChild(gaugeSVG(it.name,it.v));
+      cell.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+        tip.innerHTML='<b>'+esc(it.name)+'</b><br>'+it.v.toFixed(2)+'% uptime'+(it.v<95.0?' <br>&#9888; below target':''); });
+      cell.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+      stage.appendChild(cell);
+    });
+    document.getElementById('avg').textContent=(tot/items.length).toFixed(1)+'%';
+    document.getElementById('below').textContent=below;
+    document.getElementById('belowwrap').style.display= below>0?'inline':'none';
+  }
+  function synth(){
+    return [
+      {name:'Line 1 — Machining',v:97.8},{name:'Line 2 — Assembly',v:94.2},{name:'Line 3 — Paint',v:98.9},
+      {name:'Line 4 — Stamping',v:96.1},{name:'Line 5 — Welding',v:99.2},{name:'Line 6 — Packaging',v:93.4}
+    ];
+  }
+  var stt={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=stt.cfg||{};
+    if(stt.data&&c.line&&c.uptime&&stt.data[c.line]){
+      var nm=stt.data[c.line]||[], up=stt.data[c.uptime]||[];
+      var items=nm.map(function(n,i){ return {name:n!=null?String(n):('Line '+i), v:Number(up[i])||0}; }).filter(function(it){return it.v>0;});
+      if(items.length){ draw(items); return; }
+    }
+    draw(synth());
+  }
+  if(client){ client.config.subscribe(function(cfg){ stt.cfg=cfg||{};
+    if(stt.unsub){stt.unsub();stt.unsub=null;}
+    if(cfg&&cfg.source){ stt.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ stt.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+  // MUST redraw after Sigma finishes sizing the panel; a load-time-only draw goes stale (clipped/overlapping gauges on wrap)
+  window.addEventListener('resize',function(){ recompute(); });
+  if(window.ResizeObserver){ new ResizeObserver(function(){ recompute(); }).observe(document.getElementById('stage')); }
+})();
+</script>
+</body>
+</html>

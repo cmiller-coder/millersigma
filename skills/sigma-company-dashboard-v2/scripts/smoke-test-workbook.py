@@ -38,6 +38,12 @@ import urllib.request
 
 import sigmaapi as S
 
+# Compatibility shim: only the CLI-backed sigmaapi.py has these; the old
+# urllib+OAuth module only has the base SigmaError / no PROFILE concept. Lets
+# this script run unmodified against either, for A/B timing comparisons.
+_APIError = getattr(S, "SigmaAPIError", S.SigmaError)
+_PROFILE = getattr(S, "PROFILE", "(old sigmaapi.py — no profile concept)")
+
 # The classic Sigma sample retail table. Override with --connection / --path.
 DEFAULT_CONNECTION_NAME = "Sigma Sample Database"
 DEFAULT_TABLE_PATH = ["RETAIL", "PLUGS_ELECTRONICS", "PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA"]
@@ -70,7 +76,7 @@ def _raw(method, path, body=None, accept="application/json", binary=False):
         with urllib.request.urlopen(req, timeout=180) as resp:
             raw = resp.read()
     except urllib.error.HTTPError as exc:
-        raise S.SigmaAPIError(exc.code, exc.read().decode()[:800], url) from None
+        raise _APIError(exc.code, exc.read().decode()[:800], url) from None
     if binary:
         return raw
     text = raw.decode()
@@ -224,7 +230,7 @@ def render_png(workbook_id: str, out_path: pathlib.Path,
             if blob:
                 out_path.write_bytes(blob)
                 return len(blob)
-        except S.SigmaAPIError as exc:
+        except _APIError as exc:
             # Not-ready and gateway-timeout-on-a-live-render are both retryable.
             if exc.status not in (404, 409, 425, 500, 502, 503, 504):
                 raise
@@ -248,7 +254,7 @@ def main() -> None:
 
     folder = args.folder or resolve_folder()
     connection = resolve_connection(args.connection)
-    print("profile    %s" % S.PROFILE)
+    print("profile    %s" % _PROFILE)
     print("folder     %s" % folder)
     print("connection %s (%s)" % (connection, args.connection))
 
@@ -267,7 +273,7 @@ def main() -> None:
                 sql = _raw("GET", "/v2/workbooks/%s/elements/%s/query"
                           % (workbook_id, element)).get("sql") or ""
                 print("sql        %-22s ok (%d chars)" % (element, len(sql)))
-            except S.SigmaAPIError as exc:
+            except _APIError as exc:
                 failures.append("%s: query failed HTTP %s" % (element, exc.status))
                 print("sql        %-22s FAILED %s" % (element, exc.status))
 

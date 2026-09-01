@@ -1,0 +1,2428 @@
+workbookId: 47b6f175-09f9-41d8-93d0-ae4b8202c40e
+name: Sigma Apps - Sales Forecasting (1)
+url: https://staging.sigmacomputing.io/papercranestaging/workbook/Sigma-Apps-Sales-Forecasting-1-2bk3Kw6MbZPbjzBlQG01lk
+documentVersion: 1
+latestDocumentVersion: 1
+ownerId: EMiCgbHO20dUMslKW729zFTR5FygN
+folderId: 5249f7f3-7d5c-412c-bcf6-c68f488f66d6
+createdBy: EMiCgbHO20dUMslKW729zFTR5FygN
+updatedBy: EMiCgbHO20dUMslKW729zFTR5FygN
+createdAt: '2026-07-20T17:57:47.929Z'
+updatedAt: '2026-07-20T17:57:47.929Z'
+schemaVersion: 1
+pages:
+  - id: Fl6OysBYWC
+    name: Data
+    elements:
+      - id: jGCIi3L8h-
+        kind: button
+        text: Summary
+        appearance: filled
+        align: center
+      - id: 99pssB1oUz
+        kind: button
+        text: Create Forecast
+        appearance: filled
+        align: center
+      - id: nHvdVqokHd
+        kind: button
+        text: Forecast Table
+        appearance: filled
+        align: center
+      - id: Lc8tNOwgLm
+        kind: button
+        text: Approvals
+        appearance: filled
+        align: center
+      - id: lGfqdcDUuC
+        kind: button
+        text: Bursting
+        appearance: filled
+        align: center
+      - id: 5VVX4Sk4FE
+        kind: button
+        text: Customization
+        appearance: filled
+        align: center
+      - id: 45fNG306Aj
+        kind: divider
+      - id: fLiz0roayj
+        kind: text
+        body: Summary Data
+        verticalAlign: middle
+      - id: rSWJpCzpcQ
+        kind: table
+        source:
+          connectionId: a9d45cfe-ff65-4515-8193-a7072602a1ee
+          kind: warehouse-table
+          path:
+            - SE_DEMO_DB
+            - RETAIL_DEMO
+            - PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA
+        columns:
+          - id: umDAY-Gmr7
+            formula: Year([Week of Date])
+            name: Year
+          - id: aNqv9EvD_-
+            formula: DateTrunc("week", [PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Date])
+            format:
+              kind: datetime
+              formatString: '%Y-%m-%d %H:%M:%S'
+          - id: lek2c8GzR6
+            formula: Sum([Revenue])
+            name: Weekly Revenue
+            format:
+              kind: number
+              formatString: $,.0f
+          - id: SyzwwrW-EG
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Product Type]'
+          - id: f2nBCpUm03
+            formula: Sum([Revenue])
+            name: Product Revenue by Month
+            format:
+              kind: number
+              formatString: $,.0f
+          - id: Uovyi8Vc5I
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Order Number]'
+          - id: Dug4SEfsr8
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Sku Number]'
+          - id: io3NxaxL3W
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Quantity]'
+          - id: zHoXN5ksei
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Cost]'
+          - id: jxpKRotxzR
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Price]'
+          - id: eXZ7LIqSPW
+            formula: '[Price] * [Quantity]'
+            name: Revenue
+          - id: tn2es9F8tN
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Product Family]'
+          - id: mej9v6kG2H
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Product Name]'
+          - id: GtlRkp46cJ
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Store Name]'
+          - id: sTOZR26DPv
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Store Key]'
+          - id: qPrry3u4VE
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Store Region]'
+          - id: Qg1yI-hgGY
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Store State]'
+          - id: y0vCJ0o3Lw
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Store City]'
+          - id: T5XX5uwJYu
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Store Latitude]'
+          - id: 1UbNyZGiXv
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Store Longitude]'
+          - id: LLYAF-oe7B
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Customer Name]'
+          - id: KvtJ7qffA3
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Cust Key]'
+          - id: aFH5C6vgaX
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Cust Json]'
+          - id: CIvjVjtP1U
+            formula: '[PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Date]'
+          - id: D6ZYIpM65T
+            formula: week
+            name: Month
+        filters:
+          - id: nZc1Bwph1r
+            columnId: CIvjVjtP1U
+            kind: date-range
+            mode: before
+            date: '2024-07-07T00:00:00Z'
+            includeNulls: always
+        groupings:
+          - id: d68DmbI-SK
+            groupBy:
+              - umDAY-Gmr7
+              - aNqv9EvD_-
+            calculations:
+              - lek2c8GzR6
+          - id: 9Ggf54y_d4
+            groupBy:
+              - SyzwwrW-EG
+            calculations:
+              - f2nBCpUm03
+        order:
+          - Uovyi8Vc5I
+          - Dug4SEfsr8
+          - io3NxaxL3W
+          - zHoXN5ksei
+          - jxpKRotxzR
+          - eXZ7LIqSPW
+          - tn2es9F8tN
+          - mej9v6kG2H
+          - GtlRkp46cJ
+          - sTOZR26DPv
+          - qPrry3u4VE
+          - Qg1yI-hgGY
+          - y0vCJ0o3Lw
+          - T5XX5uwJYu
+          - 1UbNyZGiXv
+          - LLYAF-oe7B
+          - KvtJ7qffA3
+          - aFH5C6vgaX
+          - CIvjVjtP1U
+          - D6ZYIpM65T
+        visibleAsSource: false
+        tableComponents:
+          collapsedColumns: hidden
+      - id: vVc-jTnTE-
+        kind: input-table
+        source:
+          kind: empty
+          connectionId: a9d45cfe-ff65-4515-8193-a7072602a1ee
+        inputMode: explore
+        name: Target & Forecast
+        columns:
+          - id: B9AGBJG-AJ
+            type: datetime
+            name: Week
+          - id: Aq8g3I1Rrp
+            formula: Hour([Week])
+            hidden: true
+          - id: aFi22ri2bb
+            formula: DateAdd("hour", -[Hour of Week], [Week])
+            name: Date Mod
+            hidden: true
+          - id: VbENKp7S7H
+            formula: >-
+              Lookup([PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Weekly Revenue], [Week],
+              [PLUGS_ELECTRONICS_HANDS_ON_LAB_DATA/Week of Date])
+            name: Actuals
+          - id: E45PD3QK6N
+            type: number
+            name: Target
+          - id: JJWM89ELUA
+            type: number
+            name: Stat Forecast
+          - id: Uz9FPiEkMO
+            formula: If(IsNull([Stat Forecast]), "Actuals", "Forecast")
+            name: Actuals/Forecast
+          - id: hZPZOTK1K0
+            formula: Coalesce([Actuals], [Stat Forecast]) - [Target]
+            name: Var
+          - id: yIwbXXlb30
+            formula: Coalesce([Actuals], [Stat Forecast])
+            name: Actuals and Forecast
+          - id: 4DtehwTMHs
+            formula: SumIf([Actuals], [Actuals\/Forecast] = "Actuals")
+            name: YTD revenue
+          - id: yuKMC7eod9
+            formula: SumIf([Target], [Actuals\/Forecast] = "Actuals")
+            name: YTD target
+          - id: TbsT28LIt7
+            formula: SumIf([Target], [Actuals\/Forecast] = "Forecast")
+            name: Remainder target
+          - id: CGLLX0_s-A
+            formula: SumIf([Stat Forecast], [Actuals\/Forecast] = "Forecast")
+            name: Remainder forecast
+          - id: loXyux8XI-
+            formula: Sum([Target])
+            name: Full year target
+        summary:
+          - 4DtehwTMHs
+          - yuKMC7eod9
+          - TbsT28LIt7
+          - CGLLX0_s-A
+          - loXyux8XI-
+      - id: hp6J6z_zYw
+        kind: divider
+      - id: 8qSquutwGr
+        kind: text
+        body: Forecast Scenario List
+      - id: D3zIPd8aj7
+        kind: text
+        body: '<p style="text-align: center">Modal Actions</p>'
+        verticalAlign: middle
+      - id: KzBOQY_0u5
+        kind: divider
+      - kind: control
+        controlId: Change-ID
+        id: ieO5H0XHX8
+        name: C_ChangeID
+        controlType: list
+        mode: include
+        selectionMode: single
+        value: 715D065821A94EB88CF9D6C74E3CBED1
+        source:
+          kind: manual
+          valueType: text
+      - id: C6SLgePOah
+        kind: divider
+      - id: VJ2auN5SGe
+        kind: text
+        body: Log for Forecast Linked Input Table
+      - id: 0u6Eol0Nb1
+        kind: table
+        source:
+          kind: join
+          joins:
+            - left:
+                elementId: vVc-jTnTE-
+                kind: table
+              right:
+                elementId: 6zrIkHs9wC
+                kind: table
+              columns:
+                - left: '1'
+                  right: '1'
+              joinType: left-outer
+          primarySource:
+            elementId: vVc-jTnTE-
+            kind: table
+        columns:
+          - id: xnCWmZvpTq
+            formula: '[Forecast Scenarios List/Forecast Name]'
+          - id: G9ZfVbBEdg
+            formula: '[Forecast Scenarios List/Forecast Submission Status]'
+          - id: hqK8bK_Dnz
+            formula: '[Forecast Scenarios List/Forecast Promotions Comments]'
+          - id: SP5eVuUyEk
+            formula: '[Target & Forecast/YTD revenue]'
+          - id: 9S1qizg-2Q
+            formula: '[Target & Forecast/YTD target]'
+          - id: EekuUIqwrW
+            formula: '[Target & Forecast/Remainder target]'
+          - id: 01uqaNP8Mc
+            formula: '[Target & Forecast/Full year target]'
+          - id: v_0jSsKD3t
+            formula: '[Target & Forecast/Week]'
+          - id: FccQUVg_bb
+            formula: '[Target & Forecast/Actuals]'
+          - id: PS1uA_Q9Gk
+            formula: '[Target & Forecast/Target]'
+          - id: inYU0PFQtF
+            formula: '[Target & Forecast/Stat Forecast]'
+          - id: VaM-kLdEK_
+            formula: '[Target & Forecast/Actuals\/Forecast]'
+          - id: evh6R6d4a-
+            formula: '[Target & Forecast/Var]'
+          - id: zSA41JtBS_
+            formula: '[Target & Forecast/Actuals and Forecast]'
+          - id: '-_EzN7q8Q4'
+            formula: '[Forecast Scenarios List/Last updated at]'
+          - id: NQ-9o6DyXZ
+            formula: '[Forecast Scenarios List/ID]'
+          - id: 4IpjP1dp2m
+            formula: '[Forecast Scenarios List/Approval Status]'
+          - id: zgOXsrY575
+            formula: '[Forecast Scenarios List/Forecasted Submitted On]'
+          - id: 9TRsiE0VTH
+            formula: '[Forecast Scenarios List/Forecasted Submitted By]'
+          - id: _4pNTar-DY
+            formula: '[Forecast Scenarios List/Approved On]'
+          - id: W2g8G4wMJ_
+            formula: '[Forecast Scenarios List/Approved By]'
+          - id: f1JH4m-L3q
+            formula: '[Forecast Scenarios List/Approval Comments]'
+          - id: rmjYcbcllL
+            formula: '[Target & Forecast/Remainder forecast]'
+          - id: Qob7B2Fnlt
+            formula: '[Target & Forecast/Hour of Week]'
+          - id: EoTBiyPdPq
+            formula: '[Target & Forecast/Date Mod]'
+        name: Log for Forecast Linked Input Table
+        filters:
+          - id: v7J6NiqN-e
+            columnId: VaM-kLdEK_
+            kind: list
+            mode: include
+            values:
+              - Forecast
+        order:
+          - xnCWmZvpTq
+          - G9ZfVbBEdg
+          - hqK8bK_Dnz
+          - SP5eVuUyEk
+          - 9S1qizg-2Q
+          - EekuUIqwrW
+          - 01uqaNP8Mc
+          - v_0jSsKD3t
+          - FccQUVg_bb
+          - PS1uA_Q9Gk
+          - inYU0PFQtF
+          - VaM-kLdEK_
+          - evh6R6d4a-
+          - zSA41JtBS_
+          - '-_EzN7q8Q4'
+          - NQ-9o6DyXZ
+          - 4IpjP1dp2m
+          - zgOXsrY575
+          - 9TRsiE0VTH
+          - _4pNTar-DY
+          - W2g8G4wMJ_
+          - f1JH4m-L3q
+          - rmjYcbcllL
+          - Qob7B2Fnlt
+          - EoTBiyPdPq
+        visibleAsSource: false
+      - id: QI2MlRFiVV
+        kind: text
+        body: '<p style="text-align: center">Modal Actions</p>'
+        verticalAlign: middle
+      - id: 2VNQz_30O3
+        kind: divider
+      - kind: control
+        controlId: Vurrent-Value
+        id: POy6QTSyTc
+        name: Current Value
+        controlType: number
+        mode: '='
+        includeNulls: always
+      - kind: control
+        controlId: Target
+        id: Auros1Y83J
+        name: Target
+        controlType: number
+        mode: '='
+        value: 8573709
+        includeNulls: always
+      - kind: control
+        controlId: Week
+        id: f6NduszsGg
+        name: Week
+        controlType: date
+        mode: '='
+        value: '2024-07-20T07:00:00Z'
+        includeNulls: always
+      - kind: control
+        controlId: State-Forecast
+        id: IJX9nbSlvD
+        name: State Forecast
+        controlType: number
+        mode: '='
+        value: 8132315.44191919
+        includeNulls: always
+      - kind: control
+        controlId: Updated-Value
+        id: HAY7I9t9l5
+        controlType: number
+        mode: '='
+        value: 8989707.3
+        includeNulls: always
+      - kind: control
+        controlId: Submitted-On
+        id: Ftr2UBw0PX
+        name: Submitted On
+        controlType: date
+        mode: '='
+        value: '2025-05-14T16:27:46Z'
+        includeNulls: always
+      - kind: control
+        controlId: Submitted-By
+        id: oyyP-6dd7H
+        name: Submitted by
+        case: insensitive
+        controlType: text
+        mode: equals
+        value: jonathan.archer@sigmacomputing.com
+        includeNulls: always
+        showOperators: false
+      - id: zC9IZgcRBr
+        kind: divider
+      - id: 3JCTjcItgX
+        kind: text
+        body: Forecast Approvals
+      - id: 21B5XhWjFK
+        kind: table
+        source:
+          connectionId: a9d45cfe-ff65-4515-8193-a7072602a1ee
+          statement: |-
+            Select * From
+                              SE_DEMO_DB.PAPERCRANE_WRITE."SIGDS_7e26511e_48e7_4b59_b01f_6dc4c13434ca" "SIGDS_7e26511e_48e7_4b59_b01f_6dc4c13434ca"
+          kind: sql
+        columns:
+          - id: rOlguSZkiU
+            formula: '[Updated By]'
+            name: Forecast Name
+          - id: tciV_QKOUY
+            formula: DateTrunc("day", [Week (1)])
+            name: Week
+          - id: NR2nzyPxu8
+            formula: SumIf([Forecast (1)], [Max of ROW_VERSION] = [Row Version])
+            name: Forecast
+            format:
+              kind: number
+              formatString: $,.0f
+          - id: VDpwX7SDpR
+            formula: MaxIf([Updated By (1)], [Max of ROW_VERSION] = [Row Version])
+            name: Updated By
+            format:
+              kind: number
+              formatString: $,.0f
+          - id: ZmmYcvoqLW
+            formula: MaxIf([Updated At (1)], [Max of ROW_VERSION] = [Row Version])
+            name: Updated At
+            format:
+              kind: number
+              formatString: $,.0f
+          - id: 0AedyEQyZl
+            formula: Max([Row Version])
+            hidden: true
+          - id: _Bdw2QfbGl
+            formula: '[Custom SQL/ID]'
+          - id: lIvBwCGxMv
+            formula: '[Custom SQL/SEQ_NUM]'
+          - id: s3vNRtg97n
+            formula: '[Custom SQL/ROW_VERSION]'
+          - id: HKiT-DUbMt
+            formula: '[Custom SQL/TOMBSTONE_VERSION]'
+          - id: v8_Ia1lJ6j
+            formula: '[Custom SQL/UPDATED_BY]'
+          - id: 83-30yOUcJ
+            formula: '[Custom SQL/UPDATED_AT]'
+          - id: BgKok1_VzN
+            formula: '[Custom SQL/YNI9ZBGJ9-]'
+            name: Week
+          - id: JoCKnsn3uO
+            formula: '[Custom SQL/JTVELJAVZJ]'
+          - id: AtnMnZfUHG
+            formula: '[Custom SQL/XLBK2WXDAL]'
+          - id: tixkuS4T0-
+            formula: '[Custom SQL/1YISL3L8X3]'
+            name: Forecast
+          - id: HCX4BLTSwl
+            formula: '[Custom SQL/GIX4YE50FC]'
+        name: Forecast Approvals
+        filters:
+          - id: FRoPu9fCKC
+            columnId: HCX4BLTSwl
+            kind: list
+            mode: include
+            values: []
+        groupings:
+          - id: x-_SNRWgyX
+            groupBy:
+              - rOlguSZkiU
+          - id: QALSaSbfmc
+            groupBy:
+              - tciV_QKOUY
+            calculations:
+              - NR2nzyPxu8
+              - VDpwX7SDpR
+              - ZmmYcvoqLW
+              - 0AedyEQyZl
+        order:
+          - _Bdw2QfbGl
+          - lIvBwCGxMv
+          - s3vNRtg97n
+          - HKiT-DUbMt
+          - v8_Ia1lJ6j
+          - 83-30yOUcJ
+          - BgKok1_VzN
+          - JoCKnsn3uO
+          - AtnMnZfUHG
+          - tixkuS4T0-
+          - HCX4BLTSwl
+        visibleAsSource: false
+        sort:
+          - columnId: 83-30yOUcJ
+            direction: descending
+            nulls: last
+      - id: wWHLBv0jHN
+        kind: text
+        body: '<p style="text-align: center">Modal Actions</p>'
+      - id: 41Q8PwYc16
+        kind: divider
+      - kind: control
+        controlId: Approval-Forecast-Name
+        id: wdTcqHFRXY
+        name: Approval Forecast Name
+        case: insensitive
+        controlType: text
+        mode: equals
+        value: '1101'
+        includeNulls: always
+        showOperators: false
+      - kind: control
+        controlId: Approval-Status
+        id: f9YuOtr_c3
+        name: Approval Status
+        case: insensitive
+        controlType: text
+        mode: equals
+        value: Submit
+        includeNulls: always
+        showOperators: false
+      - kind: control
+        controlId: Submission-Notes
+        id: gAZDf3x4oz
+        name: Submission Notes
+        case: insensitive
+        controlType: text
+        mode: equals
+        value: check this out please
+        includeNulls: always
+        showOperators: false
+      - kind: control
+        controlId: Approved-On
+        id: Oh-ygX7vf5
+        name: Approved On
+        controlType: date
+        mode: '='
+        value: '2025-05-12T23:32:22Z'
+        includeNulls: always
+      - kind: control
+        controlId: Approved-By
+        id: lrRXy8msJt
+        name: Approved By
+        case: insensitive
+        controlType: text
+        mode: equals
+        value: jonathan.archer@sigmacomputing.com
+        includeNulls: always
+        showOperators: false
+      - kind: control
+        controlId: Submission-Status
+        id: Il8EYygvkN
+        name: Fcst Submission Status
+        case: insensitive
+        controlType: text
+        mode: equals
+        value: Approved
+        includeNulls: always
+        showOperators: false
+      - id: 7xFbPN7kzX
+        kind: divider
+      - id: 5xpXly1-ts
+        kind: text
+        body: Bursting Summary
+      - id: XooljRRSGc
+        kind: table
+        source:
+          kind: join
+          joins:
+            - left:
+                elementId: 6zrIkHs9wC
+                kind: table
+              right:
+                elementId: 21B5XhWjFK
+                kind: table
+              columns:
+                - left: '[Forecast Name]'
+                  right: '[Forecast Name]'
+              joinType: left-outer
+          primarySource:
+            elementId: 6zrIkHs9wC
+            kind: table
+        columns:
+          - id: FGX6a78Llk
+            formula: '[Forecast Scenarios List/Forecast Name]'
+          - id: nB18yIC8R5
+            formula: '[Forecast Approvals/Week]'
+            format:
+              kind: datetime
+              formatString: '%Y-%m-%d %H:%M:%S'
+          - id: eeuCmx-3n_
+            formula: Lookup([Target & Forecast/Target], [Week], [Target & Forecast/Date Mod])
+          - id: uluSRSu7Cu
+            formula: Lookup([Target & Forecast/Stat Forecast], [Week], [Target & Forecast/Date Mod])
+          - id: UG5LBm5Z_V
+            formula: '[Forecast Approvals/Forecast]'
+          - id: 34NJTgpWMx
+            formula: '[Forecast Scenarios List/Forecast Submission Status]'
+          - id: NERPP1aYJP
+            formula: '[Forecast Scenarios List/Forecasted Submitted On]'
+          - id: 3YuhCti07X
+            formula: '[Forecast Scenarios List/Forecasted Submitted By]'
+          - id: suGVLFRzeh
+            formula: '[Forecast Scenarios List/Forecast Promotions Comments]'
+          - id: ZWd09GLYdf
+            formula: '[Forecast Scenarios List/Last updated at]'
+          - id: skk5Gqhq1Y
+            formula: '[Forecast Scenarios List/ID]'
+          - id: CyqIbU4CfE
+            formula: '[Forecast Scenarios List/Approval Status]'
+          - id: LOyPmDdHGE
+            formula: '[Forecast Scenarios List/Approved On]'
+          - id: T2ucqcGAX9
+            formula: '[Forecast Scenarios List/Approved By]'
+          - id: DAOeNKId1o
+            formula: '[Forecast Scenarios List/Approval Comments]'
+          - id: VdaVxZg_tl
+            formula: '[Forecast Approvals/Forecast Name]'
+          - id: 0e601266d9498eb6f9bb49db77201613
+            formula: '[Forecast Approvals/Gix 4 Ye 50 Fc]'
+        name: Bursting
+        order:
+          - FGX6a78Llk
+          - nB18yIC8R5
+          - eeuCmx-3n_
+          - uluSRSu7Cu
+          - UG5LBm5Z_V
+          - 34NJTgpWMx
+          - NERPP1aYJP
+          - 3YuhCti07X
+          - suGVLFRzeh
+          - ZWd09GLYdf
+          - skk5Gqhq1Y
+          - CyqIbU4CfE
+          - LOyPmDdHGE
+          - T2ucqcGAX9
+          - DAOeNKId1o
+          - VdaVxZg_tl
+          - 0e601266d9498eb6f9bb49db77201613
+        visibleAsSource: false
+      - id: 0Ekz65VC6P
+        kind: text
+        body: Controls
+      - id: Wa-3HAXa_k
+        kind: divider
+      - kind: control
+        controlId: Burst-Forecast-Name
+        id: YTpUBPvkDd
+        name: Burst Forecast Name
+        filters:
+          - source:
+              kind: table
+              elementId: XooljRRSGc
+            columnId: FGX6a78Llk
+        controlType: list
+        mode: include
+        selectionMode: single
+        value: Dom's awesome forecast
+        source:
+          kind: source
+          source:
+            kind: table
+            elementId: FKnL-Ql2PN
+          columnId: TYDCTBOEY4
+      - id: 6zrIkHs9wC
+        kind: input-table
+        source:
+          kind: empty
+          connectionId: a9d45cfe-ff65-4515-8193-a7072602a1ee
+        inputMode: explore
+        name: Forecast Scenarios List
+        sort:
+          - columnId: 0Oh3ZMxWsW
+            direction: descending
+            nulls: last
+        filters:
+          - id: N0hZREj2Bt
+            columnId: QO5W_DWLPL
+            kind: list
+            mode: include
+            values: []
+        columns:
+          - id: QO5W_DWLPL
+            type: text
+            name: Forecast Name
+          - id: NWZNBQG4HL
+            type: text
+            name: Forecast Submission Status
+            values:
+              - Submit
+            pills: color-by-option
+          - id: LAGGGLQFAU
+            type: datetime
+            name: Forecasted Submitted On
+          - id: 0ZIW0O6NH9
+            type: text
+            name: Forecasted Submitted By
+          - id: 9ZXRXVS4OX
+            type: text
+            name: Forecast Promotions Comments
+          - id: UPDATED_AT
+            name: Last updated at
+          - id: ID
+            name: ID
+          - id: 6PGUW_C3MG
+            type: text
+            name: Approval Status
+          - id: SXO3SGWNJK
+            type: datetime
+            name: Approved On
+          - id: CDQSC4QM28
+            type: text
+            name: Approved By
+          - id: BKDJ6XHD33
+            type: text
+            name: Approval Comments
+      - kind: control
+        controlId: Company
+        id: d_8mwrpH48con
+        filters:
+          - source:
+              kind: table
+              elementId: U34OAI5vhI
+            columnId: IV5PP_AGB6
+        controlType: list
+        mode: include
+        selectionMode: single
+        value: SoFi
+        source:
+          kind: source
+          source:
+            kind: table
+            elementId: U34OAI5vhI
+          columnId: IV5PP_AGB6
+      - kind: control
+        controlId: Logo
+        id: qZfKaiZUXqcon
+        filters:
+          - source:
+              kind: table
+              elementId: U34OAI5vhI
+            columnId: WWNA4IEZGH
+        controlType: list
+        mode: include
+        selectionMode: single
+        value: upload.wikimedia.org/wikipedia/commons/thumb/1/16/SoFi_logo.svg/1150px-SoFi_logo.svg.png
+        source:
+          kind: source
+          source:
+            kind: table
+            elementId: U34OAI5vhI
+          columnId: WWNA4IEZGH
+      - id: qYRmwpjo5u
+        kind: button
+        text: Clear
+        appearance: outline
+        align: center
+        actions:
+          - id: hcPNjtjv-a
+            trigger: on-click
+            effects:
+              - effect: clear-control
+                scope:
+                  type: control
+                  controlId: Company
+              - effect: clear-control
+                scope:
+                  type: control
+                  controlId: Logo
+      - id: U34OAI5vhI
+        kind: input-table
+        source:
+          kind: empty
+          connectionId: a9d45cfe-ff65-4515-8193-a7072602a1ee
+        inputMode: explore
+        name: Customization
+        filters:
+          - id: WWJexxatwu
+            columnId: IV5PP_AGB6
+            kind: list
+            mode: exclude
+            values:
+              - null
+        columns:
+          - id: IV5PP_AGB6
+            type: text
+            name: Company
+          - id: WWNA4IEZGH
+            type: text
+            name: Logo
+          - id: zqWyPfV3um
+            formula: '"SET"'
+            name: Set Customization
+    visibility: hidden
+  - id: GY_hF1osPB
+    type: modal
+    name: Create Forecast
+    elements:
+      - kind: control
+        controlId: C_CreateForecast
+        id: '-ss_9eGNNc'
+        name: Start by giving your forecast a name
+        case: insensitive
+        controlType: text
+        mode: equals
+        includeNulls: always
+        showOperators: false
+      - id: CcbvDhiQBz
+        kind: button
+        text: Get Sarted
+        appearance: filled
+        align: stretch
+        fillColor: '#1e3558'
+        actions:
+          - id: u4lvUnSMPT
+            trigger: on-click
+            effects:
+              - effect: insert-rows
+                tableElementId: 6zrIkHs9wC
+                values:
+                  9ZXRXVS4OX:
+                    type: constant
+                    value:
+                      type: text
+                      value: null
+                  NWZNBQG4HL:
+                    type: constant
+                    value:
+                      type: text
+                      value: null
+                  QO5W_DWLPL:
+                    type: control
+                    control: C_CreateForecast
+              - effect: close-overlay
+              - effect: set-control-value
+                control: C_DisplayForecast
+                value:
+                  type: control
+                  control: C_CreateForecast
+          - id: ixjHp9tqDy
+            trigger: on-click
+            effects:
+              - effect: open-overlay
+                overlayId: 0o8QPIeJWd
+      - id: hdNQ9E3pGM
+        kind: button
+        text: Cancel
+        appearance: outline
+        align: stretch
+        actions:
+          - id: EVCCUf06F-
+            trigger: on-click
+            effects:
+              - effect: close-overlay
+    modal:
+      width: x-small
+      header:
+        showCloseIcon: hidden
+      footer:
+        primaryCta:
+          visible: hidden
+        secondaryCta:
+          visible: hidden
+  - id: 0o8QPIeJWd
+    type: modal
+    name: Forecast Already Exists
+    elements:
+      - id: WfxQp8JBIF
+        kind: text
+        body: '<p style="text-align: center">Forecast already exists. Please enter a new forecast name.</p>'
+        verticalAlign: middle
+      - id: DxvrvkMSTP
+        kind: button
+        text: Okay
+        appearance: filled
+        align: center
+        actions:
+          - id: 1TKYV7seEr
+            trigger: on-click
+            effects:
+              - effect: open-overlay
+                overlayId: GY_hF1osPB
+    modal:
+      header:
+        showCloseIcon: hidden
+      footer:
+        primaryCta:
+          visible: hidden
+        secondaryCta:
+          visible: hidden
+  - id: vciMDGoDz3
+    name: Summary
+    elements:
+      - id: 89et5Mq7aI
+        kind: image
+        url: https://{{[Logo]}}
+      - id: tvKUY9M4bp
+        kind: text
+        body: '## Sales Forecasting & Approvals'
+        verticalAlign: middle
+      - id: 6tAclTMshQ
+        kind: kpi-chart
+        source:
+          elementId: vVc-jTnTE-
+          kind: table
+        columns:
+          - id: wB2Qzisu73
+            formula: Sum([Actuals and Forecast (1)])
+            name: Actuals and FOrecast
+            format:
+              kind: number
+              formatString: .2~S
+          - id: '-XIXoaMb0T'
+            formula: Sum([Target (1)])
+            name: Target
+            format:
+              kind: number
+              formatString: .2~S
+          - id: '-bRNDsW2KU'
+            formula: '[Target & Forecast/YTD revenue]'
+          - id: rLYdq5nR9q
+            formula: '[Target & Forecast/YTD target]'
+          - id: WmFOMUnJsH
+            formula: '[Target & Forecast/Remainder target]'
+          - id: TycckAEy_s
+            formula: '[Target & Forecast/Full year target]'
+          - id: Y2o82Yo1Uh
+            formula: '[Target & Forecast/Week]'
+          - id: ipJz2tKMou
+            formula: '[Target & Forecast/Actuals]'
+          - id: L75RtoH55f
+            formula: '[Target & Forecast/Target]'
+          - id: JAb4W8EiMc
+            formula: '[Target & Forecast/Stat Forecast]'
+          - id: Yb9syPvESK
+            formula: '[Target & Forecast/Var]'
+          - id: yZlTJSzLzp
+            formula: '[Target & Forecast/Actuals\/Forecast]'
+          - id: WKKKBSOd1t
+            formula: '[Target & Forecast/Actuals and Forecast]'
+          - id: dJj1ipzwKv
+            formula: '[Target & Forecast/Remainder forecast]'
+          - id: yQNwlIDR4F
+            formula: '[Target & Forecast/Hour of Week]'
+          - id: t4jTRkgAke
+            formula: '[Target & Forecast/Date Mod]'
+        value:
+          columnId: wB2Qzisu73
+          fontSize: 32
+        name:
+          text: Projected Annual Revenue
+          fontSize: 16
+        comparison:
+          display: delta
+          colorGood: '#3bb5b3'
+          colorBad: '#ee465c'
+          fontSize: 14
+        comparisonColumn:
+          columnId: '-XIXoaMb0T'
+      - id: 3FN8D-FCvU
+        kind: line-chart
+        source:
+          elementId: vVc-jTnTE-
+          kind: table
+        columns:
+          - id: Xf26aW2SbC
+            formula: DateTrunc("day", [Week])
+            format:
+              kind: datetime
+              formatString: '%m/%d/%Y'
+          - id: PlEqF4ZUNh
+            formula: Sum([Target (1)])
+            name: Target
+          - id: Fo_UUSwXPD
+            formula: Sum([Actuals (1)])
+            name: Actuals
+          - id: rp6ZJgRmi4
+            formula: Sum([Stat Forecast])
+            name: Forecast
+          - id: Q7LNlFG08Q
+            formula: '[Target & Forecast/YTD revenue]'
+          - id: _7-L9esPFB
+            formula: '[Target & Forecast/YTD target]'
+          - id: 9YAeTdc493
+            formula: '[Target & Forecast/Remainder target]'
+          - id: bC5I7Cki7K
+            formula: '[Target & Forecast/Full year target]'
+          - id: oLJ91Qd0iP
+            formula: '[Target & Forecast/Week]'
+          - id: 3jFgM9I6MB
+            formula: '[Target & Forecast/Actuals]'
+          - id: C7j3M7b-qh
+            formula: '[Target & Forecast/Target]'
+          - id: IhCwNIR_F4
+            formula: '[Target & Forecast/Stat Forecast]'
+          - id: _ymu9pusl7
+            formula: '[Target & Forecast/Actuals\/Forecast]'
+          - id: zrXZ8uaVPv
+            formula: '[Target & Forecast/Var]'
+          - id: 5SGi2b13qE
+            formula: '[Target & Forecast/Actuals and Forecast]'
+          - id: Aus_KkoBJx
+            formula: '[Target & Forecast/Remainder forecast]'
+          - id: EeVTfTeuYc
+            formula: '[Target & Forecast/Hour of Week]'
+          - id: fcT2ErqZPm
+            formula: '[Target & Forecast/Date Mod]'
+        yAxis:
+          columnIds:
+            - PlEqF4ZUNh
+            - Fo_UUSwXPD
+            - rp6ZJgRmi4
+          format:
+            scale:
+              type: linear
+              zero: true
+              hideZeroLine: true
+        xAxis:
+          columnId: Xf26aW2SbC
+        legend:
+          position: top-left
+        refMarks:
+          - type: band
+            axis: axis
+            value:
+              type: constant
+              value: 1719730800000
+            label:
+              visibility: shown
+              text: Today
+            caption:
+              position: bottom-right
+            endValue:
+              type: constant
+              value: 1735632000000
+            fill:
+              color: '#c8e4e4'
+        lineAreaStyle:
+          missing: hide
+      - id: EPN8O9olLE
+        kind: kpi-chart
+        source:
+          elementId: vVc-jTnTE-
+          kind: table
+        columns:
+          - id: bVoluyrW_F
+            formula: Sum([Actuals])
+            format:
+              kind: number
+              formatString: .2~S
+          - id: '-XIXoaMb0T'
+            formula: Sum([Target (1)])
+            name: Target
+            format:
+              kind: number
+              formatString: .2~S
+          - id: wB2Qzisu73
+            formula: Sum([Actuals and Forecast (1)])
+            name: Actuals and FOrecast
+            format:
+              kind: number
+              formatString: .2~S
+          - id: '-bRNDsW2KU'
+            formula: '[Target & Forecast/YTD revenue]'
+          - id: rLYdq5nR9q
+            formula: '[Target & Forecast/YTD target]'
+          - id: WmFOMUnJsH
+            formula: '[Target & Forecast/Remainder target]'
+          - id: TycckAEy_s
+            formula: '[Target & Forecast/Full year target]'
+          - id: Y2o82Yo1Uh
+            formula: '[Target & Forecast/Week]'
+          - id: ipJz2tKMou
+            formula: '[Target & Forecast/Actuals]'
+          - id: L75RtoH55f
+            formula: '[Target & Forecast/Target]'
+          - id: JAb4W8EiMc
+            formula: '[Target & Forecast/Stat Forecast]'
+          - id: Yb9syPvESK
+            formula: '[Target & Forecast/Var]'
+          - id: yZlTJSzLzp
+            formula: '[Target & Forecast/Actuals\/Forecast]'
+          - id: WKKKBSOd1t
+            formula: '[Target & Forecast/Actuals and Forecast]'
+          - id: U30yb9Y2md
+            formula: '[Target & Forecast/Remainder forecast]'
+          - id: _ARlYYAR_r
+            formula: '[Target & Forecast/Hour of Week]'
+          - id: Y8_3ASSJg3
+            formula: '[Target & Forecast/Date Mod]'
+        value:
+          columnId: bVoluyrW_F
+          fontSize: 32
+        filters:
+          - id: jkSiucGw1f
+            columnId: yZlTJSzLzp
+            kind: list
+            mode: include
+            values:
+              - Actuals
+        name:
+          text: Year to Date (Actuals)
+          fontSize: 16
+        comparison:
+          display: delta
+          colorGood: '#3bb5b3'
+          colorBad: '#ee465c'
+          fontSize: 14
+        comparisonColumn:
+          columnId: '-XIXoaMb0T'
+      - id: aVpGqjkjeA
+        kind: kpi-chart
+        source:
+          elementId: vVc-jTnTE-
+          kind: table
+        columns:
+          - id: bxthAv5aX8
+            formula: Sum([Stat Forecast])
+            format:
+              kind: number
+              formatString: .2~S
+          - id: '-XIXoaMb0T'
+            formula: Sum([Target (1)])
+            name: Target
+            format:
+              kind: number
+              formatString: .2~S
+          - id: bVoluyrW_F
+            formula: Sum([Actuals])
+          - id: wB2Qzisu73
+            formula: Sum([Actuals and Forecast (1)])
+            name: Actuals and FOrecast
+            format:
+              kind: number
+              formatString: .2~S
+          - id: '-bRNDsW2KU'
+            formula: '[Target & Forecast/YTD revenue]'
+          - id: rLYdq5nR9q
+            formula: '[Target & Forecast/YTD target]'
+          - id: WmFOMUnJsH
+            formula: '[Target & Forecast/Remainder target]'
+          - id: TycckAEy_s
+            formula: '[Target & Forecast/Full year target]'
+          - id: Y2o82Yo1Uh
+            formula: '[Target & Forecast/Week]'
+          - id: ipJz2tKMou
+            formula: '[Target & Forecast/Actuals]'
+          - id: L75RtoH55f
+            formula: '[Target & Forecast/Target]'
+          - id: JAb4W8EiMc
+            formula: '[Target & Forecast/Stat Forecast]'
+          - id: Yb9syPvESK
+            formula: '[Target & Forecast/Var]'
+          - id: yZlTJSzLzp
+            formula: '[Target & Forecast/Actuals\/Forecast]'
+          - id: WKKKBSOd1t
+            formula: '[Target & Forecast/Actuals and Forecast]'
+          - id: yJaH93b0Nv
+            formula: '[Target & Forecast/Remainder forecast]'
+          - id: 45iJdMMgS3
+            formula: '[Target & Forecast/Hour of Week]'
+          - id: Gkahnx2eaV
+            formula: '[Target & Forecast/Date Mod]'
+        value:
+          columnId: bxthAv5aX8
+          fontSize: 32
+        filters:
+          - id: jkSiucGw1f
+            columnId: yZlTJSzLzp
+            kind: list
+            mode: include
+            values:
+              - Forecast
+        name:
+          text: Remainder of Year (Forecast)
+          fontSize: 16
+        comparison:
+          display: delta
+          colorGood: '#3bb5b3'
+          colorBad: '#ee465c'
+          fontSize: 14
+        comparisonColumn:
+          columnId: '-XIXoaMb0T'
+      - id: oETF0qaJSG
+        kind: container
+        style:
+          padding: none
+      - id: BrGTjKP_m7
+        kind: container
+        style:
+          backgroundColor: '#1e3558'
+      - id: AjeycGalcF
+        kind: text
+        body: "<span style=\"color: #ffffff\">Scenario Modeler |\_</span><span style=\"color: #ffffff\">{{CurrentUserEmail()}}</span>"
+        verticalAlign: middle
+      - id: CF11PbjHRN
+        kind: button
+        text: Create Forecast
+        appearance: outline
+        align: stretch
+        borderRadius: pill
+        fillColor: '#ffffff'
+        fontColor: '#ffffff'
+        fontWeight: bold
+        actions:
+          - id: wfB8iNGHYN
+            trigger: on-click
+            effects:
+              - effect: clear-control
+                scope:
+                  type: page
+                  pageId: GY_hF1osPB
+              - effect: open-overlay
+                overlayId: GY_hF1osPB
+              - effect: open-overlay
+                overlayId: GY_hF1osPB
+      - id: 3bFIhEmrit
+        kind: button
+        text: Submit Forecast
+        appearance: outline
+        align: stretch
+        borderRadius: pill
+        fillColor: '#ffffff'
+        fontColor: '#ffffff'
+        actions:
+          - id: gKEXMVxwwz
+            trigger: on-click
+            effects:
+              - effect: clear-control
+                scope:
+                  type: page
+                  pageId: 0SH-HXmIq2
+              - effect: open-overlay
+                overlayId: 0SH-HXmIq2
+      - id: LGmnZYnySs
+        kind: button
+        text: Assisted Entry
+        appearance: outline
+        align: stretch
+        borderRadius: pill
+        fillColor: '#ffffff'
+        fontColor: '#ffffff'
+        actions:
+          - id: jTprhR2P6d
+            trigger: on-click
+            effects:
+              - effect: clear-control
+                scope:
+                  type: page
+                  pageId: K9X7AI-49U
+      - id: zPA77dhBsS
+        kind: button
+        text: >-
+          Alerts ({{If(MinIf([Forecast Scenarios List/Approval Status], [C_DisplayForecast] = [Forecast Scenarios
+          List/Forecast Name]) = "Change Request", 1, 0)}})
+        appearance: outline
+        align: center
+        borderRadius: pill
+        fillColor: '#fcdde0'
+        fontColor: '#fcdde0'
+        fontWeight: normal
+      - id: H8EoiFhDxq
+        kind: container
+      - kind: control
+        controlId: C_DisplayForecast
+        id: HzNIRT2wX9
+        name: 'Forecast '
+        filters:
+          - source:
+              kind: table
+              elementId: 1t8lh6zuWq
+            columnId: GIX4YE50FC
+        controlType: list
+        mode: include
+        selectionMode: single
+        value: Dom's awesome forecast
+        source:
+          kind: source
+          source:
+            kind: table
+            elementId: 6zrIkHs9wC
+          columnId: QO5W_DWLPL
+      - id: WTKki2PR0r
+        kind: text
+        body: "*Submission Status:\_****{{MinIf([Forecast Scenarios List/Forecast Submission Status], [C_DisplayForecast] = [Forecast Scenarios List/Forecast Name])}}***\n\n*Appoval Status:\_****{{MinIf([Forecast Scenarios List/Approval Status], [C_DisplayForecast] = [Forecast Scenarios List/Forecast Name])}}***"
+      - id: 1t8lh6zuWq
+        kind: input-table
+        source:
+          kind: linked
+          from: 0u6Eol0Nb1
+        inputMode: explore
+        name:
+          visibility: hidden
+        style:
+          borderRadius: pill
+          borderColor:
+            kind: theme
+            ref: colors-border
+          borderWidth: 0
+        tableStyle:
+          banding: shown
+          cellSpacing: medium
+        sort:
+          - columnId: GIX4YE50FC
+            direction: ascending
+            nulls: connection-default
+          - columnId: YNI9ZBGJ9-
+            direction: ascending
+            nulls: connection-default
+        columns:
+          - id: GIX4YE50FC
+            key: xnCWmZvpTq
+            hidden: true
+          - id: azLFoGfR3Y
+            formula: '[Log for Forecast Linked Input Table/Forecast Submission Status]'
+            hidden: true
+          - id: YNI9ZBGJ9-
+            key: v_0jSsKD3t
+            format:
+              kind: datetime
+              formatString: '%m/%d/%Y'
+          - id: DaodIyPQdi
+            formula: '[Log for Forecast Linked Input Table/Target]'
+          - id: kewx0gndb7
+            formula: '[Log for Forecast Linked Input Table/Stat Forecast]'
+          - id: 1YISL3L8X3
+            type: number
+            name: Forecast
+          - id: yAcTup7evR
+            formula: '[Forecast] - [Target]'
+            name: Δ (Forecast - Target)
+          - id: XLBK2WXDAL
+            type: text
+            name: Comments
+        conditionalFormats:
+          - type: single
+            columnIds:
+              - JTVELJAVZJ
+              - XLBK2WXDAL
+            condition: IsNull
+            style:
+              backgroundColor: '#f1f6f6'
+          - type: single
+            columnIds:
+              - JTVELJAVZJ
+              - XLBK2WXDAL
+            condition: IsNotNull
+            style:
+              backgroundColor: '#f1f6f6'
+      - id: n0rNCupkzb
+        kind: kpi-chart
+        source:
+          elementId: 1t8lh6zuWq
+          kind: table
+        columns:
+          - id: 5xqBFBElaa
+            formula: Sum(Zn([Forecast])) + [Target & Forecast/YTD revenue]
+            name: Projected Annual Revenue
+            format:
+              kind: number
+              formatString: .1S
+          - id: 8QWQGUpnLe
+            formula: Sum([Target (1)]) + [Target & Forecast/YTD target]
+            name: Target
+          - id: NLmOG06MRR
+            formula: '[Forecasts/Week]'
+          - id: 29LlGn23Wh
+            formula: '[Forecasts/Target]'
+          - id: OXLem76DzO
+            formula: '[Forecasts/Stat Forecast]'
+          - id: Gs5bUjvDX-
+            formula: '[Forecasts/Forecast]'
+          - id: 2xsZlbZ6iN
+            formula: '[Forecasts/Δ (Forecast - Target)]'
+          - id: TLoVjLHBGA
+            formula: '[Forecasts/Comments]'
+        value:
+          columnId: 5xqBFBElaa
+        style:
+          backgroundColor: '#f7f7f7'
+          borderRadius: pill
+          borderColor:
+            kind: theme
+            ref: colors-border
+          borderWidth: 1
+        comparisonColumn:
+          columnId: 8QWQGUpnLe
+      - id: uld1IC7o3m
+        kind: kpi-chart
+        source:
+          elementId: vVc-jTnTE-
+          kind: table
+        columns:
+          - id: uRSOlU5CAE
+            formula: Sum([Actuals])
+            format:
+              kind: number
+              formatString: .1S
+          - id: KfYS4OOzXB
+            formula: Sum([Target (1)])
+            name: Target
+          - id: 8QWQGUpnLe
+            formula: Sum([Target (1)]) + [Target & Forecast/YTD target]
+            name: Target YTD
+          - id: 5xqBFBElaa
+            formula: Sum(Zn([Forecast (Forecasts)])) + [Target & Forecast/YTD revenue]
+            name: Projected Annual Revenue
+            format:
+              kind: number
+              formatString: .1S
+          - id: NLmOG06MRR
+            formula: '[Target & Forecast/Week]'
+          - id: 29LlGn23Wh
+            formula: '[Target & Forecast/Target]'
+          - id: OXLem76DzO
+            formula: '[Target & Forecast/Stat Forecast]'
+          - id: HfrNS25CXw
+            formula: '[Target & Forecast/YTD revenue]'
+          - id: 4Wpw-qrcKg
+            formula: '[Target & Forecast/YTD target]'
+          - id: 6r90ofQZbm
+            formula: '[Target & Forecast/Remainder target]'
+          - id: KChmkdFzow
+            formula: '[Target & Forecast/Full year target]'
+          - id: dyR4wVxui0
+            formula: '[Target & Forecast/Actuals]'
+          - id: knYLR_oojP
+            formula: '[Target & Forecast/Actuals\/Forecast]'
+          - id: 8Hr9C8fpGh
+            formula: '[Target & Forecast/Var]'
+          - id: Kd0cWJon5d
+            formula: '[Target & Forecast/Actuals and Forecast]'
+          - id: dRnjUIXw-B
+            formula: '[Target & Forecast/Remainder forecast]'
+          - id: vobtj2Dp27
+            formula: '[Target & Forecast/Hour of Week]'
+          - id: MlcUMkBoLa
+            formula: '[Target & Forecast/Date Mod]'
+        value:
+          columnId: uRSOlU5CAE
+        name: Year to Date (Actuals)
+        style:
+          backgroundColor: '#f7f7f7'
+          borderRadius: pill
+          borderColor:
+            kind: theme
+            ref: colors-border
+          borderWidth: 1
+        comparisonColumn:
+          columnId: KfYS4OOzXB
+      - id: qw-d77F7Y1
+        kind: kpi-chart
+        source:
+          elementId: 1t8lh6zuWq
+          kind: table
+        columns:
+          - id: M0OPD9YgKF
+            formula: Sum(Zn([Forecast]))
+            format:
+              kind: number
+              formatString: .2~S
+          - id: dHykPagZbd
+            formula: Sum([Target (1)])
+            name: Target
+          - id: 8QWQGUpnLe
+            formula: Sum([Target (1)]) + [Target & Forecast/YTD target]
+            name: Target YTD
+          - id: 5xqBFBElaa
+            formula: Sum(Zn([Forecast])) + [Target & Forecast/YTD revenue]
+            name: Projected Annual Revenue
+            format:
+              kind: number
+              formatString: .1S
+          - id: NLmOG06MRR
+            formula: '[Forecasts/Week]'
+          - id: 29LlGn23Wh
+            formula: '[Forecasts/Target]'
+          - id: OXLem76DzO
+            formula: '[Forecasts/Stat Forecast]'
+          - id: Gs5bUjvDX-
+            formula: '[Forecasts/Forecast]'
+          - id: 2xsZlbZ6iN
+            formula: '[Forecasts/Δ (Forecast - Target)]'
+          - id: TLoVjLHBGA
+            formula: '[Forecasts/Comments]'
+        value:
+          columnId: M0OPD9YgKF
+        style:
+          backgroundColor: '#f7f7f7'
+          borderRadius: pill
+          borderColor:
+            kind: theme
+            ref: colors-border
+          borderWidth: 1
+        comparisonColumn:
+          columnId: dHykPagZbd
+  - id: tz96g9cOah
+    name: Approvals
+    elements:
+      - id: FTQJuEP8Is
+        kind: container
+        style:
+          padding: none
+      - id: uhj23u7xls
+        kind: text
+        body: '<p class="p-large"><span style="color: #ffffff">**Pending Forecasts**</span></p>'
+        verticalAlign: middle
+      - id: FKnL-Ql2PN
+        kind: input-table
+        source:
+          kind: linked
+          from: 0u6Eol0Nb1
+        inputMode: explore
+        name:
+          visibility: hidden
+        style:
+          borderRadius: pill
+          borderColor:
+            kind: theme
+            ref: colors-border
+          borderWidth: 0
+        tableComponents:
+          summaryBar: hidden
+        tableStyle:
+          banding: shown
+          cellSpacing: medium
+        sort:
+          - columnId: 3HQJx0wAK0
+            direction: descending
+            nulls: last
+        filters:
+          - id: xAGPHoWzdg
+            columnId: USRNhso5I4
+            kind: list
+            mode: exclude
+            values:
+              - null
+          - id: 3TA5mEDRD4
+            columnId: xgfHYwF-w8
+            kind: list
+            mode: exclude
+            values:
+              - Approved
+        columns:
+          - id: tqqY00geD7
+            formula: '"🔎"'
+            name: Details
+          - id: TYDCTBOEY4
+            key: xnCWmZvpTq
+          - id: c57Bm8Rxdq
+            formula: Lookup([Forecast Scenarios List/ID], [Forecast Name], [Forecast Scenarios List/Forecast Name])
+            name: ID
+            hidden: true
+          - id: 4ajQVIWef1
+            formula: Lookup(Sum([Forecast Approvals/Forecast]), [Forecast Name], [Forecast Approvals/Forecast Name])
+            name: Forecast
+          - id: 80VwMnDElq
+            formula: >-
+              Lookup([Forecast Scenarios List/Forecasted Submitted By], [Forecast Name], [Forecast Scenarios
+              List/Forecast Name])
+            name: Submitted by
+          - id: aPwEBJrAyA
+            formula: '[Submitted by/Approval Comments]'
+            hidden: true
+          - id: 3HQJx0wAK0
+            formula: >-
+              Lookup([Forecast Scenarios List/Forecasted Submitted On], [Forecast Name], [Forecast Scenarios
+              List/Forecast Name])
+            name: Submitted on
+          - id: USRNhso5I4
+            formula: '[Log for Forecast Linked Input Table/Forecast Submission Status]'
+            hidden: true
+          - id: LrK_qL6p7V
+            formula: If([Forecast Submission Status] = "Submit", "Pending", [Forecast Submission Status])
+            name: Forecast Submission Status (Alias)
+          - id: y_22X--VE9
+            formula: '[Log for Forecast Linked Input Table/Forecast Promotions Comments]'
+            hidden: true
+          - id: xgfHYwF-w8
+            formula: '[Log for Forecast Linked Input Table/Approval Status]'
+          - id: OU75a9cnsn
+            formula: '"Approve"'
+            name: Approve
+        conditionalFormats:
+          - type: single
+            columnIds:
+              - OU75a9cnsn
+            condition: IsNotNull
+      - id: Q0BViKsyM7
+        kind: container
+        style:
+          padding: none
+      - id: TDgbgTo_pN
+        kind: text
+        body: '<p class="p-large"><span style="color: #ffffff">**Approved Forecasts**</span></p>'
+        verticalAlign: middle
+      - id: BLB_ghTgjV
+        kind: input-table
+        source:
+          kind: linked
+          from: 0u6Eol0Nb1
+        inputMode: explore
+        name:
+          visibility: hidden
+        style:
+          borderRadius: pill
+          borderColor:
+            kind: theme
+            ref: colors-border
+          borderWidth: 0
+        tableComponents:
+          summaryBar: hidden
+        tableStyle:
+          banding: shown
+          cellSpacing: medium
+        sort:
+          - columnId: TYDCTBOEY4
+            direction: ascending
+            nulls: connection-default
+        filters:
+          - id: xAGPHoWzdg
+            columnId: USRNhso5I4
+            kind: list
+            mode: exclude
+            values:
+              - null
+          - id: yQiMKwnL6v
+            columnId: xgfHYwF-w8
+            kind: list
+            mode: include
+            values:
+              - Approved
+        columns:
+          - id: TYDCTBOEY4
+            key: xnCWmZvpTq
+          - id: c57Bm8Rxdq
+            formula: Lookup([Forecast Scenarios List/ID], [Forecast Name], [Forecast Scenarios List/Forecast Name])
+            name: ID
+            hidden: true
+          - id: 4ajQVIWef1
+            formula: Lookup(Sum([Forecast Approvals/Forecast]), [Forecast Name], [Forecast Approvals/Forecast Name])
+            name: Forecast
+          - id: 80VwMnDElq
+            formula: Lookup([Forecast Scenarios List/Approved By], [Forecast Name], [Forecast Scenarios List/Forecast Name])
+            name: Approved by
+          - id: rtfTVmmOOb
+            formula: '[Approved by/Approval Comments]'
+            hidden: true
+          - id: 3HQJx0wAK0
+            formula: Lookup([Forecast Scenarios List/Approved On], [Forecast Name], [Forecast Scenarios List/Forecast Name])
+            name: Submitted on
+          - id: USRNhso5I4
+            formula: '[Log for Forecast Linked Input Table/Forecast Submission Status]'
+            hidden: true
+          - id: y_22X--VE9
+            formula: '[Log for Forecast Linked Input Table/Forecast Promotions Comments]'
+            hidden: true
+          - id: xgfHYwF-w8
+            formula: '[Log for Forecast Linked Input Table/Approval Status]'
+  - id: vEen3k3NJX
+    name: Bursting
+    elements:
+      - id: hzfwprVnVW
+        kind: container
+        style:
+          borderRadius: pill
+          borderColor: '#1e3558'
+          borderWidth: 1
+      - id: 6rSqaHNlPf
+        kind: text
+        body: '### <span style="color: #ffffff">{{[Burst-Forecast-Name]}}</span>'
+      - id: zcl-h85m9d
+        kind: text
+        body: "<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Submitted by:\_*</span>{{Min([Bursting/Forecasted Submitted By])}}</p>\n\n<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Submitted on:\_*</span>{{Min([Bursting/Forecasted Submitted On])}}</p>\n\n<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Submission Comments:\_*</span>{{Min([Bursting/Forecast Promotions Comments])}}</p>"
+      - id: Ty3SkiT15Z
+        kind: text
+        body: "<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Approved by:\_*</span>{{Min([Bursting/Approved By])}}</p>\n\n<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Approved on:\_*</span>{{Min([Bursting/Approved On])}}</p>\n\n<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Approval Comments:\_*</span>{{Min([Bursting/Approval Comments])}}</p>"
+      - id: ov7PBO2rZV
+        kind: container
+        style:
+          borderRadius: pill
+          borderColor:
+            kind: theme
+            ref: colors-border
+          borderWidth: 1
+      - id: w8yt2ORrYn
+        kind: text
+        body: "<span style=\"color: #ffffff\">Forecast:\_</span><span style=\"color: #ffffff\">{{Sum([Bursting/Forecast]) | .1S}}</span>\n\n<span style=\"color: #ffffff\">Target:\_</span><span style=\"color: #ffffff\">{{Sum([Bursting/Target (Target & Forecast)]) | .2~S}}</span>\n\n<span style=\"color: #ffffff\">Stat Fcst:\_</span><span style=\"color: #ffffff\">{{Sum([Bursting/Stat Forecast (Target & Forecast)]) | .1S}}</span>\n\n\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*Fcst to Target:*</span></p>\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*\_ \_ \_$:\_*</span><span style=\"color: #ffffff\">*{{Sum([Bursting/Forecast]) - Sum([Bursting/Target (Target & Forecast)])}}*</span></p>\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*\_ \_ \_%:\_*</span><span style=\"color: #ffffff\">*{{(Sum([Bursting/Forecast]) - Sum([Bursting/Target (Target & Forecast)])) / Sum([Bursting/Target (Target & Forecast)]) | ,.1%}}*</span></p>\n\n<p class=\"p-small\"></p>\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*Fcst to Stat Fcst:*</span></p>\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*\_ \_ \_$:\_*</span><span style=\"color: #ffffff\">*{{Sum([Bursting/Forecast]) - Sum([Bursting/Stat Forecast (Target & Forecast)])}}*</span></p>\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*\_ \_ \_%:\_*</span><span style=\"color: #ffffff\">*{{(Sum([Bursting/Forecast]) - Sum([Bursting/Stat Forecast (Target & Forecast)])) / Sum([Bursting/Stat Forecast (Target & Forecast)]) | ,.1%}}*</span></p>"
+      - id: CIwNPlf07U
+        kind: line-chart
+        source:
+          elementId: XooljRRSGc
+          kind: table
+        columns:
+          - id: NYUcehz4oi
+            formula: '[Bursting/Week]'
+            format:
+              kind: datetime
+              formatString: '%m/%d/%Y'
+          - id: wgPcGQdZ_s
+            formula: Sum([Forecast])
+            name: Proposed Fcst
+          - id: buiET40kpM
+            formula: Sum([Target (Target & Forecast)])
+            name: Target
+          - id: OSlXbFCmUj
+            formula: Sum([Stat Forecast (Target & Forecast)])
+            name: Stat Fcst
+          - id: hh4HXdLWls
+            formula: '[Bursting/Forecast Name]'
+          - id: es6c97uKcD
+            formula: '[Bursting/Target (Target & Forecast)]'
+          - id: rcoi_PGhuF
+            formula: '[Bursting/Stat Forecast (Target & Forecast)]'
+          - id: jQvG-vJVrp
+            formula: '[Bursting/Forecast]'
+          - id: qBOKxPRqWO
+            formula: '[Bursting/Forecast Submission Status]'
+          - id: hKyrB479WQ
+            formula: '[Bursting/Forecasted Submitted On]'
+          - id: 0K0KytModM
+            formula: '[Bursting/Forecasted Submitted By]'
+          - id: whRib8AC1W
+            formula: '[Bursting/Forecast Promotions Comments]'
+          - id: 7lQQ9J8Urd
+            formula: '[Bursting/Last updated at]'
+          - id: WIEBK50Qsd
+            formula: '[Bursting/ID]'
+          - id: O9QdPr0m8p
+            formula: '[Bursting/Approval Status]'
+          - id: 0Q4Zhfk_SM
+            formula: '[Bursting/Approved On]'
+          - id: w84Yf-EYK2
+            formula: '[Bursting/Approved By]'
+          - id: hGAnAjyB9T
+            formula: '[Bursting/Approval Comments]'
+          - id: 55SVt43n9u
+            formula: '[Bursting/Forecast Name (Forecast Approvals)]'
+          - id: c5c29b49bb3a78be3460137e45af36a0
+            formula: '[Bursting/Gix 4 Ye 50 Fc]'
+        yAxis:
+          columnIds:
+            - wgPcGQdZ_s
+            - buiET40kpM
+            - OSlXbFCmUj
+          format:
+            scale:
+              type: linear
+              zero: false
+        xAxis:
+          columnId: NYUcehz4oi
+        name:
+          visibility: hidden
+      - id: bdoXfV965n
+        kind: bar-chart
+        source:
+          elementId: XooljRRSGc
+          kind: table
+        columns:
+          - id: ME91ZHz_fy
+            formula: Sum([Forecast])
+            name: Fcst
+            format:
+              kind: number
+              formatString: .1S
+          - id: z5CuxTN8Xd
+            formula: Sum([Target (Target & Forecast)])
+            name: Target
+            format:
+              kind: number
+              formatString: .1S
+          - id: md8SXhCa7a
+            formula: Sum([Stat Forecast (Target & Forecast)])
+            name: Stat Fcst
+            format:
+              kind: number
+              formatString: .1S
+          - id: UBFNbMoquz
+            formula: '[Bursting/Forecast Name]'
+          - id: ZZNg9VBtgx
+            formula: '[Bursting/Week]'
+          - id: 3qRZKPQyde
+            formula: '[Bursting/Target (Target & Forecast)]'
+          - id: cdM5l4CnNM
+            formula: '[Bursting/Stat Forecast (Target & Forecast)]'
+          - id: 030BcWXn44
+            formula: '[Bursting/Forecast]'
+          - id: jAWdpWyEE_
+            formula: '[Bursting/Forecast Submission Status]'
+          - id: ksp2jgj3LK
+            formula: '[Bursting/Forecasted Submitted On]'
+          - id: 0J5_w0VXJ_
+            formula: '[Bursting/Forecasted Submitted By]'
+          - id: eIYnr_OtIy
+            formula: '[Bursting/Forecast Promotions Comments]'
+          - id: gTFbCflTAL
+            formula: '[Bursting/Last updated at]'
+          - id: 1yagfdqQJ5
+            formula: '[Bursting/ID]'
+          - id: LYI8APfgqd
+            formula: '[Bursting/Approval Status]'
+          - id: ACPjydKMzo
+            formula: '[Bursting/Approved On]'
+          - id: srF7XEqRon
+            formula: '[Bursting/Approved By]'
+          - id: 6GI6TQfrXb
+            formula: '[Bursting/Approval Comments]'
+          - id: c1367PNjd8
+            formula: '[Bursting/Forecast Name (Forecast Approvals)]'
+          - id: c5c29b49bb3a78be3460137e45af36a0
+            formula: '[Bursting/Gix 4 Ye 50 Fc]'
+        yAxis:
+          columnIds:
+            - ME91ZHz_fy
+            - z5CuxTN8Xd
+            - md8SXhCa7a
+          format:
+            labels: hidden
+            scale:
+              type: linear
+              zero: true
+        stacking: none
+        dataLabel:
+          fontSize: 16
+          labels: shown
+          anchor: end
+        name:
+          visibility: hidden
+        legend:
+          position: right
+  - id: 2COZo4nlMJ
+    type: modal
+    name: Fcst Card
+    elements:
+      - id: 1qAJ6MB4tI
+        kind: container
+        style:
+          borderRadius: pill
+          borderColor: '#1e3558'
+          borderWidth: 1
+      - id: MslhAH-q1I
+        kind: text
+        body: '### <span style="color: #ffffff">{{[Burst-Forecast-Name]}}</span>'
+      - id: C_A9uQi8uF
+        kind: text
+        body: "<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Submitted by:\_*</span>{{Min([Bursting/Forecasted Submitted By])}}</p>\n\n<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Submitted on:\_*</span>{{Min([Bursting/Forecasted Submitted On])}}</p>\n\n<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Submission Comments:\_*</span>{{Min([Bursting/Forecast Promotions Comments])}}</p>"
+      - id: 2sFg81po7u
+        kind: text
+        body: "<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Approved by:\_*</span>{{Min([Bursting/Approved By])}}</p>\n\n<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Approved on:\_*</span>{{Min([Bursting/Approved On])}}</p>\n\n<p class=\"p-small\"><span style=\"color: var(--colors-textNeutral)\">*Approval Comments:\_*</span>{{Min([Bursting/Approval Comments])}}</p>"
+      - id: Ezu8Hc4-0O
+        kind: container
+        style:
+          borderRadius: pill
+          borderColor:
+            kind: theme
+            ref: colors-border
+          borderWidth: 1
+      - id: TKG50DSPU6
+        kind: text
+        body: "<span style=\"color: #ffffff\">Forecast:\_</span><span style=\"color: #ffffff\">{{Sum([Bursting/Forecast]) | .1S}}</span>\n\n<span style=\"color: #ffffff\">Target:\_</span><span style=\"color: #ffffff\">{{Sum([Bursting/Target (Target & Forecast)]) | .2~S}}</span>\n\n<span style=\"color: #ffffff\">Stat Fcst:\_</span><span style=\"color: #ffffff\">{{Sum([Bursting/Stat Forecast (Target & Forecast)]) | .1S}}</span>\n\n\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*Fcst to Target:*</span></p>\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*\_ \_ \_$:\_*</span><span style=\"color: #ffffff\">*{{Sum([Bursting/Forecast]) - Sum([Bursting/Target (Target & Forecast)])}}*</span></p>\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*\_ \_ \_%:\_*</span><span style=\"color: #ffffff\">*{{(Sum([Bursting/Forecast]) - Sum([Bursting/Target (Target & Forecast)])) / Sum([Bursting/Target (Target & Forecast)]) | ,.1%}}*</span></p>\n\n<p class=\"p-small\"></p>\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*Fcst to Stat Fcst:*</span></p>\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*\_ \_ \_$:\_*</span><span style=\"color: #ffffff\">*{{Sum([Bursting/Forecast]) - Sum([Bursting/Stat Forecast (Target & Forecast)])}}*</span></p>\n\n<p class=\"p-small\"><span style=\"color: #ffffff\">*\_ \_ \_%:\_*</span><span style=\"color: #ffffff\">*{{(Sum([Bursting/Forecast]) - Sum([Bursting/Stat Forecast (Target & Forecast)])) / Sum([Bursting/Stat Forecast (Target & Forecast)]) | ,.1%}}*</span></p>"
+      - id: tJckFS1Poe
+        kind: line-chart
+        source:
+          elementId: XooljRRSGc
+          kind: table
+        columns:
+          - id: NYUcehz4oi
+            formula: '[Bursting/Week]'
+            format:
+              kind: datetime
+              formatString: '%m/%d/%Y'
+          - id: wgPcGQdZ_s
+            formula: Sum([Forecast])
+            name: Proposed Fcst
+          - id: buiET40kpM
+            formula: Sum([Target (Target & Forecast)])
+            name: Target
+          - id: OSlXbFCmUj
+            formula: Sum([Stat Forecast (Target & Forecast)])
+            name: Stat Fcst
+          - id: hh4HXdLWls
+            formula: '[Bursting/Forecast Name]'
+          - id: es6c97uKcD
+            formula: '[Bursting/Target (Target & Forecast)]'
+          - id: rcoi_PGhuF
+            formula: '[Bursting/Stat Forecast (Target & Forecast)]'
+          - id: jQvG-vJVrp
+            formula: '[Bursting/Forecast]'
+          - id: qBOKxPRqWO
+            formula: '[Bursting/Forecast Submission Status]'
+          - id: hKyrB479WQ
+            formula: '[Bursting/Forecasted Submitted On]'
+          - id: 0K0KytModM
+            formula: '[Bursting/Forecasted Submitted By]'
+          - id: whRib8AC1W
+            formula: '[Bursting/Forecast Promotions Comments]'
+          - id: 7lQQ9J8Urd
+            formula: '[Bursting/Last updated at]'
+          - id: WIEBK50Qsd
+            formula: '[Bursting/ID]'
+          - id: O9QdPr0m8p
+            formula: '[Bursting/Approval Status]'
+          - id: 0Q4Zhfk_SM
+            formula: '[Bursting/Approved On]'
+          - id: w84Yf-EYK2
+            formula: '[Bursting/Approved By]'
+          - id: hGAnAjyB9T
+            formula: '[Bursting/Approval Comments]'
+          - id: 55SVt43n9u
+            formula: '[Bursting/Forecast Name (Forecast Approvals)]'
+          - id: c5c29b49bb3a78be3460137e45af36a0
+            formula: '[Bursting/Gix 4 Ye 50 Fc]'
+        yAxis:
+          columnIds:
+            - wgPcGQdZ_s
+            - buiET40kpM
+            - OSlXbFCmUj
+          format:
+            scale:
+              type: linear
+              zero: false
+        xAxis:
+          columnId: NYUcehz4oi
+        name:
+          visibility: hidden
+      - id: 37ORcnzUZU
+        kind: bar-chart
+        source:
+          elementId: XooljRRSGc
+          kind: table
+        columns:
+          - id: ME91ZHz_fy
+            formula: Sum([Forecast])
+            name: Fcst
+            format:
+              kind: number
+              formatString: .1S
+          - id: z5CuxTN8Xd
+            formula: Sum([Target (Target & Forecast)])
+            name: Target
+            format:
+              kind: number
+              formatString: .1S
+          - id: md8SXhCa7a
+            formula: Sum([Stat Forecast (Target & Forecast)])
+            name: Stat Fcst
+            format:
+              kind: number
+              formatString: .1S
+          - id: UBFNbMoquz
+            formula: '[Bursting/Forecast Name]'
+          - id: ZZNg9VBtgx
+            formula: '[Bursting/Week]'
+          - id: 3qRZKPQyde
+            formula: '[Bursting/Target (Target & Forecast)]'
+          - id: cdM5l4CnNM
+            formula: '[Bursting/Stat Forecast (Target & Forecast)]'
+          - id: 030BcWXn44
+            formula: '[Bursting/Forecast]'
+          - id: jAWdpWyEE_
+            formula: '[Bursting/Forecast Submission Status]'
+          - id: ksp2jgj3LK
+            formula: '[Bursting/Forecasted Submitted On]'
+          - id: 0J5_w0VXJ_
+            formula: '[Bursting/Forecasted Submitted By]'
+          - id: eIYnr_OtIy
+            formula: '[Bursting/Forecast Promotions Comments]'
+          - id: gTFbCflTAL
+            formula: '[Bursting/Last updated at]'
+          - id: 1yagfdqQJ5
+            formula: '[Bursting/ID]'
+          - id: LYI8APfgqd
+            formula: '[Bursting/Approval Status]'
+          - id: ACPjydKMzo
+            formula: '[Bursting/Approved On]'
+          - id: srF7XEqRon
+            formula: '[Bursting/Approved By]'
+          - id: 6GI6TQfrXb
+            formula: '[Bursting/Approval Comments]'
+          - id: c1367PNjd8
+            formula: '[Bursting/Forecast Name (Forecast Approvals)]'
+          - id: c5c29b49bb3a78be3460137e45af36a0
+            formula: '[Bursting/Gix 4 Ye 50 Fc]'
+        yAxis:
+          columnIds:
+            - ME91ZHz_fy
+            - z5CuxTN8Xd
+            - md8SXhCa7a
+          format:
+            labels: hidden
+            scale:
+              type: linear
+              zero: true
+        stacking: none
+        dataLabel:
+          fontSize: 16
+          labels: shown
+          anchor: end
+        name:
+          visibility: hidden
+        legend:
+          position: right
+    modal:
+      width: large
+      header:
+        showCloseIcon: shown
+      footer:
+        primaryCta:
+          visible: hidden
+        secondaryCta:
+          visible: hidden
+  - id: 4BfWmfxKct
+    type: modal
+    name: Fcst Approval
+    elements:
+      - id: 57b1SJ9QaP
+        kind: text
+        body: '**Forecast name:**'
+      - id: KbrVMGIlQ4
+        kind: text
+        body: '{{[Approval-Forecast-Name]}}'
+      - id: q_MXtVe4FE
+        kind: text
+        body: '**Current status:**'
+      - id: d78ic5EQBd
+        kind: text
+        body: '{{[Submission-Status]}}'
+      - kind: control
+        controlId: New-Status
+        id: YnGOE9w0fE
+        name: 'Status:'
+        controlType: segmented
+        source:
+          kind: manual
+          valueType: text
+          values:
+            - Approved
+            - Denied
+            - Change Request
+          labels:
+            - null
+            - null
+            - null
+        value: Change Request
+      - kind: control
+        controlId: Approver-Comments
+        id: LfZIgT6Md6
+        name: 'Approval Comments:'
+        controlType: text-area
+        value: can you please re submit
+      - id: mKMgph1oi0
+        kind: text
+        body: '**Submission notes:**'
+      - id: J3MsfCqcH1
+        kind: text
+        body: '{{[Submission-Notes]}}'
+      - kind: control
+        controlId: Manager-override-(demo-only)
+        id: SoseOlTD9L
+        style:
+          backgroundColor: '#E2E2E2'
+        mode: True/False
+        controlType: checkbox
+        value: false
+      - id: OGPoTCQAGO
+        kind: button
+        text: Submit Change
+        appearance: filled
+        align: stretch
+        actions:
+          - id: Nswbwde6zc
+            trigger: on-click
+            effects:
+              - effect: update-rows
+                tableElementId: 6zrIkHs9wC
+                whichRows:
+                  type: single-row
+                  primaryKeys:
+                    _cdrqmoF-I:
+                      type: control
+                      control: Change-ID
+                values:
+                  SXO3SGWNJK:
+                    type: control
+                    control: Approved-On
+                  CDQSC4QM28:
+                    type: control
+                    control: Approved-By
+                  6PGUW_C3MG:
+                    type: control
+                    control: New-Status
+                  BKDJ6XHD33:
+                    type: control
+                    control: Approver-Comments
+              - effect: close-overlay
+          - id: BA6euENW23
+            trigger: on-click
+            effects:
+              - effect: open-overlay
+                overlayId: L2lc9nWbs5
+          - id: FJKR5fi0hL
+            trigger: on-click
+            effects:
+              - effect: open-overlay
+                overlayId: bA7Dvh-41s
+      - id: XOfkEmXZRo
+        kind: button
+        text: Cancel
+        appearance: outline
+        align: stretch
+        actions:
+          - id: w3ydCcu4kA
+            trigger: on-click
+            effects:
+              - effect: close-overlay
+    modal:
+      width: x-small
+      header:
+        title: Forecast Approval
+        showCloseIcon: hidden
+      footer:
+        primaryCta:
+          visible: hidden
+        secondaryCta:
+          visible: hidden
+  - id: bA7Dvh-41s
+    type: modal
+    name: Only Managers Can Approve
+    elements:
+      - id: Su1tggiIAD
+        kind: text
+        body: '<p style="text-align: center">Approvals may only be subbmitted by management.</p>'
+        verticalAlign: middle
+      - id: KUJ1r4dl5i
+        kind: button
+        text: Okay
+        appearance: filled
+        align: center
+        actions:
+          - id: l0XFk6qKyc
+            trigger: on-click
+            effects:
+              - effect: open-overlay
+                overlayId: 4BfWmfxKct
+    modal:
+      header:
+        showCloseIcon: hidden
+      footer:
+        primaryCta:
+          visible: hidden
+        secondaryCta:
+          visible: hidden
+  - id: L2lc9nWbs5
+    type: modal
+    name: Enter Approval Status
+    elements:
+      - id: iIrngfZvfd
+        kind: text
+        body: '<p style="text-align: center">Please enter an approval status to continue.</p>'
+        verticalAlign: middle
+      - id: TFGIqptHsF
+        kind: button
+        text: Okay
+        appearance: filled
+        align: center
+        actions:
+          - id: _c_TFGIqptHsF_0
+            trigger: on-click
+            effects:
+              - effect: open-overlay
+                overlayId: 4BfWmfxKct
+    modal:
+      header:
+        showCloseIcon: hidden
+      footer:
+        primaryCta:
+          visible: hidden
+        secondaryCta:
+          visible: hidden
+  - id: X05jDrFuJD
+    type: modal
+    name: Forecast is approved
+    elements:
+      - id: 2dxCftV8n4
+        kind: text
+        body: '<p style="text-align: center">Changes are not allowed on approved forecasts.</p>'
+        verticalAlign: middle
+      - id: Bn6vuTNS8C
+        kind: button
+        text: Okay
+        appearance: filled
+        align: center
+        fillColor: '#1e3558'
+        fontWeight: normal
+        actions:
+          - id: _c_Bn6vuTNS8C_0
+            trigger: on-click
+            effects:
+              - effect: close-overlay
+    modal:
+      header:
+        showCloseIcon: hidden
+      footer:
+        primaryCta:
+          visible: hidden
+        secondaryCta:
+          visible: hidden
+  - id: 0SH-HXmIq2
+    type: modal
+    name: Submit Forecast
+    elements:
+      - id: i546DXn_2I
+        kind: text
+        body: Forecast name
+      - id: p07wQaFS6X
+        kind: text
+        body: '{{[C_DisplayForecast]}}'
+      - id: Ix_yMQZas-
+        kind: text
+        body: Date of submission
+      - id: JrsZvTC9Br
+        kind: text
+        body: '{{Now()}}'
+      - id: TewqP1vQfm
+        kind: text
+        body: Comments
+      - kind: control
+        controlId: C_SubmitComments
+        id: gp9JG2D_60
+        controlType: text-area
+      - id: Zae_QbWgOa
+        kind: button
+        text: Submit Forecast
+        appearance: filled
+        align: center
+    modal:
+      width: small
+      header:
+        title: Submit Forecast
+      footer:
+        primaryCta:
+          visible: hidden
+        secondaryCta:
+          visible: hidden
+themeName: 1c99b807-20bc-4f00-a108-4c562a886400
+themeOverrides:
+  pageWidth: large
+layout: |
+  <?xml version="1.0" encoding="utf-8"?>
+  <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="Fl6OysBYWC">
+    <LayoutElement elementId="jGCIi3L8h-" gridColumn="1 / 5" gridRow="1 / 3"/>
+    <LayoutElement elementId="99pssB1oUz" gridColumn="5 / 9" gridRow="1 / 3"/>
+    <LayoutElement elementId="nHvdVqokHd" gridColumn="9 / 13" gridRow="1 / 3"/>
+    <LayoutElement elementId="Lc8tNOwgLm" gridColumn="13 / 17" gridRow="1 / 3"/>
+    <LayoutElement elementId="lGfqdcDUuC" gridColumn="17 / 21" gridRow="1 / 3"/>
+    <LayoutElement elementId="5VVX4Sk4FE" gridColumn="21 / 25" gridRow="1 / 3"/>
+    <LayoutElement elementId="45fNG306Aj" gridColumn="1 / 25" gridRow="3 / 4"/>
+    <LayoutElement elementId="fLiz0roayj" gridColumn="1 / 25" gridRow="4 / 6"/>
+    <LayoutElement elementId="rSWJpCzpcQ" gridColumn="1 / 25" gridRow="6 / 26"/>
+    <LayoutElement elementId="vVc-jTnTE-" gridColumn="1 / 25" gridRow="26 / 46"/>
+    <LayoutElement elementId="hp6J6z_zYw" gridColumn="1 / 25" gridRow="46 / 47"/>
+    <LayoutElement elementId="8qSquutwGr" gridColumn="1 / 25" gridRow="47 / 48"/>
+    <LayoutElement elementId="D3zIPd8aj7" gridColumn="21 / 25" gridRow="48 / 49"/>
+    <LayoutElement elementId="KzBOQY_0u5" gridColumn="21 / 25" gridRow="49 / 50"/>
+    <LayoutElement elementId="ieO5H0XHX8" gridColumn="21 / 25" gridRow="50 / 53"/>
+    <LayoutElement elementId="C6SLgePOah" gridColumn="1 / 25" gridRow="60 / 61"/>
+    <LayoutElement elementId="VJ2auN5SGe" gridColumn="1 / 25" gridRow="61 / 62"/>
+    <LayoutElement elementId="0u6Eol0Nb1" gridColumn="1 / 20" gridRow="62 / 86"/>
+    <LayoutElement elementId="QI2MlRFiVV" gridColumn="20 / 25" gridRow="62 / 64"/>
+    <LayoutElement elementId="2VNQz_30O3" gridColumn="20 / 25" gridRow="64 / 65"/>
+    <LayoutElement elementId="POy6QTSyTc" gridColumn="20 / 25" gridRow="65 / 68"/>
+    <LayoutElement elementId="Auros1Y83J" gridColumn="20 / 25" gridRow="68 / 71"/>
+    <LayoutElement elementId="f6NduszsGg" gridColumn="20 / 25" gridRow="71 / 74"/>
+    <LayoutElement elementId="IJX9nbSlvD" gridColumn="20 / 25" gridRow="74 / 77"/>
+    <LayoutElement elementId="HAY7I9t9l5" gridColumn="20 / 25" gridRow="77 / 80"/>
+    <LayoutElement elementId="Ftr2UBw0PX" gridColumn="20 / 25" gridRow="80 / 83"/>
+    <LayoutElement elementId="oyyP-6dd7H" gridColumn="20 / 25" gridRow="83 / 86"/>
+    <LayoutElement elementId="zC9IZgcRBr" gridColumn="1 / 25" gridRow="86 / 87"/>
+    <LayoutElement elementId="3JCTjcItgX" gridColumn="1 / 13" gridRow="87 / 89"/>
+    <LayoutElement elementId="21B5XhWjFK" gridColumn="1 / 21" gridRow="89 / 109"/>
+    <LayoutElement elementId="wWHLBv0jHN" gridColumn="21 / 25" gridRow="89 / 91"/>
+    <LayoutElement elementId="41Q8PwYc16" gridColumn="21 / 25" gridRow="91 / 92"/>
+    <LayoutElement elementId="wdTcqHFRXY" gridColumn="21 / 25" gridRow="92 / 95"/>
+    <LayoutElement elementId="f9YuOtr_c3" gridColumn="21 / 25" gridRow="95 / 97"/>
+    <LayoutElement elementId="gAZDf3x4oz" gridColumn="21 / 25" gridRow="97 / 100"/>
+    <LayoutElement elementId="Oh-ygX7vf5" gridColumn="21 / 25" gridRow="100 / 103"/>
+    <LayoutElement elementId="lrRXy8msJt" gridColumn="21 / 25" gridRow="103 / 106"/>
+    <LayoutElement elementId="Il8EYygvkN" gridColumn="21 / 25" gridRow="106 / 109"/>
+    <LayoutElement elementId="7xFbPN7kzX" gridColumn="1 / 25" gridRow="109 / 110"/>
+    <LayoutElement elementId="5xpXly1-ts" gridColumn="1 / 25" gridRow="110 / 112"/>
+    <LayoutElement elementId="XooljRRSGc" gridColumn="1 / 21" gridRow="112 / 132"/>
+    <LayoutElement elementId="0Ekz65VC6P" gridColumn="21 / 25" gridRow="112 / 114"/>
+    <LayoutElement elementId="Wa-3HAXa_k" gridColumn="21 / 25" gridRow="114 / 115"/>
+    <LayoutElement elementId="YTpUBPvkDd" gridColumn="21 / 25" gridRow="115 / 132"/>
+    <LayoutElement elementId="6zrIkHs9wC" gridColumn="1 / 21" gridRow="132 / 144"/>
+    <LayoutElement elementId="d_8mwrpH48con" gridColumn="1 / 9" gridRow="145 / 148"/>
+    <LayoutElement elementId="qZfKaiZUXqcon" gridColumn="9 / 17" gridRow="145 / 148"/>
+    <LayoutElement elementId="qYRmwpjo5u" gridColumn="17 / 21" gridRow="146 / 148"/>
+    <LayoutElement elementId="U34OAI5vhI" gridColumn="1 / 25" gridRow="148 / 168"/>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="GY_hF1osPB">
+    <LayoutElement elementId="-ss_9eGNNc" gridColumn="1 / 13" gridRow="1 / 4"/>
+    <LayoutElement elementId="CcbvDhiQBz" gridColumn="1 / 7" gridRow="4 / 6"/>
+    <LayoutElement elementId="hdNQ9E3pGM" gridColumn="7 / 13" gridRow="4 / 6"/>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="0o8QPIeJWd">
+    <LayoutElement elementId="WfxQp8JBIF" gridColumn="1 / 13" gridRow="1 / 3"/>
+    <LayoutElement elementId="DxvrvkMSTP" gridColumn="5 / 9" gridRow="3 / 5"/>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="vciMDGoDz3">
+    <LayoutElement elementId="89et5Mq7aI" gridColumn="1 / 7" gridRow="1 / 5"/>
+    <LayoutElement elementId="tvKUY9M4bp" gridColumn="7 / 19" gridRow="1 / 5"/>
+    <LayoutElement elementId="6tAclTMshQ" gridColumn="1 / 7" gridRow="5 / 12"/>
+    <LayoutElement elementId="3FN8D-FCvU" gridColumn="7 / 25" gridRow="5 / 26"/>
+    <LayoutElement elementId="EPN8O9olLE" gridColumn="1 / 7" gridRow="12 / 19"/>
+    <LayoutElement elementId="aVpGqjkjeA" gridColumn="1 / 7" gridRow="19 / 26"/>
+    <GridContainer elementId="oETF0qaJSG" type="grid" gridColumn="1 / 25" gridRow="26 / 54" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <GridContainer elementId="BrGTjKP_m7" type="grid" gridColumn="1 / 13" gridRow="1 / 3" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+        <LayoutElement elementId="AjeycGalcF" gridColumn="1 / 5" gridRow="1 / 3"/>
+        <LayoutElement elementId="CF11PbjHRN" gridColumn="5 / 7" gridRow="1 / 3"/>
+        <LayoutElement elementId="3bFIhEmrit" gridColumn="7 / 9" gridRow="1 / 3"/>
+        <LayoutElement elementId="LGmnZYnySs" gridColumn="9 / 11" gridRow="1 / 3"/>
+        <LayoutElement elementId="zPA77dhBsS" gridColumn="11 / 13" gridRow="1 / 3"/>
+      </GridContainer>
+      <GridContainer elementId="H8EoiFhDxq" type="grid" gridColumn="1 / 13" gridRow="3 / 29" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+        <LayoutElement elementId="HzNIRT2wX9" gridColumn="1 / 4" gridRow="1 / 3"/>
+        <LayoutElement elementId="WTKki2PR0r" gridColumn="10 / 13" gridRow="1 / 3"/>
+        <LayoutElement elementId="1t8lh6zuWq" gridColumn="1 / 10" gridRow="3 / 27"/>
+        <LayoutElement elementId="n0rNCupkzb" gridColumn="10 / 13" gridRow="3 / 11"/>
+        <LayoutElement elementId="uld1IC7o3m" gridColumn="10 / 13" gridRow="11 / 19"/>
+        <LayoutElement elementId="qw-d77F7Y1" gridColumn="10 / 13" gridRow="19 / 27"/>
+      </GridContainer>
+    </GridContainer>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="tz96g9cOah">
+    <GridContainer elementId="FTQJuEP8Is" type="grid" gridColumn="1 / 25" gridRow="1 / 18" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <LayoutElement elementId="uhj23u7xls" gridColumn="1 / 13" gridRow="1 / 3"/>
+      <LayoutElement elementId="FKnL-Ql2PN" gridColumn="1 / 13" gridRow="3 / 18"/>
+    </GridContainer>
+    <GridContainer elementId="Q0BViKsyM7" type="grid" gridColumn="1 / 25" gridRow="18 / 44" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <LayoutElement elementId="TDgbgTo_pN" gridColumn="1 / 13" gridRow="1 / 3"/>
+      <LayoutElement elementId="BLB_ghTgjV" gridColumn="1 / 13" gridRow="3 / 27"/>
+    </GridContainer>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="vEen3k3NJX">
+    <GridContainer elementId="hzfwprVnVW" type="grid" gridColumn="1 / 25" gridRow="1 / 23" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <LayoutElement elementId="6rSqaHNlPf" gridColumn="1 / 13" gridRow="1 / 3"/>
+      <LayoutElement elementId="zcl-h85m9d" gridColumn="1 / 7" gridRow="3 / 7"/>
+      <LayoutElement elementId="Ty3SkiT15Z" gridColumn="9 / 13" gridRow="3 / 7"/>
+      <GridContainer elementId="ov7PBO2rZV" type="grid" gridColumn="1 / 13" gridRow="7 / 23" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+        <LayoutElement elementId="w8yt2ORrYn" gridColumn="1 / 4" gridRow="1 / 16"/>
+        <LayoutElement elementId="CIwNPlf07U" gridColumn="4 / 13" gridRow="1 / 9"/>
+        <LayoutElement elementId="bdoXfV965n" gridColumn="4 / 13" gridRow="9 / 17"/>
+      </GridContainer>
+    </GridContainer>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="2COZo4nlMJ">
+    <GridContainer elementId="1qAJ6MB4tI" type="grid" gridColumn="1 / 13" gridRow="1 / 23" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+      <LayoutElement elementId="MslhAH-q1I" gridColumn="1 / 13" gridRow="1 / 3"/>
+      <LayoutElement elementId="C_A9uQi8uF" gridColumn="1 / 7" gridRow="3 / 7"/>
+      <LayoutElement elementId="2sFg81po7u" gridColumn="9 / 13" gridRow="3 / 7"/>
+      <GridContainer elementId="Ezu8Hc4-0O" type="grid" gridColumn="1 / 13" gridRow="7 / 23" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+        <LayoutElement elementId="TKG50DSPU6" gridColumn="1 / 4" gridRow="1 / 16"/>
+        <LayoutElement elementId="tJckFS1Poe" gridColumn="4 / 13" gridRow="1 / 9"/>
+        <LayoutElement elementId="37ORcnzUZU" gridColumn="4 / 13" gridRow="9 / 17"/>
+      </GridContainer>
+    </GridContainer>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="4BfWmfxKct">
+    <LayoutElement elementId="57b1SJ9QaP" gridColumn="1 / 6" gridRow="1 / 3"/>
+    <LayoutElement elementId="KbrVMGIlQ4" gridColumn="6 / 13" gridRow="1 / 3"/>
+    <LayoutElement elementId="q_MXtVe4FE" gridColumn="1 / 6" gridRow="3 / 5"/>
+    <LayoutElement elementId="d78ic5EQBd" gridColumn="6 / 13" gridRow="3 / 5"/>
+    <LayoutElement elementId="YnGOE9w0fE" gridColumn="1 / 13" gridRow="5 / 8"/>
+    <LayoutElement elementId="LfZIgT6Md6" gridColumn="1 / 13" gridRow="8 / 11"/>
+    <LayoutElement elementId="mKMgph1oi0" gridColumn="1 / 13" gridRow="11 / 13"/>
+    <LayoutElement elementId="J3MsfCqcH1" gridColumn="1 / 13" gridRow="13 / 15"/>
+    <LayoutElement elementId="SoseOlTD9L" gridColumn="1 / 13" gridRow="15 / 18"/>
+    <LayoutElement elementId="OGPoTCQAGO" gridColumn="1 / 7" gridRow="18 / 20"/>
+    <LayoutElement elementId="XOfkEmXZRo" gridColumn="7 / 13" gridRow="18 / 20"/>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="bA7Dvh-41s">
+    <LayoutElement elementId="Su1tggiIAD" gridColumn="1 / 13" gridRow="1 / 3"/>
+    <LayoutElement elementId="KUJ1r4dl5i" gridColumn="1 / 13" gridRow="3 / 5"/>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="L2lc9nWbs5">
+    <LayoutElement elementId="iIrngfZvfd" gridColumn="1 / 13" gridRow="1 / 3"/>
+    <LayoutElement elementId="TFGIqptHsF" gridColumn="5 / 9" gridRow="3 / 5"/>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="X05jDrFuJD">
+    <LayoutElement elementId="2dxCftV8n4" gridColumn="1 / 13" gridRow="1 / 3"/>
+    <LayoutElement elementId="Bn6vuTNS8C" gridColumn="5 / 9" gridRow="3 / 5"/>
+  </Page>
+  <Page type="grid" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto" id="0SH-HXmIq2">
+    <LayoutElement elementId="i546DXn_2I" gridColumn="1 / 5" gridRow="1 / 2"/>
+    <LayoutElement elementId="p07wQaFS6X" gridColumn="5 / 13" gridRow="1 / 3"/>
+    <LayoutElement elementId="Ix_yMQZas-" gridColumn="1 / 5" gridRow="3 / 4"/>
+    <LayoutElement elementId="JrsZvTC9Br" gridColumn="5 / 13" gridRow="3 / 4"/>
+    <LayoutElement elementId="TewqP1vQfm" gridColumn="1 / 5" gridRow="4 / 5"/>
+    <LayoutElement elementId="gp9JG2D_60" gridColumn="5 / 13" gridRow="4 / 7"/>
+    <LayoutElement elementId="Zae_QbWgOa" gridColumn="5 / 9" gridRow="7 / 10"/>
+  </Page>

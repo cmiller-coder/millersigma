@@ -1,15 +1,6 @@
 {
-  "workbookId": "d8fc91eb-6b79-4d6b-9b5c-a4b1d1adde37",
-  "name": "Plugs Revenue — Monthly",
-  "url": "https://staging.sigmacomputing.io/papercranestaging/workbook/Plugs-Revenue-Monthly-6BrLA2Gu9lBt40HTSZV66z",
-  "documentVersion": 2,
-  "latestDocumentVersion": 2,
-  "ownerId": "7d9y50O9V9qLDpdThAY5tdHncEaM2",
-  "folderId": "eb548e3b-81e4-46d9-adfd-488ae1dfb0bb",
-  "createdBy": "7d9y50O9V9qLDpdThAY5tdHncEaM2",
-  "updatedBy": "7d9y50O9V9qLDpdThAY5tdHncEaM2",
-  "createdAt": "2026-05-07T16:33:48.828Z",
-  "updatedAt": "2026-05-07T16:42:24.431Z",
+  "name": "Plugs Revenue \u2014 Monthly",
+  "folderId": "REPLACE_WITH_YOUR_FOLDER_ID",
   "schemaVersion": 1,
   "pages": [
     {

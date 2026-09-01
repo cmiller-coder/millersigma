@@ -116,8 +116,11 @@ for w in H_COL_W[:-1]:
 
 add({"id": "h-logo", "kind": "image",
      "source": {"kind": "url", "url": B.logo_navy()},
-     "style": {"fit": "contain", "align": "start", "backgroundColor": "transparent",
-               "padding": "none"}},
+     # "backgroundColor": "transparent" on an image element's style is rejected
+     # by the reports API as of 2026-08-18 (masked behind a misleading
+     # "Invalid kind: image" error) -- text elements still accept it fine, only
+     # image does not. Omit it; the report canvas is already white.
+     "style": {"fit": "contain", "align": "start", "padding": "none"}},
     "global-header", h_col_x[0], 20, H_COL_W[0], 38)
 
 add(txt("h-manage",
@@ -297,7 +300,8 @@ y = 0
 # An H1 needs more box than its font size or the glyphs clip and the next
 # element sits on top of it -- 34px was cropping the descenders and colliding
 # with the table's top border.
-add(txt("p2-h1", "# Account activity", B.NAVY), "p2", MARGIN, y, CW, 54)
+add(txt("p2-h1", CO.STATEMENTS.get(CFG["key"], {}).get("page2_title", "# Account activity"),
+        B.NAVY), "p2", MARGIN, y, CW, 54)
 y += 62
 
 add({"id": "p2-tbl", "kind": "table",

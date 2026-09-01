@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Campaign Flight Timeline — Innocean Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#1a1416;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 14px;gap:8px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#e4002b}
+  #meta{font-size:11px;color:#8a7f81}
+  #meta b{color:#1a1416}
+  #chart{flex:1;position:relative;overflow-y:auto;overflow-x:hidden}
+  #axis{position:sticky;top:0;height:18px;z-index:3;background:rgba(255,255,255,.75);backdrop-filter:blur(2px)}
+  .tick{position:absolute;top:0;height:100%;border-left:1px solid #ecdfe1;font-size:9px;color:#a89ea0;padding-left:4px;line-height:18px;white-space:nowrap}
+  .row{position:relative;height:26px;display:flex;align-items:center}
+  .row:nth-child(even){background:#faf3f4}
+  .lbl{width:150px;flex:0 0 150px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px;padding-right:8px}
+  .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+  .track{position:relative;flex:1;height:100%}
+  .bar{position:absolute;top:5px;height:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:flex-end;padding:0 7px;font-size:9px;font-weight:700;color:#fff;min-width:3px;cursor:default;transition:filter .1s}
+  .bar:hover{filter:brightness(1.08)}
+  #legend{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:#6b6264;align-items:center}
+  #legend .li{display:flex;align-items:center;gap:5px}
+  #legend .dot{width:9px;height:9px}
+  #tip{position:fixed;pointer-events:none;background:#1a1416;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#ff6b7a}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Campaign Flight Timeline</div><div id="meta"><b id="cnt">0</b> campaigns · <b id="spd">—</b> total spend · <span id="win">—</span></div></div>
+  <div id="chart"><div id="axis"></div><div id="rows"></div></div>
+  <div id="legend"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var PALETTE=['#E4002B','#FF5A5F','#F59E0B','#2E7D32','#3FA7FF','#8B5CF6','#8A1230','#0EA5A0','#D946A6','#64748B'];
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'campaign',type:'column',source:'source',label:'Campaign'},
+    {name:'channel',type:'column',source:'source',label:'Channel'},
+    {name:'start',type:'column',source:'source',label:'Start date'},
+    {name:'end',type:'column',source:'source',label:'End date'},
+    {name:'spend',type:'column',source:'source',allowedTypes:['number','integer'],label:'Spend / Billings'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var LBL=150;
+  var tip=document.getElementById('tip');
+  function toT(v){ if(v==null) return NaN; if(typeof v==='number') return v>1e11?v:v*1; var p=Date.parse(v); return isNaN(p)?NaN:p; }
+  function fmtD(t){ var d=new Date(t); return (d.getMonth()+1)+'/'+d.getDate(); }
+  function fmt$(n){ if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B'; if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M'; if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'K'; return '$'+Math.round(n); }
+  var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function draw(items){
+    var rows=document.getElementById('rows'), axis=document.getElementById('axis'); rows.innerHTML=''; axis.innerHTML='';
+    if(!items.length){return;}
+    var mn=Infinity,mx=-Infinity,tot=0;
+    items.forEach(function(it){ if(it.s<mn)mn=it.s; if(it.e>mx)mx=it.e; tot+=it.spend||0; });
+    if(!isFinite(mn)||!isFinite(mx)||mx<=mn){ mx=mn+1; }
+    var span=mx-mn, pad=span*0.02; mn-=pad; mx+=pad; span=mx-mn;
+    // color per channel
+    var chans=[],cmap={};
+    items.forEach(function(it){ if(cmap[it.chan]==null){ cmap[it.chan]=PALETTE[chans.length%PALETTE.length]; chans.push(it.chan);} });
+    // axis month ticks
+    var d0=new Date(mn); d0.setDate(1); d0.setHours(0,0,0,0);
+    for(var t=d0.getTime(); t<=mx; ){ var dd=new Date(t); var pct=((t-mn)/span); if(pct>=0&&pct<=1){ var el=document.createElement('div'); el.className='tick'; el.style.left='calc('+LBL+'px + '+(pct*100)+'% * (1 - '+LBL+'px/100%))'; el.style.left=(LBL + pct*(axisW()))+'px'; el.textContent=MON[dd.getMonth()]+' '+String(dd.getFullYear()).slice(2); axis.appendChild(el);} var nm=dd.getMonth()+1; dd.setMonth(nm); t=dd.getTime(); }
+    // sort by channel then start
+    items.sort(function(a,b){ if(a.chan<b.chan)return -1; if(a.chan>b.chan)return 1; return a.s-b.s; });
+    items.forEach(function(it){
+      var row=document.createElement('div'); row.className='row';
+      var col=cmap[it.chan];
+      var lbl=document.createElement('div'); lbl.className='lbl'; lbl.innerHTML='<span class="dot" style="background:'+col+'"></span>'+esc(it.name);
+      var track=document.createElement('div'); track.className='track';
+      var bar=document.createElement('div'); bar.className='bar';
+      var l=(it.s-mn)/span, w=(it.e-it.s)/span;
+      bar.style.left=(l*100)+'%'; bar.style.width=Math.max(0.5,w*100)+'%'; bar.style.background=col;
+      bar.textContent=fmt$(it.spend||0);
+      bar.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+        tip.innerHTML='<b>'+esc(it.name)+'</b><br>'+esc(it.chan)+'<br>'+fmtD(it.s)+' → '+fmtD(it.e)+'<br>Spend '+fmt$(it.spend||0); });
+      bar.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+      track.appendChild(bar); row.appendChild(lbl); row.appendChild(track); rows.appendChild(row);
+    });
+    document.getElementById('cnt').textContent=items.length;
+    document.getElementById('spd').textContent=fmt$(tot);
+    document.getElementById('win').textContent=fmtD(mn)+' – '+fmtD(mx);
+    var lg=document.getElementById('legend'); lg.innerHTML='';
+    chans.forEach(function(c){ var li=document.createElement('div'); li.className='li'; li.innerHTML='<span class="dot" style="background:'+cmap[c]+'"></span>'+esc(c); lg.appendChild(li); });
+  }
+  function axisW(){ var c=document.getElementById('chart'); return (c?c.clientWidth:600)-LBL; }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];}); }
+
+  function synth(){
+    var names=['Hyundai Elantra Launch','Kia EV9','Genesis GV80','IONIQ 5 Always-On','Brand Awareness','Holiday Sales Event','Retargeting','Sponsorship','Kia Sorento','Super Bowl Teaser'];
+    var chans=['Paid Social','Search / SEM','Digital Display','TV / Video','Out-of-Home','Programmatic','Influencer'];
+    var base=new Date(2025,0,1).getTime(), DAY=864e5, out=[];
+    for(var i=0;i<names.length;i++){ var st=base+((i*13)%150)*DAY; var dur=(20+((i*37)%90))*DAY;
+      out.push({name:names[i],chan:chans[i%chans.length],s:st,e:st+dur,spend:200000+((i*471349)%1800000)}); }
+    return out;
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{};
+    if(st.data&&c.campaign&&st.data[c.campaign]){
+      var nm=st.data[c.campaign]||[], ch=(c.channel&&st.data[c.channel])||[], s=(c.start&&st.data[c.start])||[], e=(c.end&&st.data[c.end])||[], sp=(c.spend&&st.data[c.spend])||[];
+      var items=nm.map(function(n,i){ return {name:n!=null?String(n):('Campaign '+i),chan:ch[i]!=null?String(ch[i]):'—',s:toT(s[i]),e:toT(e[i]),spend:Number(sp[i])||0}; })
+        .filter(function(it){ return !isNaN(it.s)&&!isNaN(it.e); });
+      if(items.length){ draw(items); return; }
+    }
+    draw(synth());
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ st.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+  window.addEventListener('resize',function(){ recompute(); });
+})();
+</script>
+</body>
+</html>

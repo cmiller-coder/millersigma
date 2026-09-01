@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Anatomical Imaging Body Map — OneMedNet Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#0E2430;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:10px 14px 8px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#0070FA;white-space:nowrap}
+  #meta{font-size:11px;color:#6E8592;text-align:right;line-height:1.35}
+  #meta b{color:#1C244B;font-weight:700}
+  #stage{flex:1;min-height:0;display:flex;gap:10px;align-items:stretch}
+  #figs{flex:1 1 auto;min-width:0;position:relative;overflow:hidden}
+  svg{width:100%;height:100%;display:block;overflow:visible}
+  #rail{flex:0 0 232px;min-width:0;overflow-y:auto;overflow-x:hidden;padding-right:2px;border-left:1px solid #E3EAEE;padding-left:10px}
+  #rail.off{display:none}
+  #railh{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9AACB6;padding:0 0 4px;display:flex;justify-content:space-between}
+  .rrow{display:flex;align-items:center;gap:6px;height:19px;cursor:pointer;border-radius:3px;padding:0 3px;transition:background .1s}
+  .rrow:hover{background:#EFF5F9}
+  .rrow.sel{background:#E3EEF7;box-shadow:inset 0 0 0 1px #1C244B}
+  .rrow.dim{opacity:.34}
+  .rn{flex:1 1 auto;min-width:0;font-size:10.5px;color:#324A6D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rn.po::after{content:'·P';font-size:8px;color:#9AACB6;margin-left:3px}
+  .rb{flex:0 0 32px;height:7px;border-radius:2px;background:#EDF1F3;overflow:hidden;display:flex}
+  .rb i{display:block;height:100%;border-radius:2px}
+  .rv{flex:0 0 42px;text-align:right;font-size:10px;font-weight:700;color:#1C244B;font-variant-numeric:tabular-nums}
+  .rv.mut{color:#9AACB6;font-weight:600}
+  .rm{flex:0 0 26px;height:7px;border-radius:2px;overflow:hidden;display:flex;background:#F2F5F7}
+  .rm i{display:block;height:100%}
+  .runm{margin-top:5px;padding:4px 5px;border:1px dashed #B9C6CD;border-radius:4px;font-size:9.5px;color:#6E8592;cursor:pointer;background:#F6F8F9}
+  #legend{flex:0 0 auto;display:flex;flex-wrap:nowrap;align-items:center;gap:7px;font-size:9.5px;color:#6E8592;overflow:hidden;white-space:nowrap;padding-top:2px;border-top:1px solid #EEF2F5}
+  #legend .ramp{display:flex;gap:1px}
+  #legend .ramp span{width:20px;height:9px;border-radius:1px;position:relative}
+  #legend.tiny{gap:5px;font-size:9px}
+  #legend.tiny .ramp span{width:11px;height:8px}
+  #legend.tiny .sw{width:9px;height:9px;flex:0 0 9px}
+  #legend .edges{font-size:8.5px;color:#9AACB6;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+  #legend .sep{width:1px;height:12px;background:#DDE5EA;flex:0 0 1px}
+  #legend .ch{display:flex;align-items:center;gap:4px}
+  #legend .sw{width:11px;height:11px;border-radius:2px;flex:0 0 11px}
+  .sw-none{background:repeating-linear-gradient(45deg,#B9C6CD 0 1.5px,#F6F8F9 1.5px 4px);border:1px dashed #B9C6CD}
+  .sw-zero{background:#EDF1F3;border:1px solid #B4C0C7}
+  .sw-sup{background:radial-gradient(#8FA3AE 0.9px,#F6F8F9 1px) 0 0/3.5px 3.5px;border:1px solid #C6D1D8}
+  .sw-wb{background:#F6F8F9;border:1.5px dashed #2E749B}
+  #tip{position:fixed;pointer-events:none;background:#131C3C;border:1px solid #324A6D;border-radius:8px;padding:8px 10px;font-size:11px;color:#E6EEF6;opacity:0;transition:opacity .09s;z-index:40;box-shadow:0 10px 28px rgba(10,20,40,.42);max-width:290px;line-height:1.45}
+  #tip b{color:#00BBFB}
+  #tip .syn{font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:#8FA9C4;margin:1px 0 3px}
+  #tip .mbar{display:flex;height:6px;border-radius:3px;overflow:hidden;margin:5px 0 3px;background:#26355F}
+  #tip .mbar i{display:block;height:100%}
+  #tip .mtx{font-size:9.5px;color:#AFC3D6}
+  #tip .ft{font-size:9.5px;color:#8FA9C4;margin-top:3px}
+  .tile{cursor:pointer}
+  .tile.dimd{opacity:.35}
+  .tile>*{fill-opacity:.92}
+  .tile.hi>*{stroke:#0E2430 !important;stroke-opacity:1 !important;stroke-width:var(--hw) !important;fill-opacity:1}
+  .tile.hi>.hitonly{stroke:transparent !important}
+  .rrow.hov{background:#E3EEF7}
+  #hint{position:absolute;left:0;bottom:0;font-size:9px;color:#A9B8C1}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl">Anatomical imaging coverage</div>
+    <div id="meta">—</div>
+  </div>
+  <div id="stage">
+    <div id="figs">
+      <svg id="svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 800" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <!-- RIGHT HALF of the body outline, local space 0 0 300 780, midline x=150.
+               Open contour: vertex (150,16) -> crotch (150,414). Mirrored with
+               translate(300,0) scale(-1,1) so bilateral symmetry is structural.
+               Built from the 7.5-head landmark table; arms abducted ~15deg. -->
+          <path id="edgeR" fill="none" d="M 150 17
+            C 173 17 187 33 187 59
+            C 187 79 185 91 182 99
+            L 172 111
+            C 169 114 168 117 168 121
+            L 168 148
+            C 184 151 204 154 226 162
+            C 236 169 241 183 241 200
+            C 245 229 251 265 255 297
+            C 260 318 263 342 262 364
+            C 261 380 260 391 260 400
+            C 266 406 268 416 266 425
+            C 264 435 260 446 255 454
+            C 252 459 248 458 246 452
+            C 243 442 241 427 241 413
+            C 240 407 240 403 241 400
+            C 238 370 231 336 226 300
+            C 219 262 208 208 200 172
+            C 201 182 202 194 202 206
+            C 201 226 197 244 196 262
+            C 195 284 193 300 192 316
+            C 191 330 199 340 206 348
+            C 209 362 209 376 208 390
+            C 205 444 200 500 196 552
+            C 198 568 199 582 198 596
+            C 195 634 187 674 182 700
+            C 187 712 190 726 190 738
+            C 190 748 188 754 182 755
+            C 175 756 167 756 162 754
+            C 159 752 158 747 159 741
+            C 160 728 161 712 163 699
+            C 165 672 167 632 168 596
+            C 168 582 169 570 170 552
+            C 168 512 160 460 155 432
+            C 153 422 151 417 150 412"/>
+          <!-- skeletal orientation hint, right half -->
+          <path id="skelR" fill="none" d="M 150 33 C 169 33 181 48 181 72
+            M 150 126 C 163 126 172 118 177 105
+            M 155 162 C 178 158 202 163 222 169
+            M 227 172 C 237 184 239 202 232 216
+            M 158 177 C 176 172 193 186 194 203 C 194 214 186 220 177 222
+            M 158 195 C 178 190 196 204 197 222 C 197 234 188 241 178 243
+            M 158 213 C 179 208 198 223 199 242 C 199 255 189 262 178 264
+            M 158 231 C 178 226 196 241 197 260 C 197 271 188 278 177 280
+            M 158 249 C 176 245 193 259 193 276 C 193 285 185 291 177 293
+            M 152 352 C 176 348 197 356 201 372 C 204 386 195 396 186 400
+            M 172 385 C 182 383 190 391 188 400 C 186 408 176 411 170 407 Z
+            M 168 408 C 160 413 154 415 150 415
+            M 178 399 A 9 9 0 1 0 196 399 A 9 9 0 1 0 178 399
+            M 175 552 A 7 7 0 1 0 189 552 A 7 7 0 1 0 175 552
+            M 214 176 L 244 296 M 240 302 L 250 400 M 248 301 L 258 399
+            M 187 400 L 180 552 M 179 560 L 173 696 M 173 700 L 187 742"/>
+          <!-- midline skeleton: sternum, vertebral tick ladder, sacrum -->
+          <path id="skelM" fill="none" d="M 150 152 L 150 350
+            M 143 158 L 157 158 M 143 172 L 157 172 M 143 186 L 157 186
+            M 143 200 L 157 200 M 143 214 L 157 214 M 143 228 L 157 228
+            M 143 242 L 157 242 M 143 256 L 157 256 M 143 270 L 157 270
+            M 143 284 L 157 284 M 143 298 L 157 298 M 143 312 L 157 312
+            M 143 326 L 157 326 M 143 340 L 157 340
+            M 140 352 L 160 352 L 155 392 L 150 401 L 145 392 Z"/>
+          <clipPath id="bodyClip">
+            <path id="clipA" d=""/>
+            <path id="clipB" d="" transform="translate(300,0) scale(-1,1)"/>
+          </clipPath>
+          <pattern id="hatchNone" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+            <rect width="10" height="10" fill="#F6F8F9"/>
+            <line x1="0" y1="0" x2="0" y2="10" stroke="#B9C6CD" stroke-width="2"/>
+          </pattern>
+          <pattern id="stippleSuppressed" patternUnits="userSpaceOnUse" width="7" height="7">
+            <rect width="7" height="7" fill="#F6F8F9"/>
+            <circle cx="1.8" cy="1.8" r="1.15" fill="#8FA3AE"/>
+            <circle cx="5.3" cy="5.3" r="1.15" fill="#8FA3AE"/>
+          </pattern>
+        </defs>
+        <g id="root"></g>
+      </svg>
+    </div>
+    <div id="rail"></div>
+  </div>
+  <div id="legend"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var NS='http://www.w3.org/2000/svg';
+  var tip=document.getElementById('tip'), svg=document.getElementById('svg'), root=document.getElementById('root');
+  var wrap=document.getElementById('wrap'), stage=document.getElementById('stage'), figs=document.getElementById('figs');
+  var railEl=document.getElementById('rail'), legEl=document.getElementById('legend'), metaEl=document.getElementById('meta');
+
+  /* ---------- brand ---------- */
+  var NAVY='#1C244B', SLATE='#324A6D', ACCENT='#0070FA', INK='#0E2430';
+  var RAMP=['#CFE3EE','#9CC6DE','#5C9CC0','#2E749B','#12496B'];
+  var MODCOL={CT:'#2E749B',MR:'#5C4B8A',US:'#0E7C7B',XR:'#7A8A94',MG:'#B0567F',PET:'#C77D2E',OTHER:'#9AA7AE'};
+  var MODORDER=['XR','CT','MR','US','MG','PET','OTHER'];
+
+  /* ---------- editor panel ---------- */
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'region',type:'column',source:'source',label:'Body region (DICOM BodyPartExamined)',description:'One row per body region (x modality). Values matched case/space/punctuation-insensitively against the built-in DICOM body-part synonym map. Unmatched values are surfaced, never dropped.'},
+    {name:'studies',type:'column',source:'source',allowedTypes:['number','integer'],label:'Imaging studies (drives shading)'},
+    {name:'patients',type:'column',source:'source',allowedTypes:['number','integer'],label:'Distinct patients (optional — also drives suppression)'},
+    {name:'modality',type:'column',source:'source',label:'Modality — CT / MR / US / CR / DX / MG / PT (optional)'},
+    {name:'completeness',type:'column',source:'source',allowedTypes:['number','integer'],label:'EHR linkage / completeness % (optional)'},
+    {name:'firstStudy',type:'column',source:'source',allowedTypes:['datetime'],label:'Earliest study date (optional)'},
+    {name:'lastStudy',type:'column',source:'source',allowedTypes:['datetime'],label:'Latest study date (optional)'},
+    {name:'sites',type:'column',source:'source',allowedTypes:['number','integer'],label:'Contributing sites (optional)'},
+    {name:'regionVar',type:'variable',label:'Click region → control variable',description:'Bind a workbook List control here. Clicking a region pushes its body-region value(s) so the rest of the dashboard filters. Shift-click adds regions; click background to clear.'},
+    {name:'onRegionSelect',type:'action-trigger',label:'On region select (optional action)'},
+    {name:'shadeBy',type:'dropdown',values:['Study volume','Distinct patients','Data completeness %'],label:'Shade regions by'},
+    {name:'views',type:'dropdown',values:['Anterior + posterior','Anterior only'],label:'Views'},
+    {name:'scaleMode',type:'dropdown',values:['Quantile (5 bins)','Linear','Log'],label:'Color scale'},
+    {name:'suppressUnder',type:'dropdown',values:[0,11,20,50],label:'Suppress regions under N patients'},
+    {name:'showRail',type:'toggle',label:'Show ranked region rail'},
+    {name:'showSkeleton',type:'toggle',label:'Show skeletal orientation hint'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  /* ---------- helpers ---------- */
+  function el(t,a){ var e=document.createElementNS(NS,t); if(a) for(var k in a) e.setAttribute(k,a[k]); return e; }
+  function use(id,mirror){ var u=el('use',{}); u.setAttributeNS('http://www.w3.org/1999/xlink','xlink:href','#'+id); u.setAttribute('href','#'+id);
+    if(mirror) u.setAttribute('transform','translate(300,0) scale(-1,1)'); return u; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function hx(c){ return ('0'+Math.round(c).toString(16)).slice(-2); }
+  function mix(c1,c2,t){ function P(h){return [parseInt(h.substr(1,2),16),parseInt(h.substr(3,2),16),parseInt(h.substr(5,2),16)];}
+    var a=P(c1),b=P(c2); return '#'+hx(lerp(a[0],b[0],t))+hx(lerp(a[1],b[1],t))+hx(lerp(a[2],b[2],t)); }
+  function cfgInt(n,d){ var v=parseInt(st.cfg&&st.cfg[n],10); return isFinite(v)?v:d; }
+  function cfgStr(n){ return String((st.cfg&&st.cfg[n])!=null?st.cfg[n]:''); }
+  function cfgBool(n,d){ var v=st.cfg&&st.cfg[n]; if(v===undefined||v===null||v==='') return d; return v===true||v==='true'; }
+  function K(v){ v=Number(v)||0;
+    if(v>=1e9) return (v/1e9).toFixed(2)+'B';
+    if(v>=1e6) return (v/1e6).toFixed(2)+'M';
+    if(v>=1e5) return Math.round(v/1e3)+'k';
+    if(v>=1e4) return (v/1e3).toFixed(1)+'k';
+    if(v>=1e3) return (v/1e3).toFixed(1)+'k';
+    return String(Math.round(v)); }
+  function N(v){ return (Math.round(Number(v)||0)).toLocaleString('en-US'); }
+  function nrm(v){ return String(v==null?'':v).toUpperCase().replace(/[^A-Z]/g,''); }
+  function pdate(v){
+    if(v==null||v==='') return null;
+    if(v instanceof Date){ var g=v.getTime(); return isNaN(g)?null:g; }
+    if(typeof v==='number'){ return v<1e11 ? v*1000 : v; }
+    var s=String(v).trim();
+    if(/^\d{4}-\d{2}$/.test(s)) s+='-01';
+    var t=Date.parse(s); if(!isNaN(t)) return t;
+    var n=Number(s); if(isFinite(n)&&n>0) return n<1e11?n*1000:n;
+    return null; }
+  function fmtYM(t){ if(t==null) return null; var d=new Date(t); return d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2); }
+  function modGroup(m){ var s=nrm(m);
+    if(!s) return 'OTHER';
+    if(s==='CT'||s==='CTA'||s==='COMPUTEDTOMOGRAPHY') return 'CT';
+    if(s==='MR'||s==='MRI'||s==='MRA'||s==='MAGNETICRESONANCE') return 'MR';
+    if(s==='US'||s==='ULTRASOUND'||s==='ECHO'||s==='USG') return 'US';
+    if(s==='XR'||s==='CR'||s==='DX'||s==='RF'||s==='XA'||s==='RG'||s==='RADIOGRAPH') return 'XR';
+    if(s==='MG'||s==='MAMMO'||s==='MAMMOGRAPHY'||s==='DBT') return 'MG';
+    if(s==='PT'||s==='PET'||s==='NM'||s==='PETCT'||s==='SPECT') return 'PET';
+    return 'OTHER'; }
+
+  /* ---------- regions ----------
+     Appended in strictly DESCENDING TILE AREA so smaller tiles land on top and
+     stay hittable (chest must not steal heart / breast).
+     `v`: A = anterior figure, P = posterior figure.
+     `lp`: [x,y] leader-line anchor in local space (gutter labels, tier A only). */
+  var REGIONS=[
+    {k:'chest',lab:'Chest / Thorax',v:'A',lp:[100,168],
+     syn:['CHEST','THORAX','LUNG','LUNGS','LUNGBASE','MEDIASTINUM','PLEURA','RIBS','RIB','RIBCAGE','STERNUM','AORTA','THORACICAORTA','CHESTABDOMEN','CHESTABDOMENPELVIS','THORAXABDOMEN','TRACHEA','ESOPHAGUS'],
+     sh:[['path','M 96 150 L 204 150 L 206 234 C 188 262 172 274 150 274 C 128 274 112 262 94 234 Z']]},
+    {k:'head',lab:'Head / Brain',v:'A',lp:[112,64],
+     syn:['HEAD','BRAIN','SKULL','CRANIUM','ORBIT','ORBITS','SINUS','SINUSES','PARANASALSINUS','FACE','FACIALBONES','TEMPORALBONE','PITUITARY','IAC','CIRCLEOFWILLIS','HEADNECK','MAXILLA'],
+     sh:[['ellipse',null,{cx:150,cy:66,rx:54,ry:54}]]},
+    {k:'abdomen',lab:'Abdomen',v:'A',lp:[102,300],
+     syn:['ABDOMEN','LIVER','KIDNEY','KIDNEYS','RENAL','PANCREAS','SPLEEN','GALLBLADDER','BILIARY','BOWEL','SMALLBOWEL','COLON','STOMACH','RETROPERITONEUM','ABDOMENPELVIS','ADRENAL','APPENDIX','MESENTERY'],
+     sh:[['rect',null,{x:92,y:276,width:116,height:72,rx:14}]]},
+    {k:'hip',lab:'Hip / femur',v:'A',lp:[118,470],
+     syn:['HIP','HIPS','FEMUR','THIGH','FEMORALHEAD','GREATERTROCHANTER','PROXIMALFEMUR'],
+     sh:[['path','M 151 412 L 210 412 L 198 550 L 158 550 Z'],['path','M 149 412 L 90 412 L 102 550 L 142 550 Z']]},
+    {k:'shoulder',lab:'Shoulder / upper arm',v:'A',lp:null,
+     syn:['SHOULDER','SHOULDERS','CLAVICLE','SCAPULA','HUMERUS','ACROMION','ACJOINT','UPPERARM','ARM','PROXIMALHUMERUS','ROTATORCUFF'],
+     sh:[['path','M 208 156 L 250 170 L 268 302 L 220 302 Z'],['path','M 92 156 L 50 170 L 32 302 L 80 302 Z']]},
+    {k:'arm',lab:'Elbow / forearm / hand',v:'A',lp:null,
+     syn:['ELBOW','FOREARM','RADIUS','ULNA','WRIST','HAND','FINGER','FINGERS','THUMB','CARPUS','SCAPHOID','METACARPAL','DISTALRADIUS','OLECRANON'],
+     sh:[['path','M 222 304 L 262 304 L 274 448 L 234 456 Z'],['path','M 78 304 L 38 304 L 26 448 L 66 456 Z']]},
+    {k:'pelvis',lab:'Pelvis',v:'A',lp:[110,368],
+     syn:['PELVIS','PROSTATE','UTERUS','CERVIXUTERI','OVARY','OVARIES','BLADDER','RECTUM','PELVICFLOOR','SCROTUM','TESTIS','INGUINAL'],
+     sh:[['path','M 96 350 C 118 342 150 342 150 342 C 182 342 204 350 204 350 C 204 380 189 402 171 410 L 150 415 L 129 410 C 111 402 96 380 96 350 Z']]},
+    {k:'knee',lab:'Knee / lower leg',v:'A',lp:[124,600],
+     syn:['KNEE','KNEES','TIBIA','FIBULA','PATELLA','LEG','LOWERLEG','CALF','TIBFIB','SHIN','PROXIMALTIBIA'],
+     sh:[['path','M 158 552 L 200 552 L 184 702 L 160 702 Z'],['path','M 142 552 L 100 552 L 116 702 L 140 702 Z']]},
+    {k:'foot',lab:'Ankle / foot',v:'A',lp:[126,726],
+     syn:['ANKLE','FOOT','FEET','CALCANEUS','HEEL','TOE','TOES','TARSAL','METATARSAL','MIDFOOT','HINDFOOT','FOREFOOT','ACHILLES'],
+     sh:[['path','M 150 698 L 192 698 L 200 756 L 150 756 Z'],['path','M 150 698 L 108 698 L 100 756 L 150 756 Z']]},
+    {k:'neck',lab:'Neck / soft tissue',v:'A',lp:[136,132],
+     syn:['NECK','THYROID','CAROTID','LARYNX','PAROTID','SOFTTISSUENECK','CERVICALSOFTTISSUE','SALIVARYGLAND','PHARYNX','NASOPHARYNX'],
+     sh:[['rect',null,{x:126,y:112,width:48,height:38,rx:12}]]},
+    {k:'heart',lab:'Cardiac',v:'A',lp:[132,228],
+     syn:['HEART','CARDIAC','CORONARY','ECHO','MYOCARDIUM','PERICARDIUM','CARDIACVALVE','LEFTATRIUM','CORONARYARTERY'],
+     sh:[['ellipse',null,{cx:137,cy:226,rx:31,ry:24,transform:'rotate(-28 137 226)'}]]},
+    {k:'breast',lab:'Breast',v:'A',lp:null,
+     syn:['BREAST','BREASTS','MAMMO','MAMMOGRAM','AXILLA','NIPPLE','BREASTIMPLANT'],
+     sh:[['path','M 112 192 C 129 182 143 189 146 205 C 143 225 121 231 108 218 C 101 209 105 198 112 192 Z'],
+         ['path','M 188 192 C 171 182 157 189 154 205 C 157 225 179 231 192 218 C 199 209 195 198 188 192 Z']]},
+    {k:'tspine',lab:'Thoracic spine',v:'P',lp:[212,208],
+     syn:['TSPINE','THORACICSPINE','TSPINEONLY','TLSPINE','THORACOLUMBARSPINE','DORSALSPINE','THORACICVERTEBRA'],
+     sh:[['rect',null,{x:135,y:152,width:30,height:112,rx:9}]]},
+    {k:'lspine',lab:'Lumbar spine / sacrum',v:'P',lp:[212,306],
+     syn:['LSPINE','LUMBARSPINE','SACRUM','COCCYX','SIJOINT','SIJOINTS','SACROILIACJOINT','LSSPINE','LUMBOSACRALSPINE','LUMBARVERTEBRA','SACROILIAC'],
+     sh:[['rect',null,{x:135,y:266,width:30,height:82,rx:9}]]},
+    {k:'cspine',lab:'Cervical spine',v:'P',lp:[212,132],
+     syn:['CSPINE','CERVICALSPINE','CTSPINE','CERVICOTHORACICSPINE','CERVICALVERTEBRA','ATLAS','ODONTOID'],
+     sh:[['rect',null,{x:135,y:116,width:30,height:34,rx:9}]]},
+    {k:'wholebody',lab:'Whole body (PET-CT)',v:'A',lp:null,halo:true,
+     syn:['WHOLEBODY','PETCT','TOTALBODY','SKULLTOTHIGH','BODY','WHOLEBODYPET','EYESTOTHIGHS','VERTEXTOTHIGH'],
+     sh:[]}
+  ];
+  /* gutter-label subset (tier A): 6 primary anterior regions, top to bottom */
+  var GUTTER=['head','chest','heart','abdomen','pelvis','knee'];
+  /* posterior gutter labels (tiers A and C) */
+  var PGUTTER=['cspine','tspine','lspine'];
+
+  var SYNMAP={}, RKEY={};
+  REGIONS.forEach(function(r){ RKEY[r.k]=r; r.syn.forEach(function(s){ if(SYNMAP[s]==null) SYNMAP[s]=r.k; }); });
+
+  /* ---------- state ---------- */
+  var st={cfg:{},data:null,unsub:null,selected:[],regionRawValue:{},agg:{},dirty:true,synthetic:false,
+          scale:1,tier:'A',bins:[],unmapped:[],totals:{}};
+
+  /* ---------- synthetic fallback (exercises all four visual states) ----------
+     [regionValue, modality, studies, patients, completeness, first, last, sites] */
+  var SYNTH=[
+    ['CHEST','DX',282000,198417,87,'2013-06','2025-11',34],['CHEST','CT',151000,198417,87,'2013-06','2025-11',34],
+    ['CHEST','MR',29000,198417,87,'2013-06','2025-11',34],['CHEST','US',19000,198417,87,'2013-06','2025-11',34],
+    ['CHEST','PT',5204,198417,87,'2013-06','2025-11',34],
+    ['ABDOMEN','CT',171000,142880,84,'2013-09','2025-11',31],['ABDOMEN','US',96000,142880,84,'2013-09','2025-11',31],
+    ['ABDOMEN','MR',24000,142880,84,'2013-09','2025-11',31],
+    ['HEAD','CT',148000,121400,91,'2012-11','2025-12',33],['HEAD','MR',77000,121400,91,'2012-11','2025-12',33],
+    ['LSPINE','MR',84000,61200,79,'2014-02','2025-10',27],['LSPINE','DX',38000,61200,79,'2014-02','2025-10',27],
+    ['SI JOINT','MR',900,1100,58,'2019-05','2025-01',4],
+    ['KNEE','MR',52000,44900,74,'2014-05','2025-09',24],['KNEE','DX',41000,44900,74,'2014-05','2025-09',24],
+    ['BREAST','MG',96000,71300,88,'2013-01','2025-11',22],['BREAST','US',18000,71300,88,'2013-01','2025-11',22],
+    ['BREAST','MR',6100,71300,88,'2013-01','2025-11',22],
+    ['HEART','US',64000,38200,81,'2015-03','2025-08',19],['HEART','CT',12400,38200,81,'2015-03','2025-08',19],
+    ['PELVIS','CT',47000,39100,82,'2014-01','2025-10',26],['PELVIS','US',33000,39100,82,'2014-01','2025-10',26],
+    ['SHOULDER','MR',22000,20100,71,'2015-06','2025-07',18],['SHOULDER','DX',26000,20100,71,'2015-06','2025-07',18],
+    ['WRIST','DX',31000,27400,69,'2015-02','2025-09',21],
+    ['HIP','DX',24000,22600,73,'2014-08','2025-08',20],
+    ['WHOLEBODY','PT',14800,11900,93,'2016-04','2025-11',12],
+    ['CSPINE','MR',29000,24100,77,'2014-04','2025-09',23],
+    ['FOOT','DX',0,1840,61,'2018-01','2024-05',6],
+    ['TSPINE','MR',310,7,55,'2021-03','2024-11',2],
+    ['TMJ','MR',640,820,52,'2019-08','2025-02',3]
+  ];
+
+  /* ---------- aggregation ----------
+     studies SUM; patients is a DISTINCT count -> MAX within region (never summed
+     across modalities); completeness / sites MAX; first MIN; last MAX. */
+  function blank(){ return {studies:0,patients:0,comp:null,sites:null,first:null,last:null,mods:{},syns:{},raws:[],rows:0}; }
+  function aggregate(rows){
+    var agg={}, unm={}, raw={};
+    rows.forEach(function(r){
+      var rv=r[0], mg=modGroup(r[1]), s=Number(r[2]);
+      if(!isFinite(s)) s=0;
+      var key=nrm(rv), rk=SYNMAP[key];
+      if(!rk){
+        var u=unm[key]||(unm[key]={label:String(rv==null?'(blank)':rv),studies:0,patients:0});
+        u.studies+=s; u.patients=Math.max(u.patients,Number(r[3])||0); return;
+      }
+      var a=agg[rk]||(agg[rk]=blank());
+      a.rows++; a.studies+=s;
+      a.patients=Math.max(a.patients,Number(r[3])||0);
+      var c=r[4]; if(c!=null&&c!==''&&isFinite(Number(c))) a.comp=a.comp==null?Number(c):Math.max(a.comp,Number(c));
+      var si=r[7]; if(si!=null&&si!==''&&isFinite(Number(si))) a.sites=a.sites==null?Number(si):Math.max(a.sites,Number(si));
+      var f=pdate(r[5]); if(f!=null) a.first=a.first==null?f:Math.min(a.first,f);
+      var l=pdate(r[6]); if(l!=null) a.last=a.last==null?l:Math.max(a.last,l);
+      a.mods[mg]=(a.mods[mg]||0)+s;
+      a.syns[key]=true;
+      if(a.raws.indexOf(rv)<0&&a.raws.length<24) a.raws.push(rv);
+      (raw[rk]||(raw[rk]=[])).indexOf(rv)<0 && raw[rk].push(rv);
+    });
+    var ul=[]; for(var k in unm) ul.push(unm[k]);
+    ul.sort(function(a,b){return b.studies-a.studies;});
+    return {agg:agg,unmapped:ul,raw:raw};
+  }
+
+  /* ---------- shading value + 5-bin scale ---------- */
+  function shadeField(){ var s=cfgStr('shadeBy');
+    if(s==='Distinct patients') return 'patients';
+    if(s==='Data completeness %') return 'comp';
+    return 'studies'; }
+  function stateOf(k){
+    var a=st.agg[k]; if(!a) return 'none';
+    var thr=cfgInt('suppressUnder',11);
+    if(thr>0 && a.rows>0 && a.patients>0 && a.patients<thr) return 'sup';
+    var f=shadeField(), v=a[f];
+    if(f==='comp'&&v==null) return 'none';
+    if(!(Number(v)>0)) return 'zero';
+    return 'val'; }
+  function shadeVal(k){ var a=st.agg[k]; if(!a) return null; var v=a[shadeField()]; return v==null?null:Number(v); }
+  function buildBins(){
+    var mode=cfgStr('scaleMode')||'Quantile (5 bins)', vals=[];
+    REGIONS.forEach(function(r){ if(stateOf(r.k)==='val'){ var v=shadeVal(r.k); if(v>0) vals.push(v); } });
+    vals.sort(function(a,b){return a-b;});
+    st.vals=vals;
+    var edges=[];
+    if(!vals.length){ st.bins=[]; st.binMode=mode; return; }
+    var mx=vals[vals.length-1], mn=vals[0];
+    if(mode==='Linear'){ for(var i=1;i<5;i++) edges.push(mn+(mx-mn)*i/5); }
+    else if(mode==='Log'){ var l0=Math.log(mn+1), l1=Math.log(mx+1);
+      for(var j=1;j<5;j++) edges.push(Math.exp(l0+(l1-l0)*j/5)-1); }
+    else { for(var q=1;q<5;q++){ var p=q/5*(vals.length-1); var lo=Math.floor(p), hi=Math.ceil(p);
+        edges.push(lerp(vals[lo],vals[hi],p-lo)); } }
+    st.bins=edges; st.binMode=mode; st.vmin=mn; st.vmax=mx;
+  }
+  function binOf(v){ var e=st.bins; if(!e||!e.length) return 2;
+    for(var i=0;i<e.length;i++) if(v<=e[i]) return i; return e.length; }
+  function fillFor(k,scale){
+    var s=stateOf(k);
+    if(s==='val') return {fill:RAMP[binOf(shadeVal(k))],stroke:INK,so:0.25,sw:0.9,dash:null};
+    if(s==='zero') return {fill:'#EDF1F3',stroke:'#B4C0C7',so:1,sw:1,dash:null};
+    var usePat = scale>=0.5;
+    if(s==='sup') return usePat?{fill:'url(#stippleSuppressed)',stroke:'#A9B8C1',so:1,sw:1,dash:null}
+                              :{fill:'#DBE3E8',stroke:'#8FA3AE',so:1,sw:1.2,dash:'1.6 2.2'};
+    return usePat?{fill:'url(#hatchNone)',stroke:'#9FB0B9',so:1,sw:1,dash:'3 3'}
+                 :{fill:'#E6EDF0',stroke:'#9FB0B9',so:1,sw:1.2,dash:'3 3'};
+  }
+  function modMix(k){ var a=st.agg[k]; if(!a) return [];
+    var tot=0; MODORDER.forEach(function(m){ tot+=(a.mods[m]||0); });
+    if(!(tot>0)) return [];
+    return MODORDER.filter(function(m){return (a.mods[m]||0)>0;}).map(function(m){
+      return {m:m,v:a.mods[m],p:a.mods[m]/tot}; }).sort(function(x,y){return y.v-x.v;}); }
+
+  /* ---------- geometry / clip ---------- */
+  var edgeD=document.getElementById('edgeR').getAttribute('d').replace(/\s+/g,' ').trim();
+  var closedD=edgeD+' L 148 412 L 148 16 Z';
+  document.getElementById('clipA').setAttribute('d',closedD);
+  document.getElementById('clipB').setAttribute('d',closedD);
+
+  /* pattern spacing must be recomputed per draw: patternUnits="userSpaceOnUse"
+     scales with the viewBox, so a fixed 6px hatch moires at ~0.42 scale. */
+  function tunePatterns(scale){
+    var s=Math.max(0.12,scale);
+    var hp=document.getElementById('hatchNone'), sp=document.getElementById('stippleSuppressed');
+    var hw=Math.max(6,Math.min(26,9/s));
+    hp.setAttribute('width',hw.toFixed(2)); hp.setAttribute('height',hw.toFixed(2));
+    hp.children[0].setAttribute('width',hw.toFixed(2)); hp.children[0].setAttribute('height',hw.toFixed(2));
+    var ln=hp.getElementsByTagName('line')[0];
+    ln.setAttribute('y2',hw.toFixed(2)); ln.setAttribute('stroke-width',Math.max(1.4,hw*0.22).toFixed(2));
+    var sw=Math.max(5,Math.min(20,7/s));
+    sp.setAttribute('width',sw.toFixed(2)); sp.setAttribute('height',sw.toFixed(2));
+    sp.children[0].setAttribute('width',sw.toFixed(2)); sp.children[0].setAttribute('height',sw.toFixed(2));
+    var cs=sp.getElementsByTagName('circle'), r=Math.max(0.9,sw*0.16);
+    cs[0].setAttribute('cx',(sw*0.26).toFixed(2)); cs[0].setAttribute('cy',(sw*0.26).toFixed(2)); cs[0].setAttribute('r',r.toFixed(2));
+    cs[1].setAttribute('cx',(sw*0.76).toFixed(2)); cs[1].setAttribute('cy',(sw*0.76).toFixed(2)); cs[1].setAttribute('r',r.toFixed(2));
+  }
+
+  /* ---------- one figure ---------- */
+  function figure(view,tx,scale,fs){
+    var g=el('g',{transform:'translate('+tx+',0)'});
+    /* 1 - silhouette base fill */
+    g.appendChild(el('path',{d:closedD,fill:'#FAFCFD'}));
+    g.appendChild(el('path',{d:closedD,fill:'#FAFCFD',transform:'translate(300,0) scale(-1,1)'}));
+    /* 2 - region tiles, clipped to the body */
+    var clipG=el('g',{'clip-path':'url(#bodyClip)'});
+    g.appendChild(clipG);
+    var hits=[];
+    REGIONS.forEach(function(r){
+      if(r.v!==view||!r.sh.length) return;
+      var f=fillFor(r.k,scale), sel=st.selected.indexOf(r.k)>=0;
+      var rg=el('g',{'class':'tile'}); rg.setAttribute('data-k',r.k);
+      r.sh.forEach(function(s){
+        var e=el(s[0],s[2]||{});
+        if(s[1]) e.setAttribute('d',s[1]);
+        e.setAttribute('fill',f.fill);
+        e.setAttribute('stroke',sel?NAVY:f.stroke);
+        e.setAttribute('stroke-opacity',sel?1:f.so);
+        e.setAttribute('stroke-width',sel?(2/scale).toFixed(2):f.sw);
+        if(f.dash&&!sel) e.setAttribute('stroke-dasharray',f.dash);
+        rg.appendChild(e);
+      });
+      clipG.appendChild(rg); hits.push(rg);
+    });
+    /* zero-state "0" glyphs (only when the tile is comfortably big) */
+    REGIONS.forEach(function(r){
+      if(r.v!==view||!r.sh.length||stateOf(r.k)!=='zero') return;
+      r.sh.forEach(function(sh){
+        var c=centroid({sh:[sh]}); if(!c||c.d*scale<20) return;
+        var t=el('text',{x:c.x,y:c.y+fs(4),'text-anchor':'middle','font-size':fs(9.5),
+          'font-weight':700,fill:'#8FA3AE','pointer-events':'none'}); t.textContent='0';
+        clipG.appendChild(t);
+      });
+    });
+    /* 3 - skeletal orientation hint, above the fills */
+    if(cfgBool('showSkeleton',true)){
+      var sk=el('g',{stroke:NAVY,fill:'none','stroke-width':(1.15/scale).toFixed(2),opacity:0.16,
+        'stroke-linecap':'round','pointer-events':'none','clip-path':'url(#bodyClip)'});
+      sk.appendChild(use('skelR',false)); sk.appendChild(use('skelR',true)); sk.appendChild(use('skelM',false));
+      g.appendChild(sk);
+    }
+    /* 1b - outline stroke last so the body edge stays crisp over the tiles */
+    var ol=el('g',{fill:'none',stroke:SLATE,'stroke-width':(1.5/scale).toFixed(2),
+      'stroke-linejoin':'round','stroke-linecap':'round','pointer-events':'none'});
+    ol.appendChild(use('edgeR',false)); ol.appendChild(use('edgeR',true));
+    g.appendChild(ol);
+    /* view caption */
+    var cap=el('text',{x:150,y:786,'text-anchor':'middle','font-size':fs(9),'font-weight':700,
+      'letter-spacing':fs(0.09),fill:'#9AACB6','pointer-events':'none'});
+    cap.textContent=(view==='A'?'ANTERIOR':'POSTERIOR');
+    g.appendChild(cap);
+    return {g:g,hits:hits};
+  }
+
+  /* approximate tile centroid + smallest dimension, in local units */
+  function centroid(r){
+    var s=r.sh[0]; if(!s) return null;
+    if(s[0]==='rect'){ var a=s[2]; return {x:a.x+a.width/2,y:a.y+a.height/2,d:Math.min(a.width,a.height)}; }
+    if(s[0]==='ellipse'){ var b=s[2]; return {x:b.cx,y:b.cy,d:Math.min(b.rx,b.ry)*2}; }
+    var nums=s[1].match(/-?\d+(\.\d+)?/g)||[], xs=[],ys=[];
+    for(var i=0;i+1<nums.length;i+=2){ xs.push(+nums[i]); ys.push(+nums[i+1]); }
+    if(!xs.length) return null;
+    var x0=Math.min.apply(null,xs),x1=Math.max.apply(null,xs),y0=Math.min.apply(null,ys),y1=Math.max.apply(null,ys);
+    return {x:(x0+x1)/2,y:(y0+y1)/2,d:Math.min(x1-x0,y1-y0)};
+  }
+
+  /* ---------- whole-body halo ---------- */
+  function halo(tx,scale){
+    var s=stateOf('wholebody'), sel=st.selected.indexOf('wholebody')>=0;
+    var col = s==='val' ? RAMP[binOf(shadeVal('wholebody'))] : '#C6D1D8';
+    var outer=el('g',{transform:'translate('+tx+',0)'});
+    var g=el('g',{'class':'tile'}); g.setAttribute('data-k','wholebody');
+    g.appendChild(el('rect',{x:18,y:2,width:264,height:760,rx:26,fill:'none',stroke:col,
+      'stroke-width':((sel?2.6:1.5)/scale).toFixed(2),
+      'stroke-dasharray':(7/scale).toFixed(1)+' '+(6/scale).toFixed(1),'pointer-events':'none',
+      'stroke-opacity':(s==='val'?0.95:0.55)}));
+    g.appendChild(el('rect',{x:18,y:2,width:264,height:760,rx:26,fill:'none',stroke:'transparent',
+      'stroke-width':(11/scale).toFixed(2),'class':'hitonly'}));
+    outer.appendChild(g);
+    return {g:outer,hits:[g]};
+  }
+
+  /* ---------- gutter leader labels ---------- */
+  function gutterA(tx,scale,fs){
+    var g=el('g',{transform:'translate('+tx+',0)','pointer-events':'none'});
+    GUTTER.forEach(function(k){
+      var r=RKEY[k]; if(!r||!r.lp) return;
+      var y=r.lp[1], stt=stateOf(k);
+      g.appendChild(el('line',{x1:-14,y1:y,x2:r.lp[0],y2:y,stroke:'#B9C6CD','stroke-width':(0.9/scale).toFixed(2),
+        'stroke-dasharray':(2.5/scale).toFixed(1)+' '+(2.5/scale).toFixed(1)}));
+      g.appendChild(el('circle',{cx:r.lp[0],cy:y,r:(2.2/scale).toFixed(2),fill:SLATE}));
+      var t1=el('text',{x:-20,y:y-fs(1.5),'text-anchor':'end','font-size':fs(10),fill:SLATE});
+      t1.textContent=r.lab; g.appendChild(t1);
+      var t2=el('text',{x:-20,y:y+fs(11),'text-anchor':'end','font-size':fs(10.5),'font-weight':800,
+        fill:stt==='val'?NAVY:'#9AACB6'});
+      t2.textContent=labelValue(k); g.appendChild(t2);
+    });
+    return g;
+  }
+  function gutterP(tx,scale,fs){
+    var g=el('g',{transform:'translate('+tx+',0)','pointer-events':'none'});
+    PGUTTER.forEach(function(k){
+      var r=RKEY[k]; if(!r) return;
+      var y=r.sh[0][2].y+r.sh[0][2].height/2, stt=stateOf(k);
+      g.appendChild(el('line',{x1:166,y1:y,x2:278,y2:y,stroke:'#B9C6CD','stroke-width':(0.9/scale).toFixed(2),
+        'stroke-dasharray':(2.5/scale).toFixed(1)+' '+(2.5/scale).toFixed(1)}));
+      g.appendChild(el('circle',{cx:166,cy:y,r:(2.2/scale).toFixed(2),fill:SLATE}));
+      var t1=el('text',{x:284,y:y-fs(1.5),'font-size':fs(10),fill:SLATE}); t1.textContent=r.lab; g.appendChild(t1);
+      var t2=el('text',{x:284,y:y+fs(11),'font-size':fs(10.5),'font-weight':800,
+        fill:stt==='val'?NAVY:'#9AACB6'}); t2.textContent=labelValue(k); g.appendChild(t2);
+    });
+    return g;
+  }
+  function labelValue(k){
+    var s=stateOf(k);
+    if(s==='none') return 'no data';
+    if(s==='sup') return 'suppressed';
+    if(s==='zero') return '0 studies';
+    var f=shadeField(), v=shadeVal(k);
+    return f==='comp' ? Math.round(v)+'%' : K(v);
+  }
+
+  /* ---------- in-body value chips ---------- */
+  function chips(tx,scale,fs){
+    var g=el('g',{transform:'translate('+tx+',0)','pointer-events':'none'});
+    ['chest','abdomen','pelvis'].forEach(function(k){
+      if(stateOf(k)!=='val') return;
+      var pos={chest:[150,174],abdomen:[150,312],pelvis:[150,372]}[k];
+      var txt=labelValue(k), w=(txt.length*5.6+10)/scale, h=15/scale;
+      g.appendChild(el('rect',{x:pos[0]-w/2,y:pos[1]-h/2,width:w,height:h,rx:h/2,
+        fill:'#FFFFFF','fill-opacity':0.88,stroke:'#D6E1E8','stroke-width':(0.8/scale).toFixed(2)}));
+      var t=el('text',{x:pos[0],y:pos[1]+fs(3.4),'text-anchor':'middle','font-size':fs(9.5),
+        'font-weight':800,fill:NAVY}); t.textContent=txt; g.appendChild(t);
+    });
+    return g;
+  }
+
+  /* ---------- tooltip ---------- */
+  function synList(k){
+    var a=st.agg[k]; if(!a) return '';
+    var out=[]; for(var s in a.syns) out.push(s);
+    out.sort(); return out.slice(0,8).join(' · ')+(out.length>8?' +'+(out.length-8):'');
+  }
+  function tipHTML(k){
+    var r=RKEY[k], a=st.agg[k], s=stateOf(k), thr=cfgInt('suppressUnder',11);
+    var h='<b>'+esc(r.lab).toUpperCase()+'</b>';
+    if(s==='none'){
+      return h+'<div class="syn">no licensed data</div>This region is absent from the result set — no licensed studies are available for it in the current filter context.'+
+        '<div class="ft">Matches any of: '+esc(r.syn.slice(0,6).join(' · '))+'</div>';
+    }
+    h+='<div class="syn">'+esc(synList(k)||'—')+'</div>';
+    if(s==='sup'){
+      return h+'Suppressed — fewer than '+thr+' patients (de-identification threshold).<br>Counts are withheld to prevent re-identification.'+
+        '<div class="ft">'+N(a.studies)+' studies present · patient count below threshold</div>';
+    }
+    if(s==='zero'){
+      return h+'<b style="color:#E6EEF6">0 studies</b> in the current result set.<br>The region is licensed and present, but no studies match the active filters.'+
+        (a.patients?'<div class="ft">'+N(a.patients)+' patients in cohort</div>':'');
+    }
+    h+=N(a.studies)+' studies'+(a.patients?' · '+N(a.patients)+' patients':'');
+    var mm=modMix(k);
+    if(mm.length){
+      var bar='<div class="mbar">', tx=[];
+      mm.forEach(function(m){ bar+='<i style="width:'+(m.p*100).toFixed(2)+'%;background:'+MODCOL[m.m]+'"></i>';
+        tx.push(m.m+' '+Math.round(m.p*100)+'%'); });
+      h+=bar+'</div><div class="mtx">'+esc(tx.join(' · '))+'</div>';
+    }
+    var ft=[];
+    var f=fmtYM(a.first), l=fmtYM(a.last);
+    if(f&&l) ft.push(f+' → '+l); else if(l) ft.push('through '+l);
+    if(a.sites!=null) ft.push(N(a.sites)+' contributing sites');
+    if(ft.length) h+='<div class="ft">'+esc(ft.join(' · '))+'</div>';
+    if(a.comp!=null) h+='<div class="ft">EHR linkage '+Math.round(a.comp)+'%</div>';
+    return h;
+  }
+  function showTip(e,html){
+    tip.innerHTML=html; tip.style.opacity=1;
+    var w=tip.offsetWidth, h=tip.offsetHeight;
+    var x=e.clientX+14, y=e.clientY+14;
+    if(x+w>window.innerWidth-6) x=Math.max(6,e.clientX-w-14);
+    if(y+h>window.innerHeight-6) y=Math.max(6,e.clientY-h-14);
+    tip.style.left=x+'px'; tip.style.top=y+'px';
+  }
+  function hideTip(){ tip.style.opacity=0; }
+
+  /* ---------- highlight ---------- */
+  var allHits=[];
+  function highlight(k){
+    allHits.forEach(function(g){ var m=g.getAttribute('data-k')===k;
+      g.classList.toggle('hi',m); g.classList.toggle('dimd',k!=null&&!m); });
+    Array.prototype.forEach.call(railEl.querySelectorAll('.rrow'),function(rw){
+      var m=rw.getAttribute('data-k')===k;
+      rw.classList.toggle('hov',m); rw.classList.toggle('dim',k!=null&&!m); });
+  }
+  function clearHighlight(){ highlight(null); hideTip(); }
+
+  /* ---------- selection -> Sigma control variable ---------- */
+  function pushSelection(){
+    if(!client) return;
+    var varId = st.cfg && st.cfg.regionVar;
+    if(!varId) return;
+    try{
+      var vals=[];
+      st.selected.forEach(function(k){ var rv=st.regionRawValue[k];
+        if(rv==null) return;
+        (Array.isArray(rv)?rv:[rv]).forEach(function(v){ if(v!=null&&vals.indexOf(v)<0) vals.push(v); }); });
+      if(!vals.length){ client.config.setVariable(varId); return; }
+      client.config.setVariable.apply(client.config,[varId].concat(vals));
+      if(st.cfg.onRegionSelect) client.config.triggerAction(st.cfg.onRegionSelect);
+    }catch(e){ console.error('[body-map] setVariable failed', e); }
+  }
+  function toggleSel(k,add){
+    var i=st.selected.indexOf(k);
+    if(add){ if(i>=0) st.selected.splice(i,1); else st.selected.push(k); }
+    else { st.selected = (i>=0&&st.selected.length===1) ? [] : [k]; }
+    st.dirty=true; recompute(); pushSelection();
+  }
+  function clearSel(){ if(!st.selected.length) return; st.selected=[]; st.dirty=true; recompute(); pushSelection(); }
+
+  function bindHits(hits){
+    hits.forEach(function(g){
+      var k=g.getAttribute('data-k');
+      allHits.push(g);
+      g.addEventListener('mousemove',function(e){ highlight(k); showTip(e,tipHTML(k)); });
+      g.addEventListener('mouseleave',clearHighlight);
+      g.addEventListener('click',function(e){ e.stopPropagation(); toggleSel(k,e.shiftKey||e.metaKey||e.ctrlKey); });
+    });
+  }
+
+  /* ---------- ranked region rail ---------- */
+  function drawRail(narrow){
+    railEl.innerHTML='';
+    var f=shadeField();
+    var rows=REGIONS.map(function(r){ return {k:r.k,lab:r.lab,po:r.v==='P',s:stateOf(r.k),v:shadeVal(r.k)||0}; });
+    var order={val:0,zero:1,sup:2,none:3};
+    rows.sort(function(a,b){ if(order[a.s]!==order[b.s]) return order[a.s]-order[b.s]; return b.v-a.v; });
+    var mx=0; rows.forEach(function(r){ if(r.s==='val'&&r.v>mx) mx=r.v; }); mx=mx||1;
+    var hd=document.createElement('div'); hd.id='railh';
+    hd.innerHTML='<span>region</span><span>'+(f==='comp'?'linkage':(f==='patients'?'patients':'studies'))+'</span>';
+    railEl.appendChild(hd);
+    rows.forEach(function(r){
+      var d=document.createElement('div'); d.className='rrow'+(st.selected.indexOf(r.k)>=0?' sel':'');
+      d.setAttribute('data-k',r.k);
+      var barW = r.s==='val' ? Math.max(3,Math.round(r.v/mx*32)) : 0;
+      var barC = r.s==='val' ? RAMP[binOf(r.v)] : '#D6E1E8';
+      var val = labelValue(r.k), mut = r.s!=='val';
+      var mm=modMix(r.k), mb='';
+      mm.forEach(function(m){ mb+='<i style="flex:'+(m.p*100).toFixed(2)+';background:'+MODCOL[m.m]+'"></i>'; });
+      d.innerHTML='<span class="rn'+(r.po?' po':'')+'">'+esc(r.lab)+'</span>'+
+        '<span class="rb"><i style="width:'+barW+'px;background:'+barC+'"></i></span>'+
+        '<span class="rv'+(mut?' mut':'')+'">'+esc(mut?(r.s==='none'?'—':(r.s==='sup'?'supp':'0')):val)+'</span>'+
+        (narrow?'':'<span class="rm">'+mb+'</span>');
+      d.addEventListener('mousemove',function(e){ highlight(r.k); showTip(e,tipHTML(r.k)); });
+      d.addEventListener('mouseleave',clearHighlight);
+      d.addEventListener('click',function(e){ e.stopPropagation(); toggleSel(r.k,e.shiftKey||e.metaKey||e.ctrlKey); });
+      railEl.appendChild(d);
+    });
+    if(st.unmapped.length){
+      var tot=0; st.unmapped.forEach(function(u){ tot+=u.studies; });
+      var u=document.createElement('div'); u.className='runm';
+      u.textContent='Unmapped ('+st.unmapped.length+') · '+K(tot)+' studies';
+      var lst=st.unmapped.slice(0,10).map(function(x){ return esc(x.label)+' — '+N(x.studies); }).join('<br>');
+      u.addEventListener('mousemove',function(e){ showTip(e,'<b>UNMAPPED BODY-PART VALUES</b><div class="syn">not in the DICOM synonym map</div>'+lst+
+        '<div class="ft">Counted in totals, not shaded on the figure. Extend the synonym map or normalise upstream.</div>'); });
+      u.addEventListener('mouseleave',hideTip);
+      railEl.appendChild(u);
+    }
+  }
+
+  /* ---------- legend ---------- */
+  function drawLegend(sw){
+    var f=shadeField(), pct=(f==='comp'), wide=sw>=700, tiny=sw<640;
+    legEl.classList.toggle('tiny',tiny);
+    var h='<span>low</span><span class="ramp">';
+    RAMP.forEach(function(c){ h+='<span style="background:'+c+'"></span>'; });
+    h+='</span><span>high</span>';
+    if(wide&&st.bins.length){
+      h+='<span class="edges">'+st.bins.map(function(e){ return pct?Math.round(e)+'%':K(e); }).join('  |  ')+'</span>';
+    }
+    h+='<span class="sep"></span>';
+    h+='<span class="ch"><span class="sw sw-none"></span>'+(tiny?'no data':'no licensed data')+'</span>';
+    h+='<span class="ch"><span class="sw sw-zero"></span>'+(tiny?'zero':'zero studies')+'</span>';
+    var thr=cfgInt('suppressUnder',11);
+    h+='<span class="ch"><span class="sw sw-sup"></span>'+(thr>0?('suppressed'+(tiny?'':' (&lt;'+thr+' pts)')):'suppression off')+'</span>';
+    h+='<span class="ch"><span class="sw sw-wb"></span>'+(tiny?'PET':'whole-body (PET)')+'</span>';
+    legEl.innerHTML=h;
+  }
+
+  /* ---------- header meta ---------- */
+  function drawMeta(){
+    var tS=0,tP=0,nv=0,nz=0,ns=0,nn=0;
+    REGIONS.forEach(function(r){ var a=st.agg[r.k], s=stateOf(r.k);
+      if(a){ tS+=a.studies; tP=Math.max(tP,a.patients||0); }
+      if(s==='val')nv++; else if(s==='zero')nz++; else if(s==='sup')ns++; else nn++; });
+    var un=0; st.unmapped.forEach(function(u){ un+=u.studies; });
+    var tight=(stage.clientWidth||900)<760;
+    var parts=[K(tS+un)+' studies'];
+    if(tP) parts.push(K(tP)+(tight?' pts':' patients (peak region)'));
+    parts.push(nv+'/'+REGIONS.length+(tight?' regions':' regions covered'));
+    if(nn) parts.push(nn+' no data');
+    if(ns) parts.push(ns+' suppr');
+    if(st.unmapped.length) parts.push(st.unmapped.length+' unmapped');
+    metaEl.innerHTML=parts.map(function(p,i){ return i===0?'<b>'+p+'</b>':p; }).join(' · ')+
+      (st.synthetic?' <span style="color:#B0567F">· preview data</span>':'');
+  }
+
+  /* ---------- master draw ---------- */
+  function draw(){
+    var sw=stage.clientWidth||900;
+    var tier = sw>=880?'A' : sw>=760?'B' : sw>=620?'C' : 'D';
+    var single = cfgStr('views')==='Anterior only' || tier==='D';
+    var wantRail = cfgBool('showRail',true) && tier!=='C';
+    railEl.className = wantRail?'':'off';
+    railEl.style.flexBasis = (sw<760?176:232)+'px';
+    var fw=figs.clientWidth||600, fh=figs.clientHeight||420;
+    var gA = tier==='A' && fh>=420, gP = (tier==='A'||tier==='C') && fh>=420 && !single;
+    var minx = gA?-112:0;
+    var vbw = (gA?112:0) + (single?320:640) + (gP?120:0);
+    svg.setAttribute('viewBox',minx+' 0 '+vbw+' 800');
+    var scale=Math.min(fw/vbw, fh/800); if(!(scale>0)) scale=0.5;
+    st.scale=scale; st.tier=tier;
+    function fs(px){ return +(px/scale).toFixed(2); }
+    svg.style.setProperty('--hw',(1.6/scale).toFixed(2));
+    tunePatterns(scale);
+    while(root.firstChild) root.removeChild(root.firstChild);
+    allHits=[];
+    var atx = single?10:8;
+    var fa=figure('A',atx,scale,fs); root.appendChild(fa.g); bindHits(fa.hits);
+    if(stateOf('wholebody')!=='none'){ var hl=halo(atx,scale); root.appendChild(hl.g); bindHits(hl.hits); }
+    if(!single){ var fp=figure('P',332,scale,fs); root.appendChild(fp.g); bindHits(fp.hits); }
+    if(scale>=0.46) root.appendChild(chips(atx,scale,fs));
+    if(gA) root.appendChild(gutterA(atx,scale,fs));
+    if(gP) root.appendChild(gutterP(332,scale,fs));
+    if(wantRail) drawRail(sw<760); else railEl.innerHTML='';
+    drawLegend(sw);
+    drawMeta();
+  }
+
+  /* ---------- data -> state ---------- */
+  function rowsFromSigma(){
+    var c=st.cfg||{}, d=st.data;
+    if(!d||!c.region||!c.studies||!d[c.region]||!d[c.studies]) return null;
+    var reg=d[c.region]||[], sd=d[c.studies]||[],
+        pa=(c.patients&&d[c.patients])||[], mo=(c.modality&&d[c.modality])||[],
+        co=(c.completeness&&d[c.completeness])||[], f1=(c.firstStudy&&d[c.firstStudy])||[],
+        f2=(c.lastStudy&&d[c.lastStudy])||[], si=(c.sites&&d[c.sites])||[];
+    var out=[];
+    for(var i=0;i<reg.length;i++){
+      if(reg[i]==null||reg[i]==='') continue;
+      out.push([reg[i],mo[i],sd[i],pa[i],co[i],f1[i],f2[i],si[i]]);
+    }
+    return out.length?out:null;
+  }
+  function ingest(){
+    var rows=rowsFromSigma();
+    st.synthetic=!rows;
+    if(!rows) rows=SYNTH;
+    var r=aggregate(rows);
+    st.agg=r.agg; st.unmapped=r.unmapped; st.regionRawValue=r.raw;
+    st.selected=st.selected.filter(function(k){ return !!st.agg[k]; });
+    buildBins();
+  }
+
+  /* ---------- resize (observe #wrap, decide tiers from #stage) ---------- */
+  var lastW=0,lastH=0,rTimer;
+  function recompute(){
+    var w=wrap.clientWidth,h=wrap.clientHeight;
+    if(w===lastW&&h===lastH&&!st.dirty) return;
+    lastW=w; lastH=h; st.dirty=false;
+    ingest(); draw();
+  }
+  function schedule(){ clearTimeout(rTimer); rTimer=setTimeout(function(){ st.dirty=true; recompute(); },80); }
+
+  figs.addEventListener('click',function(e){
+    var n=e.target; while(n&&n!==figs){ if(n.classList&&n.classList.contains('tile')) return; n=n.parentNode; }
+    clearSel();
+  });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') clearSel(); });
+
+  if(client){
+    client.config.subscribe(function(cfg){
+      st.cfg=cfg||{}; st.dirty=true;
+      if(st.unsub){ st.unsub(); st.unsub=null; }
+      if(cfg&&cfg.source){
+        try{ if(client.setLoadingState) client.setLoadingState(true);
+             else if(client.config&&client.config.setLoadingState) client.config.setLoadingState(true); }catch(e){}
+        st.unsub=client.elements.subscribeToElementData(cfg.source,function(dd){
+          st.data=dd; st.dirty=true; recompute();
+          try{ if(client.setLoadingState) client.setLoadingState(false);
+               else if(client.config&&client.config.setLoadingState) client.config.setLoadingState(false); }catch(e){}
+        });
+      } else { st.data=null; }
+      recompute();
+    });
+  }
+  st.dirty=true; recompute();
+  if(window.ResizeObserver) new ResizeObserver(schedule).observe(wrap);
+  window.addEventListener('resize',schedule);
+})();
+</script>
+</body>
+</html>

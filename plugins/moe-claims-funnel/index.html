@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Claims Pipeline Funnel — Mutual of Enumclaw Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#10251a;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#1e7a46}
+  #meta{font-size:11px;color:#5c6b62}
+  #meta b{color:#10251a}
+  #funnel{flex:1;display:flex;flex-direction:column;justify-content:center;gap:5px;min-height:0}
+  .stage{display:flex;align-items:center;gap:10px;height:100%;max-height:56px}
+  .lbl{flex:0 0 118px;text-align:right}
+  .lbl .n{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lbl .d{font-size:10px;color:#7c8a80}
+  .barwrap{flex:1;position:relative;height:100%;display:flex;align-items:center;justify-content:center}
+  .bar{height:82%;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,.14);transition:filter .1s;cursor:default;min-width:34px}
+  .bar:hover{filter:brightness(1.06)}
+  .rt{flex:0 0 96px;font-size:11px;line-height:1.3}
+  .rt .pct{font-weight:800;color:#10251a}
+  .rt .drop{color:#c2410c}
+  .rt .keep{color:#1e7a46}
+  #tip{position:fixed;pointer-events:none;background:#0c2a1b;border-radius:8px;padding:8px 10px;font-size:11px;color:#eafff2;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#8ee0b0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Claims Pipeline</div><div id="meta"><b id="intake">—</b> FNOL · <b id="closed">—</b> closed · <b id="rate">—</b> settle rate</div></div>
+  <div id="funnel"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.sigmaComputing&&window.sigmaComputing.plugin&&window.sigmaComputing.plugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'stage',type:'column',source:'source',label:'Stage'},
+    {name:'claims',type:'column',source:'source',allowedTypes:['number','integer'],label:'Claims'},
+    {name:'days',type:'column',source:'source',allowedTypes:['number','integer'],label:'Avg days in stage'},
+    {name:'order',type:'column',source:'source',allowedTypes:['number','integer'],label:'Stage order (optional)'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var tip=document.getElementById('tip');
+  function fmtN(n){ return n>=1e3?(n/1e3).toFixed(n>=1e4?0:1)+'K':String(Math.round(n)); }
+  var GREENS=['#0C3B25','#155C37','#1E7A46','#2E9E5B','#49BE79','#6FD79E'];
+
+  function draw(stages){
+    var box=document.getElementById('funnel'); box.innerHTML='';
+    if(!stages.length) return;
+    var mx=Math.max.apply(null,stages.map(function(s){return s.claims;}))||1;
+    var top=stages[0].claims||1, last=stages[stages.length-1].claims||0;
+    stages.forEach(function(s,i){
+      var prev=i>0?stages[i-1].claims:s.claims;
+      var keepPct=prev?Math.round(s.claims/prev*100):100;
+      var ofTop=top?Math.round(s.claims/top*100):0;
+      var col=GREENS[Math.min(GREENS.length-1,Math.round(i/(stages.length-1||1)*(GREENS.length-1)))];
+      var row=document.createElement('div'); row.className='stage';
+      var d=s.days!=null?('<span class="d">avg '+s.days+'d in stage</span>'):'';
+      row.innerHTML=''+
+        '<div class="lbl"><div class="n">'+esc(s.stage)+'</div>'+d+'</div>'+
+        '<div class="barwrap"><div class="bar" style="width:'+Math.max(6,s.claims/mx*100)+'%;background:'+col+'">'+fmtN(s.claims)+'</div></div>'+
+        '<div class="rt"><div class="pct">'+ofTop+'% of FNOL</div>'+(i>0?('<div class="'+(keepPct<100?'drop':'keep')+'">'+(keepPct<100?'▼ ':'')+keepPct+'% from prev</div>'):'<div class="keep">intake</div>')+'</div>';
+      var bar=row.querySelector('.bar');
+      bar.addEventListener('mousemove',function(e){ tip.style.opacity=1; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+        tip.innerHTML='<b>'+esc(s.stage)+'</b><br>'+s.claims.toLocaleString()+' claims<br>'+ofTop+'% of FNOL'+(s.days!=null?('<br>avg '+s.days+' days in stage'):''); });
+      bar.addEventListener('mouseleave',function(){ tip.style.opacity=0; });
+      box.appendChild(row);
+    });
+    document.getElementById('intake').textContent=fmtN(top);
+    document.getElementById('closed').textContent=fmtN(last);
+    document.getElementById('rate').textContent=(top?Math.round(last/top*100):0)+'%';
+  }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];}); }
+
+  function synth(){
+    return [
+      {stage:'FNOL Received',claims:4820,days:1,ord:1},
+      {stage:'Open',claims:4120,days:4,ord:2},
+      {stage:'In Adjusting',claims:3060,days:12,ord:3},
+      {stage:'Settled',claims:2740,days:21,ord:4},
+      {stage:'Closed',claims:2610,days:3,ord:5}
+    ];
+  }
+
+  var st={cfg:{},data:null,unsub:null};
+  function recompute(){ var c=st.cfg||{};
+    if(st.data&&c.stage&&st.data[c.stage]&&c.claims){
+      var sn=st.data[c.stage]||[], cl=st.data[c.claims]||[], dy=(c.days&&st.data[c.days])||[], od=(c.order&&st.data[c.order])||[];
+      var rows=sn.map(function(n,i){ return {stage:n!=null?String(n):('Stage '+i),claims:Number(cl[i])||0,days:dy[i]!=null?Number(dy[i]):null,ord:od[i]!=null?Number(od[i]):i}; });
+      if(rows.length){ rows.sort(function(a,b){return a.ord-b.ord;}); draw(rows); return; }
+    }
+    draw(synth());
+  }
+  if(client){ client.config.subscribe(function(cfg){ st.cfg=cfg||{};
+    if(st.unsub){st.unsub();st.unsub=null;}
+    if(cfg&&cfg.source){ st.unsub=client.elements.subscribeToElementData(cfg.source,function(d){ st.data=d; recompute(); }); }
+    recompute(); });
+  } else { recompute(); }
+  window.addEventListener('resize',function(){ recompute(); });
+})();
+</script>
+</body>
+</html>

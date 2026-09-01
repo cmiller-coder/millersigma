@@ -155,10 +155,10 @@ SAVE_VALUES={
     "s-lapsedrate":{"type":"formula","formula":"CountDistinct(If([Customer Population/Is Lapsed]=\"Yes\",[Customer Population/Cust ID],Null))/CountDistinct([Customer Population/Cust ID])"},
     **{f"s-age{i}":{"type":"formula","formula":f'CountDistinct(If([Customer Population/Age Group]="{ag}",[Customer Population/Cust ID],Null))'} for i,ag in enumerate(AGE_GROUPS)}}
 btn_save={"id":"btn-save","kind":"button","text":"Save Cohort","appearance":"filled","actions":[{"id":"a-save","trigger":"on-click","effects":[
-    {"effect":"insert-rows","table":"saved-cohorts","values":SAVE_VALUES},
+    {"effect":"insert-rows","tableElementId":"saved-cohorts","values":SAVE_VALUES},
     {"effect":"set-control-value","control":"CohortPick","value":{"type":"control","control":"CohortName"}}]}]}
 btn_reset={"id":"btn-reset","kind":"button","text":"Reset filters","appearance":"outline","actions":[{"id":"a-reset","trigger":"on-click","effects":[
-    {"effect":"clear-control","scope":{"type":"page","page":"pg"},"usePublishedValue":True}]}]}
+    {"effect":"clear-control","scope":{"type":"page","pageId":"pg"},"usePublishedValue":True}]}]}
 saved_note={"id":"saved-note","kind":"text","body":"Every Save inserts a real row here (never lost, unlike the demeng original's UI-only Action Sequence).","verticalAlign":"middle","style":{"color":"#3A3A3A"}}
 
 # ---- Agent: one tool per filter dimension, mirroring the demeng pattern exactly ----
@@ -179,7 +179,7 @@ AGENT_TOOLS=[
             {"kind":"effect","effect":"set-control-value","control":"CohortDesc","value":{"type":"agent-input","inputName":"A one-sentence description of this cohort"}}]},
   {"toolId":"t-save","kind":"action","name":"Save the cohort",
    "description":"When the user asks to save/persist/record the current cohort, insert it into the Saved Cohorts log along with its live size, revenue, and average-revenue snapshot so it can be compared against other saved cohorts.",
-   "steps":[{"kind":"effect","effect":"insert-rows","table":"saved-cohorts","values":SAVE_VALUES},
+   "steps":[{"kind":"effect","effect":"insert-rows","tableElementId":"saved-cohorts","values":SAVE_VALUES},
             {"kind":"effect","effect":"set-control-value","control":"CohortPick","value":{"type":"control","control":"CohortName"}}]},
 ]
 agent={"id":"ag-cohort","name":"Cohort Builder Assistant",

@@ -20,15 +20,15 @@ description: >-
 
 Make Sigma workbooks look *designed* — the difference between a functional
 dashboard and something that reads like a real, premium application. This skill
-is the visual-craft layer, grounded in three real "beautiful" workbooks whose
-specs live in `examples/` (Marketing Control Center, Cold Provisions, Demand
-Planning). When in doubt about a shape, open those and copy from them.
+is the visual-craft layer, grounded in a full branded dashboard spec in
+`examples/` (`branded-company-dashboard.json`). When in doubt about a shape, open
+it and copy from it.
 
 Mechanics live elsewhere:
 - **`sigma-workbook-conventions`** — element kinds, the 24-col `<GridContainer>`
   layout XML, ID semantics, POST-time gotchas. Read its
   `reference/workbook-spec-api.md` before authoring layout.
-- **`branded-dashboard-format`** — the standard house composition + adMarketplace
+- **`branded-dashboard-format`** — the standard house composition + a fill-in
   brand kit. Use it for "our standard format"; use *this* for "make it beautiful."
 
 ## What round-trips as code (and what doesn't)
@@ -104,33 +104,38 @@ The bindings that make it work (these round-trip):
   `{{[Stores/Store Image Url]}}` renders a per-row image (logo, product photo,
   avatar).
 
-To build one: **clone a repeated container from `examples/`** (Marketing Control
-Center and Cold Provisions both have them), point it at your source element, and
-rename the columns in the `{{[...]}}` bindings. Authoring the repeat wiring from
-a blank spec is unreliable; cloning is not.
+To build one, **clone a known-good repeated container** — the repeat *toggle* is
+configured in the UI and is finicky to author from a blank spec, but the bindings
+round-trip. Point the clone at your source element and rename the columns in the
+`{{[...]}}` bindings. If you have a prior workbook with a working repeater, clone
+from its GET-back spec.
 
 Design intent for repeaters:
 - Give every repeated card the **same `style`** so the set reads as a unit; vary
   only the bound content.
-- For a **gradient KPI row** (like the Marketing Control Center), the sweep is a
-  per-card `backgroundColor` stepping across a hue range — clone the four-card
-  block and adjust the stops.
+- For a **gradient KPI row** (see `branded-company-dashboard.json`), each card is a
+  container with a gradient `backgroundImage` (a data-URI SVG) — clone a card and
+  adjust the gradient stops.
 - **Status pills**: a small `pill`-radius container whose `backgroundColor` is
   driven by the row's status (green=approved, amber=pending) — a classic
   repeated-list treatment.
 
 ## Images and icons
 
-Three image sources, all verified in the specs:
+Three image sources, all verified in the specs. **Shape changed 2026-07-30**: the
+image `url` (and `backgroundImage.url`) must now be wrapped in `source:{kind:"url",
+url:...}` — a bare top-level `url` field is rejected as a masked `Invalid kind:
+"image"` (or `backgroundImage.source: Invalid value: undefined`). Verified via a
+live A/B POST against staging; every example below uses the current shape.
 
-1. **Hosted URL** — `{ "id": "img-logo", "kind": "image", "url": "https://.../logo.svg" }`.
+1. **Hosted URL** — `{ "id": "img-logo", "kind": "image", "source": { "kind": "url", "url": "https://.../logo.svg" } }`.
    Use SVG for logos; host at a stable CDN.
-2. **Inline data-URI SVG** — `"url": "data:image/svg+xml;base64,…"`. This is how
-   the reference workbooks embed **icons** (lucide icons: thermometer, star, and
-   an AI "bot" with a gradient stroke). Great for crisp, dependency-free icons in
-   card headers and list rows. Keep an icon set handy and drop them inline.
-3. **Column-bound** — `"url": "{{[Element/Column]}}"` for per-row images inside a
-   repeater.
+2. **Inline data-URI SVG** — `"source": { "kind": "url", "url": "data:image/svg+xml;base64,…" }`.
+   This is how the reference workbooks embed **icons** (lucide icons: thermometer,
+   star, and an AI "bot" with a gradient stroke). Great for crisp, dependency-free
+   icons in card headers and list rows. Keep an icon set handy and drop them inline.
+3. **Column-bound** — `"source": { "kind": "url", "url": "{{[Element/Column]}}" }` for
+   per-row images inside a repeater.
 
 Control scaling with `style.fit` (`cover` vs `scale-down`). Place logos and
 icons *inside* their container (masthead, card header) so they move with the block.
@@ -169,8 +174,8 @@ tall so sparklines breathe.
 
 Button elements (open link, set control value, open Sigma doc with passed
 controls — see `sigma-workbook-conventions` and Sigma's action docs) aren't
-present in the current `examples/`. When a workbook with buttons is added
-(e.g. the Oasis app), capture its GET-back spec here and document the exact
+present in the current `examples/`. When a workbook with buttons is added,
+capture its GET-back spec here and document the exact
 button `style` + action shape. Until then, treat button styling as verify-on-build.
 
 ## Workflow
@@ -186,13 +191,14 @@ button `style` + action shape. Until then, treat button styling as verify-on-bui
 
 ## Examples
 
-`examples/` holds three real, GET-back specs to clone from:
-- **`marketing-control-center.json`** — gradient KPI card row, AI insight banner,
-  control cluster, a repeated container ("Repeater Base"), CDN + data-URI images.
-- **`cold-provisions.json`** — the richest: 135 containers, repeated cards and
-  lists, column-bound images, dividers, styled tables. The best repeater source.
-- **`demand-planning.json`** — leaner input-table-driven layout with themed
-  containers and KPIs.
+`examples/` holds a full branded dashboard spec to clone from:
+- **`branded-company-dashboard.json`** — a hero masthead (data-URI image), a
+  gradient KPI-card row (each card = a container with a gradient `backgroundImage`
+  + composited title image + current/prior KPIs + a white in-card sparkline), a
+  tinted CallText AI-insight box, a color-by-category bar, a filter cluster, an
+  embedded plugin element, and a detail table. Connection/folder IDs are
+  placeholders — swap in your own.
 
-Treat them as immutable references: clone-and-modify, never edit in place. Add
-new beautiful specs here (especially any using buttons) as you build them.
+Treat it as an immutable reference: clone-and-modify, never edit in place. Add
+new beautiful specs here (especially any using buttons or repeated containers) as
+you build them.

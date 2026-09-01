@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Scatter Lasso Select — Sigma Plugin</title>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  :root{
+    --accent:#4F46E5; --ink:#111827; --muted:#6B7280;
+    --grid:#E5E7EB; --bg:#FFFFFF; --panel:#F9FAFB; --border:#E5E7EB;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Inter",Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column}
+  #top{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);z-index:6}
+  #ttl{font-size:13px;font-weight:700;letter-spacing:.01em;white-space:nowrap}
+  #status{font-size:11.5px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #clearBtn{font-size:11.5px;font-weight:600;color:var(--accent);background:var(--panel);border:1px solid var(--border);
+    border-radius:6px;padding:5px 10px;cursor:pointer;white-space:nowrap}
+  #clearBtn:hover:not(:disabled){background:#EEF2FF}
+  #clearBtn:disabled{opacity:.4;cursor:default}
+  #stage{flex:1;position:relative;min-height:0}
+  #stage canvas{position:absolute;inset:0;width:100%;height:100%}
+  #pointsCanvas{pointer-events:none}
+  #overlayCanvas{cursor:crosshair}
+  #legend{position:absolute;top:10px;right:12px;background:rgba(255,255,255,.94);border:1px solid var(--border);
+    border-radius:8px;padding:8px 10px;font-size:10.5px;color:var(--ink);box-shadow:0 2px 10px rgba(17,24,39,.06);
+    max-width:180px;pointer-events:none}
+  #legend .row{display:flex;align-items:center;gap:6px;margin:2px 0}
+  #legend .sw{width:8px;height:8px;border-radius:2px;flex:none}
+  #msg{position:absolute;top:0;left:0;right:0;padding:9px 14px;background:rgba(249,250,251,.97);
+    border-bottom:1px solid var(--border);font-size:11.5px;color:var(--muted);text-align:left;display:none;z-index:4;pointer-events:none}
+  #msg b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl">◔ Scatter Lasso Select</div>
+    <div id="status">Loading…</div>
+    <button id="clearBtn" disabled>Clear selection</button>
+  </div>
+  <div id="stage">
+    <canvas id="pointsCanvas"></canvas>
+    <canvas id="overlayCanvas"></canvas>
+    <div id="legend" style="display:none"></div>
+    <div id="msg"></div>
+  </div>
+</div>
+<script>
+(function(){
+  'use strict';
+  var client = (window.sigmaComputing && window.sigmaComputing.plugin && window.sigmaComputing.plugin.client) || null;
+
+  var defs = [
+    {name:'source', type:'element'},
+    {name:'xAxis', type:'column', source:'source', allowedTypes:['number','integer'], label:'X Axis'},
+    {name:'yAxis', type:'column', source:'source', allowedTypes:['number','integer'], label:'Y Axis'},
+    {name:'colorBy', type:'column', source:'source', label:'Color By (category)', description:'Colors the points and drives the legend'},
+    {name:'filterColumn', type:'column', source:'source', label:'Filter Field', description:'Values from selected points are pushed to the Selection Output variable (defaults to Color By if unset)'},
+    {name:'selectionVar', type:'variable', label:'Selection Output Variable', description:'Bind a workbook List control here — rectangle-selecting points sets its value(s), which filters anything wired to that control'},
+    {name:'pointSize', type:'dropdown', values:[1,2,3,4,5], label:'Point Size (px)'},
+    {name:'pointOpacity', type:'dropdown', values:[0.3,0.45,0.6,0.75,0.9,1], label:'Point Opacity'}
+  ];
+  if (client) client.config.configureEditorPanel(defs);
+
+  var COLORS = ['#4F46E5','#EC4899','#10B981','#F59E0B','#3B82F6','#EF4444','#14B8A6','#8B5CF6','#F97316','#64748B'];
+
+  var pointsCanvas = document.getElementById('pointsCanvas');
+  var overlayCanvas = document.getElementById('overlayCanvas');
+  var pointsCtx = pointsCanvas.getContext('2d');
+  var overlayCtx = overlayCanvas.getContext('2d');
+  var stageEl = document.getElementById('stage');
+  var statusEl = document.getElementById('status');
+  var clearBtn = document.getElementById('clearBtn');
+  var legendEl = document.getElementById('legend');
+  var msgEl = document.getElementById('msg');
+
+  var PAD = {l:54, r:16, t:16, b:36};
+
+  var st = {
+    cfg:{}, data:null, cols:null, unsubData:null, unsubCols:null,
+    activeCfg:{}, activeCols:{}, usingSynthetic:false,
+    n:0, rawX:null, rawY:null, rawCat:null, rawFilter:null, keys:null, order:null,
+    catColor:{}, catList:[], hasOther:false,
+    sx:null, sy:null, plotW:0, plotH:0, w:0, h:0,
+    xMin:0, xMax:1, yMin:0, yMax:1,
+    selected:new Set(), dragging:false, dragMoved:false, dragStart:null, dragCur:null
+  };
+
+  function cfgNum(name, dflt){ var v = st.cfg && st.cfg[name]; v = Number(v); return isFinite(v) ? v : dflt; }
+  function colName(id){ return (st.activeCols && st.activeCols[id] && st.activeCols[id].name) || id || ''; }
+  function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+  function round2(v){ return Math.round(v*100)/100; }
+  function escapeHtml(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  function fmtNum(v){
+    v = Number(v);
+    if(!isFinite(v)) return '';
+    var a = Math.abs(v);
+    if(a >= 1e9) return (v/1e9).toFixed(1).replace(/\.0$/,'') + 'B';
+    if(a >= 1e6) return (v/1e6).toFixed(1).replace(/\.0$/,'') + 'M';
+    if(a >= 1e3) return (v/1e3).toFixed(1).replace(/\.0$/,'') + 'K';
+    if(Number.isInteger(v)) return String(v);
+    return v.toFixed(2);
+  }
+
+  // ---------- DPR-aware canvas sizing ----------
+  function sizeCanvas(canvas, ctx, w, h){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.round(w*dpr));
+    canvas.height = Math.max(1, Math.round(h*dpr));
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  // ---------- synthetic fallback (also doubles as the 100K-point stress test) ----------
+  function randn(){
+    var u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+  function synth(nTotal){
+    nTotal = nTotal || 100000;
+    var segs = [
+      {name:'Champions', cx:80, cy:82, sx:9,  sy:7},
+      {name:'Loyal',     cx:62, cy:55, sx:11, sy:9},
+      {name:'New',       cx:25, cy:20, sx:8,  sy:6},
+      {name:'At Risk',   cx:30, cy:58, sx:10, sy:8},
+      {name:'Dormant',   cx:15, cy:12, sx:7,  sy:5}
+    ];
+    var ID=new Array(nTotal), X=new Array(nTotal), Y=new Array(nTotal), CAT=new Array(nTotal), LTV=new Array(nTotal);
+    for(var i=0;i<nTotal;i++){
+      var s = segs[(Math.random()*segs.length)|0];
+      var x = clamp(s.cx + randn()*s.sx, 0, 100);
+      var y = clamp(s.cy + randn()*s.sy, 0, 100);
+      ID[i]=i; X[i]=round2(x); Y[i]=round2(y); CAT[i]=s.name;
+      LTV[i]=round2(Math.max(5, y*6 + randn()*40));
+    }
+    return {
+      cols:{ id:{name:'Customer ID',columnType:'integer'}, x:{name:'Tenure Score',columnType:'number'},
+             y:{name:'Engagement Score',columnType:'number'}, cat:{name:'Segment',columnType:'text'},
+             ltv:{name:'Lifetime Value',columnType:'number'} },
+      data:{ id:ID, x:X, y:Y, cat:CAT, ltv:LTV },
+      cfg:{ xAxis:'x', yAxis:'y', colorBy:'cat', filterColumn:'cat' }
+    };
+  }
+
+  // ---------- data -> layout ----------
+  function rebuildFromData(){
+    var rawCfg = st.cfg || {};
+    var data = st.data, cols = st.cols, c = rawCfg, useSynthetic = false;
+
+    if(!data || !rawCfg.xAxis || !rawCfg.yAxis || !data[rawCfg.xAxis] || !data[rawCfg.yAxis]){
+      var fb = synth(100000);
+      data = fb.data; cols = fb.cols; c = fb.cfg; useSynthetic = true;
+    }
+
+    var xs = data[c.xAxis], ys = data[c.yAxis];
+    var n = Math.min(xs.length, ys.length);
+    var catCol = (c.colorBy && data[c.colorBy]) || null;
+    var filterCol = (c.filterColumn && data[c.filterColumn]) || catCol;
+
+    st.n = n; st.rawX = xs; st.rawY = ys; st.rawCat = catCol; st.rawFilter = filterCol;
+    st.activeCfg = c; st.activeCols = cols; st.usingSynthetic = useSynthetic;
+    st.selected = new Set(); // config/data changed -> selection no longer meaningful
+
+    // category palette: top 9 by frequency + "Other"
+    var counts = {};
+    if(catCol){ for(var i=0;i<n;i++){ var k = catCol[i]==null ? '—' : String(catCol[i]); counts[k]=(counts[k]||0)+1; } }
+    var catNames = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; });
+    var top = catNames.slice(0,9);
+    var catColor = {};
+    top.forEach(function(k,idx){ catColor[k] = COLORS[idx % COLORS.length]; });
+    var hasOther = catNames.length > top.length;
+    if(hasOther) catColor['__other__'] = '#9CA3AF';
+    st.catColor = catColor; st.catList = top; st.hasOther = hasOther;
+
+    // precompute a per-row category KEY once (O(n)) so drawing never re-derives it
+    var keys = new Array(n);
+    if(catCol){
+      for(var i2=0;i2<n;i2++){
+        var kk = catCol[i2]==null ? '—' : String(catCol[i2]);
+        keys[i2] = catColor[kk] ? kk : '__other__';
+      }
+    } else {
+      for(var i3=0;i3<n;i3++) keys[i3] = '__solo__';
+    }
+    st.keys = keys;
+
+    // draw order sorted by category so rendering only switches fillStyle a handful of times
+    var order = new Array(n);
+    for(var j=0;j<n;j++) order[j]=j;
+    order.sort(function(a,b){ var ka=keys[a], kb=keys[b]; return ka<kb?-1:(ka>kb?1:0); });
+    st.order = order;
+
+    computeExtents();
+    renderLegend();
+    updateStatus();
+    layoutAndDraw();
+  }
+
+  function extent(arr, n){
+    var lo=Infinity, hi=-Infinity;
+    for(var i=0;i<n;i++){ var v=Number(arr[i]); if(!isFinite(v)) continue; if(v<lo)lo=v; if(v>hi)hi=v; }
+    if(lo===Infinity){ lo=0; hi=1; }
+    if(lo===hi){ lo -= 1; hi += 1; }
+    return [lo,hi];
+  }
+  function computeExtents(){
+    var ex = extent(st.rawX, st.n), ey = extent(st.rawY, st.n);
+    st.xMin=ex[0]; st.xMax=ex[1]; st.yMin=ey[0]; st.yMax=ey[1];
+  }
+
+  function layoutAndDraw(){
+    var w = stageEl.clientWidth || 640, h = stageEl.clientHeight || 400;
+    sizeCanvas(pointsCanvas, pointsCtx, w, h);
+    sizeCanvas(overlayCanvas, overlayCtx, w, h);
+    st.w = w; st.h = h;
+    st.plotW = Math.max(1, w - PAD.l - PAD.r);
+    st.plotH = Math.max(1, h - PAD.t - PAD.b);
+
+    var n = st.n, sx = new Float64Array(n), sy = new Float64Array(n);
+    var xr = (st.xMax-st.xMin)||1, yr = (st.yMax-st.yMin)||1;
+    for(var i=0;i<n;i++){
+      sx[i] = PAD.l + ((Number(st.rawX[i])-st.xMin)/xr) * st.plotW;
+      sy[i] = PAD.t + (1 - (Number(st.rawY[i])-st.yMin)/yr) * st.plotH;
+    }
+    st.sx = sx; st.sy = sy;
+    drawPoints();
+  }
+
+  function drawAxes(ctx){
+    ctx.save();
+    ctx.strokeStyle = '#EEF0F3'; ctx.fillStyle = '#6B7280';
+    ctx.font = '10px -apple-system,Segoe UI,Roboto,Arial,sans-serif';
+    ctx.lineWidth = 1;
+    var ticks = 5;
+    for(var t=0; t<=ticks; t++){
+      var fx = PAD.l + (st.plotW*t/ticks);
+      var vx = st.xMin + (st.xMax-st.xMin)*t/ticks;
+      ctx.beginPath(); ctx.moveTo(fx, PAD.t); ctx.lineTo(fx, PAD.t+st.plotH); ctx.stroke();
+      ctx.textAlign='center'; ctx.fillText(fmtNum(vx), fx, PAD.t+st.plotH+14);
+
+      var fy = PAD.t + st.plotH - (st.plotH*t/ticks);
+      var vy = st.yMin + (st.yMax-st.yMin)*t/ticks;
+      ctx.beginPath(); ctx.moveTo(PAD.l, fy); ctx.lineTo(PAD.l+st.plotW, fy); ctx.stroke();
+      ctx.textAlign='right'; ctx.fillText(fmtNum(vy), PAD.l-8, fy+3);
+    }
+    ctx.strokeStyle = '#D1D5DB';
+    ctx.beginPath(); ctx.moveTo(PAD.l, PAD.t); ctx.lineTo(PAD.l, PAD.t+st.plotH); ctx.lineTo(PAD.l+st.plotW, PAD.t+st.plotH); ctx.stroke();
+
+    ctx.fillStyle = '#374151'; ctx.font = '600 10.5px -apple-system,Segoe UI,Roboto,Arial,sans-serif';
+    ctx.textAlign='center'; ctx.fillText(colName(st.activeCfg.xAxis) || 'X', PAD.l + st.plotW/2, st.h-4);
+    ctx.save();
+    ctx.translate(12, PAD.t + st.plotH/2); ctx.rotate(-Math.PI/2);
+    ctx.textAlign='center'; ctx.fillText(colName(st.activeCfg.yAxis) || 'Y', 0, 0);
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function drawPoints(){
+    if(!st.sx) return;
+    var ctx = pointsCtx;
+    ctx.clearRect(0,0,st.w,st.h);
+    drawAxes(ctx);
+
+    var n = st.n, order = st.order, sx = st.sx, sy = st.sy, keys = st.keys;
+    var size = cfgNum('pointSize', 2);
+    var baseOpacity = cfgNum('pointOpacity', 0.6);
+    var hasSel = st.selected.size > 0;
+    var half = size/2;
+
+    ctx.globalAlpha = hasSel ? 0.14 : baseOpacity;
+    var curKey;
+    for(var idx=0; idx<n; idx++){
+      var i = order[idx];
+      var key = keys[i];
+      if(key !== curKey){ ctx.fillStyle = st.catColor[key] || '#4F46E5'; curKey = key; }
+      ctx.fillRect(sx[i]-half, sy[i]-half, size, size);
+    }
+
+    if(hasSel){
+      var selArr = Array.from(st.selected);
+      var selSize = size + 1, selHalf = selSize/2;
+
+      ctx.globalAlpha = 0.30;
+      ctx.fillStyle = 'rgba(17,24,39,0.9)';
+      for(var s=0;s<selArr.length;s++){
+        var si = selArr[s];
+        ctx.fillRect(sx[si]-selHalf-0.6, sy[si]-selHalf-0.6, selSize+1.2, selSize+1.2);
+      }
+
+      selArr.sort(function(a,b){ var ka=keys[a], kb=keys[b]; return ka<kb?-1:(ka>kb?1:0); });
+      ctx.globalAlpha = 0.95;
+      var selCurKey;
+      for(var s2=0;s2<selArr.length;s2++){
+        var si2 = selArr[s2];
+        var key2 = keys[si2];
+        if(key2 !== selCurKey){ ctx.fillStyle = st.catColor[key2] || '#4F46E5'; selCurKey = key2; }
+        ctx.fillRect(sx[si2]-selHalf, sy[si2]-selHalf, selSize, selSize);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function renderLegend(){
+    if(!st.catList || !st.catList.length){ legendEl.style.display='none'; return; }
+    var html = '';
+    st.catList.forEach(function(k){
+      html += '<div class="row"><span class="sw" style="background:'+st.catColor[k]+'"></span>'+escapeHtml(k)+'</div>';
+    });
+    if(st.hasOther) html += '<div class="row"><span class="sw" style="background:#9CA3AF"></span>Other</div>';
+    legendEl.innerHTML = html;
+    legendEl.style.display = 'block';
+  }
+
+  function updateStatus(){
+    var n = st.n||0, k = st.selected.size;
+    var base = n.toLocaleString() + ' point' + (n===1?'':'s');
+    if(st.usingSynthetic) base += ' (preview data)';
+    if(k>0){
+      var field = colName(st.activeCfg.filterColumn || st.activeCfg.colorBy);
+      statusEl.textContent = base + ' · ' + k.toLocaleString() + ' selected → filtering on ' + field;
+    } else {
+      statusEl.textContent = base + ' · drag a rectangle to select';
+    }
+    clearBtn.disabled = k===0;
+  }
+
+  // ---------- selection ----------
+  function applySelection(idxArr){
+    st.selected = new Set(idxArr);
+    drawPoints();
+    updateStatus();
+    pushSelectionToVariable();
+  }
+  function clearSelection(){ applySelection([]); }
+
+  function pushSelectionToVariable(){
+    if(!client) return;
+    var varId = st.activeCfg && st.activeCfg.selectionVar;
+    if(!varId) return;
+    var raw = st.rawFilter;
+    try{
+      if(!st.selected.size || !raw){ client.config.setVariable(varId); return; }
+      var seen = {}, values = [];
+      st.selected.forEach(function(i){
+        var v = raw[i];
+        if(v===null || v===undefined) return;
+        var key = String(v);
+        if(seen[key]) return;
+        seen[key]=true; values.push(v);
+      });
+      if(!values.length){ client.config.setVariable(varId); return; }
+      client.config.setVariable.apply(client.config, [varId].concat(values));
+    }catch(e){ console.error('[scatter-lasso] setVariable failed', e); }
+  }
+
+  // ---------- interaction (rectangle brush on the overlay canvas) ----------
+  function localXY(evt){
+    var r = overlayCanvas.getBoundingClientRect();
+    return { x: evt.clientX - r.left, y: evt.clientY - r.top };
+  }
+  function drawRectOverlay(){
+    overlayCtx.clearRect(0,0,st.w,st.h);
+    if(!st.dragging || !st.dragMoved) return;
+    var a = st.dragStart, b = st.dragCur;
+    var x = Math.min(a.x,b.x), y = Math.min(a.y,b.y), w = Math.abs(b.x-a.x), h = Math.abs(b.y-a.y);
+    overlayCtx.fillStyle = 'rgba(79,70,229,0.10)';
+    overlayCtx.strokeStyle = '#4F46E5';
+    overlayCtx.lineWidth = 1;
+    overlayCtx.setLineDash([4,3]);
+    overlayCtx.fillRect(x,y,w,h);
+    overlayCtx.strokeRect(x+0.5,y+0.5,w,h);
+    overlayCtx.setLineDash([]);
+  }
+
+  function onMove(e){
+    if(!st.dragging) return;
+    var p = localXY(e);
+    if(Math.abs(p.x-st.dragStart.x) > 3 || Math.abs(p.y-st.dragStart.y) > 3) st.dragMoved = true;
+    st.dragCur = p;
+    drawRectOverlay();
+  }
+  function onUp(){
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    if(!st.dragging) return;
+    st.dragging = false;
+    if(!st.dragMoved){
+      if(st.selected.size) clearSelection();
+      drawRectOverlay();
+      return;
+    }
+    var a = st.dragStart, b = st.dragCur;
+    var x0=Math.min(a.x,b.x), x1=Math.max(a.x,b.x), y0=Math.min(a.y,b.y), y1=Math.max(a.y,b.y);
+    var idx = [], sx=st.sx, sy=st.sy, n=st.n;
+    for(var i=0;i<n;i++){ var px=sx[i], py=sy[i]; if(px>=x0&&px<=x1&&py>=y0&&py<=y1) idx.push(i); }
+    applySelection(idx);
+    drawRectOverlay();
+  }
+  overlayCanvas.addEventListener('mousedown', function(e){
+    if(!st.sx) return;
+    e.preventDefault();
+    st.dragging = true; st.dragMoved = false;
+    st.dragStart = localXY(e); st.dragCur = st.dragStart;
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  });
+  window.addEventListener('keydown', function(e){ if(e.key==='Escape' && st.selected.size) clearSelection(); });
+  clearBtn.addEventListener('click', clearSelection);
+
+  // ---------- Sigma wiring ----------
+  function showMessage(text){
+    if(text){ msgEl.innerHTML = text; msgEl.style.display='block'; legendEl.style.top='40px'; }
+    else { msgEl.innerHTML=''; msgEl.style.display='none'; legendEl.style.top='10px'; }
+  }
+  function onConfigOrData(){
+    var c = st.cfg || {};
+    if(!c.source){ showMessage('Select a <b>data source</b> in the editor panel. Showing 100,000 synthetic points until then.'); }
+    else if(!c.xAxis || !c.yAxis){ showMessage('Choose an <b>X Axis</b> and <b>Y Axis</b> column in the editor panel.'); }
+    else { showMessage(''); }
+    rebuildFromData();
+  }
+
+  if(client){
+    client.setLoadingState && client.setLoadingState(true);
+    client.config.subscribe(function(cfg){
+      st.cfg = cfg || {};
+      if(st.unsubData){ st.unsubData(); st.unsubData=null; }
+      if(st.unsubCols){ st.unsubCols(); st.unsubCols=null; }
+      if(cfg && cfg.source){
+        st.unsubCols = client.elements.subscribeToElementColumns(cfg.source, function(cols){ st.cols = cols; });
+        st.unsubData = client.elements.subscribeToElementData(cfg.source, function(data){
+          st.data = data;
+          client.setLoadingState && client.setLoadingState(false);
+          onConfigOrData();
+        });
+      } else {
+        st.data = null; st.cols = null;
+        client.setLoadingState && client.setLoadingState(false);
+        onConfigOrData();
+      }
+    });
+  } else {
+    onConfigOrData();
+  }
+
+  // ---------- resize (mandatory: Sigma sizes the iframe after first paint) ----------
+  var rTimer;
+  function scheduleResize(){ clearTimeout(rTimer); rTimer = setTimeout(layoutAndDraw, 100); }
+  if(window.ResizeObserver){ new ResizeObserver(scheduleResize).observe(stageEl); }
+  window.addEventListener('resize', scheduleResize);
+})();
+</script>
+</body>
+</html>
