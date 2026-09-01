@@ -1,0 +1,2427 @@
+{
+  "name": "Assignment Booked Last 5 Weeks",
+  "folderId": "dc487f89-30a6-48b7-8de8-e0cce0315e1b",
+  "document": {
+    "schemaVersion": 1,
+    "kind": "workbook",
+    "pages": [
+      {
+        "id": "page-booked",
+        "name": "Assignment Booked"
+      },
+      {
+        "id": "page-upcoming",
+        "name": "Upcoming Assignments"
+      }
+    ],
+    "elements": [
+      {
+        "id": "tbl-assignments",
+        "kind": "table",
+        "name": "Assignments",
+        "visibleAsSource": true,
+        "source": {
+          "kind": "warehouse-table",
+          "connectionId": "f45a23e2-7b17-41d4-aa34-f2ed38483a53",
+          "path": [
+            "BARTONDB",
+            "GOLD",
+            "ASSIGNMENT_PROD"
+          ]
+        },
+        "columns": [
+          {
+            "id": "col-an",
+            "formula": "[ASSIGNMENT_PROD/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "col-main-spec",
+            "formula": "[ASSIGNMENT_PROD/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "col-sub-spec",
+            "formula": "[ASSIGNMENT_PROD/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "col-asgn-type",
+            "formula": "[ASSIGNMENT_PROD/Reassignment]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "col-provider-type",
+            "formula": "If(IsNull([ASSIGNMENT_PROD/SF Long Provider Type]) or [ASSIGNMENT_PROD/SF Long Provider Type] = \"\", \"Other\", [ASSIGNMENT_PROD/SF Long Provider Type])",
+            "name": "Provider Type"
+          },
+          {
+            "id": "col-ae",
+            "formula": "[ASSIGNMENT_PROD/AE]",
+            "name": "AE"
+          },
+          {
+            "id": "col-ae-entity",
+            "formula": "[ASSIGNMENT_PROD/AE Company]",
+            "name": "AE Entity"
+          },
+          {
+            "id": "col-recruiter",
+            "formula": "[ASSIGNMENT_PROD/Recruiter]",
+            "name": "Recruiter"
+          },
+          {
+            "id": "col-state",
+            "formula": "[ASSIGNMENT_PROD/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "col-loa",
+            "formula": "[ASSIGNMENT_PROD/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "col-bill",
+            "formula": "[ASSIGNMENT_PROD/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "col-pay",
+            "formula": "[ASSIGNMENT_PROD/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "col-created",
+            "formula": "[ASSIGNMENT_PROD/Assignment Created Date]",
+            "name": "Assignment Created Date"
+          },
+          {
+            "id": "col-prod",
+            "formula": "[ASSIGNMENT_PROD/prod_assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "col-week-ending",
+            "formula": "DateAdd(\"day\", 5, DateTrunc(\"week\", [Assignment Created Date]))",
+            "name": "Week Ending",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "col-week-label",
+            "formula": "DateFormat(DateAdd(\"day\", 5, DateTrunc(\"week\", [Assignment Created Date])), \"%Y-%m-%d\")",
+            "name": "Week Label"
+          },
+          {
+            "id": "col-chart-period",
+            "formula": "Switch([BookedGrain], \"Quarter\", DateTrunc(\"quarter\", [Assignment Created Date]), \"Month\", DateTrunc(\"month\", [Assignment Created Date]), DateAdd(\"day\", 5, DateTrunc(\"week\", [Assignment Created Date])))",
+            "name": "Chart Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "col-chart-label",
+            "formula": "Switch([BookedGrain], \"Quarter\", DateFormat(DateTrunc(\"quarter\", [Assignment Created Date]), \"%Y-%m\"), \"Month\", DateFormat(DateTrunc(\"month\", [Assignment Created Date]), \"%Y-%m\"), DateFormat(DateAdd(\"day\", 5, DateTrunc(\"week\", [Assignment Created Date])), \"%Y-%m-%d\"))",
+            "name": "Chart Label"
+          },
+          {
+            "id": "col-weeks-back",
+            "formula": "DateDiff(\"week\", DateTrunc(\"week\", [Assignment Created Date]), DateTrunc(\"week\", Today()))",
+            "name": "Weeks Back",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          },
+          {
+            "id": "col-scope",
+            "formula": "If([Prod Assignment] != \"Yes\", \"Excluded\", Switch([BookedWindow], \"All\", \"Included\", \"52W\", If([Weeks Back] >= 0 and [Weeks Back] <= 51, \"Included\", \"Excluded\"), \"26W\", If([Weeks Back] >= 0 and [Weeks Back] <= 25, \"Included\", \"Excluded\"), \"13W\", If([Weeks Back] >= 0 and [Weeks Back] <= 12, \"Included\", \"Excluded\"), If([Weeks Back] >= 0 and [Weeks Back] <= 4, \"Included\", \"Excluded\")))",
+            "name": "Booking Scope"
+          },
+          {
+            "id": "col-projected-billing",
+            "formula": "[Bill Rate] * [Assignment LOA] * 8",
+            "name": "Projected Billing",
+            "format": {
+              "kind": "number",
+              "formatString": "$,.0f"
+            }
+          },
+          {
+            "id": "col-gm-dollars",
+            "formula": "([Bill Rate] - [Pay Rate]) * [Assignment LOA] * 8",
+            "name": "GM Dollars",
+            "format": {
+              "kind": "number",
+              "formatString": "$,.0f"
+            }
+          },
+          {
+            "id": "col-gm-pct",
+            "formula": "[GM Dollars] / NullIf([Projected Billing], 0)",
+            "name": "GM Percent",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2%"
+            }
+          }
+        ],
+        "order": [
+          "col-an",
+          "col-main-spec",
+          "col-sub-spec",
+          "col-asgn-type",
+          "col-provider-type",
+          "col-ae",
+          "col-ae-entity",
+          "col-recruiter",
+          "col-state",
+          "col-loa",
+          "col-bill",
+          "col-pay",
+          "col-created",
+          "col-prod",
+          "col-week-ending",
+          "col-week-label",
+          "col-chart-period",
+          "col-chart-label",
+          "col-weeks-back",
+          "col-scope",
+          "col-projected-billing",
+          "col-gm-dollars",
+          "col-gm-pct"
+        ],
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "ctrl-specialty",
+        "kind": "control",
+        "controlId": "MainSpecialty",
+        "name": "Main Specialty",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-assignments"
+          },
+          "columnId": "col-main-spec"
+        },
+        "includeNulls": "never",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-main-spec"
+          }
+        ]
+      },
+      {
+        "id": "ctrl-sub",
+        "kind": "control",
+        "controlId": "SubSpecialty",
+        "name": "Sub Specialty",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-assignments"
+          },
+          "columnId": "col-sub-spec"
+        },
+        "includeNulls": "never",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-sub-spec"
+          }
+        ]
+      },
+      {
+        "id": "ctrl-type",
+        "kind": "control",
+        "controlId": "AssignmentType",
+        "name": "Assignment Type",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-assignments"
+          },
+          "columnId": "col-asgn-type"
+        },
+        "includeNulls": "never",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-asgn-type"
+          }
+        ]
+      },
+      {
+        "id": "ctrl-ae",
+        "kind": "control",
+        "controlId": "AccountExecutive",
+        "name": "AE",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-assignments"
+          },
+          "columnId": "col-ae"
+        },
+        "includeNulls": "never",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-ae"
+          }
+        ]
+      },
+      {
+        "id": "ctrl-recruiter",
+        "kind": "control",
+        "controlId": "RecruiterName",
+        "name": "Recruiter",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-assignments"
+          },
+          "columnId": "col-recruiter"
+        },
+        "includeNulls": "never",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-recruiter"
+          }
+        ]
+      },
+      {
+        "id": "ctrl-scope",
+        "kind": "control",
+        "controlId": "BookingScope",
+        "name": "Booking scope",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [
+          "Included"
+        ],
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "Included",
+            "Excluded"
+          ]
+        },
+        "includeNulls": "never",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-scope"
+          }
+        ]
+      },
+      {
+        "id": "ctrl-window",
+        "kind": "control",
+        "controlId": "BookedWindow",
+        "name": "Date window",
+        "controlType": "segmented",
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "5W",
+            "13W",
+            "26W",
+            "52W",
+            "All"
+          ]
+        },
+        "value": "5W"
+      },
+      {
+        "id": "ctrl-grain",
+        "kind": "control",
+        "controlId": "BookedGrain",
+        "name": "Trend grain",
+        "controlType": "segmented",
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "Week",
+            "Month",
+            "Quarter"
+          ]
+        },
+        "value": "Week"
+      },
+      {
+        "id": "ctrl-date-range",
+        "kind": "control",
+        "controlId": "BookedDateRange",
+        "name": "Fine-tune dates",
+        "controlType": "date-range",
+        "mode": "between",
+        "includeNulls": "when-no-value-is-selected",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-created"
+          }
+        ]
+      },
+      {
+        "id": "container-filters",
+        "kind": "container",
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "container-ai",
+        "kind": "container",
+        "style": {
+          "backgroundColor": "#F4FBFA",
+          "borderColor": "#00A5A2",
+          "borderWidth": 2,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "chart-booked",
+        "kind": "area-chart",
+        "name": {
+          "text": "Assignments Booked Trend",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "chart-booked-x",
+            "formula": "[Assignments/Chart Period]",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "cb-v",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Assignments Booked Trend",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          }
+        ],
+        "xAxis": {
+          "columnId": "chart-booked-x"
+        },
+        "yAxis": {
+          "columnIds": [
+            "cb-v"
+          ]
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        },
+        "stacking": "none",
+        "legend": {
+          "visibility": "hidden"
+        },
+        "dataLabel": {
+          "labels": "shown",
+          "fontSize": 11
+        },
+        "trendlines": [
+          {
+            "columnId": "cb-v",
+            "model": "linear",
+            "line": {
+              "style": "dashed",
+              "width": 2,
+              "color": "#0F2A3A"
+            },
+            "label": {
+              "visibility": "shown",
+              "text": "Linear regression"
+            }
+          }
+        ]
+      },
+      {
+        "id": "chart-type",
+        "kind": "bar-chart",
+        "name": {
+          "text": "Bookings by Assignment Type",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "chart-type-x",
+            "formula": "[Assignments/Chart Label]",
+            "name": "Period"
+          },
+          {
+            "id": "ct-v",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Bookings by Assignment Type",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          },
+          {
+            "id": "ct-s",
+            "formula": "[Assignments/Assignment Type]",
+            "name": "Series"
+          }
+        ],
+        "xAxis": {
+          "columnId": "chart-type-x"
+        },
+        "yAxis": {
+          "columnIds": [
+            "ct-v"
+          ]
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        },
+        "color": {
+          "by": "category",
+          "column": "ct-s",
+          "scheme": [
+            "#00A5A2",
+            "#1E3A4C",
+            "#E1A32D",
+            "#5BBFB8",
+            "#2D6B6A",
+            "#7A8E99",
+            "#8FD4D2",
+            "#1A5050"
+          ]
+        },
+        "legend": {
+          "position": "bottom"
+        },
+        "stacking": "stacked"
+      },
+      {
+        "id": "chart-provider",
+        "kind": "bar-chart",
+        "name": {
+          "text": "Bookings by Provider Type",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "chart-provider-x",
+            "formula": "[Assignments/Chart Label]",
+            "name": "Period"
+          },
+          {
+            "id": "cp-v",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Bookings by Provider Type",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          },
+          {
+            "id": "cp-s",
+            "formula": "[Assignments/Provider Type]",
+            "name": "Series"
+          }
+        ],
+        "xAxis": {
+          "columnId": "chart-provider-x"
+        },
+        "yAxis": {
+          "columnIds": [
+            "cp-v"
+          ]
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        },
+        "color": {
+          "by": "category",
+          "column": "cp-s",
+          "scheme": [
+            "#00A5A2",
+            "#1E3A4C",
+            "#E1A32D",
+            "#5BBFB8",
+            "#2D6B6A",
+            "#7A8E99",
+            "#8FD4D2",
+            "#1A5050"
+          ]
+        },
+        "legend": {
+          "position": "bottom"
+        },
+        "stacking": "stacked"
+      },
+      {
+        "id": "chart-gm",
+        "kind": "line-chart",
+        "name": {
+          "text": "GM$ Trend",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "chart-gm-x",
+            "formula": "[Assignments/Chart Period]",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "cg-v",
+            "formula": "Sum([Assignments/GM Dollars])",
+            "name": "GM$ Trend",
+            "format": {
+              "kind": "number",
+              "formatString": "$.4~s"
+            }
+          }
+        ],
+        "xAxis": {
+          "columnId": "chart-gm-x"
+        },
+        "yAxis": {
+          "columnIds": [
+            "cg-v"
+          ]
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        },
+        "stacking": "none",
+        "legend": {
+          "visibility": "hidden"
+        },
+        "dataLabel": {
+          "labels": "shown",
+          "fontSize": 11
+        },
+        "trendlines": [
+          {
+            "columnId": "cg-v",
+            "model": "linear",
+            "line": {
+              "style": "dashed",
+              "width": 2,
+              "color": "#0F2A3A"
+            },
+            "label": {
+              "visibility": "shown",
+              "text": "Linear regression"
+            }
+          }
+        ]
+      },
+      {
+        "id": "chart-gmpct",
+        "kind": "line-chart",
+        "name": {
+          "text": "GM% Trend",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "chart-gmpct-x",
+            "formula": "[Assignments/Chart Period]",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "cgp-v",
+            "formula": "Sum([Assignments/GM Dollars]) / NullIf(Sum([Assignments/Projected Billing]), 0)",
+            "name": "GM% Trend",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2%"
+            }
+          }
+        ],
+        "xAxis": {
+          "columnId": "chart-gmpct-x"
+        },
+        "yAxis": {
+          "columnIds": [
+            "cgp-v"
+          ]
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        },
+        "stacking": "none",
+        "legend": {
+          "visibility": "hidden"
+        },
+        "dataLabel": {
+          "labels": "shown",
+          "fontSize": 11
+        },
+        "trendlines": [
+          {
+            "columnId": "cgp-v",
+            "model": "linear",
+            "line": {
+              "style": "dashed",
+              "width": 2,
+              "color": "#0F2A3A"
+            },
+            "label": {
+              "visibility": "shown",
+              "text": "Linear regression"
+            }
+          }
+        ]
+      },
+      {
+        "id": "chart-loa",
+        "kind": "line-chart",
+        "name": {
+          "text": "Average LOA Trend",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "chart-loa-x",
+            "formula": "[Assignments/Chart Period]",
+            "name": "Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "cl-v",
+            "formula": "Avg([Assignments/Assignment LOA])",
+            "name": "Average LOA Trend",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2f"
+            }
+          }
+        ],
+        "xAxis": {
+          "columnId": "chart-loa-x"
+        },
+        "yAxis": {
+          "columnIds": [
+            "cl-v"
+          ]
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        },
+        "stacking": "none",
+        "legend": {
+          "visibility": "hidden"
+        },
+        "dataLabel": {
+          "labels": "shown",
+          "fontSize": 11
+        },
+        "trendlines": [
+          {
+            "columnId": "cl-v",
+            "model": "linear",
+            "line": {
+              "style": "dashed",
+              "width": 2,
+              "color": "#0F2A3A"
+            },
+            "label": {
+              "visibility": "shown",
+              "text": "Linear regression"
+            }
+          }
+        ]
+      },
+      {
+        "id": "pie-specialty",
+        "kind": "pie-chart",
+        "name": {
+          "text": "Bookings by Specialty",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "pie-specialty-c",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Category"
+          },
+          {
+            "id": "pie-specialty-v",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Assignments",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          }
+        ],
+        "color": {
+          "id": "pie-specialty-c"
+        },
+        "value": {
+          "id": "pie-specialty-v"
+        },
+        "legend": {
+          "position": "bottom"
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "pie-sub",
+        "kind": "pie-chart",
+        "name": {
+          "text": "Bookings by Sub Specialty",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "pie-sub-c",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Category"
+          },
+          {
+            "id": "pie-sub-v",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Assignments",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          }
+        ],
+        "color": {
+          "id": "pie-sub-c"
+        },
+        "value": {
+          "id": "pie-sub-v"
+        },
+        "legend": {
+          "position": "bottom"
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "chart-state",
+        "kind": "region-map",
+        "name": {
+          "text": "Assignment Booked by State \u2014 Contiguous US",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "cs-x",
+            "formula": "[Assignments/Worksite State]",
+            "name": "State"
+          },
+          {
+            "id": "cs-v",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Assignments",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          },
+          {
+            "id": "cs-lbl",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Booked",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          }
+        ],
+        "region": {
+          "id": "cs-x",
+          "regionType": "us-state"
+        },
+        "color": {
+          "by": "scale",
+          "column": "cs-v",
+          "scheme": [
+            "#5BBFB8",
+            "#00A5A2",
+            "#0F2A3A"
+          ]
+        },
+        "label": [
+          {
+            "id": "cs-lbl"
+          }
+        ],
+        "filters": [
+          {
+            "id": "cs-filter-contiguous",
+            "columnId": "cs-x",
+            "kind": "list",
+            "mode": "exclude",
+            "values": [
+              "AK",
+              "HI",
+              "PR",
+              "VI",
+              "GU",
+              "AS",
+              "MP",
+              "",
+              null
+            ]
+          }
+        ],
+        "legend": {
+          "visibility": "hidden"
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "chat-ask",
+        "kind": "chat",
+        "agentId": "ag-barton"
+      },
+      {
+        "id": "txt-chat",
+        "kind": "text",
+        "body": "**Ask beyond the charts** \u2014 ad hoc questions against the assignment dataset.",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#1E3A4C"
+        }
+      },
+      {
+        "id": "txt-ai-prompt",
+        "kind": "text",
+        "body": "**Try asking**\n\n\u2022 Which specialties gained momentum?\n\n\u2022 Where is GM% deteriorating?\n\n\u2022 Compare recruiters by bookings and GM$.",
+        "verticalAlign": "start",
+        "style": {
+          "color": "#41454D",
+          "backgroundColor": "#EAF8F6",
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "kpi-total",
+        "kind": "kpi-chart",
+        "name": "Booked Total",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "kpi-total-v",
+            "formula": "CountDistinct([Assignments/Assignment Number])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "kpi-total-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "kpi-avg-gm",
+        "kind": "kpi-chart",
+        "name": "Avg GM",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "kpi-avg-gm-v",
+            "formula": "Avg([Assignments/GM Percent])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2%"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "kpi-avg-gm-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "kpi-max-gm",
+        "kind": "kpi-chart",
+        "name": "High GM",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "kpi-max-gm-v",
+            "formula": "Max([Assignments/GM Percent])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2%"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "kpi-max-gm-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "kpi-min-gm",
+        "kind": "kpi-chart",
+        "name": "Low GM",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "kpi-min-gm-v",
+            "formula": "Min([Assignments/GM Percent])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2%"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "kpi-min-gm-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "kpi-avg-loa",
+        "kind": "kpi-chart",
+        "name": "Avg LOA",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "kpi-avg-loa-v",
+            "formula": "Avg([Assignments/Assignment LOA])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2f"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "kpi-avg-loa-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "kpi-gm-dollars",
+        "kind": "kpi-chart",
+        "name": "GM Dollars",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "kpi-gm-dollars-v",
+            "formula": "Sum([Assignments/GM Dollars])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": "$,.0f"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "kpi-gm-dollars-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "txt-summary",
+        "kind": "text",
+        "body": "**{{[Booked Total/Value]}}** Total Assignment Booked with Avg GM of **{{[Avg GM/Value]}}**. Highest GM was {{[High GM/Value]}} and lowest GM was {{[Low GM/Value]}}. The Avg Assignment LOA was {{[Avg LOA/Value]}}. Assignment GM$ was **{{[GM Dollars/Value]}}**.",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#41454D"
+        }
+      },
+      {
+        "id": "txt-title",
+        "kind": "text",
+        "body": "## Assignment Performance",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#1E3A4C"
+        }
+      },
+      {
+        "id": "txt-subtitle",
+        "kind": "text",
+        "body": "Production assignments \u00b7 live Snowflake data \u00b7 choose a preset, then optionally fine-tune an exact date range",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#6B7B85"
+        }
+      },
+      {
+        "id": "btn-report",
+        "kind": "button",
+        "text": "Open client-ready report \u2197",
+        "appearance": "filled",
+        "actions": [
+          {
+            "id": "a-open-report",
+            "trigger": "on-click",
+            "effects": [
+              {
+                "effect": "open-url",
+                "url": "/barton/report/3Q5VvIAvLorcakIRTuFKgX",
+                "openTarget": "_blank"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tbl-detail",
+        "kind": "table",
+        "name": {
+          "text": "Assignment Detail",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-assignments"
+        },
+        "columns": [
+          {
+            "id": "d-link",
+            "formula": "\"Click to view file\"",
+            "name": "File Links",
+            "link": {
+              "kind": "formula",
+              "formula": "Concat(\"https://bartonassociates.lightning.force.com/lightning/r/Assignment__c/\", Text([Assignments/Assignment Number]), \"/view\")"
+            }
+          },
+          {
+            "id": "d-main",
+            "formula": "[Assignments/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "d-sub",
+            "formula": "[Assignments/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "d-an",
+            "formula": "[Assignments/Assignment Number]",
+            "name": "Assn #"
+          },
+          {
+            "id": "d-entity",
+            "formula": "[Assignments/AE Entity]",
+            "name": "AE Entity"
+          },
+          {
+            "id": "d-ae",
+            "formula": "[Assignments/AE]",
+            "name": "AE"
+          },
+          {
+            "id": "d-rec",
+            "formula": "[Assignments/Recruiter]",
+            "name": "Recruiter"
+          },
+          {
+            "id": "d-loa",
+            "formula": "[Assignments/Assignment LOA]",
+            "name": "Assn LOA",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2f"
+            }
+          },
+          {
+            "id": "d-bill",
+            "formula": "[Assignments/Bill Rate]",
+            "name": "Bill Rate",
+            "format": {
+              "kind": "number",
+              "formatString": "$,.2f"
+            }
+          },
+          {
+            "id": "d-pay",
+            "formula": "[Assignments/Pay Rate]",
+            "name": "Pay Rate",
+            "format": {
+              "kind": "number",
+              "formatString": "$,.2f"
+            }
+          },
+          {
+            "id": "d-pb",
+            "formula": "[Assignments/Projected Billing]",
+            "name": "Projected Billing",
+            "format": {
+              "kind": "number",
+              "formatString": "$.4~s"
+            }
+          },
+          {
+            "id": "d-gm",
+            "formula": "[Assignments/GM Dollars]",
+            "name": "GM $$",
+            "format": {
+              "kind": "number",
+              "formatString": "$.4~s"
+            }
+          },
+          {
+            "id": "d-gmp",
+            "formula": "[Assignments/GM Percent]",
+            "name": "GM % (GM$$ / Projected Billing)",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2%"
+            }
+          }
+        ],
+        "order": [
+          "d-link",
+          "d-main",
+          "d-sub",
+          "d-an",
+          "d-entity",
+          "d-ae",
+          "d-rec",
+          "d-loa",
+          "d-bill",
+          "d-pay",
+          "d-pb",
+          "d-gm",
+          "d-gmp"
+        ],
+        "sort": [
+          {
+            "columnId": "d-main",
+            "direction": "ascending"
+          },
+          {
+            "columnId": "d-gmp",
+            "direction": "descending"
+          }
+        ],
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "tbl-upcoming",
+        "kind": "table",
+        "name": "Upcoming",
+        "visibleAsSource": true,
+        "source": {
+          "kind": "warehouse-table",
+          "connectionId": "f45a23e2-7b17-41d4-aa34-f2ed38483a53",
+          "path": [
+            "BARTONDB",
+            "GOLD",
+            "ASSIGNMENT_PROD"
+          ]
+        },
+        "columns": [
+          {
+            "id": "u-col-an",
+            "formula": "[ASSIGNMENT_PROD/Assignment Number]",
+            "name": "Assignment Number"
+          },
+          {
+            "id": "u-col-main-spec",
+            "formula": "[ASSIGNMENT_PROD/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "u-col-sub-spec",
+            "formula": "[ASSIGNMENT_PROD/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "u-col-asgn-type",
+            "formula": "[ASSIGNMENT_PROD/Reassignment]",
+            "name": "Assignment Type"
+          },
+          {
+            "id": "u-col-ae",
+            "formula": "[ASSIGNMENT_PROD/AE]",
+            "name": "AE"
+          },
+          {
+            "id": "u-col-recruiter",
+            "formula": "[ASSIGNMENT_PROD/Recruiter]",
+            "name": "Recruiter"
+          },
+          {
+            "id": "u-col-state",
+            "formula": "[ASSIGNMENT_PROD/Worksite State]",
+            "name": "Worksite State"
+          },
+          {
+            "id": "u-col-loa",
+            "formula": "[ASSIGNMENT_PROD/Assignment LOA]",
+            "name": "Assignment LOA"
+          },
+          {
+            "id": "u-col-bill",
+            "formula": "[ASSIGNMENT_PROD/Bill Rate]",
+            "name": "Bill Rate"
+          },
+          {
+            "id": "u-col-pay",
+            "formula": "[ASSIGNMENT_PROD/Pay Rate]",
+            "name": "Pay Rate"
+          },
+          {
+            "id": "u-col-start",
+            "formula": "[ASSIGNMENT_PROD/Start Date]",
+            "name": "Start Date"
+          },
+          {
+            "id": "u-col-prod",
+            "formula": "[ASSIGNMENT_PROD/prod_assignment]",
+            "name": "Prod Assignment"
+          },
+          {
+            "id": "u-col-start-period",
+            "formula": "Switch([UpcomingGrain], \"Monthly\", DateTrunc(\"month\", [ASSIGNMENT_PROD/Start Date]), DateTrunc(\"week\", [ASSIGNMENT_PROD/Start Date]))",
+            "name": "Start Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "u-col-days-out",
+            "formula": "DateDiff(\"day\", Today(), [ASSIGNMENT_PROD/Start Date])",
+            "name": "Days Out",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          },
+          {
+            "id": "u-col-scope",
+            "formula": "If([Days Out] >= 0 and [Days Out] <= 90 and [Prod Assignment] = \"Yes\", \"Next 90 Days\", \"Excluded\")",
+            "name": "Start Window"
+          },
+          {
+            "id": "u-col-billing",
+            "formula": "[Bill Rate] * [Assignment LOA] * 8",
+            "name": "Expected Revenue",
+            "format": {
+              "kind": "number",
+              "formatString": "$,.0f"
+            }
+          },
+          {
+            "id": "u-col-gm",
+            "formula": "([Bill Rate] - [Pay Rate]) * [Assignment LOA] * 8",
+            "name": "GM Dollars",
+            "format": {
+              "kind": "number",
+              "formatString": "$,.0f"
+            }
+          },
+          {
+            "id": "u-col-gm-pct",
+            "formula": "[GM Dollars] / NullIf([Expected Revenue], 0)",
+            "name": "GM Percent",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2%"
+            }
+          }
+        ],
+        "order": [
+          "u-col-an",
+          "u-col-main-spec",
+          "u-col-sub-spec",
+          "u-col-asgn-type",
+          "u-col-ae",
+          "u-col-recruiter",
+          "u-col-state",
+          "u-col-loa",
+          "u-col-bill",
+          "u-col-pay",
+          "u-col-start",
+          "u-col-prod",
+          "u-col-start-period",
+          "u-col-days-out",
+          "u-col-scope",
+          "u-col-billing",
+          "u-col-gm",
+          "u-col-gm-pct"
+        ],
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-ctrl-window",
+        "kind": "control",
+        "controlId": "UpcomingWindow",
+        "name": "Start window",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [
+          "Next 90 Days"
+        ],
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "Next 90 Days",
+            "Excluded"
+          ]
+        },
+        "includeNulls": "never",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-upcoming"
+            },
+            "columnId": "u-col-scope"
+          }
+        ]
+      },
+      {
+        "id": "u-ctrl-grain",
+        "kind": "control",
+        "controlId": "UpcomingGrain",
+        "name": "Grain",
+        "controlType": "segmented",
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "Weekly",
+            "Monthly"
+          ]
+        },
+        "value": "Weekly"
+      },
+      {
+        "id": "u-ctrl-specialty",
+        "kind": "control",
+        "controlId": "UpcomingSpecialty",
+        "name": "Main Specialty",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-upcoming"
+          },
+          "columnId": "u-col-main-spec"
+        },
+        "includeNulls": "never",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-upcoming"
+            },
+            "columnId": "u-col-main-spec"
+          }
+        ]
+      },
+      {
+        "id": "u-ctrl-type",
+        "kind": "control",
+        "controlId": "UpcomingAssignmentType",
+        "name": "Assignment Type",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-upcoming"
+          },
+          "columnId": "u-col-asgn-type"
+        },
+        "includeNulls": "never",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-upcoming"
+            },
+            "columnId": "u-col-asgn-type"
+          }
+        ]
+      },
+      {
+        "id": "u-ctrl-ae",
+        "kind": "control",
+        "controlId": "UpcomingAE",
+        "name": "AE",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "multiple",
+        "values": [],
+        "source": {
+          "kind": "source",
+          "source": {
+            "kind": "table",
+            "elementId": "tbl-upcoming"
+          },
+          "columnId": "u-col-ae"
+        },
+        "includeNulls": "never",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-upcoming"
+            },
+            "columnId": "u-col-ae"
+          }
+        ]
+      },
+      {
+        "id": "u-container-filters",
+        "kind": "container",
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-chart-starts",
+        "kind": "area-chart",
+        "name": {
+          "text": "Assignments Starting \u2014 Next 90 Days",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-upcoming"
+        },
+        "columns": [
+          {
+            "id": "u-chart-starts-x",
+            "formula": "[Upcoming/Start Period]",
+            "name": "Starting",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "us-v",
+            "formula": "CountDistinct([Upcoming/Assignment Number])",
+            "name": "Assignments Starting \u2014 Next 90 Days",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          }
+        ],
+        "xAxis": {
+          "columnId": "u-chart-starts-x"
+        },
+        "yAxis": {
+          "columnIds": [
+            "us-v"
+          ]
+        },
+        "stacking": "none",
+        "legend": {
+          "visibility": "hidden"
+        },
+        "dataLabel": {
+          "labels": "shown",
+          "fontSize": 11
+        },
+        "trendlines": [
+          {
+            "columnId": "us-v",
+            "model": "linear",
+            "line": {
+              "style": "dashed",
+              "width": 2,
+              "color": "#0F2A3A"
+            },
+            "label": {
+              "visibility": "shown",
+              "text": "Linear regression"
+            }
+          }
+        ],
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-chart-revenue",
+        "kind": "line-chart",
+        "name": {
+          "text": "Expected Revenue \u2014 Next 90 Days",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-upcoming"
+        },
+        "columns": [
+          {
+            "id": "u-chart-revenue-x",
+            "formula": "[Upcoming/Start Period]",
+            "name": "Starting",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "ur-v",
+            "formula": "Sum([Upcoming/Expected Revenue])",
+            "name": "Expected Revenue \u2014 Next 90 Days",
+            "format": {
+              "kind": "number",
+              "formatString": "$.4~s"
+            }
+          }
+        ],
+        "xAxis": {
+          "columnId": "u-chart-revenue-x"
+        },
+        "yAxis": {
+          "columnIds": [
+            "ur-v"
+          ]
+        },
+        "stacking": "none",
+        "legend": {
+          "visibility": "hidden"
+        },
+        "dataLabel": {
+          "labels": "shown",
+          "fontSize": 11
+        },
+        "trendlines": [
+          {
+            "columnId": "ur-v",
+            "model": "linear",
+            "line": {
+              "style": "dashed",
+              "width": 2,
+              "color": "#0F2A3A"
+            },
+            "label": {
+              "visibility": "shown",
+              "text": "Linear regression"
+            }
+          }
+        ],
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-chart-specialty",
+        "kind": "bar-chart",
+        "name": {
+          "text": "Starts by Specialty",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-upcoming"
+        },
+        "columns": [
+          {
+            "id": "usp-x",
+            "formula": "[Upcoming/Start Period]",
+            "name": "Starting",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "usp-v",
+            "formula": "CountDistinct([Upcoming/Assignment Number])",
+            "name": "Assignments",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          },
+          {
+            "id": "usp-s",
+            "formula": "[Upcoming/Main Specialty]",
+            "name": "Specialty"
+          }
+        ],
+        "xAxis": {
+          "columnId": "usp-x"
+        },
+        "yAxis": {
+          "columnIds": [
+            "usp-v"
+          ]
+        },
+        "color": {
+          "by": "category",
+          "column": "usp-s",
+          "scheme": [
+            "#00A5A2",
+            "#1E3A4C",
+            "#E1A32D",
+            "#5BBFB8",
+            "#2D6B6A",
+            "#7A8E99",
+            "#8FD4D2",
+            "#1A5050"
+          ]
+        },
+        "stacking": "stacked",
+        "legend": {
+          "position": "bottom"
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-chart-rank",
+        "kind": "bar-chart",
+        "name": {
+          "text": "Expected Revenue by Specialty",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-upcoming"
+        },
+        "columns": [
+          {
+            "id": "urk-x",
+            "formula": "[Upcoming/Main Specialty]",
+            "name": "Specialty"
+          },
+          {
+            "id": "urk-v",
+            "formula": "Sum([Upcoming/Expected Revenue])",
+            "name": "Expected Revenue",
+            "format": {
+              "kind": "number",
+              "formatString": "$.4~s"
+            }
+          },
+          {
+            "id": "urk-s",
+            "formula": "\"Expected Revenue\"",
+            "name": "Series"
+          }
+        ],
+        "xAxis": {
+          "columnId": "urk-x",
+          "sort": {
+            "by": "urk-v",
+            "direction": "descending"
+          }
+        },
+        "yAxis": {
+          "columnIds": [
+            "urk-v"
+          ]
+        },
+        "color": {
+          "by": "category",
+          "column": "urk-s",
+          "scheme": [
+            "#00A5A2"
+          ]
+        },
+        "legend": {
+          "visibility": "hidden"
+        },
+        "dataLabel": {
+          "labels": "shown",
+          "fontSize": 10
+        },
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-kpi-count",
+        "kind": "kpi-chart",
+        "name": "Upcoming Starts",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-upcoming"
+        },
+        "columns": [
+          {
+            "id": "u-kpi-count-v",
+            "formula": "CountDistinct([Upcoming/Assignment Number])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "u-kpi-count-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-kpi-revenue",
+        "kind": "kpi-chart",
+        "name": "Expected Revenue",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-upcoming"
+        },
+        "columns": [
+          {
+            "id": "u-kpi-revenue-v",
+            "formula": "Sum([Upcoming/Expected Revenue])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": "$,.0f"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "u-kpi-revenue-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-kpi-gm",
+        "kind": "kpi-chart",
+        "name": "Expected GM$",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-upcoming"
+        },
+        "columns": [
+          {
+            "id": "u-kpi-gm-v",
+            "formula": "Sum([Upcoming/GM Dollars])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": "$,.0f"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "u-kpi-gm-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-kpi-gm-pct",
+        "kind": "kpi-chart",
+        "name": "Avg GM %",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-upcoming"
+        },
+        "columns": [
+          {
+            "id": "u-kpi-gm-pct-v",
+            "formula": "Avg([Upcoming/GM Percent])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2%"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "u-kpi-gm-pct-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-kpi-loa",
+        "kind": "kpi-chart",
+        "name": "Avg LOA",
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-upcoming"
+        },
+        "columns": [
+          {
+            "id": "u-kpi-loa-v",
+            "formula": "Avg([Upcoming/Assignment LOA])",
+            "name": "Value",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2f"
+            }
+          }
+        ],
+        "value": {
+          "columnId": "u-kpi-loa-v",
+          "color": "#1E3A4C",
+          "fontSize": 22
+        },
+        "layout": {
+          "anchor": "middle"
+        },
+        "style": {
+          "backgroundColor": "#F7FAFA",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      },
+      {
+        "id": "u-txt-title",
+        "kind": "text",
+        "body": "## Upcoming Assignments \u2014 Starting in the Next 90 Days",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#1E3A4C"
+        }
+      },
+      {
+        "id": "u-txt-summary",
+        "kind": "text",
+        "body": "**{{[Upcoming Starts/Value]}}** assignments start in the next 90 days, worth **{{[Expected Revenue/Value]}}** of expected revenue at **{{[Avg GM %/Value]}}** average GM. Average LOA is {{[Avg LOA/Value]}} weeks.",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#41454D"
+        }
+      },
+      {
+        "id": "tbl-upcoming-detail",
+        "kind": "table",
+        "name": {
+          "text": "Assignments Starting in the Next 90 Days",
+          "fontWeight": "bold",
+          "fontSize": 14,
+          "color": "#41454D"
+        },
+        "source": {
+          "kind": "table",
+          "elementId": "tbl-upcoming"
+        },
+        "columns": [
+          {
+            "id": "ud-link",
+            "formula": "\"Click to view file\"",
+            "name": "File Links",
+            "link": {
+              "kind": "formula",
+              "formula": "Concat(\"https://bartonassociates.lightning.force.com/lightning/r/Assignment__c/\", Text([Upcoming/Assignment Number]), \"/view\")"
+            }
+          },
+          {
+            "id": "ud-start",
+            "formula": "[Upcoming/Start Date]",
+            "name": "Start Date",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "ud-days",
+            "formula": "[Upcoming/Days Out]",
+            "name": "Days Out",
+            "format": {
+              "kind": "number",
+              "formatString": ",.0f"
+            }
+          },
+          {
+            "id": "ud-main",
+            "formula": "[Upcoming/Main Specialty]",
+            "name": "Main Specialty"
+          },
+          {
+            "id": "ud-sub",
+            "formula": "[Upcoming/Sub Specialty]",
+            "name": "Sub Specialty"
+          },
+          {
+            "id": "ud-an",
+            "formula": "[Upcoming/Assignment Number]",
+            "name": "Assn #"
+          },
+          {
+            "id": "ud-ae",
+            "formula": "[Upcoming/AE]",
+            "name": "AE"
+          },
+          {
+            "id": "ud-rec",
+            "formula": "[Upcoming/Recruiter]",
+            "name": "Recruiter"
+          },
+          {
+            "id": "ud-state",
+            "formula": "[Upcoming/Worksite State]",
+            "name": "State"
+          },
+          {
+            "id": "ud-loa",
+            "formula": "[Upcoming/Assignment LOA]",
+            "name": "Assn LOA",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2f"
+            }
+          },
+          {
+            "id": "ud-rev",
+            "formula": "[Upcoming/Expected Revenue]",
+            "name": "Expected Revenue",
+            "format": {
+              "kind": "number",
+              "formatString": "$.4~s"
+            }
+          },
+          {
+            "id": "ud-gmp",
+            "formula": "[Upcoming/GM Percent]",
+            "name": "GM %",
+            "format": {
+              "kind": "number",
+              "formatString": ",.2%"
+            }
+          }
+        ],
+        "order": [
+          "ud-link",
+          "ud-start",
+          "ud-days",
+          "ud-main",
+          "ud-sub",
+          "ud-an",
+          "ud-ae",
+          "ud-rec",
+          "ud-state",
+          "ud-loa",
+          "ud-rev",
+          "ud-gmp"
+        ],
+        "sort": [
+          {
+            "columnId": "ud-days",
+            "direction": "ascending"
+          }
+        ],
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#D4E8E7",
+          "borderWidth": 1,
+          "borderRadius": "round"
+        }
+      }
+    ],
+    "agents": [
+      {
+        "id": "ag-barton",
+        "name": "Barton Analyst",
+        "description": "Ad hoc questions on assignment bookings beyond the predefined KPIs.",
+        "instructions": "You are an analyst for Barton Associates staffing assignments. Use the Assignments base table and the charts on this workbook. The reader controls the production-assignment window (5W, 13W, 26W, 52W, or All), trend grain (Week, Month, Quarter), and an optional exact date range. Metrics: assignment count; projected billing = Bill Rate * LOA * 8; GM$ = (Bill Rate - Pay Rate) * LOA * 8; GM% = GM$ / projected billing; average LOA. Dashboard 'Assignment Type' is Extension / New Assignment / Reassignment. Provider Type is Physician / Advanced Practice Nurse / Physician Assistant / Other. Answer ad hoc requests even when the metric is not on a chart. Be concise and quantitative.",
+        "greeting": {
+          "mode": "static",
+          "message": "Ask me about bookings, GM, specialty, recruiter, or state \u2014 including questions that go beyond the charts. I can also focus a specialty."
+        },
+        "dataSources": [
+          {
+            "kind": "table",
+            "elementId": "tbl-assignments"
+          },
+          {
+            "kind": "table",
+            "elementId": "tbl-detail"
+          },
+          {
+            "kind": "table",
+            "elementId": "chart-booked"
+          },
+          {
+            "kind": "table",
+            "elementId": "chart-state"
+          }
+        ],
+        "tools": [
+          {
+            "toolId": "t-specialty",
+            "kind": "action",
+            "name": "Focus a specialty",
+            "description": "Filter the dashboard to one main specialty.",
+            "steps": [
+              {
+                "kind": "effect",
+                "effect": "set-control-value",
+                "control": "MainSpecialty",
+                "value": {
+                  "type": "agent-input",
+                  "inputName": "Main specialty to focus on"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-booked\">\n  <Element elementId=\"txt-title\" gridColumn=\"1 / 18\" gridRow=\"1 / 3\"/>\n  <Element elementId=\"txt-subtitle\" gridColumn=\"1 / 18\" gridRow=\"3 / 5\"/>\n  <Element elementId=\"btn-report\" gridColumn=\"19 / 25\" gridRow=\"2 / 5\"/>\n  <Container elementId=\"container-filters\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 12\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 6\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-sub\" gridColumn=\"6 / 11\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"11 / 16\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-ae\" gridColumn=\"16 / 21\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-recruiter\" gridColumn=\"21 / 25\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-window\" gridColumn=\"1 / 9\" gridRow=\"4 / 7\"/>\n    <Element elementId=\"ctrl-grain\" gridColumn=\"9 / 17\" gridRow=\"4 / 7\"/>\n    <Element elementId=\"ctrl-date-range\" gridColumn=\"17 / 25\" gridRow=\"4 / 7\"/>\n  </Container>\n  <Element elementId=\"kpi-total\" gridColumn=\"1 / 5\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"kpi-avg-gm\" gridColumn=\"5 / 9\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"kpi-max-gm\" gridColumn=\"9 / 13\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"kpi-min-gm\" gridColumn=\"13 / 17\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"kpi-avg-loa\" gridColumn=\"17 / 21\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"kpi-gm-dollars\" gridColumn=\"21 / 25\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"chart-booked\" gridColumn=\"1 / 10\" gridRow=\"17 / 31\"/>\n  <Element elementId=\"chart-type\" gridColumn=\"10 / 18\" gridRow=\"17 / 31\"/>\n  <Element elementId=\"chart-gm\" gridColumn=\"1 / 10\" gridRow=\"31 / 45\"/>\n  <Element elementId=\"chart-gmpct\" gridColumn=\"10 / 18\" gridRow=\"31 / 45\"/>\n  <Container elementId=\"container-ai\" type=\"grid\" gridColumn=\"18 / 25\" gridRow=\"17 / 45\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"txt-chat\" gridColumn=\"1 / 13\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"txt-ai-prompt\" gridColumn=\"1 / 13\" gridRow=\"3 / 10\"/>\n    <Element elementId=\"chat-ask\" gridColumn=\"1 / 13\" gridRow=\"10 / 28\"/>\n  </Container>\n  <Element elementId=\"chart-provider\" gridColumn=\"1 / 13\" gridRow=\"45 / 59\"/>\n  <Element elementId=\"chart-loa\" gridColumn=\"13 / 25\" gridRow=\"45 / 59\"/>\n  <Element elementId=\"pie-specialty\" gridColumn=\"1 / 7\" gridRow=\"59 / 75\"/>\n  <Element elementId=\"pie-sub\" gridColumn=\"7 / 13\" gridRow=\"59 / 75\"/>\n  <Element elementId=\"chart-state\" gridColumn=\"13 / 25\" gridRow=\"59 / 75\"/>\n  <Element elementId=\"txt-summary\" gridColumn=\"1 / 25\" gridRow=\"75 / 78\"/>\n  <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"78 / 105\"/>\n  <Element elementId=\"ctrl-scope\" gridColumn=\"1 / 7\" gridRow=\"105 / 108\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"7 / 25\" gridRow=\"105 / 108\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-upcoming\">\n  <Element elementId=\"u-txt-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Container elementId=\"u-container-filters\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"3 / 6\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"u-ctrl-specialty\" gridColumn=\"1 / 6\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-type\" gridColumn=\"6 / 11\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-ae\" gridColumn=\"11 / 16\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-window\" gridColumn=\"16 / 21\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-grain\" gridColumn=\"21 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"u-kpi-count\" gridColumn=\"1 / 6\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-revenue\" gridColumn=\"6 / 11\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-gm\" gridColumn=\"11 / 16\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-gm-pct\" gridColumn=\"16 / 21\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-loa\" gridColumn=\"21 / 25\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-txt-summary\" gridColumn=\"1 / 25\" gridRow=\"11 / 14\"/>\n  <Element elementId=\"u-chart-starts\" gridColumn=\"1 / 13\" gridRow=\"14 / 28\"/>\n  <Element elementId=\"u-chart-revenue\" gridColumn=\"13 / 25\" gridRow=\"14 / 28\"/>\n  <Element elementId=\"u-chart-specialty\" gridColumn=\"1 / 13\" gridRow=\"28 / 44\"/>\n  <Element elementId=\"u-chart-rank\" gridColumn=\"13 / 25\" gridRow=\"28 / 44\"/>\n  <Element elementId=\"tbl-upcoming-detail\" gridColumn=\"1 / 25\" gridRow=\"44 / 68\"/>\n  <Element elementId=\"tbl-upcoming\" gridColumn=\"1 / 25\" gridRow=\"68 / 72\"/>\n</Page>",
+    "settings": {
+      "theme": {
+        "overrides": {
+          "colors": {
+            "text": "#41454D",
+            "highlight": "#00A5A2",
+            "success": "#007A78",
+            "warning": "#E1A32D",
+            "danger": "#D64545",
+            "darkMode": "hidden"
+          },
+          "colorOverrides": {
+            "backgroundCanvas": "#EEF4F4",
+            "canvasBackground": "#EEF4F4"
+          },
+          "categoricalScheme": [
+            "#00A5A2",
+            "#1E3A4C",
+            "#E1A32D",
+            "#5BBFB8",
+            "#2D6B6A",
+            "#7A8E99",
+            "#8FD4D2",
+            "#1A5050"
+          ],
+          "backgroundColor": "#EEF4F4",
+          "elementBackgroundColor": "#FFFFFF",
+          "pageWidth": "large"
+        }
+      }
+    }
+  }
+}
