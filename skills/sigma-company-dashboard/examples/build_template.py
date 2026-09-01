@@ -147,7 +147,7 @@ layout=f"""<?xml version="1.0" encoding="utf-8"?>
 </Page>
 """
 theme={"colors":{"text":"#14231A","highlight":"#76B900","success":"#2E7D32","warning":"#E4B23C","danger":"#D93025","darkMode":"hidden"},
- "colorOverrides":{"backgroundCanvas":"#FFFFFF","canvasBackground":"#EEF1EA"},
+ "colorOverrides":[],  # TEMP: live colorOverrides regression, see schema-2026-08-breaking-changes.md
  "categoricalScheme":["#FFFFFF","#76B900","#3E7A00","#A3E635","#4B5563","#8E8E93"],
  "fonts":{"textFont":"Inter","dataFont":"Inter"},"pageWidth":"full","tableStyles":{"preset":"presentation","cellSpacing":"small"}}
 spec={"name":"NVIDIA — Commercial Command Center","folderId":FOLDER,"schemaVersion":1,"pages":[{"id":"pg","name":"Overview","elements":elements}],"layout":layout,"themeOverrides":theme}

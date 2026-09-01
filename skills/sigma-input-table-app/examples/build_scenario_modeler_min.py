@@ -116,7 +116,7 @@ ml=pg("model",f'''  <GridContainer elementId="c-bar" type="grid" gridColumn="1 /
 dl=pg("data","".join(f'<LayoutElement elementId="{e["id"]}" gridColumn="1 / 25" gridRow="{1+i*7} / {8+i*7}"/>' for i,e in enumerate(data_page["elements"])))
 mo=pg("createModal",'<LayoutElement elementId="mtitle" gridColumn="1 / 25" gridRow="1 / 3"/><LayoutElement elementId="ctrl-name" gridColumn="1 / 25" gridRow="3 / 5"/><LayoutElement elementId="cancelbtn" gridColumn="13 / 19" gridRow="5 / 7"/><LayoutElement elementId="createbtn" gridColumn="19 / 25" gridRow="5 / 7"/>')
 theme={"colors":{"text":"#0F2138","highlight":"#0D9488","success":GOOD,"warning":"#F59E0B","danger":BAD,"darkMode":"hidden"},
- "colorOverrides":{"backgroundCanvas":"#FFFFFF","canvasBackground":"#EEF2F5"},
+ "colorOverrides":[],  # TEMP: live colorOverrides regression, see schema-2026-08-breaking-changes.md
  "categoricalScheme":["#1E3A8A","#0D9488","#7C3AED","#F59E0B","#3B82F6","#64748B"],
  "fonts":{"textFont":"Inter","dataFont":"Inter"},"pageWidth":"full","tableStyles":{"preset":"presentation","cellSpacing":"small"}}
 spec={"name":"Scenario Modeler — Demand Planning (v2)","folderId":FOLDER,"schemaVersion":1,"pages":[model_page,data_page,modal],

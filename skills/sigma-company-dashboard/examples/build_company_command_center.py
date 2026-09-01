@@ -362,7 +362,7 @@ modal_lay='<Page type="grid" gridTemplateColumns="repeat(24,1fr)" gridTemplateRo
 # flat white card, so flip it to the brand accent when KPI_STYLE=="flat".
 _SPARK0=RED if KPI_STYLE=="flat" else "#FFFFFF"
 theme={"colors":{"text":INK,"highlight":RED,"success":"#3B7A3B","warning":ORANGE,"danger":"#EB1700","darkMode":"hidden"},
- "colorOverrides":{"backgroundCanvas":"#FFFFFF","canvasBackground":"#F4F1EF"},
+ "colorOverrides":[],  # TEMP: live colorOverrides regression, see schema-2026-08-breaking-changes.md
  "categoricalScheme":[_SPARK0,"#EB1700","#B3122E","#F0872E","#C0453A","#5B2340","#8A8F94","#2E6FB0"],
  "fonts":{"textFont":"Inter","dataFont":"Inter"},"pageWidth":"full","tableStyles":{"preset":"presentation","cellSpacing":"small"}}
 def build(mode):

@@ -377,7 +377,7 @@ DOCUMENT = {
     "settings": {"theme": {"overrides": {
         "colors": {"text": B.TEXT_DARK, "highlight": B.SOFI_BRIGHT, "success": B.GOOD,
                    "warning": B.WARN, "danger": B.BAD, "darkMode": "hidden"},
-        "colorOverrides": {"backgroundCanvas": "#FFFFFF"},
+        "colorOverrides": [],  # TEMP: live colorOverrides regression, see schema-2026-08-breaking-changes.md
         "categoricalScheme": B.CATEGORICAL,
         "space": {"unit": "small", "showElementPadding": "shown"},
     }}},

@@ -413,3 +413,39 @@ every load.
 It round-trips correctly. If inserts fail with *"Edits can only be made in draft
 mode"*, check whether the viewer is in a **Custom view** — writes are blocked
 there regardless of `inputMode`.
+
+## `colorOverrides` live-API regression (found 2026-09-01)
+
+`document.settings.theme.overrides.colorOverrides` currently rejects any real
+value on `/v2/workbooks/spec/verify` and `create`/`update`, live, on the
+production API — not a doc-drift issue on our side. Confirmed by isolating the
+field with a minimal test spec:
+
+- Sigma's own docs (help.sigmacomputing.com/reference/create-workbook-spec)
+  say the type is `map<string,string>` (an object) — e.g.
+  `{"backgroundCanvas": "#EEF2F7", "canvasBackground": "#EEF2F7"}`. That is
+  *exactly* what a real `GET /spec` on an already-published workbook returns.
+- Sending that same object back on `verify`/`create`/`update` fails:
+  `document.settings.theme.overrides.colorOverrides: Invalid ColorOverrides: object`.
+- The field now requires an **array**, but no array-item shape tried
+  (`{key,value}`, `{name,hex}`, `{colorKey,value}`, a bare string, a
+  `{kind:"theme",ref,...}` object) is accepted — every non-empty array still
+  fails with the same "Invalid ColorOverrides: object" message. Only a
+  **literal empty array** (`"colorOverrides": []`) passes.
+- Net effect: canvas-background color overrides are currently impossible to
+  set from code rep at all, full stop — there is no known working alternative
+  shape, not just a renamed field.
+
+**Workaround shipped across the skill (2026-09-01):** every builder that set
+`colorOverrides` (`build_sofi.py`, `build_statement.py`, and 8 example
+builders across sigma-cohort-builder-app, sigma-input-table-app,
+sigma-company-dashboard, and sigma-company-dashboard-v2) now sends
+`"colorOverrides": []` with a `# TEMP` comment pointing here. This means
+workbooks built right now render with Sigma's default canvas color instead of
+the intended brand-tinted background — a real, visible regression versus
+prior builds — until Sigma fixes this live. Re-verified against a real
+company (`bayport`, 203 elements/3 overlays/3 agents) with this workaround:
+`verify` and `create` both succeed end-to-end. Report this to
+#feat-code-representation before assuming any fix has shipped; re-test with
+the original object shape periodically and revert the workaround once it
+round-trips again.

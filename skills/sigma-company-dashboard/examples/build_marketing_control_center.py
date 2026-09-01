@@ -192,7 +192,7 @@ layout=f"""<?xml version="1.0" encoding="utf-8"?>
 {p2lay}
 {molay}"""
 theme={"colors":{"text":INK,"highlight":BLU,"success":GRN,"warning":"#F59E0B","danger":"#EF4444","darkMode":"hidden"},
- "colorOverrides":{"backgroundCanvas":"#FFFFFF","canvasBackground":"#F4F7FB"},
+ "colorOverrides":[],  # TEMP: live colorOverrides regression, see schema-2026-08-breaking-changes.md
  "categoricalScheme":["#FFFFFF","#22D3EE","#14B8A6","#22C55E","#8B5CF6","#F59E0B","#EC4899","#64748B"],
  "fonts":{"textFont":"Inter","dataFont":"Inter"},"pageWidth":"full","tableStyles":{"preset":"presentation","cellSpacing":"small"}}
 spec={"name":"adMarketplace — Marketing Control Center","folderId":FOLDER,"schemaVersion":1,"pages":[{"id":"pg","name":"Marketing Performance Analysis","elements":elements},{"id":"model","name":"Scenario Modeler","elements":p2},create_modal],"layout":layout,"themeOverrides":theme}

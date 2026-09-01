@@ -62,7 +62,8 @@ ml=pg("model",'<LayoutElement elementId="hdr" gridColumn="1 / 25" gridRow="1 / 5
 dl=pg("data","".join(f'<LayoutElement elementId="{e["id"]}" gridColumn="1 / 25" gridRow="{1+i*7} / {8+i*7}"/>' for i,e in enumerate(data_page["elements"])))
 mo=pg("createModal",'<LayoutElement elementId="mtitle" gridColumn="1 / 25" gridRow="1 / 3"/><LayoutElement elementId="ctrl-name" gridColumn="1 / 25" gridRow="3 / 5"/><LayoutElement elementId="cancelbtn" gridColumn="13 / 19" gridRow="5 / 7"/><LayoutElement elementId="createbtn" gridColumn="19 / 25" gridRow="5 / 7"/>')
 spec={"name":"Scenario Modeler — Styled v2","folderId":FOLDER,"schemaVersion":1,"pages":[model_page,data_page,modal],"layout":'<?xml version="1.0" encoding="utf-8"?>\n'+ml+dl+mo,
- "themeOverrides":{"colors":{"text":"#0F2138","highlight":TEAL},"colorOverrides":{"backgroundCanvas":"#FFFFFF","canvasBackground":"#EEF2F6"},"categoricalScheme":["#0A1F3B","#14B8A6","#EF4444","#64748B"],"fonts":{"textFont":"Inter","dataFont":"Inter"},"pageWidth":"full"}}
+ # colorOverrides:[] TEMP workaround for a live regression, see schema-2026-08-breaking-changes.md
+ "themeOverrides":{"colors":{"text":"#0F2138","highlight":TEAL},"colorOverrides":[],"categoricalScheme":["#0A1F3B","#14B8A6","#EF4444","#64748B"],"fonts":{"textFont":"Inter","dataFont":"Inter"},"pageWidth":"full"}}
 r=urllib.request.Request(BASE+"/v2/workbooks/spec",data=json.dumps(spec).encode(),headers=H,method="POST")
 try:
     resp=urllib.request.urlopen(r,timeout=90).read().decode()

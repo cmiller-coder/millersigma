@@ -1672,7 +1672,7 @@ for _pg in (1, 2, 3):
 SETTINGS = {"theme": {"overrides": {
     "colors": {"text": B.TEXT_DARK, "highlight": B.SOFI_BRIGHT, "success": B.GOOD,
                "warning": B.WARN, "danger": B.BAD, "darkMode": "hidden"},
-    "colorOverrides": {"backgroundCanvas": B.CANVAS, "canvasBackground": B.CANVAS},
+    "colorOverrides": [],  # TEMP: live colorOverrides regression, see schema-2026-08-breaking-changes.md
     "categoricalScheme": B.CATEGORICAL,
             "backgroundColor": B.CANVAS,
             "elementBackgroundColor": B.CARD,

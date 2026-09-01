@@ -302,7 +302,7 @@ def page2(with_agent):
     return elems,lay
 modal_lay='<Page type="grid" gridTemplateColumns="repeat(24,1fr)" gridTemplateRows="auto" id="createModal"><LayoutElement elementId="mtitle" gridColumn="1 / 25" gridRow="1 / 3"/><LayoutElement elementId="ctrl-name" gridColumn="1 / 25" gridRow="3 / 5"/><LayoutElement elementId="cancelbtn" gridColumn="13 / 19" gridRow="5 / 7"/><LayoutElement elementId="createbtn" gridColumn="19 / 25" gridRow="5 / 7"/></Page>'
 theme={"colors":{"text":INK,"highlight":CORAL,"success":"#4E8A3A","warning":"#E0A458","danger":"#C64A2E","darkMode":"hidden"},
- "colorOverrides":{"backgroundCanvas":"#FFFFFF","canvasBackground":"#F6EEE7"},
+ "colorOverrides":[],  # TEMP: live colorOverrides regression, see schema-2026-08-breaking-changes.md
  "categoricalScheme":["#FFFFFF","#E5533A","#6B7A3A","#5A2A4A","#C64A2E","#8A6F64","#E0A458","#3E7C7B"],
  "fonts":{"textFont":"Inter","dataFont":"Inter"},"pageWidth":"full","tableStyles":{"preset":"presentation","cellSpacing":"small"}}
 def build(mode):

@@ -343,7 +343,8 @@ layout_utils="""<Page type="grid" gridTemplateColumns="repeat(24,1fr)" gridTempl
 
 layout='<?xml version="1.0" encoding="utf-8"?>\n'+layout1+layout2+layout_utils
 
-theme={"colors":{"text":INK,"highlight":BLUE},"colorOverrides":{"backgroundCanvas":"#FFFFFF","canvasBackground":"#F3F5F8"},
+theme={"colors":{"text":INK,"highlight":BLUE},
+ "colorOverrides":[],  # TEMP: live colorOverrides regression, see schema-2026-08-breaking-changes.md
  "categoricalScheme":["#1B5FBF","#5A6472","#2E9B6B","#C9A94B","#B0407A"],"fonts":{"textFont":"Inter","dataFont":"Inter"},"pageWidth":"full"}
 
 spec={"name":"Cohort Builder — Proof of Concept","folderId":FOLDER,"schemaVersion":1,
