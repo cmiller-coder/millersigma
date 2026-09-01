@@ -26,16 +26,19 @@ CLI = pathlib.Path(os.environ.get("SIGMA_CLI_BIN")
                     or (pathlib.Path.home() / ".sigma-cli" / "bin" / "sigma"))
 PROFILE = os.environ.get("SIGMA_CLI_PROFILE", "papercranestaging")
 
-ORG_ID = "8c99818a-90b3-4cae-bdb7-cf69a741171a"
+# These three are org-specific and MUST be overridden via .env for any org
+# other than Connor's own papercranestaging (never commit real values for a
+# different org into these fallbacks — .env is gitignored, this file is not).
+ORG_ID = os.environ.get("SIGMA_ORG_ID", "8c99818a-90b3-4cae-bdb7-cf69a741171a")
 
 # Discovered 2026-08-07 on papercranestaging.
-FOLDER_CLAUDE_BUILDER = "a758d7ee-8c23-423d-9d60-5b635d9e9b58"
+FOLDER_CLAUDE_BUILDER = os.environ.get("SIGMA_FOLDER_ID", "a758d7ee-8c23-423d-9d60-5b635d9e9b58")
 
 # Most staging connections have disabled warehouse credentials. This one resolves
 # SQL at create time; it is also what the reference "Microsoft — Executive App"
 # workbook uses. `verify` does NOT resolve SQL, so a bad connection only surfaces
 # on create.
-CONN_SNOWFLAKE = "a9d45cfe-ff65-4515-8193-a7072602a1ee"
+CONN_SNOWFLAKE = os.environ.get("SIGMA_CONNECTION_ID", "a9d45cfe-ff65-4515-8193-a7072602a1ee")
 
 
 class SigmaError(RuntimeError):

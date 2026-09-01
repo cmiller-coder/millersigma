@@ -71,6 +71,22 @@ the `sigma-api` skill, and caches it at `/tmp/.sigma_token` (0600, 55-min TTL).
 Secrets live only in `.env` and the `Authorization` header — never in specs,
 prompts, or notes.
 
+**Using a different Sigma org than Connor's own?** `sigma-company-dashboard-v2`'s
+`sigmaapi.py` also needs your org's own folder and warehouse-connection IDs, not
+just credentials. Add these to your `.env` too — they override the fallbacks
+that only work on Connor's org:
+
+```
+SIGMA_ORG_ID=...
+SIGMA_FOLDER_ID=...        # destination folder for generated workbooks
+SIGMA_CONNECTION_ID=...    # warehouse connection used by build_sofi.py
+```
+
+Don't have these IDs handy? Ask Claude, once your base credentials work, to
+look them up via the Sigma API (folders and connections are both listable) and
+write them into `.env` for you. Because these live in `.env` (gitignored),
+`git pull` never conflicts with your org-specific setup.
+
 ## Working with the scripts
 
 `sigma-workbook-conventions` was authored to run **with a workbook project as
