@@ -8,32 +8,31 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
-  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#111114;overflow:hidden}
-  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:6px 10px;gap:8px}
-  #grid{flex:1;display:grid;grid-auto-flow:column;gap:10px;place-items:stretch;min-height:0}
-  .region{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;gap:6px}
-  .region-name{font-size:12px;font-weight:700;color:#111114;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  body{font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#0B1B3A;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:4px 8px 2px;gap:10px}
+  #grid{flex:1;display:grid;grid-auto-flow:column;gap:8px;place-items:stretch;min-height:0}
+  .region{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;gap:8px}
+  .region-name{font-size:12px;font-weight:650;letter-spacing:.01em;color:#0B1B3A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .ring-wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;min-height:0;width:100%}
-  .ring-glow{position:absolute;left:50%;top:50%;border-radius:50%;background:radial-gradient(circle, rgba(26,112,241,.4), rgba(26,112,241,0) 72%);
+  .ring-glow{position:absolute;left:50%;top:50%;border-radius:50%;background:radial-gradient(circle, rgba(27,79,214,.35), rgba(27,79,214,0) 72%);
     transform:translate(-50%,-50%);animation:glowPulse 1.7s ease-out infinite;pointer-events:none;}
   @keyframes glowPulse{
     0%{opacity:.9;transform:translate(-50%,-50%) scale(.82);}
     70%{opacity:0;transform:translate(-50%,-50%) scale(1.4);}
     100%{opacity:0;transform:translate(-50%,-50%) scale(1.4);}
   }
-  .ring-pct{font-weight:800;fill:#111114;}
-  .badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;}
-  #legend{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:16px;font-size:11px;color:#5F5F66}
-  #legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;}
+  .ring-pct{font-weight:750;fill:#0B1B3A;}
+  .badge{font-size:11px;font-weight:650;padding:3px 10px;border-radius:999px;letter-spacing:.01em;}
+  #legend{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:18px;font-size:11px;color:#5B6B7F;padding-bottom:2px}
+  #legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
 </style>
 </head>
 <body>
 <div id="wrap">
   <div id="grid"></div>
   <div id="legend">
-    <span><i class="dot" style="background:#1A70F1"></i>EV share of backlog</span>
-    <span><i class="dot" style="background:#8A8F9C"></i>Hybrid share</span>
-    <span>Glow = backlog growing &gt;25%/mo</span>
+    <span><i class="dot" style="background:#1B4FD6"></i>EV share</span>
+    <span><i class="dot" style="background:#C5CDD8"></i>Hybrid share</span>
   </div>
 </div>
 <script>
@@ -75,8 +74,8 @@
     var fontSize = 11;
     return '<div style="position:relative;width:'+size+'px;height:'+size+'px;">'+glow+
       '<svg width="'+size+'" height="'+size+'" viewBox="0 0 36 36" style="position:relative;z-index:1;">'+
-      '<circle cx="18" cy="18" r="'+r+'" fill="none" stroke="#8A8F9C" stroke-width="4.2"/>'+
-      '<circle cx="18" cy="18" r="'+r+'" fill="none" stroke="#1A70F1" stroke-width="4.2" '+
+      '<circle cx="18" cy="18" r="'+r+'" fill="none" stroke="#C5CDD8" stroke-width="4.4"/>'+
+      '<circle cx="18" cy="18" r="'+r+'" fill="none" stroke="#1B4FD6" stroke-width="4.4" '+
         'stroke-dasharray="'+evLen+' '+gap+'" stroke-dashoffset="'+(c*0.25)+'" stroke-linecap="round" transform="scale(-1,1) translate(-36,0)"/>'+
       '<text x="18" y="18" text-anchor="middle" dominant-baseline="central" class="ring-pct" '+
         'style="font-size:'+fontSize+'px;">'+Math.round(evPct)+'%</text>'+
@@ -104,7 +103,7 @@
       wrap.innerHTML =
         '<div class="region-name">'+r.region+'</div>'+
         '<div class="ring-wrap">'+ringSVG(size, evPct, r.growth_pct>25)+'</div>'+
-        '<span class="badge" style="background:'+lvl.bg+';color:'+lvl.fg+';">'+r.backlog_weeks.toFixed(1)+' wks</span>';
+        '<span class="badge" style="background:'+lvl.bg+';color:'+lvl.fg+';">'+(r.growth_pct>0?'↑ ':'↓ ')+r.backlog_weeks.toFixed(1)+' wks</span>';
       grid.appendChild(wrap);
     });
   }
