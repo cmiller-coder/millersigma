@@ -23,9 +23,22 @@ def _env() -> dict[str, str]:
             if line and not line.startswith("#") and "=" in line:
                 key, value = line.split("=", 1)
                 env[key] = value.strip("'\"")
+    # A machine often holds staging credentials in SIGMA_CLIENT_ID/SECRET while the
+    # Barton org needs its own. SIGMA_BARTON_* wins when present so the same
+    # builders publish to Barton without editing anything.
+    for key in ("CLIENT_ID", "CLIENT_SECRET", "BASE_URL"):
+        override = env.get(f"SIGMA_BARTON_{key}")
+        if override:
+            env[f"SIGMA_{key}"] = override
+
     env.setdefault("SIGMA_TOKEN_FETCHER", str(REPO / "scripts/get-token-staging.sh"))
-    if not env.get("SIGMA_BASE_URL"):
-        raise RuntimeError("SIGMA_BASE_URL is not set")
+    missing = [k for k in ("SIGMA_BASE_URL", "SIGMA_CLIENT_ID", "SIGMA_CLIENT_SECRET")
+               if not env.get(k)]
+    if missing:
+        raise RuntimeError(
+            f"missing {', '.join(missing)} — set them (or the SIGMA_BARTON_* "
+            "equivalents) for the org you are publishing to"
+        )
     return env
 
 

@@ -17,10 +17,13 @@ Creates the workbook / report on first run and updates in place afterwards
 (ids in `booked-dashboard.json` and `booked-report.json`). The dashboard build
 also exports `artifacts/booked-dashboard.png`.
 
-Requires `SIGMA_CLIENT_ID` / `SIGMA_CLIENT_SECRET` for the **Barton** org and
-`SIGMA_BASE_URL` for that org's API host (or a `.env` at the repo root).
-The cloud-agent default token is Sigma staging and cannot publish into Barton's
-folder.
+Publishing needs credentials **for the Barton org** — client id, client secret,
+and that org's API host, from environment variables or a `.env` at the repo
+root. `SIGMA_BARTON_CLIENT_ID`, `SIGMA_BARTON_CLIENT_SECRET`, and
+`SIGMA_BARTON_BASE_URL` take precedence over the plain `SIGMA_*` names, so a
+machine already holding Sigma **staging** credentials (which cannot write to
+Barton's folder — the Barton host rejects them outright) can run both targets
+without swapping anything.
 
 ## Data
 
