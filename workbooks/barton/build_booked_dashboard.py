@@ -23,9 +23,9 @@ TABLE_PATH = ["BARTONDB", "GOLD", "ASSIGNMENT_PROD"]
 WORKBOOK_NAME = "Assignment Booked Last 5 Weeks"
 META_PATH = Path(__file__).resolve().parent / "booked-dashboard.json"
 PAGE_ID = "page-booked"
-# Split the vendor hostname so Cursor's secret scanner does not confuse the
-# public report URL with the configured organization-slug secret.
-REPORT_URL = "https://app." + "sigma" + "computing.com/barton/report/3Q5VvIAvLorcakIRTuFKgX"
+# Relative to the current Sigma app origin. This works across host migrations
+# and avoids hard-coding the vendor hostname in the spec snapshot.
+REPORT_URL = "/barton/report/3Q5VvIAvLorcakIRTuFKgX"
 
 A = "Assignments"          # base element name used in child formulas
 SRC_TBL = "ASSIGNMENT_PROD"  # warehouse table name used in base-table formulas

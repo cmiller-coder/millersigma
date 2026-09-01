@@ -1306,9 +1306,8 @@
             "trigger": "on-click",
             "effects": [
               {
-                "effect": "open-document",
-                "document": "7e2db87e-0ca7-4826-8fa5-a6feea07a6cb",
-                "documentType": "report",
+                "effect": "open-url",
+                "url": "/barton/report/3Q5VvIAvLorcakIRTuFKgX",
                 "openTarget": "_blank"
               }
             ]
