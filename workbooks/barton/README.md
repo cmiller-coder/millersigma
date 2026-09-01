@@ -36,6 +36,17 @@ without swapping anything.
    the two windows — booked in the last 5 weeks *and* starting in the next 90 —
    and quietly gut both pages.
 
+### Retention
+
+A cohort retention curve — percent of a cohort still active N periods after its
+first assignment — is **not computable from this extract**. It needs a subject
+key to define "retained", and the table carries no provider, clinician, or
+client identifier; `Assignment Number` is unique per assignment. The retention
+signal the data does support is the **repeat booking rate**: the share of
+bookings that are extensions or reassignments rather than new assignments,
+trended weekly with a regression on the booked page. If Barton can expose a
+provider or client id, a real cohort curve becomes straightforward.
+
 ⚠️ The upcoming page reads `Start Date`. That column is confirmed present on
 `ASSIGNMENT_POC_TEST`; it has **not** been verified on `ASSIGNMENT_PROD`. If the
 first publish errors on it, the column name is one constant in

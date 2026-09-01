@@ -44,6 +44,10 @@ COLUMN_STANDINS = {
     "col-pay": f"[{SRC}/COST]",
     "col-created": f"[{SRC}/DATE]",
     "col-prod": '"Yes"',
+    # No "New Assignment" value exists in the sample data, so stand net-new work
+    # in with a PRODUCT_TYPE that does occur; a value that never matches leaves
+    # the repeat rate pinned at a flat 100%, which proves nothing.
+    "col-repeat": f'If([{SRC}/PRODUCT_TYPE] = "Computers", 0, 1)',
     # The sample data ends in Aug 2026, so anchor the window instead of Today().
     "col-weeks-back": (
         'DateDiff("week", DateTrunc("week", [Assignment Created Date]), '
@@ -116,7 +120,7 @@ def main() -> None:
     _, live = try_api("GET", f"/v2/workbooks/{workbook_id}/spec")
     elements = {e["id"]: e for e in (live.get("document") or live)["elements"]}
     for el_id in ("chart-booked", "chart-gm", "chart-gmpct", "chart-loa",
-                  "u-chart-starts", "u-chart-revenue"):
+                  "chart-repeat", "u-chart-starts", "u-chart-revenue"):
         if not elements.get(el_id, {}).get("trendlines"):
             raise SystemExit(f"{el_id}: trendlines did not survive the round trip")
     if not elements.get("chart-state", {}).get("label"):

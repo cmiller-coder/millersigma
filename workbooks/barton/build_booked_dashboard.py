@@ -139,6 +139,14 @@ def base_table() -> dict:
             "name": "GM Percent",
             "format": PCT,
         },
+        {
+            # Repeat business, i.e. an extension of a current placement or a
+            # provider redeployed somewhere new, as opposed to net-new work.
+            "id": "col-repeat",
+            "formula": 'If([Assignment Type] = "New Assignment", 0, 1)',
+            "name": "Repeat Booking",
+            "format": INT,
+        },
     ]
     return {
         "id": "tbl-assignments",
@@ -447,6 +455,14 @@ def build_elements() -> tuple[list[dict], str]:
                      PCT, NAVY, trend_line=True),
         weekly_chart("chart-loa", "Assignment Booked Average LOA Last 5 Weeks", "line-chart",
                      "cl-v", f"Avg([{A}/Assignment LOA])", NUM2, AMBER, trend_line=True),
+        # Repeat-booking rate. Barton's extract carries no provider or client
+        # key, so a cohort retention curve is not computable from it; the share
+        # of bookings that are extensions or reassignments is the retention
+        # signal this data does support.
+        weekly_chart("chart-repeat", "Repeat Booking Rate — Extensions & Reassignments",
+                     "line-chart", "cr-v",
+                     f"Sum([{A}/Repeat Booking]) / NullIf(Count([{A}/Assignment Number]), 0)",
+                     PCT, TEAL, trend_line=True),
         pie("pie-specialty", "Assignment Booked by Specialty Last 5 Weeks", f"[{A}/Main Specialty]"),
         pie("pie-sub", "Assignment Booked by Sub Specialty Last 5 Weeks", f"[{A}/Sub Specialty]"),
         region_map(count_formula),
@@ -503,20 +519,21 @@ def build_elements() -> tuple[list[dict], str]:
   <Element elementId="chart-gm" gridColumn="1 / 9" gridRow="18 / 30"/>
   <Element elementId="chart-gmpct" gridColumn="9 / 17" gridRow="18 / 30"/>
   <Element elementId="chart-loa" gridColumn="17 / 25" gridRow="18 / 30"/>
-  <Element elementId="pie-specialty" gridColumn="1 / 7" gridRow="30 / 46"/>
-  <Element elementId="pie-sub" gridColumn="7 / 13" gridRow="30 / 46"/>
-  <Element elementId="chart-state" gridColumn="13 / 25" gridRow="30 / 46"/>
-  <Element elementId="txt-chat" gridColumn="1 / 25" gridRow="46 / 48"/>
-  <Element elementId="chat-ask" gridColumn="1 / 25" gridRow="48 / 58"/>
-  <Element elementId="txt-summary" gridColumn="1 / 25" gridRow="58 / 61"/>
-  <Element elementId="tbl-detail" gridColumn="1 / 25" gridRow="61 / 85"/>
-  <Element elementId="kpi-total" gridColumn="1 / 5" gridRow="85 / 90"/>
-  <Element elementId="kpi-avg-gm" gridColumn="5 / 9" gridRow="85 / 90"/>
-  <Element elementId="kpi-max-gm" gridColumn="9 / 13" gridRow="85 / 90"/>
-  <Element elementId="kpi-min-gm" gridColumn="13 / 17" gridRow="85 / 90"/>
-  <Element elementId="kpi-avg-loa" gridColumn="17 / 21" gridRow="85 / 90"/>
-  <Element elementId="kpi-gm-dollars" gridColumn="21 / 25" gridRow="85 / 90"/>
-  <Element elementId="tbl-assignments" gridColumn="1 / 25" gridRow="90 / 94"/>
+  <Element elementId="chart-repeat" gridColumn="1 / 25" gridRow="30 / 42"/>
+  <Element elementId="pie-specialty" gridColumn="1 / 7" gridRow="42 / 58"/>
+  <Element elementId="pie-sub" gridColumn="7 / 13" gridRow="42 / 58"/>
+  <Element elementId="chart-state" gridColumn="13 / 25" gridRow="42 / 58"/>
+  <Element elementId="txt-chat" gridColumn="1 / 25" gridRow="58 / 60"/>
+  <Element elementId="chat-ask" gridColumn="1 / 25" gridRow="60 / 70"/>
+  <Element elementId="txt-summary" gridColumn="1 / 25" gridRow="70 / 73"/>
+  <Element elementId="tbl-detail" gridColumn="1 / 25" gridRow="73 / 97"/>
+  <Element elementId="kpi-total" gridColumn="1 / 5" gridRow="97 / 102"/>
+  <Element elementId="kpi-avg-gm" gridColumn="5 / 9" gridRow="97 / 102"/>
+  <Element elementId="kpi-max-gm" gridColumn="9 / 13" gridRow="97 / 102"/>
+  <Element elementId="kpi-min-gm" gridColumn="13 / 17" gridRow="97 / 102"/>
+  <Element elementId="kpi-avg-loa" gridColumn="17 / 21" gridRow="97 / 102"/>
+  <Element elementId="kpi-gm-dollars" gridColumn="21 / 25" gridRow="97 / 102"/>
+  <Element elementId="tbl-assignments" gridColumn="1 / 25" gridRow="102 / 106"/>
 </Page>"""
     return elements, layout
 
