@@ -422,6 +422,9 @@
         },
         "dataLabels": {
           "visibility": "visible"
+        },
+        "trendLine": {
+          "kind": "linear"
         }
       },
       {
@@ -555,7 +558,8 @@
         },
         "legend": {
           "visibility": "visible"
-        }
+        },
+        "stacking": "stacked"
       },
       {
         "id": "chart-gm",
@@ -617,6 +621,9 @@
         },
         "dataLabels": {
           "visibility": "visible"
+        },
+        "trendLine": {
+          "kind": "linear"
         }
       },
       {
@@ -679,6 +686,9 @@
         },
         "dataLabels": {
           "visibility": "visible"
+        },
+        "trendLine": {
+          "kind": "linear"
         }
       },
       {
@@ -741,6 +751,9 @@
         },
         "dataLabels": {
           "visibility": "visible"
+        },
+        "trendLine": {
+          "kind": "linear"
         }
       },
       {
@@ -835,7 +848,7 @@
       },
       {
         "id": "chart-state",
-        "kind": "bar-chart",
+        "kind": "region-map",
         "name": {
           "text": "Assignment Booked by State Last 5 Weeks",
           "fontWeight": "bold",
@@ -860,40 +873,46 @@
               "kind": "number",
               "formatString": ",.0f"
             }
-          },
-          {
-            "id": "cs-s",
-            "formula": "\"Assignments\"",
-            "name": "Series"
           }
         ],
-        "xAxis": {
-          "columnId": "cs-x",
-          "sort": {
-            "by": "cs-v",
-            "direction": "descending"
-          }
-        },
-        "yAxis": {
-          "columnIds": [
-            "cs-v"
-          ]
+        "region": {
+          "id": "cs-x",
+          "regionType": "us-state"
         },
         "color": {
-          "by": "category",
-          "column": "cs-s",
+          "by": "scale",
+          "column": "cs-v",
           "scheme": [
-            "#1E3A4C"
+            "#5BBFB8",
+            "#00A5A2",
+            "#0F2A3A"
           ]
         },
+        "dataLabels": {
+          "visibility": "visible"
+        },
         "legend": {
-          "visibility": "hidden"
+          "visibility": "visible"
         },
         "style": {
           "backgroundColor": "#FFFFFF",
           "borderColor": "#D4E8E7",
           "borderWidth": 1,
           "borderRadius": "round"
+        }
+      },
+      {
+        "id": "chat-ask",
+        "kind": "chat",
+        "agentId": "ag-barton"
+      },
+      {
+        "id": "txt-chat",
+        "kind": "text",
+        "body": "**Ask beyond the charts** \u2014 ad hoc questions against the assignment dataset.",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#1E3A4C"
         }
       },
       {
@@ -1133,6 +1152,15 @@
         },
         "columns": [
           {
+            "id": "d-link",
+            "formula": "\"Click to view file\"",
+            "name": "File Links",
+            "link": {
+              "kind": "formula",
+              "formula": "Concat(\"https://bartonassociates.lightning.force.com/lightning/r/Assignment__c/\", Text([Assignments/Assignment Number]), \"/view\")"
+            }
+          },
+          {
             "id": "d-main",
             "formula": "[Assignments/Main Specialty]",
             "name": "Main Specialty"
@@ -1218,6 +1246,7 @@
           }
         ],
         "order": [
+          "d-link",
           "d-main",
           "d-sub",
           "d-an",
@@ -1249,7 +1278,56 @@
         }
       }
     ],
-    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-booked\">\n  <Element elementId=\"txt-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Container elementId=\"container-filters\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"3 / 6\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 5\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-sub\" gridColumn=\"5 / 9\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"9 / 13\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-ae\" gridColumn=\"13 / 17\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-recruiter\" gridColumn=\"17 / 21\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-window\" gridColumn=\"21 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"chart-booked\" gridColumn=\"1 / 9\" gridRow=\"6 / 18\"/>\n  <Element elementId=\"chart-type\" gridColumn=\"9 / 17\" gridRow=\"6 / 18\"/>\n  <Element elementId=\"chart-provider\" gridColumn=\"17 / 25\" gridRow=\"6 / 18\"/>\n  <Element elementId=\"chart-gm\" gridColumn=\"1 / 9\" gridRow=\"18 / 30\"/>\n  <Element elementId=\"chart-gmpct\" gridColumn=\"9 / 17\" gridRow=\"18 / 30\"/>\n  <Element elementId=\"chart-loa\" gridColumn=\"17 / 25\" gridRow=\"18 / 30\"/>\n  <Element elementId=\"pie-specialty\" gridColumn=\"1 / 9\" gridRow=\"30 / 44\"/>\n  <Element elementId=\"pie-sub\" gridColumn=\"9 / 17\" gridRow=\"30 / 44\"/>\n  <Element elementId=\"chart-state\" gridColumn=\"17 / 25\" gridRow=\"30 / 44\"/>\n  <Element elementId=\"txt-summary\" gridColumn=\"1 / 25\" gridRow=\"44 / 47\"/>\n  <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"47 / 71\"/>\n  <Element elementId=\"kpi-total\" gridColumn=\"1 / 5\" gridRow=\"71 / 76\"/>\n  <Element elementId=\"kpi-avg-gm\" gridColumn=\"5 / 9\" gridRow=\"71 / 76\"/>\n  <Element elementId=\"kpi-max-gm\" gridColumn=\"9 / 13\" gridRow=\"71 / 76\"/>\n  <Element elementId=\"kpi-min-gm\" gridColumn=\"13 / 17\" gridRow=\"71 / 76\"/>\n  <Element elementId=\"kpi-avg-loa\" gridColumn=\"17 / 21\" gridRow=\"71 / 76\"/>\n  <Element elementId=\"kpi-gm-dollars\" gridColumn=\"21 / 25\" gridRow=\"71 / 76\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 25\" gridRow=\"76 / 80\"/>\n</Page>",
+    "agents": [
+      {
+        "id": "ag-barton",
+        "name": "Barton Analyst",
+        "description": "Ad hoc questions on assignment bookings beyond the predefined KPIs.",
+        "instructions": "You are an analyst for Barton Associates staffing assignments. Use the Assignments base table and the charts on this workbook. Default scope is production assignments in the last five week-ending buckets. Metrics: assignment count; projected billing = Bill Rate * LOA * 8; GM$ = (Bill Rate - Pay Rate) * LOA * 8; GM% = GM$ / projected billing; average LOA. Dashboard 'Assignment Type' is Extension / New Assignment / Reassignment. Provider Type is Physician / Advanced Practice Nurse / Physician Assistant / Other. Answer ad hoc requests even when the metric is not on a chart. Be concise and quantitative.",
+        "greeting": {
+          "mode": "static",
+          "message": "Ask me about bookings, GM, specialty, recruiter, or state \u2014 including questions that go beyond the charts on this page."
+        },
+        "dataSources": [
+          {
+            "kind": "table",
+            "elementId": "tbl-assignments"
+          },
+          {
+            "kind": "table",
+            "elementId": "tbl-detail"
+          },
+          {
+            "kind": "table",
+            "elementId": "chart-booked"
+          },
+          {
+            "kind": "table",
+            "elementId": "chart-state"
+          }
+        ],
+        "tools": [
+          {
+            "toolId": "t-specialty",
+            "kind": "action",
+            "name": "Focus a specialty",
+            "description": "Filter the dashboard to one main specialty.",
+            "steps": [
+              {
+                "kind": "effect",
+                "effect": "set-control-value",
+                "control": "MainSpecialty",
+                "value": {
+                  "type": "agent-input",
+                  "inputName": "Main specialty to focus on"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-booked\">\n  <Element elementId=\"txt-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Container elementId=\"container-filters\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"3 / 6\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 5\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-sub\" gridColumn=\"5 / 9\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"9 / 13\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-ae\" gridColumn=\"13 / 17\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-recruiter\" gridColumn=\"17 / 21\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-window\" gridColumn=\"21 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"chart-booked\" gridColumn=\"1 / 9\" gridRow=\"6 / 18\"/>\n  <Element elementId=\"chart-type\" gridColumn=\"9 / 17\" gridRow=\"6 / 18\"/>\n  <Element elementId=\"chart-provider\" gridColumn=\"17 / 25\" gridRow=\"6 / 18\"/>\n  <Element elementId=\"chart-gm\" gridColumn=\"1 / 9\" gridRow=\"18 / 30\"/>\n  <Element elementId=\"chart-gmpct\" gridColumn=\"9 / 17\" gridRow=\"18 / 30\"/>\n  <Element elementId=\"chart-loa\" gridColumn=\"17 / 25\" gridRow=\"18 / 30\"/>\n  <Element elementId=\"pie-specialty\" gridColumn=\"1 / 9\" gridRow=\"30 / 44\"/>\n  <Element elementId=\"pie-sub\" gridColumn=\"9 / 17\" gridRow=\"30 / 44\"/>\n  <Element elementId=\"chart-state\" gridColumn=\"17 / 25\" gridRow=\"30 / 44\"/>\n  <Element elementId=\"txt-chat\" gridColumn=\"1 / 25\" gridRow=\"44 / 46\"/>\n  <Element elementId=\"chat-ask\" gridColumn=\"1 / 25\" gridRow=\"46 / 58\"/>\n  <Element elementId=\"txt-summary\" gridColumn=\"1 / 25\" gridRow=\"58 / 61\"/>\n  <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"61 / 85\"/>\n  <Element elementId=\"kpi-total\" gridColumn=\"1 / 5\" gridRow=\"85 / 90\"/>\n  <Element elementId=\"kpi-avg-gm\" gridColumn=\"5 / 9\" gridRow=\"85 / 90\"/>\n  <Element elementId=\"kpi-max-gm\" gridColumn=\"9 / 13\" gridRow=\"85 / 90\"/>\n  <Element elementId=\"kpi-min-gm\" gridColumn=\"13 / 17\" gridRow=\"85 / 90\"/>\n  <Element elementId=\"kpi-avg-loa\" gridColumn=\"17 / 21\" gridRow=\"85 / 90\"/>\n  <Element elementId=\"kpi-gm-dollars\" gridColumn=\"21 / 25\" gridRow=\"85 / 90\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 25\" gridRow=\"90 / 94\"/>\n</Page>",
     "settings": {
       "theme": {
         "overrides": {

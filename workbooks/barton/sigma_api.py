@@ -13,12 +13,17 @@ REPO = Path(__file__).resolve().parents[2]
 
 
 def _env() -> dict[str, str]:
-    env: dict[str, str] = {}
-    for line in (REPO / ".env").read_text().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            key, value = line.split("=", 1)
-            env[key] = value.strip("'\"")
+    env: dict[str, str] = dict(os.environ)
+    env_file = REPO / ".env"
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                env[key] = value.strip("'\"")
+    env.setdefault("SIGMA_TOKEN_FETCHER", str(REPO / "scripts/get-token-staging.sh"))
+    if not env.get("SIGMA_BASE_URL"):
+        raise RuntimeError("SIGMA_BASE_URL is not set")
     return env
 
 
@@ -35,6 +40,14 @@ def _token(env: dict[str, str]) -> str:
 
 
 def api(method: str, path: str, body: dict | None = None, *, raw: bool = False):
+    status, payload = try_api(method, path, body, raw=raw)
+    if status >= 400:
+        text = payload.decode() if isinstance(payload, (bytes, bytearray)) else str(payload)
+        raise SystemExit(f"HTTP {status} on {method} {path}\n{text[:4000]}")
+    return payload
+
+
+def try_api(method: str, path: str, body: dict | None = None, *, raw: bool = False):
     env = _env()
     token = _token(env)
     data = json.dumps(body).encode() if body is not None else None
@@ -51,9 +64,14 @@ def api(method: str, path: str, body: dict | None = None, *, raw: bool = False):
     try:
         with urllib.request.urlopen(req, timeout=180) as resp:
             payload = resp.read()
-            return payload if raw else json.loads(payload)
+            return resp.status, (payload if raw else json.loads(payload))
     except urllib.error.HTTPError as exc:
-        raise SystemExit(f"HTTP {exc.code} on {method} {path}\n{exc.read().decode()[:4000]}")
+        raw_body = exc.read()
+        try:
+            parsed = json.loads(raw_body)
+        except Exception:
+            parsed = raw_body.decode()[:4000]
+        return exc.code, parsed
 
 
 def render_page_png(workbook_id: str, page_id: str, out_path: Path, timeout_s: int = 180) -> Path:

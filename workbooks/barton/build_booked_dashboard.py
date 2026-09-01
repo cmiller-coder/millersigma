@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sigma_api import REPO, api, render_page_png
+from sigma_api import REPO, render_page_png
 
 CONN = "f45a23e2-7b17-41d4-aa34-f2ed38483a53"
 FOLDER = "dc487f89-30a6-48b7-8de8-e0cce0315e1b"
@@ -196,8 +196,12 @@ def scope_control() -> dict:
 
 def weekly_chart(el_id: str, label: str, kind: str, value_id: str, formula: str,
                  fmt: dict, color: str, *, series: tuple[str, str] | None = None,
-                 stacking: str | None = None) -> dict:
-    """Week-ending trend chart; `series` adds a stacked categorical breakout."""
+                 stacking: str | None = None, trend_line: bool = False) -> dict:
+    """Week-ending trend chart; `series` adds a stacked categorical breakout.
+
+    `trend_line` is Sigma's native linear regression overlay — not a combo-chart
+    duplicate of the same metric (Megh called that out on Aug 27).
+    """
     columns = [
         {"id": f"{el_id}-x", "formula": f"[{A}/Week Label]", "name": "Week Ending"},
         {"id": value_id, "formula": formula, "name": label, "format": fmt},
@@ -224,7 +228,82 @@ def weekly_chart(el_id: str, label: str, kind: str, value_id: str, formula: str,
         el["color"] = {"by": "category", "column": f"{el_id}-s", "scheme": [color]}
         el["legend"] = {"visibility": "hidden"}
         el["dataLabels"] = {"visibility": "visible"}
+    if trend_line:
+        el["trendLine"] = {"kind": "linear"}
     return el
+
+
+def region_map(count_formula: str) -> dict:
+    """US-only choropleth of Worksite State. `us-state` drops Canada from the frame."""
+    return {
+        "id": "chart-state",
+        "kind": "region-map",
+        "name": title("Assignment Booked by State Last 5 Weeks"),
+        "source": {"kind": "table", "elementId": "tbl-assignments"},
+        "columns": [
+            {"id": "cs-x", "formula": f"[{A}/Worksite State]", "name": "State"},
+            {"id": "cs-v", "formula": count_formula, "name": "Assignments", "format": INT},
+        ],
+        "region": {"id": "cs-x", "regionType": "us-state"},
+        "color": {
+            "by": "scale",
+            "column": "cs-v",
+            "scheme": [TEAL_LIGHT, TEAL, NAVY_DEEP],
+        },
+        "dataLabels": {"visibility": "visible"},
+        "legend": {"visibility": "visible"},
+        "style": dict(CARD),
+    }
+
+
+def analyst_agent() -> dict:
+    return {
+        "id": "ag-barton",
+        "name": "Barton Analyst",
+        "description": "Ad hoc questions on assignment bookings beyond the predefined KPIs.",
+        "instructions": (
+            "You are an analyst for Barton Associates staffing assignments. "
+            "Use the Assignments base table and the charts on this workbook. "
+            "Default scope is production assignments in the last five week-ending buckets. "
+            "Metrics: assignment count; projected billing = Bill Rate * LOA * 8; "
+            "GM$ = (Bill Rate - Pay Rate) * LOA * 8; GM% = GM$ / projected billing; average LOA. "
+            "Dashboard 'Assignment Type' is Extension / New Assignment / Reassignment. "
+            "Provider Type is Physician / Advanced Practice Nurse / Physician Assistant / Other. "
+            "Answer ad hoc requests even when the metric is not on a chart. Be concise and quantitative."
+        ),
+        "greeting": {
+            "mode": "static",
+            "message": (
+                "Ask me about bookings, GM, specialty, recruiter, or state — "
+                "including questions that go beyond the charts on this page."
+            ),
+        },
+        "dataSources": [
+            {"kind": "table", "elementId": "tbl-assignments"},
+            {"kind": "table", "elementId": "tbl-detail"},
+            {"kind": "table", "elementId": "chart-booked"},
+            {"kind": "table", "elementId": "chart-state"},
+        ],
+        "tools": [
+            {
+                "toolId": "t-specialty",
+                "kind": "action",
+                "name": "Focus a specialty",
+                "description": "Filter the dashboard to one main specialty.",
+                "steps": [
+                    {
+                        "kind": "effect",
+                        "effect": "set-control-value",
+                        "control": "MainSpecialty",
+                        "value": {
+                            "type": "agent-input",
+                            "inputName": "Main specialty to focus on",
+                        },
+                    }
+                ],
+            }
+        ],
+    }
 
 
 def pie(el_id: str, label: str, dim_formula: str) -> dict:
@@ -265,6 +344,12 @@ def summary_kpi(el_id: str, name: str, formula: str, fmt: dict) -> dict:
 
 def detail_table() -> dict:
     cols = [
+        (
+            "d-link",
+            '"Click to view file"',
+            "File Links",
+            None,
+        ),
         ("d-main", f"[{A}/Main Specialty]", "Main Specialty", None),
         ("d-sub", f"[{A}/Sub Specialty]", "Sub Specialty", None),
         ("d-an", f"[{A}/Assignment Number]", "Assn #", None),
@@ -283,6 +368,14 @@ def detail_table() -> dict:
         col = {"id": cid, "formula": formula, "name": name}
         if fmt:
             col["format"] = fmt
+        if cid == "d-link":
+            col["link"] = {
+                "kind": "formula",
+                "formula": (
+                    'Concat("https://bartonassociates.lightning.force.com/lightning/r/'
+                    f'Assignment__c/", Text([{A}/Assignment Number]), "/view")'
+                ),
+            }
         columns.append(col)
     return {
         "id": "tbl-detail",
@@ -312,7 +405,7 @@ def build_elements() -> tuple[list[dict], str]:
         scope_control(),
         {"id": "container-filters", "kind": "container", "style": dict(CARD)},
         weekly_chart("chart-booked", "Assignment Booked Last 5 Weeks", "bar-chart",
-                     "cb-v", count_formula, INT, TEAL),
+                     "cb-v", count_formula, INT, TEAL, trend_line=True),
         weekly_chart("chart-type", "Assignment Booked Assignment Type Last 5 Weeks", "bar-chart",
                      "ct-v", count_formula, INT, TEAL,
                      series=("ct-s", f"[{A}/Assignment Type]"), stacking="stacked"),
@@ -320,30 +413,23 @@ def build_elements() -> tuple[list[dict], str]:
                      "cp-v", count_formula, INT, TEAL,
                      series=("cp-s", f"[{A}/Provider Type]"), stacking="stacked"),
         weekly_chart("chart-gm", "Assignment Booked GM$ Last 5 Weeks", "line-chart",
-                     "cg-v", f"Sum([{A}/GM Dollars])", CUR_S, TEAL_DARK),
+                     "cg-v", f"Sum([{A}/GM Dollars])", CUR_S, TEAL_DARK, trend_line=True),
         weekly_chart("chart-gmpct", "Assignment Booked GM% Last 5 Weeks", "line-chart",
                      "cgp-v",
                      f"Sum([{A}/GM Dollars]) / NullIf(Sum([{A}/Projected Billing]), 0)",
-                     PCT, NAVY),
+                     PCT, NAVY, trend_line=True),
         weekly_chart("chart-loa", "Assignment Booked Average LOA Last 5 Weeks", "line-chart",
-                     "cl-v", f"Avg([{A}/Assignment LOA])", NUM2, AMBER),
+                     "cl-v", f"Avg([{A}/Assignment LOA])", NUM2, AMBER, trend_line=True),
         pie("pie-specialty", "Assignment Booked by Specialty Last 5 Weeks", f"[{A}/Main Specialty]"),
         pie("pie-sub", "Assignment Booked by Sub Specialty Last 5 Weeks", f"[{A}/Sub Specialty]"),
+        region_map(count_formula),
+        {"id": "chat-ask", "kind": "chat", "agentId": "ag-barton"},
         {
-            "id": "chart-state",
-            "kind": "bar-chart",
-            "name": title("Assignment Booked by State Last 5 Weeks"),
-            "source": {"kind": "table", "elementId": "tbl-assignments"},
-            "columns": [
-                {"id": "cs-x", "formula": f"[{A}/Worksite State]", "name": "State"},
-                {"id": "cs-v", "formula": count_formula, "name": "Assignments", "format": INT},
-                {"id": "cs-s", "formula": '"Assignments"', "name": "Series"},
-            ],
-            "xAxis": {"columnId": "cs-x", "sort": {"by": "cs-v", "direction": "descending"}},
-            "yAxis": {"columnIds": ["cs-v"]},
-            "color": {"by": "category", "column": "cs-s", "scheme": [NAVY]},
-            "legend": {"visibility": "hidden"},
-            "style": dict(CARD),
+            "id": "txt-chat",
+            "kind": "text",
+            "body": "**Ask beyond the charts** — ad hoc questions against the assignment dataset.",
+            "verticalAlign": "middle",
+            "style": {"color": NAVY},
         },
         summary_kpi("kpi-total", "Booked Total", count_formula, INT),
         summary_kpi("kpi-avg-gm", "Avg GM", f"Avg([{A}/GM Percent])", PCT),
@@ -393,15 +479,17 @@ def build_elements() -> tuple[list[dict], str]:
   <Element elementId="pie-specialty" gridColumn="1 / 9" gridRow="30 / 44"/>
   <Element elementId="pie-sub" gridColumn="9 / 17" gridRow="30 / 44"/>
   <Element elementId="chart-state" gridColumn="17 / 25" gridRow="30 / 44"/>
-  <Element elementId="txt-summary" gridColumn="1 / 25" gridRow="44 / 47"/>
-  <Element elementId="tbl-detail" gridColumn="1 / 25" gridRow="47 / 71"/>
-  <Element elementId="kpi-total" gridColumn="1 / 5" gridRow="71 / 76"/>
-  <Element elementId="kpi-avg-gm" gridColumn="5 / 9" gridRow="71 / 76"/>
-  <Element elementId="kpi-max-gm" gridColumn="9 / 13" gridRow="71 / 76"/>
-  <Element elementId="kpi-min-gm" gridColumn="13 / 17" gridRow="71 / 76"/>
-  <Element elementId="kpi-avg-loa" gridColumn="17 / 21" gridRow="71 / 76"/>
-  <Element elementId="kpi-gm-dollars" gridColumn="21 / 25" gridRow="71 / 76"/>
-  <Element elementId="tbl-assignments" gridColumn="1 / 25" gridRow="76 / 80"/>
+  <Element elementId="txt-chat" gridColumn="1 / 25" gridRow="44 / 46"/>
+  <Element elementId="chat-ask" gridColumn="1 / 25" gridRow="46 / 58"/>
+  <Element elementId="txt-summary" gridColumn="1 / 25" gridRow="58 / 61"/>
+  <Element elementId="tbl-detail" gridColumn="1 / 25" gridRow="61 / 85"/>
+  <Element elementId="kpi-total" gridColumn="1 / 5" gridRow="85 / 90"/>
+  <Element elementId="kpi-avg-gm" gridColumn="5 / 9" gridRow="85 / 90"/>
+  <Element elementId="kpi-max-gm" gridColumn="9 / 13" gridRow="85 / 90"/>
+  <Element elementId="kpi-min-gm" gridColumn="13 / 17" gridRow="85 / 90"/>
+  <Element elementId="kpi-avg-loa" gridColumn="17 / 21" gridRow="85 / 90"/>
+  <Element elementId="kpi-gm-dollars" gridColumn="21 / 25" gridRow="85 / 90"/>
+  <Element elementId="tbl-assignments" gridColumn="1 / 25" gridRow="90 / 94"/>
 </Page>"""
     return elements, layout
 
@@ -413,6 +501,7 @@ def build_document() -> dict:
         "kind": "workbook",
         "pages": [{"id": PAGE_ID, "name": "Assignment Booked"}],
         "elements": elements,
+        "agents": [analyst_agent()],
         "layout": layout,
         "settings": {
             "theme": {
@@ -450,18 +539,24 @@ def main() -> None:
         json.dumps(payload, indent=2) + "\n"
     )
 
-    if workbook_id:
-        api("PUT", f"/v2/workbooks/{workbook_id}/spec", payload)
-        print("Updated", WORKBOOK_NAME, workbook_id)
-    else:
-        created = api("POST", "/v2/workbooks/spec", payload)
-        workbook_id = created.get("workbookId") or created.get("id")
-        if not workbook_id:
-            raise SystemExit(f"POST returned no workbookId: {created!r}")
-        print("Created", WORKBOOK_NAME, workbook_id)
+    from sigma_api import try_api
 
-    info = api("GET", f"/v2/workbooks/{workbook_id}")
-    url = info.get("url", "")
+    if workbook_id:
+        status, body = try_api("PUT", f"/v2/workbooks/{workbook_id}/spec", payload)
+        print("PUT", status, str(body)[:300] if status >= 400 else workbook_id)
+    else:
+        status, created = try_api("POST", "/v2/workbooks/spec", payload)
+        print("POST", status, str(created)[:300])
+        if status < 400:
+            workbook_id = created.get("workbookId") or created.get("id")
+
+    if not workbook_id or (isinstance(workbook_id, str) is False):
+        return
+    if status >= 400:
+        return
+
+    info_status, info = try_api("GET", f"/v2/workbooks/{workbook_id}")
+    url = info.get("url", "") if isinstance(info, dict) else ""
     META_PATH.write_text(
         json.dumps(
             {
