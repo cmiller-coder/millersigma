@@ -63,7 +63,7 @@ def build_document() -> dict:
         weekly_chart(
             "chart-booked",
             "Assignment Booked Last 5 Weeks",
-            "bar-chart",
+            "area-chart",
             "cb-v",
             count_formula,
             INT,
@@ -106,22 +106,31 @@ def build_document() -> dict:
         {"id": "f-rule", "kind": "divider", "style": {"color": "#D4E8E7"}},
     ]
 
+    # Usable height is the page minus BOTH margins and the two panels; content
+    # that runs past it silently spills onto a second page.
     inner_w = PAGE_W - 2 * MARGIN
+    inner_h = PAGE_H - 2 * MARGIN - HEADER_H - FOOTER_H
+    col_w = (inner_w - 20) // 2
+    charts_y, charts_h = 138, 230
+    lower_y = charts_y + charts_h + 8
+    lower_h = inner_h - lower_y
+    assert lower_y + lower_h <= inner_h, "report content overflows to a second page"
+
     layout = f"""<?xml version="1.0" encoding="utf-8"?>
 <Page id="p1">
-  <Element elementId="ctrl-window" x="{MARGIN}" y="4" width="220" height="36"/>
-  <Element elementId="p1-summary" x="{MARGIN}" y="44" width="{inner_w}" height="40"/>
-  <Element elementId="kpi-total" x="{MARGIN}" y="88" width="240" height="72"/>
-  <Element elementId="kpi-avg-gm" x="{MARGIN + 250}" y="88" width="240" height="72"/>
-  <Element elementId="kpi-avg-loa" x="{MARGIN + 500}" y="88" width="240" height="72"/>
-  <Element elementId="kpi-gm-dollars" x="{MARGIN + 750}" y="88" width="250" height="72"/>
-  <Element elementId="chart-booked" x="{MARGIN}" y="168" width="490" height="250"/>
-  <Element elementId="chart-gm" x="{MARGIN + 510}" y="168" width="490" height="250"/>
-  <Element elementId="chart-state" x="{MARGIN}" y="428" width="640" height="280"/>
-  <Element elementId="pie-specialty" x="{MARGIN + 660}" y="428" width="340" height="280"/>
+  <Element elementId="p1-summary" x="{MARGIN}" y="8" width="{inner_w}" height="30"/>
+  <Element elementId="kpi-total" x="{MARGIN}" y="70" width="240" height="60"/>
+  <Element elementId="kpi-avg-gm" x="{MARGIN + 250}" y="70" width="240" height="60"/>
+  <Element elementId="kpi-avg-loa" x="{MARGIN + 500}" y="70" width="240" height="60"/>
+  <Element elementId="kpi-gm-dollars" x="{MARGIN + 750}" y="70" width="250" height="60"/>
+  <Element elementId="chart-booked" x="{MARGIN}" y="{charts_y}" width="{col_w}" height="{charts_h}"/>
+  <Element elementId="chart-gm" x="{MARGIN + col_w + 20}" y="{charts_y}" width="{col_w}" height="{charts_h}"/>
+  <Element elementId="chart-state" x="{MARGIN}" y="{lower_y}" width="640" height="{lower_h}"/>
+  <Element elementId="pie-specialty" x="{MARGIN + 660}" y="{lower_y}" width="{inner_w - 660}" height="{lower_h}"/>
 </Page>
 <Page id="pdata">
   <Element elementId="tbl-assignments" x="{MARGIN}" y="0" width="{inner_w}" height="400"/>
+  <Element elementId="ctrl-window" x="{MARGIN}" y="410" width="220" height="30"/>
 </Page>
 <Panel id="global-header" type="header">
   <Element elementId="h-title" x="{MARGIN}" y="8" width="640" height="28"/>

@@ -56,6 +56,11 @@ RATE = {"kind": "number", "formatString": "$,.2f"}
 PCT = {"kind": "number", "formatString": ",.2%"}
 DATE = {"kind": "datetime", "formatString": "%Y-%m-%d"}
 
+# Worksite State holds two-letter codes. These are dropped from the map tile
+# only, to keep the auto-fitted frame on the lower 48; blank covers the rows
+# with no worksite captured, which otherwise render as a "1 missing" badge.
+OFF_MAP_STATES = ["AK", "HI", "PR", "VI", "GU", "AS", "MP", "", None]
+
 # Production assignments booked within the trailing 5 week-ending buckets.
 WINDOW_LABEL = "Last 5 Weeks"
 SCOPE_FORMULA = (
@@ -266,7 +271,7 @@ def region_map(count_formula: str) -> dict:
     return {
         "id": "chart-state",
         "kind": "region-map",
-        "name": title("Assignment Booked by State Last 5 Weeks"),
+        "name": title("Assignment Booked by State — Contiguous US"),
         "source": {"kind": "table", "elementId": "tbl-assignments"},
         "columns": [
             {"id": "cs-x", "formula": f"[{A}/Worksite State]", "name": "State"},
@@ -280,6 +285,18 @@ def region_map(count_formula: str) -> dict:
             "scheme": [TEAL_LIGHT, TEAL, NAVY_DEEP],
         },
         "label": [{"id": "cs-lbl"}],
+        # Sigma auto-fits the map to whatever regions are present and the spec
+        # exposes no center/zoom, so a handful of Alaska rows drag the frame out
+        # far enough to fill it with Canada — the exact thing Megh objected to.
+        # Excluding the non-contiguous states pins it to the lower 48; the
+        # element title says so, and every other tile still counts them.
+        "filters": [{
+            "id": "cs-filter-contiguous",
+            "columnId": "cs-x",
+            "kind": "list",
+            "mode": "exclude",
+            "values": OFF_MAP_STATES,
+        }],
         # The printed values carry the number, so the color scale legend is just
         # furniture — and it overlaps the element title. Maps take `visibility`;
         # `position` is rejected on this kind.

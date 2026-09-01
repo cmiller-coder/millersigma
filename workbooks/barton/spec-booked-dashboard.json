@@ -959,7 +959,7 @@
         "id": "chart-state",
         "kind": "region-map",
         "name": {
-          "text": "Assignment Booked by State Last 5 Weeks",
+          "text": "Assignment Booked by State \u2014 Contiguous US",
           "fontWeight": "bold",
           "fontSize": 14,
           "color": "#41454D"
@@ -1009,6 +1009,25 @@
         "label": [
           {
             "id": "cs-lbl"
+          }
+        ],
+        "filters": [
+          {
+            "id": "cs-filter-contiguous",
+            "columnId": "cs-x",
+            "kind": "list",
+            "mode": "exclude",
+            "values": [
+              "AK",
+              "HI",
+              "PR",
+              "VI",
+              "GU",
+              "AS",
+              "MP",
+              "",
+              null
+            ]
           }
         ],
         "legend": {
