@@ -25,6 +25,22 @@ machine already holding Sigma **staging** credentials (which cannot write to
 Barton's folder — the Barton host rejects them outright) can run both targets
 without swapping anything.
 
+## Pages
+
+1. **Assignment Booked** — the Domo tile recreated: last 5 weeks, weekly trends
+   with regression, specialty pies, US state map, detail table, chat.
+2. **Upcoming Assignments** (`upcoming_page.py`) — the Aug 24 ask: everything
+   starting in the next 90 days, weekly or monthly by specialty, with expected
+   revenue and GM. It has **its own** warehouse table element. Control filters
+   cascade to every child of their target, so sharing one table would intersect
+   the two windows — booked in the last 5 weeks *and* starting in the next 90 —
+   and quietly gut both pages.
+
+⚠️ The upcoming page reads `Start Date`. That column is confirmed present on
+`ASSIGNMENT_POC_TEST`; it has **not** been verified on `ASSIGNMENT_PROD`. If the
+first publish errors on it, the column name is one constant in
+`upcoming_page.base_table()`.
+
 ## Data
 
 `BARTONDB.GOLD.ASSIGNMENT_PROD` on the *Snowflake POC* connection.

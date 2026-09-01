@@ -522,14 +522,21 @@ def build_elements() -> tuple[list[dict], str]:
 
 
 def build_document() -> dict:
+    # Imported here, not at module scope: the upcoming page pulls this module's
+    # palette and warehouse constants, so a top-level import would be circular.
+    import upcoming_page
+
     elements, layout = build_elements()
     return {
         "schemaVersion": 1,
         "kind": "workbook",
-        "pages": [{"id": PAGE_ID, "name": "Assignment Booked"}],
-        "elements": elements,
+        "pages": [
+            {"id": PAGE_ID, "name": "Assignment Booked"},
+            {"id": upcoming_page.PAGE_ID, "name": "Upcoming Assignments"},
+        ],
+        "elements": elements + upcoming_page.elements(),
         "agents": [analyst_agent()],
-        "layout": layout,
+        "layout": layout + "\n" + upcoming_page.LAYOUT,
         "settings": {
             "theme": {
                 "overrides": {
