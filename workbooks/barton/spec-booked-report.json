@@ -116,6 +116,20 @@
             "name": "Week Label"
           },
           {
+            "id": "col-chart-period",
+            "formula": "Switch([BookedGrain], \"Quarter\", DateTrunc(\"quarter\", [Assignment Created Date]), \"Month\", DateTrunc(\"month\", [Assignment Created Date]), DateAdd(\"day\", 5, DateTrunc(\"week\", [Assignment Created Date])))",
+            "name": "Chart Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "col-chart-label",
+            "formula": "Switch([BookedGrain], \"Quarter\", DateFormat(DateTrunc(\"quarter\", [Assignment Created Date]), \"%Y-%m\"), \"Month\", DateFormat(DateTrunc(\"month\", [Assignment Created Date]), \"%Y-%m\"), DateFormat(DateAdd(\"day\", 5, DateTrunc(\"week\", [Assignment Created Date])), \"%Y-%m-%d\"))",
+            "name": "Chart Label"
+          },
+          {
             "id": "col-weeks-back",
             "formula": "DateDiff(\"week\", DateTrunc(\"week\", [Assignment Created Date]), DateTrunc(\"week\", Today()))",
             "name": "Weeks Back",
@@ -126,7 +140,7 @@
           },
           {
             "id": "col-scope",
-            "formula": "If([Weeks Back] >= 0 and [Weeks Back] <= 4 and [Prod Assignment] = \"Yes\", \"Last 5 Weeks\", \"Excluded\")",
+            "formula": "If([Prod Assignment] != \"Yes\", \"Excluded\", Switch([BookedWindow], \"All\", \"Included\", \"52W\", If([Weeks Back] >= 0 and [Weeks Back] <= 51, \"Included\", \"Excluded\"), \"26W\", If([Weeks Back] >= 0 and [Weeks Back] <= 25, \"Included\", \"Excluded\"), \"13W\", If([Weeks Back] >= 0 and [Weeks Back] <= 12, \"Included\", \"Excluded\"), If([Weeks Back] >= 0 and [Weeks Back] <= 4, \"Included\", \"Excluded\")))",
             "name": "Booking Scope"
           },
           {
@@ -155,15 +169,6 @@
               "kind": "number",
               "formatString": ",.2%"
             }
-          },
-          {
-            "id": "col-repeat",
-            "formula": "If([Assignment Type] = \"New Assignment\", 0, 1)",
-            "name": "Repeat Booking",
-            "format": {
-              "kind": "number",
-              "formatString": ",.0f"
-            }
           }
         ],
         "order": [
@@ -183,12 +188,13 @@
           "col-prod",
           "col-week-ending",
           "col-week-label",
+          "col-chart-period",
+          "col-chart-label",
           "col-weeks-back",
           "col-scope",
           "col-projected-billing",
           "col-gm-dollars",
-          "col-gm-pct",
-          "col-repeat"
+          "col-gm-pct"
         ],
         "style": {
           "backgroundColor": "#FFFFFF",
@@ -198,21 +204,21 @@
         }
       },
       {
-        "id": "ctrl-window",
+        "id": "ctrl-scope",
         "kind": "control",
-        "controlId": "BookingWindow",
-        "name": "Booking window",
+        "controlId": "BookingScope",
+        "name": "Booking scope",
         "controlType": "list",
         "mode": "include",
         "selectionMode": "multiple",
         "values": [
-          "Last 5 Weeks"
+          "Included"
         ],
         "source": {
           "kind": "manual",
           "valueType": "text",
           "values": [
-            "Last 5 Weeks",
+            "Included",
             "Excluded"
           ]
         },
@@ -226,6 +232,42 @@
             "columnId": "col-scope"
           }
         ]
+      },
+      {
+        "id": "ctrl-window",
+        "kind": "control",
+        "controlId": "BookedWindow",
+        "name": "Date window",
+        "controlType": "segmented",
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "5W",
+            "13W",
+            "26W",
+            "52W",
+            "All"
+          ]
+        },
+        "value": "5W"
+      },
+      {
+        "id": "ctrl-grain",
+        "kind": "control",
+        "controlId": "BookedGrain",
+        "name": "Trend grain",
+        "controlType": "segmented",
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "Week",
+            "Month",
+            "Quarter"
+          ]
+        },
+        "value": "Week"
       },
       {
         "id": "chart-booked",
@@ -243,8 +285,8 @@
         "columns": [
           {
             "id": "chart-booked-x",
-            "formula": "[Assignments/Week Ending]",
-            "name": "Week Ending",
+            "formula": "[Assignments/Chart Period]",
+            "name": "Period",
             "format": {
               "kind": "datetime",
               "formatString": "%Y-%m-%d"
@@ -314,8 +356,8 @@
         "columns": [
           {
             "id": "chart-gm-x",
-            "formula": "[Assignments/Week Ending]",
-            "name": "Week Ending",
+            "formula": "[Assignments/Chart Period]",
+            "name": "Period",
             "format": {
               "kind": "datetime",
               "formatString": "%Y-%m-%d"
@@ -725,6 +767,6 @@
       "pageHeight": 816,
       "pageWidth": 1056
     },
-    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page id=\"p1\">\n  <Element elementId=\"p1-summary\" x=\"28\" y=\"8\" width=\"1000\" height=\"30\"/>\n  <Element elementId=\"kpi-total\" x=\"28\" y=\"70\" width=\"240\" height=\"60\"/>\n  <Element elementId=\"kpi-avg-gm\" x=\"278\" y=\"70\" width=\"240\" height=\"60\"/>\n  <Element elementId=\"kpi-avg-loa\" x=\"528\" y=\"70\" width=\"240\" height=\"60\"/>\n  <Element elementId=\"kpi-gm-dollars\" x=\"778\" y=\"70\" width=\"250\" height=\"60\"/>\n  <Element elementId=\"chart-booked\" x=\"28\" y=\"138\" width=\"490\" height=\"230\"/>\n  <Element elementId=\"chart-gm\" x=\"538\" y=\"138\" width=\"490\" height=\"230\"/>\n  <Element elementId=\"chart-state\" x=\"28\" y=\"376\" width=\"640\" height=\"292\"/>\n  <Element elementId=\"pie-specialty\" x=\"688\" y=\"376\" width=\"340\" height=\"292\"/>\n</Page>\n<Page id=\"pdata\">\n  <Element elementId=\"tbl-assignments\" x=\"28\" y=\"0\" width=\"1000\" height=\"400\"/>\n  <Element elementId=\"ctrl-window\" x=\"28\" y=\"410\" width=\"220\" height=\"30\"/>\n</Page>\n<Panel id=\"global-header\" type=\"header\">\n  <Element elementId=\"h-title\" x=\"28\" y=\"8\" width=\"640\" height=\"28\"/>\n  <Element elementId=\"h-sub\" x=\"28\" y=\"32\" width=\"640\" height=\"18\"/>\n  <Element elementId=\"h-rule\" x=\"28\" y=\"52\" width=\"1000\" height=\"2\"/>\n</Panel>\n<Panel id=\"global-footer\" type=\"footer\">\n  <Element elementId=\"f-rule\" x=\"28\" y=\"4\" width=\"1000\" height=\"2\"/>\n  <Element elementId=\"f-note\" x=\"28\" y=\"10\" width=\"1000\" height=\"22\"/>\n</Panel>\n"
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page id=\"p1\">\n  <Element elementId=\"p1-summary\" x=\"28\" y=\"8\" width=\"1000\" height=\"30\"/>\n  <Element elementId=\"kpi-total\" x=\"28\" y=\"70\" width=\"240\" height=\"60\"/>\n  <Element elementId=\"kpi-avg-gm\" x=\"278\" y=\"70\" width=\"240\" height=\"60\"/>\n  <Element elementId=\"kpi-avg-loa\" x=\"528\" y=\"70\" width=\"240\" height=\"60\"/>\n  <Element elementId=\"kpi-gm-dollars\" x=\"778\" y=\"70\" width=\"250\" height=\"60\"/>\n  <Element elementId=\"chart-booked\" x=\"28\" y=\"138\" width=\"490\" height=\"230\"/>\n  <Element elementId=\"chart-gm\" x=\"538\" y=\"138\" width=\"490\" height=\"230\"/>\n  <Element elementId=\"chart-state\" x=\"28\" y=\"376\" width=\"640\" height=\"292\"/>\n  <Element elementId=\"pie-specialty\" x=\"688\" y=\"376\" width=\"340\" height=\"292\"/>\n</Page>\n<Page id=\"pdata\">\n  <Element elementId=\"tbl-assignments\" x=\"28\" y=\"0\" width=\"1000\" height=\"400\"/>\n  <Element elementId=\"ctrl-scope\" x=\"28\" y=\"410\" width=\"220\" height=\"30\"/>\n  <Element elementId=\"ctrl-window\" x=\"258\" y=\"410\" width=\"220\" height=\"30\"/>\n  <Element elementId=\"ctrl-grain\" x=\"488\" y=\"410\" width=\"220\" height=\"30\"/>\n</Page>\n<Panel id=\"global-header\" type=\"header\">\n  <Element elementId=\"h-title\" x=\"28\" y=\"8\" width=\"640\" height=\"28\"/>\n  <Element elementId=\"h-sub\" x=\"28\" y=\"32\" width=\"640\" height=\"18\"/>\n  <Element elementId=\"h-rule\" x=\"28\" y=\"52\" width=\"1000\" height=\"2\"/>\n</Panel>\n<Panel id=\"global-footer\" type=\"footer\">\n  <Element elementId=\"f-rule\" x=\"28\" y=\"4\" width=\"1000\" height=\"2\"/>\n  <Element elementId=\"f-note\" x=\"28\" y=\"10\" width=\"1000\" height=\"22\"/>\n</Panel>\n"
   }
 }

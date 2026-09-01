@@ -115,6 +115,20 @@
             "name": "Week Label"
           },
           {
+            "id": "col-chart-period",
+            "formula": "Switch([BookedGrain], \"Quarter\", DateTrunc(\"quarter\", [Assignment Created Date]), \"Month\", DateTrunc(\"month\", [Assignment Created Date]), DateAdd(\"day\", 5, DateTrunc(\"week\", [Assignment Created Date])))",
+            "name": "Chart Period",
+            "format": {
+              "kind": "datetime",
+              "formatString": "%Y-%m-%d"
+            }
+          },
+          {
+            "id": "col-chart-label",
+            "formula": "Switch([BookedGrain], \"Quarter\", DateFormat(DateTrunc(\"quarter\", [Assignment Created Date]), \"%Y-%m\"), \"Month\", DateFormat(DateTrunc(\"month\", [Assignment Created Date]), \"%Y-%m\"), DateFormat(DateAdd(\"day\", 5, DateTrunc(\"week\", [Assignment Created Date])), \"%Y-%m-%d\"))",
+            "name": "Chart Label"
+          },
+          {
             "id": "col-weeks-back",
             "formula": "DateDiff(\"week\", DateTrunc(\"week\", [Assignment Created Date]), DateTrunc(\"week\", Today()))",
             "name": "Weeks Back",
@@ -125,7 +139,7 @@
           },
           {
             "id": "col-scope",
-            "formula": "If([Weeks Back] >= 0 and [Weeks Back] <= 4 and [Prod Assignment] = \"Yes\", \"Last 5 Weeks\", \"Excluded\")",
+            "formula": "If([Prod Assignment] != \"Yes\", \"Excluded\", Switch([BookedWindow], \"All\", \"Included\", \"52W\", If([Weeks Back] >= 0 and [Weeks Back] <= 51, \"Included\", \"Excluded\"), \"26W\", If([Weeks Back] >= 0 and [Weeks Back] <= 25, \"Included\", \"Excluded\"), \"13W\", If([Weeks Back] >= 0 and [Weeks Back] <= 12, \"Included\", \"Excluded\"), If([Weeks Back] >= 0 and [Weeks Back] <= 4, \"Included\", \"Excluded\")))",
             "name": "Booking Scope"
           },
           {
@@ -154,15 +168,6 @@
               "kind": "number",
               "formatString": ",.2%"
             }
-          },
-          {
-            "id": "col-repeat",
-            "formula": "If([Assignment Type] = \"New Assignment\", 0, 1)",
-            "name": "Repeat Booking",
-            "format": {
-              "kind": "number",
-              "formatString": ",.0f"
-            }
           }
         ],
         "order": [
@@ -182,12 +187,13 @@
           "col-prod",
           "col-week-ending",
           "col-week-label",
+          "col-chart-period",
+          "col-chart-label",
           "col-weeks-back",
           "col-scope",
           "col-projected-billing",
           "col-gm-dollars",
-          "col-gm-pct",
-          "col-repeat"
+          "col-gm-pct"
         ],
         "style": {
           "backgroundColor": "#FFFFFF",
@@ -337,21 +343,21 @@
         ]
       },
       {
-        "id": "ctrl-window",
+        "id": "ctrl-scope",
         "kind": "control",
-        "controlId": "BookingWindow",
-        "name": "Booking window",
+        "controlId": "BookingScope",
+        "name": "Booking scope",
         "controlType": "list",
         "mode": "include",
         "selectionMode": "multiple",
         "values": [
-          "Last 5 Weeks"
+          "Included"
         ],
         "source": {
           "kind": "manual",
           "valueType": "text",
           "values": [
-            "Last 5 Weeks",
+            "Included",
             "Excluded"
           ]
         },
@@ -367,6 +373,60 @@
         ]
       },
       {
+        "id": "ctrl-window",
+        "kind": "control",
+        "controlId": "BookedWindow",
+        "name": "Date window",
+        "controlType": "segmented",
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "5W",
+            "13W",
+            "26W",
+            "52W",
+            "All"
+          ]
+        },
+        "value": "5W"
+      },
+      {
+        "id": "ctrl-grain",
+        "kind": "control",
+        "controlId": "BookedGrain",
+        "name": "Trend grain",
+        "controlType": "segmented",
+        "source": {
+          "kind": "manual",
+          "valueType": "text",
+          "values": [
+            "Week",
+            "Month",
+            "Quarter"
+          ]
+        },
+        "value": "Week"
+      },
+      {
+        "id": "ctrl-date-range",
+        "kind": "control",
+        "controlId": "BookedDateRange",
+        "name": "Fine-tune dates",
+        "controlType": "date-range",
+        "mode": "between",
+        "includeNulls": "when-no-value-is-selected",
+        "filters": [
+          {
+            "source": {
+              "kind": "table",
+              "elementId": "tbl-assignments"
+            },
+            "columnId": "col-created"
+          }
+        ]
+      },
+      {
         "id": "container-filters",
         "kind": "container",
         "style": {
@@ -377,10 +437,20 @@
         }
       },
       {
+        "id": "container-ai",
+        "kind": "container",
+        "style": {
+          "backgroundColor": "#F4FBFA",
+          "borderColor": "#00A5A2",
+          "borderWidth": 2,
+          "borderRadius": "round"
+        }
+      },
+      {
         "id": "chart-booked",
         "kind": "area-chart",
         "name": {
-          "text": "Assignment Booked Last 5 Weeks",
+          "text": "Assignments Booked Trend",
           "fontWeight": "bold",
           "fontSize": 14,
           "color": "#41454D"
@@ -392,8 +462,8 @@
         "columns": [
           {
             "id": "chart-booked-x",
-            "formula": "[Assignments/Week Ending]",
-            "name": "Week Ending",
+            "formula": "[Assignments/Chart Period]",
+            "name": "Period",
             "format": {
               "kind": "datetime",
               "formatString": "%Y-%m-%d"
@@ -402,7 +472,7 @@
           {
             "id": "cb-v",
             "formula": "CountDistinct([Assignments/Assignment Number])",
-            "name": "Assignment Booked Last 5 Weeks",
+            "name": "Assignments Booked Trend",
             "format": {
               "kind": "number",
               "formatString": ",.0f"
@@ -451,7 +521,7 @@
         "id": "chart-type",
         "kind": "bar-chart",
         "name": {
-          "text": "Assignment Booked Assignment Type Last 5 Weeks",
+          "text": "Bookings by Assignment Type",
           "fontWeight": "bold",
           "fontSize": 14,
           "color": "#41454D"
@@ -463,13 +533,13 @@
         "columns": [
           {
             "id": "chart-type-x",
-            "formula": "[Assignments/Week Label]",
-            "name": "Week Ending"
+            "formula": "[Assignments/Chart Label]",
+            "name": "Period"
           },
           {
             "id": "ct-v",
             "formula": "CountDistinct([Assignments/Assignment Number])",
-            "name": "Assignment Booked Assignment Type Last 5 Weeks",
+            "name": "Bookings by Assignment Type",
             "format": {
               "kind": "number",
               "formatString": ",.0f"
@@ -518,7 +588,7 @@
         "id": "chart-provider",
         "kind": "bar-chart",
         "name": {
-          "text": "Assignment Booked Provider Type Last 5 Weeks",
+          "text": "Bookings by Provider Type",
           "fontWeight": "bold",
           "fontSize": 14,
           "color": "#41454D"
@@ -530,13 +600,13 @@
         "columns": [
           {
             "id": "chart-provider-x",
-            "formula": "[Assignments/Week Label]",
-            "name": "Week Ending"
+            "formula": "[Assignments/Chart Label]",
+            "name": "Period"
           },
           {
             "id": "cp-v",
             "formula": "CountDistinct([Assignments/Assignment Number])",
-            "name": "Assignment Booked Provider Type Last 5 Weeks",
+            "name": "Bookings by Provider Type",
             "format": {
               "kind": "number",
               "formatString": ",.0f"
@@ -585,7 +655,7 @@
         "id": "chart-gm",
         "kind": "line-chart",
         "name": {
-          "text": "Assignment Booked GM$ Last 5 Weeks",
+          "text": "GM$ Trend",
           "fontWeight": "bold",
           "fontSize": 14,
           "color": "#41454D"
@@ -597,8 +667,8 @@
         "columns": [
           {
             "id": "chart-gm-x",
-            "formula": "[Assignments/Week Ending]",
-            "name": "Week Ending",
+            "formula": "[Assignments/Chart Period]",
+            "name": "Period",
             "format": {
               "kind": "datetime",
               "formatString": "%Y-%m-%d"
@@ -607,7 +677,7 @@
           {
             "id": "cg-v",
             "formula": "Sum([Assignments/GM Dollars])",
-            "name": "Assignment Booked GM$ Last 5 Weeks",
+            "name": "GM$ Trend",
             "format": {
               "kind": "number",
               "formatString": "$.4~s"
@@ -656,7 +726,7 @@
         "id": "chart-gmpct",
         "kind": "line-chart",
         "name": {
-          "text": "Assignment Booked GM% Last 5 Weeks",
+          "text": "GM% Trend",
           "fontWeight": "bold",
           "fontSize": 14,
           "color": "#41454D"
@@ -668,8 +738,8 @@
         "columns": [
           {
             "id": "chart-gmpct-x",
-            "formula": "[Assignments/Week Ending]",
-            "name": "Week Ending",
+            "formula": "[Assignments/Chart Period]",
+            "name": "Period",
             "format": {
               "kind": "datetime",
               "formatString": "%Y-%m-%d"
@@ -678,7 +748,7 @@
           {
             "id": "cgp-v",
             "formula": "Sum([Assignments/GM Dollars]) / NullIf(Sum([Assignments/Projected Billing]), 0)",
-            "name": "Assignment Booked GM% Last 5 Weeks",
+            "name": "GM% Trend",
             "format": {
               "kind": "number",
               "formatString": ",.2%"
@@ -727,7 +797,7 @@
         "id": "chart-loa",
         "kind": "line-chart",
         "name": {
-          "text": "Assignment Booked Average LOA Last 5 Weeks",
+          "text": "Average LOA Trend",
           "fontWeight": "bold",
           "fontSize": 14,
           "color": "#41454D"
@@ -739,8 +809,8 @@
         "columns": [
           {
             "id": "chart-loa-x",
-            "formula": "[Assignments/Week Ending]",
-            "name": "Week Ending",
+            "formula": "[Assignments/Chart Period]",
+            "name": "Period",
             "format": {
               "kind": "datetime",
               "formatString": "%Y-%m-%d"
@@ -749,7 +819,7 @@
           {
             "id": "cl-v",
             "formula": "Avg([Assignments/Assignment LOA])",
-            "name": "Assignment Booked Average LOA Last 5 Weeks",
+            "name": "Average LOA Trend",
             "format": {
               "kind": "number",
               "formatString": ",.2f"
@@ -795,81 +865,10 @@
         ]
       },
       {
-        "id": "chart-repeat",
-        "kind": "line-chart",
-        "name": {
-          "text": "Repeat Booking Rate \u2014 Extensions & Reassignments",
-          "fontWeight": "bold",
-          "fontSize": 14,
-          "color": "#41454D"
-        },
-        "source": {
-          "kind": "table",
-          "elementId": "tbl-assignments"
-        },
-        "columns": [
-          {
-            "id": "chart-repeat-x",
-            "formula": "[Assignments/Week Ending]",
-            "name": "Week Ending",
-            "format": {
-              "kind": "datetime",
-              "formatString": "%Y-%m-%d"
-            }
-          },
-          {
-            "id": "cr-v",
-            "formula": "Sum([Assignments/Repeat Booking]) / NullIf(Count([Assignments/Assignment Number]), 0)",
-            "name": "Repeat Booking Rate \u2014 Extensions & Reassignments",
-            "format": {
-              "kind": "number",
-              "formatString": ",.2%"
-            }
-          }
-        ],
-        "xAxis": {
-          "columnId": "chart-repeat-x"
-        },
-        "yAxis": {
-          "columnIds": [
-            "cr-v"
-          ]
-        },
-        "style": {
-          "backgroundColor": "#FFFFFF",
-          "borderColor": "#D4E8E7",
-          "borderWidth": 1,
-          "borderRadius": "round"
-        },
-        "stacking": "none",
-        "legend": {
-          "visibility": "hidden"
-        },
-        "dataLabel": {
-          "labels": "shown",
-          "fontSize": 11
-        },
-        "trendlines": [
-          {
-            "columnId": "cr-v",
-            "model": "linear",
-            "line": {
-              "style": "dashed",
-              "width": 2,
-              "color": "#0F2A3A"
-            },
-            "label": {
-              "visibility": "shown",
-              "text": "Linear regression"
-            }
-          }
-        ]
-      },
-      {
         "id": "pie-specialty",
         "kind": "pie-chart",
         "name": {
-          "text": "Assignment Booked by Specialty Last 5 Weeks",
+          "text": "Bookings by Specialty",
           "fontWeight": "bold",
           "fontSize": 14,
           "color": "#41454D"
@@ -914,7 +913,7 @@
         "id": "pie-sub",
         "kind": "pie-chart",
         "name": {
-          "text": "Assignment Booked by Sub Specialty Last 5 Weeks",
+          "text": "Bookings by Sub Specialty",
           "fontWeight": "bold",
           "fontSize": 14,
           "color": "#41454D"
@@ -1052,6 +1051,17 @@
         "verticalAlign": "middle",
         "style": {
           "color": "#1E3A4C"
+        }
+      },
+      {
+        "id": "txt-ai-prompt",
+        "kind": "text",
+        "body": "**Try asking**\n\n\u2022 Which specialties gained momentum?\n\n\u2022 Where is GM% deteriorating?\n\n\u2022 Compare recruiters by bookings and GM$.",
+        "verticalAlign": "start",
+        "style": {
+          "color": "#41454D",
+          "backgroundColor": "#EAF8F6",
+          "borderRadius": "round"
         }
       },
       {
@@ -1270,17 +1280,46 @@
       {
         "id": "txt-title",
         "kind": "text",
-        "body": "## Assignment Booked \u2014 Last 5 Weeks",
+        "body": "## Assignment Performance",
         "verticalAlign": "middle",
         "style": {
           "color": "#1E3A4C"
         }
       },
       {
+        "id": "txt-subtitle",
+        "kind": "text",
+        "body": "Production assignments \u00b7 live Snowflake data \u00b7 choose a preset, then optionally fine-tune an exact date range",
+        "verticalAlign": "middle",
+        "style": {
+          "color": "#6B7B85"
+        }
+      },
+      {
+        "id": "btn-report",
+        "kind": "button",
+        "text": "Open client-ready report \u2197",
+        "appearance": "filled",
+        "actions": [
+          {
+            "id": "a-open-report",
+            "trigger": "on-click",
+            "effects": [
+              {
+                "effect": "open-document",
+                "document": "7e2db87e-0ca7-4826-8fa5-a6feea07a6cb",
+                "documentType": "report",
+                "openTarget": "_blank"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "id": "tbl-detail",
         "kind": "table",
         "name": {
-          "text": "Total Assignment Booked Last 5 Weeks",
+          "text": "Assignment Detail",
           "fontWeight": "bold",
           "fontSize": 14,
           "color": "#41454D"
@@ -2309,10 +2348,10 @@
         "id": "ag-barton",
         "name": "Barton Analyst",
         "description": "Ad hoc questions on assignment bookings beyond the predefined KPIs.",
-        "instructions": "You are an analyst for Barton Associates staffing assignments. Use the Assignments base table and the charts on this workbook. Default scope is production assignments in the last five week-ending buckets. Metrics: assignment count; projected billing = Bill Rate * LOA * 8; GM$ = (Bill Rate - Pay Rate) * LOA * 8; GM% = GM$ / projected billing; average LOA. Dashboard 'Assignment Type' is Extension / New Assignment / Reassignment. Provider Type is Physician / Advanced Practice Nurse / Physician Assistant / Other. Answer ad hoc requests even when the metric is not on a chart. Be concise and quantitative.",
+        "instructions": "You are an analyst for Barton Associates staffing assignments. Use the Assignments base table and the charts on this workbook. The reader controls the production-assignment window (5W, 13W, 26W, 52W, or All), trend grain (Week, Month, Quarter), and an optional exact date range. Metrics: assignment count; projected billing = Bill Rate * LOA * 8; GM$ = (Bill Rate - Pay Rate) * LOA * 8; GM% = GM$ / projected billing; average LOA. Dashboard 'Assignment Type' is Extension / New Assignment / Reassignment. Provider Type is Physician / Advanced Practice Nurse / Physician Assistant / Other. Answer ad hoc requests even when the metric is not on a chart. Be concise and quantitative.",
         "greeting": {
           "mode": "static",
-          "message": "Ask me about bookings, GM, specialty, recruiter, or state \u2014 including questions that go beyond the charts on this page."
+          "message": "Ask me about bookings, GM, specialty, recruiter, or state \u2014 including questions that go beyond the charts. I can also focus a specialty."
         },
         "dataSources": [
           {
@@ -2353,7 +2392,7 @@
         ]
       }
     ],
-    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-booked\">\n  <Element elementId=\"txt-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Container elementId=\"container-filters\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"3 / 6\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 5\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-sub\" gridColumn=\"5 / 9\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"9 / 13\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-ae\" gridColumn=\"13 / 17\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-recruiter\" gridColumn=\"17 / 21\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-window\" gridColumn=\"21 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"chart-booked\" gridColumn=\"1 / 9\" gridRow=\"6 / 18\"/>\n  <Element elementId=\"chart-type\" gridColumn=\"9 / 17\" gridRow=\"6 / 18\"/>\n  <Element elementId=\"chart-provider\" gridColumn=\"17 / 25\" gridRow=\"6 / 18\"/>\n  <Element elementId=\"chart-gm\" gridColumn=\"1 / 9\" gridRow=\"18 / 30\"/>\n  <Element elementId=\"chart-gmpct\" gridColumn=\"9 / 17\" gridRow=\"18 / 30\"/>\n  <Element elementId=\"chart-loa\" gridColumn=\"17 / 25\" gridRow=\"18 / 30\"/>\n  <Element elementId=\"chart-repeat\" gridColumn=\"1 / 25\" gridRow=\"30 / 42\"/>\n  <Element elementId=\"pie-specialty\" gridColumn=\"1 / 7\" gridRow=\"42 / 58\"/>\n  <Element elementId=\"pie-sub\" gridColumn=\"7 / 13\" gridRow=\"42 / 58\"/>\n  <Element elementId=\"chart-state\" gridColumn=\"13 / 25\" gridRow=\"42 / 58\"/>\n  <Element elementId=\"txt-chat\" gridColumn=\"1 / 25\" gridRow=\"58 / 60\"/>\n  <Element elementId=\"chat-ask\" gridColumn=\"1 / 25\" gridRow=\"60 / 70\"/>\n  <Element elementId=\"txt-summary\" gridColumn=\"1 / 25\" gridRow=\"70 / 73\"/>\n  <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"73 / 97\"/>\n  <Element elementId=\"kpi-total\" gridColumn=\"1 / 5\" gridRow=\"97 / 102\"/>\n  <Element elementId=\"kpi-avg-gm\" gridColumn=\"5 / 9\" gridRow=\"97 / 102\"/>\n  <Element elementId=\"kpi-max-gm\" gridColumn=\"9 / 13\" gridRow=\"97 / 102\"/>\n  <Element elementId=\"kpi-min-gm\" gridColumn=\"13 / 17\" gridRow=\"97 / 102\"/>\n  <Element elementId=\"kpi-avg-loa\" gridColumn=\"17 / 21\" gridRow=\"97 / 102\"/>\n  <Element elementId=\"kpi-gm-dollars\" gridColumn=\"21 / 25\" gridRow=\"97 / 102\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"1 / 25\" gridRow=\"102 / 106\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-upcoming\">\n  <Element elementId=\"u-txt-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Container elementId=\"u-container-filters\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"3 / 6\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"u-ctrl-specialty\" gridColumn=\"1 / 6\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-type\" gridColumn=\"6 / 11\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-ae\" gridColumn=\"11 / 16\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-window\" gridColumn=\"16 / 21\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-grain\" gridColumn=\"21 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"u-kpi-count\" gridColumn=\"1 / 6\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-revenue\" gridColumn=\"6 / 11\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-gm\" gridColumn=\"11 / 16\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-gm-pct\" gridColumn=\"16 / 21\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-loa\" gridColumn=\"21 / 25\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-txt-summary\" gridColumn=\"1 / 25\" gridRow=\"11 / 14\"/>\n  <Element elementId=\"u-chart-starts\" gridColumn=\"1 / 13\" gridRow=\"14 / 28\"/>\n  <Element elementId=\"u-chart-revenue\" gridColumn=\"13 / 25\" gridRow=\"14 / 28\"/>\n  <Element elementId=\"u-chart-specialty\" gridColumn=\"1 / 13\" gridRow=\"28 / 44\"/>\n  <Element elementId=\"u-chart-rank\" gridColumn=\"13 / 25\" gridRow=\"28 / 44\"/>\n  <Element elementId=\"tbl-upcoming-detail\" gridColumn=\"1 / 25\" gridRow=\"44 / 68\"/>\n  <Element elementId=\"tbl-upcoming\" gridColumn=\"1 / 25\" gridRow=\"68 / 72\"/>\n</Page>",
+    "layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-booked\">\n  <Element elementId=\"txt-title\" gridColumn=\"1 / 18\" gridRow=\"1 / 3\"/>\n  <Element elementId=\"txt-subtitle\" gridColumn=\"1 / 18\" gridRow=\"3 / 5\"/>\n  <Element elementId=\"btn-report\" gridColumn=\"19 / 25\" gridRow=\"2 / 5\"/>\n  <Container elementId=\"container-filters\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"5 / 12\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"ctrl-specialty\" gridColumn=\"1 / 6\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-sub\" gridColumn=\"6 / 11\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-type\" gridColumn=\"11 / 16\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-ae\" gridColumn=\"16 / 21\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-recruiter\" gridColumn=\"21 / 25\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"ctrl-window\" gridColumn=\"1 / 9\" gridRow=\"4 / 7\"/>\n    <Element elementId=\"ctrl-grain\" gridColumn=\"9 / 17\" gridRow=\"4 / 7\"/>\n    <Element elementId=\"ctrl-date-range\" gridColumn=\"17 / 25\" gridRow=\"4 / 7\"/>\n  </Container>\n  <Element elementId=\"kpi-total\" gridColumn=\"1 / 5\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"kpi-avg-gm\" gridColumn=\"5 / 9\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"kpi-max-gm\" gridColumn=\"9 / 13\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"kpi-min-gm\" gridColumn=\"13 / 17\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"kpi-avg-loa\" gridColumn=\"17 / 21\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"kpi-gm-dollars\" gridColumn=\"21 / 25\" gridRow=\"12 / 17\"/>\n  <Element elementId=\"chart-booked\" gridColumn=\"1 / 10\" gridRow=\"17 / 31\"/>\n  <Element elementId=\"chart-type\" gridColumn=\"10 / 18\" gridRow=\"17 / 31\"/>\n  <Element elementId=\"chart-gm\" gridColumn=\"1 / 10\" gridRow=\"31 / 45\"/>\n  <Element elementId=\"chart-gmpct\" gridColumn=\"10 / 18\" gridRow=\"31 / 45\"/>\n  <Container elementId=\"container-ai\" type=\"grid\" gridColumn=\"18 / 25\" gridRow=\"17 / 45\" gridTemplateColumns=\"repeat(12, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"txt-chat\" gridColumn=\"1 / 13\" gridRow=\"1 / 3\"/>\n    <Element elementId=\"txt-ai-prompt\" gridColumn=\"1 / 13\" gridRow=\"3 / 10\"/>\n    <Element elementId=\"chat-ask\" gridColumn=\"1 / 13\" gridRow=\"10 / 28\"/>\n  </Container>\n  <Element elementId=\"chart-provider\" gridColumn=\"1 / 13\" gridRow=\"45 / 59\"/>\n  <Element elementId=\"chart-loa\" gridColumn=\"13 / 25\" gridRow=\"45 / 59\"/>\n  <Element elementId=\"pie-specialty\" gridColumn=\"1 / 7\" gridRow=\"59 / 75\"/>\n  <Element elementId=\"pie-sub\" gridColumn=\"7 / 13\" gridRow=\"59 / 75\"/>\n  <Element elementId=\"chart-state\" gridColumn=\"13 / 25\" gridRow=\"59 / 75\"/>\n  <Element elementId=\"txt-summary\" gridColumn=\"1 / 25\" gridRow=\"75 / 78\"/>\n  <Element elementId=\"tbl-detail\" gridColumn=\"1 / 25\" gridRow=\"78 / 105\"/>\n  <Element elementId=\"ctrl-scope\" gridColumn=\"1 / 7\" gridRow=\"105 / 108\"/>\n  <Element elementId=\"tbl-assignments\" gridColumn=\"7 / 25\" gridRow=\"105 / 108\"/>\n</Page>\n<Page type=\"grid\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\" id=\"page-upcoming\">\n  <Element elementId=\"u-txt-title\" gridColumn=\"1 / 25\" gridRow=\"1 / 3\"/>\n  <Container elementId=\"u-container-filters\" type=\"grid\" gridColumn=\"1 / 25\" gridRow=\"3 / 6\" gridTemplateColumns=\"repeat(24, 1fr)\" gridTemplateRows=\"auto\">\n    <Element elementId=\"u-ctrl-specialty\" gridColumn=\"1 / 6\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-type\" gridColumn=\"6 / 11\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-ae\" gridColumn=\"11 / 16\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-window\" gridColumn=\"16 / 21\" gridRow=\"1 / 4\"/>\n    <Element elementId=\"u-ctrl-grain\" gridColumn=\"21 / 25\" gridRow=\"1 / 4\"/>\n  </Container>\n  <Element elementId=\"u-kpi-count\" gridColumn=\"1 / 6\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-revenue\" gridColumn=\"6 / 11\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-gm\" gridColumn=\"11 / 16\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-gm-pct\" gridColumn=\"16 / 21\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-kpi-loa\" gridColumn=\"21 / 25\" gridRow=\"6 / 11\"/>\n  <Element elementId=\"u-txt-summary\" gridColumn=\"1 / 25\" gridRow=\"11 / 14\"/>\n  <Element elementId=\"u-chart-starts\" gridColumn=\"1 / 13\" gridRow=\"14 / 28\"/>\n  <Element elementId=\"u-chart-revenue\" gridColumn=\"13 / 25\" gridRow=\"14 / 28\"/>\n  <Element elementId=\"u-chart-specialty\" gridColumn=\"1 / 13\" gridRow=\"28 / 44\"/>\n  <Element elementId=\"u-chart-rank\" gridColumn=\"13 / 25\" gridRow=\"28 / 44\"/>\n  <Element elementId=\"tbl-upcoming-detail\" gridColumn=\"1 / 25\" gridRow=\"44 / 68\"/>\n  <Element elementId=\"tbl-upcoming\" gridColumn=\"1 / 25\" gridRow=\"68 / 72\"/>\n</Page>",
     "settings": {
       "theme": {
         "overrides": {

@@ -28,9 +28,11 @@ from build_booked_dashboard import (
     base_table,
     pie,
     region_map,
+    grain_control,
     scope_control,
     summary_kpi,
     weekly_chart,
+    window_control,
 )
 from sigma_api import REPO, try_api
 
@@ -60,6 +62,8 @@ def build_document() -> dict:
     elements = [
         base_table(),
         scope_control(),
+        window_control(),
+        grain_control(),
         weekly_chart(
             "chart-booked",
             "Assignment Booked Last 5 Weeks",
@@ -130,7 +134,9 @@ def build_document() -> dict:
 </Page>
 <Page id="pdata">
   <Element elementId="tbl-assignments" x="{MARGIN}" y="0" width="{inner_w}" height="400"/>
-  <Element elementId="ctrl-window" x="{MARGIN}" y="410" width="220" height="30"/>
+  <Element elementId="ctrl-scope" x="{MARGIN}" y="410" width="220" height="30"/>
+  <Element elementId="ctrl-window" x="{MARGIN + 230}" y="410" width="220" height="30"/>
+  <Element elementId="ctrl-grain" x="{MARGIN + 460}" y="410" width="220" height="30"/>
 </Page>
 <Panel id="global-header" type="header">
   <Element elementId="h-title" x="{MARGIN}" y="8" width="640" height="28"/>

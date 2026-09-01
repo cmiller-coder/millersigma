@@ -26,10 +26,11 @@ def _env() -> dict[str, str]:
     # A machine often holds staging credentials in SIGMA_CLIENT_ID/SECRET while the
     # Barton org needs its own. SIGMA_BARTON_* wins when present so the same
     # builders publish to Barton without editing anything.
-    for key in ("CLIENT_ID", "CLIENT_SECRET", "BASE_URL"):
-        override = env.get(f"SIGMA_BARTON_{key}")
-        if override:
-            env[f"SIGMA_{key}"] = override
+    if not env.get("SIGMA_DISABLE_BARTON_OVERRIDES"):
+        for key in ("CLIENT_ID", "CLIENT_SECRET", "BASE_URL"):
+            override = env.get(f"SIGMA_BARTON_{key}")
+            if override:
+                env[f"SIGMA_{key}"] = override
 
     env.setdefault("SIGMA_TOKEN_FETCHER", str(REPO / "scripts/get-token-staging.sh"))
     missing = [k for k in ("SIGMA_BASE_URL", "SIGMA_CLIENT_ID", "SIGMA_CLIENT_SECRET")

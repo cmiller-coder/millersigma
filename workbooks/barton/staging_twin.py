@@ -16,6 +16,8 @@ import os
 import sys
 from pathlib import Path
 
+os.environ["SIGMA_DISABLE_BARTON_OVERRIDES"] = "1"
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_booked_dashboard import PAGE_ID, build_document
 from sigma_api import REPO, render_page_png, try_api
@@ -94,6 +96,16 @@ def twin_document() -> dict:
         for column in element["columns"]:
             if column["id"] in table:
                 column["formula"] = table[column["id"]]
+    # The Barton report id does not exist in staging. Keep the button visible and
+    # action-enabled there, but send the twin to the live report URL instead of
+    # asking staging to resolve a foreign report dependency.
+    for element in doc["elements"]:
+        if element["id"] == "btn-report":
+            element["actions"][0]["effects"] = [{
+                "effect": "open-url",
+                "url": "https://example.com",
+                "openTarget": "_blank",
+            }]
     return doc
 
 
@@ -107,6 +119,10 @@ def main() -> None:
     workbook_id = meta.get("workbookId")
     if workbook_id:
         status, body = try_api("PUT", f"/v2/workbooks/{workbook_id}/spec", payload)
+        if status == 404:
+            status, body = try_api("POST", "/v2/workbooks/spec", payload)
+            if status < 400:
+                workbook_id = body.get("workbookId")
     else:
         status, body = try_api("POST", "/v2/workbooks/spec", payload)
         if status < 400:
@@ -120,7 +136,7 @@ def main() -> None:
     _, live = try_api("GET", f"/v2/workbooks/{workbook_id}/spec")
     elements = {e["id"]: e for e in (live.get("document") or live)["elements"]}
     for el_id in ("chart-booked", "chart-gm", "chart-gmpct", "chart-loa",
-                  "chart-repeat", "u-chart-starts", "u-chart-revenue"):
+                  "u-chart-starts", "u-chart-revenue"):
         if not elements.get(el_id, {}).get("trendlines"):
             raise SystemExit(f"{el_id}: trendlines did not survive the round trip")
     if not elements.get("chart-state", {}).get("label"):

@@ -23,6 +23,7 @@ TABLE_PATH = ["BARTONDB", "GOLD", "ASSIGNMENT_PROD"]
 WORKBOOK_NAME = "Assignment Booked Last 5 Weeks"
 META_PATH = Path(__file__).resolve().parent / "booked-dashboard.json"
 PAGE_ID = "page-booked"
+REPORT_ID = "7e2db87e-0ca7-4826-8fa5-a6feea07a6cb"
 
 A = "Assignments"          # base element name used in child formulas
 SRC_TBL = "ASSIGNMENT_PROD"  # warehouse table name used in base-table formulas
@@ -61,11 +62,18 @@ DATE = {"kind": "datetime", "formatString": "%Y-%m-%d"}
 # with no worksite captured, which otherwise render as a "1 missing" badge.
 OFF_MAP_STATES = ["AK", "HI", "PR", "VI", "GU", "AS", "MP", "", None]
 
-# Production assignments booked within the trailing 5 week-ending buckets.
-WINDOW_LABEL = "Last 5 Weeks"
+# Flexible window selector. The hidden scope control still does the actual row
+# filtering; this visible parameter changes which rows calculate as Included.
+WINDOW_LABEL = "5W"
+WINDOW_OPTIONS = ["5W", "13W", "26W", "52W", "All"]
 SCOPE_FORMULA = (
-    f'If([Weeks Back] >= 0 and [Weeks Back] <= 4 and [Prod Assignment] = "Yes", '
-    f'"{WINDOW_LABEL}", "Excluded")'
+    'If([Prod Assignment] != "Yes", "Excluded", '
+    'Switch([BookedWindow], '
+    '"All", "Included", '
+    '"52W", If([Weeks Back] >= 0 and [Weeks Back] <= 51, "Included", "Excluded"), '
+    '"26W", If([Weeks Back] >= 0 and [Weeks Back] <= 25, "Included", "Excluded"), '
+    '"13W", If([Weeks Back] >= 0 and [Weeks Back] <= 12, "Included", "Excluded"), '
+    'If([Weeks Back] >= 0 and [Weeks Back] <= 4, "Included", "Excluded")))'
 )
 
 
@@ -120,6 +128,27 @@ def base_table() -> dict:
             "name": "Week Label",
         },
         {
+            "id": "col-chart-period",
+            "formula": (
+                'Switch([BookedGrain], '
+                '"Quarter", DateTrunc("quarter", [Assignment Created Date]), '
+                '"Month", DateTrunc("month", [Assignment Created Date]), '
+                'DateAdd("day", 5, DateTrunc("week", [Assignment Created Date])))'
+            ),
+            "name": "Chart Period",
+            "format": DATE,
+        },
+        {
+            "id": "col-chart-label",
+            "formula": (
+                'Switch([BookedGrain], '
+                '"Quarter", DateFormat(DateTrunc("quarter", [Assignment Created Date]), "%Y-%m"), '
+                '"Month", DateFormat(DateTrunc("month", [Assignment Created Date]), "%Y-%m"), '
+                'DateFormat(DateAdd("day", 5, DateTrunc("week", [Assignment Created Date])), "%Y-%m-%d"))'
+            ),
+            "name": "Chart Label",
+        },
+        {
             "id": "col-weeks-back",
             "formula": 'DateDiff("week", DateTrunc("week", [Assignment Created Date]), DateTrunc("week", Today()))',
             "name": "Weeks Back",
@@ -143,14 +172,6 @@ def base_table() -> dict:
             "formula": "[GM Dollars] / NullIf([Projected Billing], 0)",
             "name": "GM Percent",
             "format": PCT,
-        },
-        {
-            # Repeat business, i.e. an extension of a current placement or a
-            # provider redeployed somewhere new, as opposed to net-new work.
-            "id": "col-repeat",
-            "formula": 'If([Assignment Type] = "New Assignment", 0, 1)',
-            "name": "Repeat Booking",
-            "format": INT,
         },
     ]
     return {
@@ -189,21 +210,66 @@ def list_control(el_id: str, control_id: str, name: str, column_id: str) -> dict
 
 
 def scope_control() -> dict:
-    """Drives the 5-week production-assignment window. Default value does the filtering."""
+    """Hidden include/exclude control; visible preset changes its calculated input."""
     return {
-        "id": "ctrl-window",
+        "id": "ctrl-scope",
         "kind": "control",
-        "controlId": "BookingWindow",
-        "name": "Booking window",
+        "controlId": "BookingScope",
+        "name": "Booking scope",
         "controlType": "list",
         "mode": "include",
         "selectionMode": "multiple",
-        "values": [WINDOW_LABEL],
-        "source": {"kind": "manual", "valueType": "text", "values": [WINDOW_LABEL, "Excluded"]},
+        "values": ["Included"],
+        "source": {"kind": "manual", "valueType": "text", "values": ["Included", "Excluded"]},
         "includeNulls": "never",
         "filters": [
             {"source": {"kind": "table", "elementId": "tbl-assignments"}, "columnId": "col-scope"}
         ],
+    }
+
+
+def window_control() -> dict:
+    return {
+        "id": "ctrl-window",
+        "kind": "control",
+        "controlId": "BookedWindow",
+        "name": "Date window",
+        "controlType": "segmented",
+        "source": {"kind": "manual", "valueType": "text", "values": WINDOW_OPTIONS},
+        "value": WINDOW_LABEL,
+    }
+
+
+def grain_control() -> dict:
+    return {
+        "id": "ctrl-grain",
+        "kind": "control",
+        "controlId": "BookedGrain",
+        "name": "Trend grain",
+        "controlType": "segmented",
+        "source": {
+            "kind": "manual",
+            "valueType": "text",
+            "values": ["Week", "Month", "Quarter"],
+        },
+        "value": "Week",
+    }
+
+
+def custom_date_control() -> dict:
+    """Optional exact range layered on top of the preset; blank means no extra filter."""
+    return {
+        "id": "ctrl-date-range",
+        "kind": "control",
+        "controlId": "BookedDateRange",
+        "name": "Fine-tune dates",
+        "controlType": "date-range",
+        "mode": "between",
+        "includeNulls": "when-no-value-is-selected",
+        "filters": [{
+            "source": {"kind": "table", "elementId": "tbl-assignments"},
+            "columnId": "col-created",
+        }],
     }
 
 
@@ -233,8 +299,8 @@ def weekly_chart(el_id: str, label: str, kind: str, value_id: str, formula: str,
         "style": dict(CARD),
     }
     if trend_line:
-        columns.insert(0, {"id": x_id, "formula": f"[{A}/Week Ending]",
-                           "name": "Week Ending", "format": DATE})
+        columns.insert(0, {"id": x_id, "formula": f"[{A}/Chart Period]",
+                           "name": "Period", "format": DATE})
         el["stacking"] = "none"
         el["legend"] = {"visibility": "hidden"}
         el["dataLabel"] = {"labels": "shown", "fontSize": 11}
@@ -246,7 +312,7 @@ def weekly_chart(el_id: str, label: str, kind: str, value_id: str, formula: str,
         }]
         return el
 
-    columns.insert(0, {"id": x_id, "formula": f"[{A}/Week Label]", "name": "Week Ending"})
+    columns.insert(0, {"id": x_id, "formula": f"[{A}/Chart Label]", "name": "Period"})
     if series:
         series_id, series_formula = series
         columns.append({"id": series_id, "formula": series_formula, "name": "Series"})
@@ -313,7 +379,8 @@ def analyst_agent() -> dict:
         "instructions": (
             "You are an analyst for Barton Associates staffing assignments. "
             "Use the Assignments base table and the charts on this workbook. "
-            "Default scope is production assignments in the last five week-ending buckets. "
+            "The reader controls the production-assignment window (5W, 13W, 26W, 52W, "
+            "or All), trend grain (Week, Month, Quarter), and an optional exact date range. "
             "Metrics: assignment count; projected billing = Bill Rate * LOA * 8; "
             "GM$ = (Bill Rate - Pay Rate) * LOA * 8; GM% = GM$ / projected billing; average LOA. "
             "Dashboard 'Assignment Type' is Extension / New Assignment / Reassignment. "
@@ -324,7 +391,7 @@ def analyst_agent() -> dict:
             "mode": "static",
             "message": (
                 "Ask me about bookings, GM, specialty, recruiter, or state — "
-                "including questions that go beyond the charts on this page."
+                "including questions that go beyond the charts. I can also focus a specialty."
             ),
         },
         "dataSources": [
@@ -429,7 +496,7 @@ def detail_table() -> dict:
     return {
         "id": "tbl-detail",
         "kind": "table",
-        "name": title("Total Assignment Booked Last 5 Weeks"),
+        "name": title("Assignment Detail"),
         "source": {"kind": "table", "elementId": "tbl-assignments"},
         "columns": columns,
         "order": [c["id"] for c in columns],
@@ -438,6 +505,25 @@ def detail_table() -> dict:
             {"columnId": "d-gmp", "direction": "descending"},
         ],
         "style": dict(CARD),
+    }
+
+
+def report_button() -> dict:
+    return {
+        "id": "btn-report",
+        "kind": "button",
+        "text": "Open client-ready report ↗",
+        "appearance": "filled",
+        "actions": [{
+            "id": "a-open-report",
+            "trigger": "on-click",
+            "effects": [{
+                "effect": "open-document",
+                "document": REPORT_ID,
+                "documentType": "report",
+                "openTarget": "_blank",
+            }],
+        }],
     }
 
 
@@ -452,36 +538,34 @@ def build_elements() -> tuple[list[dict], str]:
         list_control("ctrl-ae", "AccountExecutive", "AE", "col-ae"),
         list_control("ctrl-recruiter", "RecruiterName", "Recruiter", "col-recruiter"),
         scope_control(),
+        window_control(),
+        grain_control(),
+        custom_date_control(),
         {"id": "container-filters", "kind": "container", "style": dict(CARD)},
+        {"id": "container-ai", "kind": "container",
+         "style": {**CARD, "borderColor": TEAL, "borderWidth": 2,
+                   "backgroundColor": "#F4FBFA"}},
         # Area, not bar: Sigma will not fit a regression on a bar chart's
         # categorical axis, so the booked tile trades bars for a filled trend
         # that can carry the regression Megh asked for.
-        weekly_chart("chart-booked", "Assignment Booked Last 5 Weeks", "area-chart",
+        weekly_chart("chart-booked", "Assignments Booked Trend", "area-chart",
                      "cb-v", count_formula, INT, TEAL, trend_line=True),
-        weekly_chart("chart-type", "Assignment Booked Assignment Type Last 5 Weeks", "bar-chart",
+        weekly_chart("chart-type", "Bookings by Assignment Type", "bar-chart",
                      "ct-v", count_formula, INT, TEAL,
                      series=("ct-s", f"[{A}/Assignment Type]"), stacking="stacked"),
-        weekly_chart("chart-provider", "Assignment Booked Provider Type Last 5 Weeks", "bar-chart",
+        weekly_chart("chart-provider", "Bookings by Provider Type", "bar-chart",
                      "cp-v", count_formula, INT, TEAL,
                      series=("cp-s", f"[{A}/Provider Type]"), stacking="stacked"),
-        weekly_chart("chart-gm", "Assignment Booked GM$ Last 5 Weeks", "line-chart",
+        weekly_chart("chart-gm", "GM$ Trend", "line-chart",
                      "cg-v", f"Sum([{A}/GM Dollars])", CUR_S, TEAL_DARK, trend_line=True),
-        weekly_chart("chart-gmpct", "Assignment Booked GM% Last 5 Weeks", "line-chart",
+        weekly_chart("chart-gmpct", "GM% Trend", "line-chart",
                      "cgp-v",
                      f"Sum([{A}/GM Dollars]) / NullIf(Sum([{A}/Projected Billing]), 0)",
                      PCT, NAVY, trend_line=True),
-        weekly_chart("chart-loa", "Assignment Booked Average LOA Last 5 Weeks", "line-chart",
+        weekly_chart("chart-loa", "Average LOA Trend", "line-chart",
                      "cl-v", f"Avg([{A}/Assignment LOA])", NUM2, AMBER, trend_line=True),
-        # Repeat-booking rate. Barton's extract carries no provider or client
-        # key, so a cohort retention curve is not computable from it; the share
-        # of bookings that are extensions or reassignments is the retention
-        # signal this data does support.
-        weekly_chart("chart-repeat", "Repeat Booking Rate — Extensions & Reassignments",
-                     "line-chart", "cr-v",
-                     f"Sum([{A}/Repeat Booking]) / NullIf(Count([{A}/Assignment Number]), 0)",
-                     PCT, TEAL, trend_line=True),
-        pie("pie-specialty", "Assignment Booked by Specialty Last 5 Weeks", f"[{A}/Main Specialty]"),
-        pie("pie-sub", "Assignment Booked by Sub Specialty Last 5 Weeks", f"[{A}/Sub Specialty]"),
+        pie("pie-specialty", "Bookings by Specialty", f"[{A}/Main Specialty]"),
+        pie("pie-sub", "Bookings by Sub Specialty", f"[{A}/Sub Specialty]"),
         region_map(count_formula),
         {"id": "chat-ask", "kind": "chat", "agentId": "ag-barton"},
         {
@@ -490,6 +574,19 @@ def build_elements() -> tuple[list[dict], str]:
             "body": "**Ask beyond the charts** — ad hoc questions against the assignment dataset.",
             "verticalAlign": "middle",
             "style": {"color": NAVY},
+        },
+        {
+            "id": "txt-ai-prompt",
+            "kind": "text",
+            "body": (
+                "**Try asking**\n\n"
+                "• Which specialties gained momentum?\n\n"
+                "• Where is GM% deteriorating?\n\n"
+                "• Compare recruiters by bookings and GM$."
+            ),
+            "verticalAlign": "start",
+            "style": {"color": SLATE, "backgroundColor": "#EAF8F6",
+                      "borderRadius": "round"},
         },
         summary_kpi("kpi-total", "Booked Total", count_formula, INT),
         summary_kpi("kpi-avg-gm", "Avg GM", f"Avg([{A}/GM Percent])", PCT),
@@ -512,45 +609,63 @@ def build_elements() -> tuple[list[dict], str]:
         {
             "id": "txt-title",
             "kind": "text",
-            "body": "## Assignment Booked — Last 5 Weeks",
+            "body": "## Assignment Performance",
             "verticalAlign": "middle",
             "style": {"color": NAVY},
         },
+        {
+            "id": "txt-subtitle",
+            "kind": "text",
+            "body": (
+                "Production assignments · live Snowflake data · "
+                "choose a preset, then optionally fine-tune an exact date range"
+            ),
+            "verticalAlign": "middle",
+            "style": {"color": TEXT_MUTED},
+        },
+        report_button(),
         detail_table(),
     ]
 
     layout = f"""<?xml version="1.0" encoding="utf-8"?>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="{PAGE_ID}">
-  <Element elementId="txt-title" gridColumn="1 / 25" gridRow="1 / 3"/>
-  <Container elementId="container-filters" type="grid" gridColumn="1 / 25" gridRow="3 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="ctrl-specialty" gridColumn="1 / 5" gridRow="1 / 4"/>
-    <Element elementId="ctrl-sub" gridColumn="5 / 9" gridRow="1 / 4"/>
-    <Element elementId="ctrl-type" gridColumn="9 / 13" gridRow="1 / 4"/>
-    <Element elementId="ctrl-ae" gridColumn="13 / 17" gridRow="1 / 4"/>
-    <Element elementId="ctrl-recruiter" gridColumn="17 / 21" gridRow="1 / 4"/>
-    <Element elementId="ctrl-window" gridColumn="21 / 25" gridRow="1 / 4"/>
+  <Element elementId="txt-title" gridColumn="1 / 18" gridRow="1 / 3"/>
+  <Element elementId="txt-subtitle" gridColumn="1 / 18" gridRow="3 / 5"/>
+  <Element elementId="btn-report" gridColumn="19 / 25" gridRow="2 / 5"/>
+  <Container elementId="container-filters" type="grid" gridColumn="1 / 25" gridRow="5 / 12" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ctrl-specialty" gridColumn="1 / 6" gridRow="1 / 4"/>
+    <Element elementId="ctrl-sub" gridColumn="6 / 11" gridRow="1 / 4"/>
+    <Element elementId="ctrl-type" gridColumn="11 / 16" gridRow="1 / 4"/>
+    <Element elementId="ctrl-ae" gridColumn="16 / 21" gridRow="1 / 4"/>
+    <Element elementId="ctrl-recruiter" gridColumn="21 / 25" gridRow="1 / 4"/>
+    <Element elementId="ctrl-window" gridColumn="1 / 9" gridRow="4 / 7"/>
+    <Element elementId="ctrl-grain" gridColumn="9 / 17" gridRow="4 / 7"/>
+    <Element elementId="ctrl-date-range" gridColumn="17 / 25" gridRow="4 / 7"/>
   </Container>
-  <Element elementId="chart-booked" gridColumn="1 / 9" gridRow="6 / 18"/>
-  <Element elementId="chart-type" gridColumn="9 / 17" gridRow="6 / 18"/>
-  <Element elementId="chart-provider" gridColumn="17 / 25" gridRow="6 / 18"/>
-  <Element elementId="chart-gm" gridColumn="1 / 9" gridRow="18 / 30"/>
-  <Element elementId="chart-gmpct" gridColumn="9 / 17" gridRow="18 / 30"/>
-  <Element elementId="chart-loa" gridColumn="17 / 25" gridRow="18 / 30"/>
-  <Element elementId="chart-repeat" gridColumn="1 / 25" gridRow="30 / 42"/>
-  <Element elementId="pie-specialty" gridColumn="1 / 7" gridRow="42 / 58"/>
-  <Element elementId="pie-sub" gridColumn="7 / 13" gridRow="42 / 58"/>
-  <Element elementId="chart-state" gridColumn="13 / 25" gridRow="42 / 58"/>
-  <Element elementId="txt-chat" gridColumn="1 / 25" gridRow="58 / 60"/>
-  <Element elementId="chat-ask" gridColumn="1 / 25" gridRow="60 / 70"/>
-  <Element elementId="txt-summary" gridColumn="1 / 25" gridRow="70 / 73"/>
-  <Element elementId="tbl-detail" gridColumn="1 / 25" gridRow="73 / 97"/>
-  <Element elementId="kpi-total" gridColumn="1 / 5" gridRow="97 / 102"/>
-  <Element elementId="kpi-avg-gm" gridColumn="5 / 9" gridRow="97 / 102"/>
-  <Element elementId="kpi-max-gm" gridColumn="9 / 13" gridRow="97 / 102"/>
-  <Element elementId="kpi-min-gm" gridColumn="13 / 17" gridRow="97 / 102"/>
-  <Element elementId="kpi-avg-loa" gridColumn="17 / 21" gridRow="97 / 102"/>
-  <Element elementId="kpi-gm-dollars" gridColumn="21 / 25" gridRow="97 / 102"/>
-  <Element elementId="tbl-assignments" gridColumn="1 / 25" gridRow="102 / 106"/>
+  <Element elementId="kpi-total" gridColumn="1 / 5" gridRow="12 / 17"/>
+  <Element elementId="kpi-avg-gm" gridColumn="5 / 9" gridRow="12 / 17"/>
+  <Element elementId="kpi-max-gm" gridColumn="9 / 13" gridRow="12 / 17"/>
+  <Element elementId="kpi-min-gm" gridColumn="13 / 17" gridRow="12 / 17"/>
+  <Element elementId="kpi-avg-loa" gridColumn="17 / 21" gridRow="12 / 17"/>
+  <Element elementId="kpi-gm-dollars" gridColumn="21 / 25" gridRow="12 / 17"/>
+  <Element elementId="chart-booked" gridColumn="1 / 10" gridRow="17 / 31"/>
+  <Element elementId="chart-type" gridColumn="10 / 18" gridRow="17 / 31"/>
+  <Element elementId="chart-gm" gridColumn="1 / 10" gridRow="31 / 45"/>
+  <Element elementId="chart-gmpct" gridColumn="10 / 18" gridRow="31 / 45"/>
+  <Container elementId="container-ai" type="grid" gridColumn="18 / 25" gridRow="17 / 45" gridTemplateColumns="repeat(12, 1fr)" gridTemplateRows="auto">
+    <Element elementId="txt-chat" gridColumn="1 / 13" gridRow="1 / 3"/>
+    <Element elementId="txt-ai-prompt" gridColumn="1 / 13" gridRow="3 / 10"/>
+    <Element elementId="chat-ask" gridColumn="1 / 13" gridRow="10 / 28"/>
+  </Container>
+  <Element elementId="chart-provider" gridColumn="1 / 13" gridRow="45 / 59"/>
+  <Element elementId="chart-loa" gridColumn="13 / 25" gridRow="45 / 59"/>
+  <Element elementId="pie-specialty" gridColumn="1 / 7" gridRow="59 / 75"/>
+  <Element elementId="pie-sub" gridColumn="7 / 13" gridRow="59 / 75"/>
+  <Element elementId="chart-state" gridColumn="13 / 25" gridRow="59 / 75"/>
+  <Element elementId="txt-summary" gridColumn="1 / 25" gridRow="75 / 78"/>
+  <Element elementId="tbl-detail" gridColumn="1 / 25" gridRow="78 / 105"/>
+  <Element elementId="ctrl-scope" gridColumn="1 / 7" gridRow="105 / 108"/>
+  <Element elementId="tbl-assignments" gridColumn="7 / 25" gridRow="105 / 108"/>
 </Page>"""
     return elements, layout
 
