@@ -10,6 +10,7 @@ file links, in-page AI chat, and a pixel-perfect PDF report.
 ```bash
 python3 workbooks/barton/build_booked_dashboard.py
 python3 workbooks/barton/build_booked_report.py
+python3 workbooks/barton/staging_twin.py   # render check against staging sample data
 ```
 
 Creates the workbook / report on first run and updates in place afterwards
@@ -63,12 +64,37 @@ control widens the page to all history.
 
 | Ask | How it is encoded |
 |---|---|
-| Linear regression (not a combo duplicate of the same series) | `trendLine: {kind: "linear"}` on booked, GM$, GM%, avg LOA |
-| US-only state map with labels | `kind: "region-map"`, `region: {id, regionType: "us-state"}`, `dataLabels` on |
+| Linear regression (not a combo duplicate of the same series) | `trendlines: [{columnId, model: "linear", line: {...}}]` on booked, GM$, GM%, avg LOA |
+| Numbers printed on each state | `region-map` with `label: [{id}]` pointing at its own copy of the count column |
 | Custom summary sentence | Unchanged `{{[KPI/Value]}}` text binding above the table |
 | Hyperlink to Salesforce | Display "Click to view file" with `link: {kind: "formula", formula: Concat(...)}`. `Hyperlink()` is not a Sigma function; `format.kind: link` is rejected. |
 | AI chat on charts + base table | `kind: "chat"` + `agents[]` with those data sources |
 | Pixel-perfect / scheduled PDF | Separate report object from `build_booked_report.py`. Schedule the email in the UI. |
+
+### Trend lines dictate the chart type
+
+Sigma only fits a regression when **all** of the following hold (matching the
+"Add trend lines" page in Sigma's help docs):
+
+- the x-axis uses a continuous scale — Time, Linear, Log, Pow, or Sqrt;
+- the chart is not stacked (`stacking: "none"` on anything that defaults to stacked);
+- the chart has no `color` encoding at all.
+
+A bar chart's axis is categorical, and `xAxis` scale fields are silently dropped
+by the spec API, so **a bar chart cannot carry a regression** — it accepts
+`trendlines` and then draws nothing. The booked tile is therefore an
+`area-chart` plotted on the datetime `Week Ending` column rather than bars. The
+color-by-constant trick used for single-color tiles also disqualifies a chart,
+so trend-line charts inherit the theme's first categorical color instead.
+
+### Verify renders, not just HTTP 200
+
+`workbooks/barton/staging_twin.py` republishes this same document against a
+Sigma staging sample table and exports the page to PNG. Chart features fail in
+three distinct ways — rejected, accepted-then-dropped, and
+accepted-and-kept-but-never-drawn — and only a render distinguishes the last
+one. `trendLine` (singular) is a live example: it passes `verify`, passes
+`create`, and disappears from `GET /spec`.
 
 ## Spec-API constraints found on this org
 
@@ -78,7 +104,9 @@ control widens the page to all history.
 | Bar/line/area/combo axes | Require `xAxis: {columnId}` / `yAxis: {columnIds: [...]}`. |
 | Series breakout | `color: {by: "category", column: "<bare id>"}`. `stacking` accepts `none` / `stacked`; `grouped` is rejected. |
 | Axis sort | `xAxis: {sort: {by: "<id>", direction: "descending"}}`. The `columnId` form is silently ignored. |
-| Region map | Supported as `region-map` (not `map-region`) with `region: {id, regionType: "us-state"}`. |
+| Region map | Supported as `region-map` (not `map-region`) with `region: {id, regionType: "us-state"}`. Value labels are `label: [{id}]`, and that column may not also be on `color` — declare the measure twice under two ids. Map legends take `visibility`; `position` is rejected. |
+| Chart value labels | `dataLabel: {labels: "shown"}` (singular). `dataLabels: {visibility: "visible"}` is accepted and dropped. |
+| Trend lines | `trendlines: [...]` (plural). `trendLine` is accepted and dropped. See the chart-type constraints above. |
 | Table `groupings` | Rejected — the detail table is flat and sorted rather than grouped with subtotals. |
 | `pivot-table` | Rejected. |
 | Link-formatted columns | `format: {kind: "link"}` is rejected; use a `Hyperlink()` formula. |

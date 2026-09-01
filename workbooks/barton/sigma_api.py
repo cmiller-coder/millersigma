@@ -1,9 +1,11 @@
 """Minimal Sigma REST helpers shared by the Barton build scripts."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -27,7 +29,19 @@ def _env() -> dict[str, str]:
     return env
 
 
+TOKEN_TTL_S = 45 * 60
+
+
 def _token(env: dict[str, str]) -> str:
+    """Bearer token, cached on disk — the auth endpoint rate-limits repeat calls."""
+    cache = Path(tempfile.gettempdir()) / (
+        ".sigma_token_" + hashlib.sha256(env["SIGMA_BASE_URL"].encode()).hexdigest()[:12]
+    )
+    if cache.exists() and time.time() - cache.stat().st_mtime < TOKEN_TTL_S:
+        cached = cache.read_text().strip()
+        if cached:
+            return cached
+
     fetcher = env.get("SIGMA_TOKEN_FETCHER", str(REPO / "scripts/get-token-staging.sh"))
     proc = subprocess.run(
         ["bash", fetcher],
@@ -36,7 +50,10 @@ def _token(env: dict[str, str]) -> str:
         env={**os.environ, **env},
         check=True,
     )
-    return proc.stdout.strip().split("=", 1)[1].strip("'\"")
+    token = proc.stdout.strip().split("=", 1)[1].strip("'\"")
+    cache.write_text(token)
+    cache.chmod(0o600)
+    return token
 
 
 def api(method: str, path: str, body: dict | None = None, *, raw: bool = False):

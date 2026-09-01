@@ -22,3 +22,6 @@ __pycache__/
 
 # Rendered verification artifacts
 artifacts/
+
+# Staging render-check workbook id (per environment)
+workbooks/barton/staging-twin.json

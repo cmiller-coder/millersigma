@@ -199,11 +199,14 @@ def weekly_chart(el_id: str, label: str, kind: str, value_id: str, formula: str,
                  stacking: str | None = None, trend_line: bool = False) -> dict:
     """Week-ending trend chart; `series` adds a stacked categorical breakout.
 
-    `trend_line` is Sigma's native linear regression overlay — not a combo-chart
-    duplicate of the same metric (Megh called that out on Aug 27).
+    A `trend_line` chart is Sigma's own linear regression overlay, not a second
+    copy of the metric. Sigma only fits a regression when the x-axis carries a
+    continuous (time) scale and the chart has no color encoding and no stacking,
+    so those charts plot the datetime Week Ending and drop the single-color
+    category trick — their series takes the theme's first categorical color.
     """
+    x_id = f"{el_id}-x"
     columns = [
-        {"id": f"{el_id}-x", "formula": f"[{A}/Week Label]", "name": "Week Ending"},
         {"id": value_id, "formula": formula, "name": label, "format": fmt},
     ]
     el: dict = {
@@ -212,29 +215,46 @@ def weekly_chart(el_id: str, label: str, kind: str, value_id: str, formula: str,
         "name": title(label),
         "source": {"kind": "table", "elementId": "tbl-assignments"},
         "columns": columns,
-        "xAxis": {"columnId": f"{el_id}-x"},
+        "xAxis": {"columnId": x_id},
         "yAxis": {"columnIds": [value_id]},
         "style": dict(CARD),
     }
+    if trend_line:
+        columns.insert(0, {"id": x_id, "formula": f"[{A}/Week Ending]",
+                           "name": "Week Ending", "format": DATE})
+        el["stacking"] = "none"
+        el["legend"] = {"visibility": "hidden"}
+        el["dataLabel"] = {"labels": "shown", "fontSize": 11}
+        el["trendlines"] = [{
+            "columnId": value_id,
+            "model": "linear",
+            "line": {"style": "dashed", "width": 2, "color": NAVY_DEEP},
+            "label": {"visibility": "shown", "text": "Linear regression"},
+        }]
+        return el
+
+    columns.insert(0, {"id": x_id, "formula": f"[{A}/Week Label]", "name": "Week Ending"})
     if series:
         series_id, series_formula = series
         columns.append({"id": series_id, "formula": series_formula, "name": "Series"})
         el["color"] = {"by": "category", "column": series_id, "scheme": CATEGORICAL}
-        el["legend"] = {"visibility": "visible"}
+        el["legend"] = {"position": "bottom"}
         if stacking:
             el["stacking"] = stacking
     else:
         columns.append({"id": f"{el_id}-s", "formula": f'"{label}"', "name": "Series"})
         el["color"] = {"by": "category", "column": f"{el_id}-s", "scheme": [color]}
         el["legend"] = {"visibility": "hidden"}
-        el["dataLabels"] = {"visibility": "visible"}
-    if trend_line:
-        el["trendLine"] = {"kind": "linear"}
+        el["dataLabel"] = {"labels": "shown", "fontSize": 11}
     return el
 
 
 def region_map(count_formula: str) -> dict:
-    """US-only choropleth of Worksite State. `us-state` drops Canada from the frame."""
+    """US-state choropleth of Worksite State, with the count printed on each state.
+
+    The label needs its own column: Sigma rejects a column that is already on the
+    color channel, so the same count is declared twice under different ids.
+    """
     return {
         "id": "chart-state",
         "kind": "region-map",
@@ -243,6 +263,7 @@ def region_map(count_formula: str) -> dict:
         "columns": [
             {"id": "cs-x", "formula": f"[{A}/Worksite State]", "name": "State"},
             {"id": "cs-v", "formula": count_formula, "name": "Assignments", "format": INT},
+            {"id": "cs-lbl", "formula": count_formula, "name": "Booked", "format": INT},
         ],
         "region": {"id": "cs-x", "regionType": "us-state"},
         "color": {
@@ -250,8 +271,11 @@ def region_map(count_formula: str) -> dict:
             "column": "cs-v",
             "scheme": [TEAL_LIGHT, TEAL, NAVY_DEEP],
         },
-        "dataLabels": {"visibility": "visible"},
-        "legend": {"visibility": "visible"},
+        "label": [{"id": "cs-lbl"}],
+        # The printed values carry the number, so the color scale legend is just
+        # furniture — and it overlaps the element title. Maps take `visibility`;
+        # `position` is rejected on this kind.
+        "legend": {"visibility": "hidden"},
         "style": dict(CARD),
     }
 
@@ -323,7 +347,7 @@ def pie(el_id: str, label: str, dim_formula: str) -> dict:
         ],
         "color": {"id": f"{el_id}-c"},
         "value": {"id": f"{el_id}-v"},
-        "legend": {"visibility": "visible"},
+        "legend": {"position": "bottom"},
         "style": dict(CARD),
     }
 
@@ -404,7 +428,10 @@ def build_elements() -> tuple[list[dict], str]:
         list_control("ctrl-recruiter", "RecruiterName", "Recruiter", "col-recruiter"),
         scope_control(),
         {"id": "container-filters", "kind": "container", "style": dict(CARD)},
-        weekly_chart("chart-booked", "Assignment Booked Last 5 Weeks", "bar-chart",
+        # Area, not bar: Sigma will not fit a regression on a bar chart's
+        # categorical axis, so the booked tile trades bars for a filled trend
+        # that can carry the regression Megh asked for.
+        weekly_chart("chart-booked", "Assignment Booked Last 5 Weeks", "area-chart",
                      "cb-v", count_formula, INT, TEAL, trend_line=True),
         weekly_chart("chart-type", "Assignment Booked Assignment Type Last 5 Weeks", "bar-chart",
                      "ct-v", count_formula, INT, TEAL,
@@ -476,11 +503,11 @@ def build_elements() -> tuple[list[dict], str]:
   <Element elementId="chart-gm" gridColumn="1 / 9" gridRow="18 / 30"/>
   <Element elementId="chart-gmpct" gridColumn="9 / 17" gridRow="18 / 30"/>
   <Element elementId="chart-loa" gridColumn="17 / 25" gridRow="18 / 30"/>
-  <Element elementId="pie-specialty" gridColumn="1 / 9" gridRow="30 / 44"/>
-  <Element elementId="pie-sub" gridColumn="9 / 17" gridRow="30 / 44"/>
-  <Element elementId="chart-state" gridColumn="17 / 25" gridRow="30 / 44"/>
-  <Element elementId="txt-chat" gridColumn="1 / 25" gridRow="44 / 46"/>
-  <Element elementId="chat-ask" gridColumn="1 / 25" gridRow="46 / 58"/>
+  <Element elementId="pie-specialty" gridColumn="1 / 7" gridRow="30 / 46"/>
+  <Element elementId="pie-sub" gridColumn="7 / 13" gridRow="30 / 46"/>
+  <Element elementId="chart-state" gridColumn="13 / 25" gridRow="30 / 46"/>
+  <Element elementId="txt-chat" gridColumn="1 / 25" gridRow="46 / 48"/>
+  <Element elementId="chat-ask" gridColumn="1 / 25" gridRow="48 / 58"/>
   <Element elementId="txt-summary" gridColumn="1 / 25" gridRow="58 / 61"/>
   <Element elementId="tbl-detail" gridColumn="1 / 25" gridRow="61 / 85"/>
   <Element elementId="kpi-total" gridColumn="1 / 5" gridRow="85 / 90"/>
