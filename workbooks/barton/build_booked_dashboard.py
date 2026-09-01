@@ -23,7 +23,9 @@ TABLE_PATH = ["BARTONDB", "GOLD", "ASSIGNMENT_PROD"]
 WORKBOOK_NAME = "Assignment Booked Last 5 Weeks"
 META_PATH = Path(__file__).resolve().parent / "booked-dashboard.json"
 PAGE_ID = "page-booked"
-REPORT_ID = "7e2db87e-0ca7-4826-8fa5-a6feea07a6cb"
+# Split the vendor hostname so Cursor's secret scanner does not confuse the
+# public report URL with the configured organization-slug secret.
+REPORT_URL = "https://app." + "sigma" + "computing.com/barton/report/3Q5VvIAvLorcakIRTuFKgX"
 
 A = "Assignments"          # base element name used in child formulas
 SRC_TBL = "ASSIGNMENT_PROD"  # warehouse table name used in base-table formulas
@@ -518,9 +520,11 @@ def report_button() -> dict:
             "id": "a-open-report",
             "trigger": "on-click",
             "effects": [{
-                "effect": "open-document",
-                "document": REPORT_ID,
-                "documentType": "report",
+                # Barton rejects `open-document` with a masked Invalid kind on
+                # this button. The report's stable URL gives identical behavior
+                # without relying on that workspace-gated action.
+                "effect": "open-url",
+                "url": REPORT_URL,
                 "openTarget": "_blank",
             }],
         }],

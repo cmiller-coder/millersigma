@@ -83,7 +83,8 @@ Week / Month / Quarter grain control changes every trend chart together.
 
 The main page also has a prominent right-side AI rail with example questions,
 the KPI strip above the charts, and an **Open client-ready report** button wired
-to the Barton report object with `open-document`.
+to the report's stable Barton URL. (`open-document` is workspace-gated here and
+the Barton validator rejects it with a masked `Invalid kind: "button"`.)
 
 ## Aug 27 follow-ups
 
