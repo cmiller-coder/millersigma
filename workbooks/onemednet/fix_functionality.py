@@ -292,6 +292,19 @@ def transform(live_spec: dict) -> dict:
     # Start the trial modeler in a coherent, non-zero oncology scenario.
     elements["c4-ta"]["value"] = "Oncology"
     elements["c4-dx"]["value"] = "C34.90"
+    cohort_formula = elements["k-p4ac"]["columns"][0]["formula"]
+    expected_events_formula = (
+        f"({cohort_formula}) * (1 - Number([ScreenFail]) / 100) * "
+        "(Number([ConsentRate]) / 100) * (Number([EventRate]) / 100)"
+    )
+    # Inline the dependency chain in the displayed values. Forward references
+    # to helper columns can round-trip but evaluate blank at runtime.
+    elements["k-p4bp"]["columns"][0]["formula"] = expected_events_formula
+    elements["k-p4bc"]["columns"][0]["formula"] = (
+        "1 / (1 + Exp(-1.702 * "
+        f"(Sqrt(({expected_events_formula}) * "
+        "Power(Ln(Number([HRatio])), 2) / 4) - 1.959964)))"
+    )
     elements["k-p4bc"]["columns"][0]["format"] = {
         "kind": "number",
         "formatString": ".1%",
