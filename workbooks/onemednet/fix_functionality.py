@@ -168,6 +168,34 @@ def place_hidden_control(layout: str) -> str:
     )
 
 
+def compact_page_layout(layout: str) -> str:
+    """Remove oversized row spans that create hundreds of pixels of dead space."""
+
+    rows = {
+        "tc1": "21 / 57",
+        "c-chat1": "21 / 57",
+        "c-gov1": "57 / 61",
+        "tc2": "21 / 53",
+        "c-chat2": "21 / 53",
+        "c-gov2": "53 / 57",
+        "tc3": "18 / 48",
+        "c-chat3": "18 / 48",
+        "c-gov3": "48 / 52",
+        "tc4": "38 / 74",
+        "c-chat4": "38 / 74",
+        "c-gov4": "74 / 78",
+    }
+    for element_id, grid_row in rows.items():
+        pattern = re.compile(
+            rf'(<(?:Container|TabbedContainer)\b[^>]*'
+            rf'elementId="{re.escape(element_id)}"[^>]*gridRow=")[^"]+(")'
+        )
+        layout, count = pattern.subn(rf"\g<1>{grid_row}\g<2>", layout, count=1)
+        if count != 1:
+            raise RuntimeError(f"Could not compact layout for {element_id}")
+    return layout
+
+
 def transform(live_spec: dict) -> dict:
     document = copy.deepcopy(live_spec["document"])
     element_list = document["elements"]
@@ -353,6 +381,7 @@ def transform(live_spec: dict) -> dict:
         element_list.append(eligibility_control)
         elements["elig-filter"] = eligibility_control
     document["layout"] = place_hidden_control(document["layout"])
+    document["layout"] = compact_page_layout(document["layout"])
 
     # Make writeback language match what the action actually persists.
     save_button = elements["b4-save"]
