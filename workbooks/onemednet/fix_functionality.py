@@ -124,12 +124,25 @@ def add_filter(control: dict, table_id: str, column_id: str) -> None:
 
 def make_eligibility_formula(elements: dict[str, dict]) -> str:
     cohort_formula = elements["k-p4ac"]["columns"][0]["formula"]
+    patient_cohort = elements["pt_elig"]
     prefix = "CountDistinct(If("
     suffix = ", [Patient Base/Patient Pseudo ID], Null))"
     if not cohort_formula.startswith(prefix) or not cohort_formula.endswith(suffix):
         raise RuntimeError("Projected-cohort formula shape changed; refusing unsafe edit")
     condition = cohort_formula[len(prefix) : -len(suffix)]
-    condition = condition.replace("[Patient Base/", "[Patient Cohort/")
+    raw_by_name = {
+        column["name"]: column["formula"]
+        for column in patient_cohort["columns"]
+        if column.get("name") and column.get("formula", "").startswith("[Custom SQL/")
+    }
+
+    def raw_reference(match: re.Match[str]) -> str:
+        name = match.group(1)
+        if name not in raw_by_name:
+            raise RuntimeError(f"Patient Cohort is missing required field: {name}")
+        return raw_by_name[name]
+
+    condition = re.sub(r"\[Patient Base/([^\]]+)\]", raw_reference, condition)
     return f'If({condition}, "Yes", "No")'
 
 
