@@ -37,7 +37,7 @@ Publish only after confirming the expected live version:
 ```bash
 python3 workbooks/onemednet/fix_functionality.py \
   --publish \
-  --expected-version 11
+  --expected-version <current-version>
 ```
 
 The version check prevents overwriting newer UI edits.

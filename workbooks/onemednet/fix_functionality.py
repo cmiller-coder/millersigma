@@ -20,7 +20,6 @@ import urllib.request
 
 
 WORKBOOK_ID = "7d65161f-037e-4ea9-a156-32d6d0f63dde"
-DEFAULT_EXPECTED_VERSION = 11
 
 CARD_COLORS = {
     "a": "#1c244b",
@@ -430,7 +429,7 @@ def main() -> None:
         default=pathlib.Path("/workspace/.env"),
     )
     parser.add_argument("--publish", action="store_true")
-    parser.add_argument("--expected-version", type=int, default=DEFAULT_EXPECTED_VERSION)
+    parser.add_argument("--expected-version", type=int)
     parser.add_argument("--output", type=pathlib.Path)
     args = parser.parse_args()
 
@@ -450,6 +449,8 @@ def main() -> None:
     if not args.publish:
         print("Dry run complete; no workbook changes were made.")
         return
+    if args.expected_version is None:
+        raise RuntimeError("--expected-version is required with --publish")
     if meta["latestVersion"] != args.expected_version:
         raise RuntimeError(
             f"Live version is {meta['latestVersion']}, expected "
