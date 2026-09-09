@@ -4,6 +4,8 @@ Live workbook: Papercrane staging, URL ID `3OCeIV1S7bV6fybbrXUBqK`.
 
 Workbook ID: `7d65161f-037e-4ea9-a156-32d6d0f63dde`
 
+`DEMO-SCRIPT.md` is the walkthrough for the prospect meeting.
+
 ## Functional repair
 
 `fix_functionality.py` fetches the latest live spec and applies targeted repairs
