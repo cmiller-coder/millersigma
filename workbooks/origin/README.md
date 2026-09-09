@@ -2,7 +2,9 @@
 
 Papercrane staging POV for Dayna McCue (Origin Data and AI Enablement).
 
-Workbook name: **Origin Investments — Model of Record**
+Live workbook URL ID: `RdlKzzl6eD5DlPQAFT8aS` (Papercrane staging, folder Claude Builder).
+
+Workbook ID: `1c3390dd-13f4-4cef-beb2-8af766c24a9a` (urlId `RdlKzzl6eD5DlPQAFT8aS`).
 
 `DEMO-SCRIPT.md` is the walkthrough. `build_origin.py` creates or updates the
 workbook via the workbooks-as-code API.
