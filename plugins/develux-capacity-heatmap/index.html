@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Team Capacity &amp; Utilization Heatmap — Develux Sigma Plugin</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,Arial,sans-serif;background:transparent;color:#12213B;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 16px;gap:7px}
+  #top{display:flex;justify-content:space-between;align-items:baseline;flex:0 0 auto}
+  #ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#0E6E5C}
+  #meta{font-size:11px;color:#5B6B85}
+  #meta b{color:#12213B}
+  #body{flex:1;display:grid;min-height:0;gap:2px}
+  .rlbl{font-size:10.5px;font-weight:600;color:#33415C;display:flex;align-items:center;padding-right:6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .clbl{font-size:9px;color:#8592a3;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px}
+  .cell{border-radius:3px;position:relative;cursor:default;transition:transform .08s}
+  .cell:hover{transform:scale(1.12);z-index:5;outline:1.5px solid #12213B;border-radius:2px}
+  .over{box-shadow:inset 0 0 0 2px #B5223B}
+  .over:after{content:'!';position:absolute;top:1px;right:2px;font-size:8px;font-weight:800;color:#fff}
+  #legend{flex:0 0 auto;display:flex;align-items:center;gap:10px;font-size:10px;color:#5B6B85}
+  #ramp{height:8px;flex:1;border-radius:4px;background:linear-gradient(90deg,#E7ECF3,#8FC7B4,#0E6E5C,#B5223B)}
+  .lgtag{display:flex;align-items:center;gap:4px}
+  .lgsw{width:9px;height:9px;border-radius:2px}
+  #tip{position:fixed;pointer-events:none;background:#12213B;border-radius:8px;padding:8px 10px;font-size:11px;color:#fff;opacity:0;transition:opacity .1s;z-index:20;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  #tip b{color:#8FC7B4}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top"><div id="ttl">Team Capacity &amp; Utilization</div><div id="meta"><b id="ln">0</b> service lines · <b id="ov">0</b> over-allocated weeks</div></div>
+  <div id="body"></div>
+  <div id="legend">
+    <span>under-utilized</span><div id="ramp"></div><span>over-allocated</span>
+    <span class="lgtag" style="margin-left:8px"><span class="lgsw" style="background:#B5223B;box-shadow:inset 0 0 0 2px #7c0f22"></span> flagged &gt;100%</span>
+  </div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client=(window.SigmaPlugin&&window.SigmaPlugin.client)||null;
+  var defs=[
+    {name:'source',type:'element'},
+    {name:'line',type:'column',source:'source',label:'Service Line'},
+    {name:'week',type:'column',source:'source',label:'Week'},
+    {name:'utilization',type:'column',source:'source',allowedTypes:['number'],label:'Utilization %'},
+    {name:'engineers',type:'column',source:'source',allowedTypes:['number','integer'],label:'Engineers Staffed'}
+  ];
+  if(client) client.config.configureEditorPanel(defs);
+
+  var tip=document.getElementById('tip');
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function mix(a,b,t){
+    function h2r(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+    var A=h2r(a),B=h2r(b);
+    return 'rgb('+Math.round(A[0]+(B[0]-A[0])*t)+','+Math.round(A[1]+(B[1]-A[1])*t)+','+Math.round(A[2]+(B[2]-A[2])*t)+')';
+  }
+  // 0% -> pale, 70% -> teal healthy, 100% -> deep teal, >100% -> red (flagged separately)
+  function heat(u){
+    var t=Math.max(0,Math.min(1,u));
+    if(t<=0.7){ return mix('#E7ECF3','#8FC7B4', t/0.7); }
+    return mix('#8FC7B4','#0E6E5C', (t-0.7)/0.3);
+  }
+
+  var LINES=['Dedicated Development Teams','Fixed-Bid Projects','Time & Materials / Hourly Staffing',
+             'QA & Test Automation','DevOps & Cloud Support','UX/UI Design Services',
+             'Business Analysis & Discovery'];
+  var WEEKS=['Wk 1','Wk 2','Wk 3','Wk 4','Wk 5','Wk 6','Wk 7','Wk 8'];
+
+  function synth(){
+    // Mirrors company.py's Develux service-line utilization baselines so the
+    // unbound preview reads as real Develux data, not placeholder rows.
+    var base=[0.91,0.68,0.86,0.74,0.97,0.79,0.72];
+    var drift=[0.02,-0.06,0.01,0.05,0.06,-0.01,0.02];
+    var rows=[];
+    for(var li=0; li<LINES.length; li++){
+      for(var wi=0; wi<WEEKS.length; wi++){
+        var wobble=Math.sin(wi*0.9+li)*0.05;
+        var u=base[li]+drift[li]*(wi/7)+wobble;
+        rows.push({line:LINES[li], week:WEEKS[wi], utilization:Math.max(0.35,u), engineers:null});
+      }
+    }
+    return rows;
+  }
+
+  function render(data){
+    var lines=[], weeks=[], seen={}, wseen={};
+    data.forEach(function(d){
+      if(!seen[d.line]){ seen[d.line]=1; lines.push(d.line); }
+      if(!wseen[d.week]){ wseen[d.week]=1; weeks.push(d.week); }
+    });
+    if(!lines.length) lines=LINES.slice();
+    if(!weeks.length) weeks=WEEKS.slice();
+
+    var byKey={};
+    data.forEach(function(d){ byKey[d.line+'|||'+d.week]=d; });
+
+    var body=document.getElementById('body');
+    body.innerHTML='';
+    var rowLabelCol='110px';
+    body.style.gridTemplateColumns=rowLabelCol+' repeat('+weeks.length+',1fr)';
+    body.style.gridTemplateRows='14px repeat('+lines.length+',1fr)';
+
+    var corner=document.createElement('div'); body.appendChild(corner);
+    weeks.forEach(function(w){
+      var cl=document.createElement('div'); cl.className='clbl'; cl.textContent=w;
+      body.appendChild(cl);
+    });
+
+    var overCount=0;
+    lines.forEach(function(ln){
+      var rl=document.createElement('div'); rl.className='rlbl'; rl.textContent=ln;
+      rl.title=ln;
+      body.appendChild(rl);
+      weeks.forEach(function(w){
+        var d=byKey[ln+'|||'+w];
+        var u=d?Number(d.utilization):null;
+        var over = u!=null && u>1.0;
+        if(over) overCount++;
+        var c=document.createElement('div');
+        c.className='cell'+(over?' over':'');
+        c.style.background = u==null ? '#F0F2F6' : heat(over?1:u);
+        c.addEventListener('mousemove', function(e){
+          tip.style.opacity=1;
+          tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+10)+'px';
+          var eng = d&&d.engineers!=null ? (', '+Math.round(d.engineers)+' engineers') : '';
+          tip.innerHTML='<b>'+esc(ln)+'</b><br>'+esc(w)+' &middot; '+ (u==null?'—':Math.round(u*100)+'% utilized') +
+            (over?' <b style="color:#ff8a9c">(over-allocated)</b>':'') + eng;
+        });
+        c.addEventListener('mouseleave', function(){ tip.style.opacity=0; });
+        body.appendChild(c);
+      });
+    });
+
+    document.getElementById('ln').textContent = lines.length;
+    document.getElementById('ov').textContent = overCount;
+  }
+
+  var unsub=null;
+  function bind(cfg){
+    if(unsub){ unsub(); unsub=null; }
+    if(!client || !cfg || !cfg.source || !cfg.line){ render(synth()); return; }
+    unsub = client.elements.subscribeToElementData(cfg.source, function(elData){
+      if(!elData || !elData[cfg.line]){ render(synth()); return; }
+      var n=elData[cfg.line].length;
+      var rows=[];
+      for(var i=0;i<n;i++){
+        rows.push({
+          line: elData[cfg.line][i],
+          week: cfg.week ? elData[cfg.week][i] : ('Wk '+(i+1)),
+          utilization: cfg.utilization ? Number(elData[cfg.utilization][i]) : null,
+          engineers: cfg.engineers ? Number(elData[cfg.engineers][i]) : null
+        });
+      }
+      render(rows);
+    });
+  }
+
+  if(client){
+    client.config.subscribe(function(cfg){ bind(cfg); });
+  } else {
+    render(synth());
+  }
+
+  // ResizeObserver on the stage element, not a window resize listener, and no
+  // animation loop -- headless PNG export must be able to reach idle.
+  var ro=new ResizeObserver(function(){ /* CSS grid reflows itself */ });
+  ro.observe(document.getElementById('wrap'));
+})();
+</script>
+</body>
+</html>
