@@ -1465,7 +1465,6 @@ def build_spec() -> dict:
             "name": "Market Detail",
             "drawer": {
                 "width": "large",
-                "position": "end",
                 "showShadow": "shown",
                 "header": {
                     "title": "Market detail",
@@ -1479,7 +1478,6 @@ def build_spec() -> dict:
             "name": "FCC County Detail",
             "drawer": {
                 "width": "large",
-                "position": "end",
                 "showShadow": "shown",
                 "header": {
                     "title": "FCC county detail",
