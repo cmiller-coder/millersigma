@@ -808,7 +808,7 @@ def build_spec() -> dict:
                 },
                 "effects": [{
                     "effect": "insert-rows",
-                    "table": "it-plan-log",
+                    "tableElementId": "it-plan-log",
                     "values": {
                         "log-plan": {
                             "type": "control",
