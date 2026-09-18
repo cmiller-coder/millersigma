@@ -63,9 +63,8 @@ NUM0 = {"kind": "number", "formatString": ",.0f"}
 DATE = {"kind": "datetime", "formatString": "%b %d, %Y"}
 
 SCOPE = (
-    "Illustrative demo. Deterministic synthetic records shaped to the June 30, 2026 "
-    "cockpit specification: 150 properties, seven holdings, twelve neighborhoods. No "
-    "production Groma, Buildium, loan, ownership, valuation, tenant or investor data."
+    "Illustrative demo · 150 properties · synthetic records shaped to the June 30, 2026 "
+    "cockpit spec · no production Groma, Buildium, loan or valuation data"
 )
 
 # ---------------------------------------------------------------------------
@@ -351,9 +350,9 @@ def bridge_sql() -> str:
     jv = sum(r[8] * r[9] for r in BOOK if r[10])
     minority = (A - B) - own_eq
     steps = [
-        (1, "Property value", int(A)),
-        (2, "Less debt", -int(B)),
-        (3, "Less minority", -int(round(minority))),
+        (1, "Value", int(A)),
+        (2, "Debt", -int(B)),
+        (3, "Minority", -int(round(minority))),
         (4, "JV add-back", int(round(jv))),
     ]
     rows = ["  (" + ",".join([str(o), q(l), str(v)]) + ")" for o, l, v in steps]
@@ -475,6 +474,15 @@ def text(eid, body, bg=None):
     return add(e)
 
 
+def scope(eid):
+    """Small muted disclaimer. Explanatory prose does not belong on a product
+    surface: the numbers and the visuals carry the argument, and the spoken
+    demo script carries the rest. Four tinted full-width slabs of paragraph
+    were the single biggest thing making this look unfinished."""
+    return add({"id": eid, "kind": "text", "verticalAlign": "center",
+                "body": f'<span style="color: {MUTED}">{SCOPE}</span>'})
+
+
 def agent(aid, name, page, instructions, greeting, sources):
     agents.append({"id": aid, "name": name, "instructions": instructions,
                    "greeting": {"mode": "static", "message": greeting},
@@ -580,7 +588,7 @@ def build_spec() -> dict:
     # PAGE 1 - What is the REIT worth, and can I trust it?
     # =====================================================================
     header(1, "What is the REIT worth?")
-    text("scope-1", SCOPE, MINT)
+    scope("scope-1")
     list_control("ctrl-holding", "Holding", "Holding", "src-property", "p-holding")
     list_control("ctrl-hood", "Hood", "Neighborhood", "src-property", "p-hood")
 
@@ -601,24 +609,19 @@ def build_spec() -> dict:
 
     # the hero: NAV bridge, with the equity-method step as its own bar
     add({"id": "chart-bridge", "kind": "waterfall-chart",
-         "name": "How $1.25B of property becomes REIT NAV",
+         "name": "How $1.25B of property becomes $466M of REIT NAV",
          "source": {"kind": "table", "elementId": "src-bridge"},
          "columns": [
              {"id": "bw-label", "name": "Step", "formula": "[NAV Bridge Steps/Step]"},
              {"id": "bw-amount", "name": "Amount", "formula": f"Sum([NAV Bridge Steps/Amount])", "format": MONEY},
              {"id": "bw-order", "name": "Order", "formula": f"Min([NAV Bridge Steps/Step Order])", "format": NUM0},
          ],
+         # orientation is accepted here but has no effect on waterfall-chart
+         "total": {"label": "REIT NAV"},
          "xAxis": {"columnId": "bw-label", "sort": {"by": "bw-order", "aggregation": "min", "direction": "ascending"}},
          "yAxis": {"columnIds": ["bw-amount"]},
          "legend": {"visibility": "hidden"},
          "style": panel()})
-    text("note-bridge",
-         f"**The small bar is the whole argument.** Seaport Residential JV is an equity-method joint venture: "
-         f"its mortgage sits inside the LLC, below the REIT. Pro-rating that in-LLC debt the way "
-         f"you would any other property would understate NAV by "
-         f"<span style=\"color: {WARN}\">**$11.5M**</span>. One holding, one rule, and it is the "
-         f"difference between a naive property split and the right fund number.", CREAM)
-
     # concentration - only meaningful because there are 150 properties
     add({"id": "chart-conc", "kind": "bar-chart",
          "name": "REIT NAV by holding",
@@ -678,9 +681,7 @@ def build_spec() -> dict:
     # PAGE 2 - Which buildings need me this quarter?
     # =====================================================================
     header(2, "Which buildings need me this quarter?")
-    text("scope-2",
-         "150 properties, ranked by exception rather than by name. The point of putting this in "
-         "Sigma is finding the handful that need a decision without reading the other 140.", MINT)
+    scope("scope-2")
     list_control("ctrl-hood2", "Hood2", "Neighborhood", "src-property", "p-hood")
     list_control("ctrl-maturity", "Maturity", "Maturity", "src-property", "p-maturity")
     list_control("ctrl-margin-flag", "MarginFlag", "Cohort position", "src-property", "p-margin-flag")
@@ -712,7 +713,8 @@ def build_spec() -> dict:
              {"id": "sc-mat", "name": "Maturity", "formula": f"[{PROP}/Maturity]"},
          ],
          "xAxis": {"columnId": "sc-vpu"},
-         "yAxis": {"columnIds": ["sc-margin"]},
+         "yAxis": {"columnIds": ["sc-margin"],
+                   "format": {"scale": {"type": "linear", "zero": False}}},
          "color": {"by": "category", "column": "sc-mat", "scheme": [FOREST, GOLD]},
          "legend": {"visibility": "visible"},
          "style": panel()})
@@ -764,10 +766,7 @@ def build_spec() -> dict:
     # PAGE 3 - Decide and commit (write-back)
     # =====================================================================
     header(3, "Decide and commit")
-    text("scope-3",
-         "Peach cells are editable and warehouse-backed. A property manager's forecast becomes a "
-         "governed input with a user and a timestamp, not an email attachment. The gold figure is a "
-         "**management value sensitivity**, not the approved quarterly mark.", MINT)
+    scope("scope-3")
 
     add({"id": "ctrl-scenario", "kind": "control", "controlId": "Scenario",
          "name": "Management scenario", "controlType": "segmented",
@@ -777,7 +776,9 @@ def build_spec() -> dict:
     add({"id": "ctrl-comment", "kind": "control", "controlId": "Comment",
          "name": "Workflow comment", "controlType": "text-area"})
 
-    add({"id": "it-budget", "kind": "input-table", "name": "Live Property Budget",
+    add({"id": "it-budget", "kind": "input-table", # NOTE: this element's name is also its formula reference key
+         # (BUD below, and the three KPIs). Do not decorate it.
+         "name": "Live Property Budget",
          "source": {"kind": "linked", "from": "src-property"},
          "inputMode": "view",
          "columns": [
@@ -870,7 +871,7 @@ def build_spec() -> dict:
                  }}],
                  "successToast": {"title": f"Budget {status.lower()}", "showMessage": "shown"}}]})
 
-    add({"id": "it-capex", "kind": "input-table", "name": "15xx Capex Review Queue",
+    add({"id": "it-capex", "kind": "input-table", "name": "15xx capex queue — classified by nature of work, never dollar size",
          "source": {"kind": "linked", "from": "src-capex"},
          "inputMode": "view",
          "columns": [
@@ -901,13 +902,6 @@ def build_spec() -> dict:
          "tableStyle": {"preset": "presentation", "cellSpacing": "small",
                         "gridLines": "horizontal", "banding": "shown", "bandingColor": CREAM},
          "style": panel()})
-    text("note-capex",
-         f"**Classification is nature-based, never dollar size.** Harbor House's "
-         f"<span style=\"color: {WARN}\">**$118k roof**</span> is recurring because it keeps units "
-         f"rentable. Maverick Flats' <span style=\"color: {GOOD}\">**$94k gut renovation**</span> is "
-         f"value-add because it changes the unit basis. Only the recurring side is deducted to reach "
-         f"cash contribution and AFFO. Re-tag a line in the peach column and the headline moves.", CREAM)
-
     agent("agent-budget", "Budget & Capex Copilot", "pg-decide",
           "You help property managers and asset managers commit budget and capex decisions in the "
           "Groma NAV REIT cockpit. Forecast overrides fall back to scenario-scaled actuals when "
@@ -922,10 +916,7 @@ def build_spec() -> dict:
     # PAGE 4 - Prove it
     # =====================================================================
     header(4, "Prove it")
-    text("scope-4",
-         "No important number rides on one file. NOI is checked against a Buildium API pull, value "
-         "against the NAV tracker, debt against the mortgage control centre. Agreement within $500 "
-         "is Tied; anything else is Review and shows both numbers and a named reason.", MINT)
+    scope("scope-4")
 
     kpi("kpi-tie-noi", "src-property", "NOI net tie delta",
         f"Sum([{PROP}/NOI Delta])", "0", MONEY0, INK, "Target", invert=True)
@@ -962,7 +953,7 @@ def build_spec() -> dict:
          "tableStyle": {"preset": "presentation", "cellSpacing": "small", "gridLines": "horizontal"},
          "style": panel()})
 
-    add({"id": "tbl-tabs", "kind": "table", "name": "The twenty-four decision tabs, and what drives each",
+    add({"id": "tbl-tabs", "kind": "table", "name": "Twenty-four decision tabs — one Layer 1 dataset, one quarterly commit",
          "source": {"kind": "table", "elementId": "src-tabs"},
          "columns": [
              {"id": "tt-num", "name": "#", "formula": "[Decision Tab Lineage/#]", "format": NUM0},
@@ -973,12 +964,6 @@ def build_spec() -> dict:
          "tableComponents": {"summaryBar": "hidden"},
          "tableStyle": {"preset": "presentation", "cellSpacing": "small", "gridLines": "horizontal"},
          "style": panel()})
-    text("note-process",
-         "**Quarterly commit path:** refresh raw pulls → set the ownership subject set → join on "
-         "canonical Buildium ID → classify accounts and capex → build Layer 1 → validate tie-outs → "
-         "publish one governed quarter. Same inputs and same written-down rules reproduce the same "
-         "twenty-four tabs every time.", CREAM)
-
     agent("agent-tie", "Tie-out Copilot", "pg-prove",
           "You are a financial controls analyst for the Groma NAV REIT cockpit. Every important "
           "figure is checked against an independent second source. Agreement within $500 is Tied; "
@@ -1024,60 +1009,57 @@ def _hdr(i):
 LAYOUT = f"""<?xml version="1.0" encoding="utf-8"?>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-worth">
 {_hdr(1)}
-  <Element elementId="scope-1" gridColumn="1 / 25" gridRow="4 / 6"/>
-  <Element elementId="ctrl-holding" gridColumn="1 / 13" gridRow="6 / 9"/>
-  <Element elementId="ctrl-hood" gridColumn="13 / 25" gridRow="6 / 9"/>
-  <Element elementId="kpi-nav" gridColumn="1 / 7" gridRow="9 / 17"/>
-  <Element elementId="kpi-jv" gridColumn="7 / 13" gridRow="9 / 17"/>
-  <Element elementId="kpi-noi" gridColumn="13 / 19" gridRow="9 / 17"/>
-  <Element elementId="kpi-ltv" gridColumn="19 / 25" gridRow="9 / 17"/>
-  <Element elementId="chart-bridge" gridColumn="1 / 17" gridRow="17 / 36"/>
-  <Element elementId="note-bridge" gridColumn="17 / 25" gridRow="17 / 26"/>
-  <Element elementId="chart-conc" gridColumn="17 / 25" gridRow="26 / 36"/>
-  <Element elementId="tbl-holdings" gridColumn="1 / 19" gridRow="36 / 54"/>
-  <Element elementId="chat-agent-nav" gridColumn="19 / 25" gridRow="36 / 54"/>
+  <Element elementId="scope-1" gridColumn="1 / 25" gridRow="4 / 5"/>
+  <Element elementId="ctrl-holding" gridColumn="1 / 13" gridRow="5 / 8"/>
+  <Element elementId="ctrl-hood" gridColumn="13 / 25" gridRow="5 / 8"/>
+  <Element elementId="kpi-nav" gridColumn="1 / 7" gridRow="8 / 16"/>
+  <Element elementId="kpi-jv" gridColumn="7 / 13" gridRow="8 / 16"/>
+  <Element elementId="kpi-noi" gridColumn="13 / 19" gridRow="8 / 16"/>
+  <Element elementId="kpi-ltv" gridColumn="19 / 25" gridRow="8 / 16"/>
+  <Element elementId="chart-bridge" gridColumn="1 / 16" gridRow="16 / 35"/>
+  <Element elementId="chart-conc" gridColumn="16 / 25" gridRow="16 / 35"/>
+  <Element elementId="tbl-holdings" gridColumn="1 / 19" gridRow="35 / 53"/>
+  <Element elementId="chat-agent-nav" gridColumn="19 / 25" gridRow="35 / 53"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-attention">
 {_hdr(2)}
-  <Element elementId="scope-2" gridColumn="1 / 25" gridRow="4 / 6"/>
-  <Element elementId="ctrl-hood2" gridColumn="1 / 9" gridRow="6 / 9"/>
-  <Element elementId="ctrl-maturity" gridColumn="9 / 17" gridRow="6 / 9"/>
-  <Element elementId="ctrl-margin-flag" gridColumn="17 / 25" gridRow="6 / 9"/>
-  <Element elementId="kpi-below" gridColumn="1 / 7" gridRow="9 / 17"/>
-  <Element elementId="kpi-over" gridColumn="7 / 13" gridRow="9 / 17"/>
-  <Element elementId="kpi-leaseup" gridColumn="13 / 19" gridRow="9 / 17"/>
-  <Element elementId="kpi-review" gridColumn="19 / 25" gridRow="9 / 17"/>
-  <Element elementId="chart-scatter" gridColumn="1 / 19" gridRow="17 / 38"/>
-  <Element elementId="chat-agent-port" gridColumn="19 / 25" gridRow="17 / 38"/>
-  <Element elementId="tbl-attention" gridColumn="1 / 25" gridRow="38 / 62"/>
+  <Element elementId="scope-2" gridColumn="1 / 25" gridRow="4 / 5"/>
+  <Element elementId="ctrl-hood2" gridColumn="1 / 9" gridRow="5 / 8"/>
+  <Element elementId="ctrl-maturity" gridColumn="9 / 17" gridRow="5 / 8"/>
+  <Element elementId="ctrl-margin-flag" gridColumn="17 / 25" gridRow="5 / 8"/>
+  <Element elementId="kpi-below" gridColumn="1 / 7" gridRow="8 / 16"/>
+  <Element elementId="kpi-over" gridColumn="7 / 13" gridRow="8 / 16"/>
+  <Element elementId="kpi-leaseup" gridColumn="13 / 19" gridRow="8 / 16"/>
+  <Element elementId="kpi-review" gridColumn="19 / 25" gridRow="8 / 16"/>
+  <Element elementId="chart-scatter" gridColumn="1 / 19" gridRow="16 / 35"/>
+  <Element elementId="chat-agent-port" gridColumn="19 / 25" gridRow="16 / 35"/>
+  <Element elementId="tbl-attention" gridColumn="1 / 25" gridRow="35 / 59"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-decide">
 {_hdr(3)}
-  <Element elementId="scope-3" gridColumn="1 / 25" gridRow="4 / 7"/>
-  <Element elementId="ctrl-scenario" gridColumn="1 / 10" gridRow="7 / 10"/>
-  <Element elementId="ctrl-comment" gridColumn="10 / 18" gridRow="7 / 10"/>
-  <Element elementId="btn-submit" gridColumn="18 / 21" gridRow="7 / 10"/>
-  <Element elementId="btn-approve" gridColumn="21 / 25" gridRow="7 / 10"/>
-  <Element elementId="kpi-fnoi" gridColumn="1 / 9" gridRow="10 / 18"/>
-  <Element elementId="kpi-remaining" gridColumn="9 / 17" gridRow="10 / 18"/>
-  <Element elementId="kpi-sens" gridColumn="17 / 25" gridRow="10 / 18"/>
-  <Element elementId="it-budget" gridColumn="1 / 19" gridRow="18 / 40"/>
-  <Element elementId="chat-agent-budget" gridColumn="19 / 25" gridRow="18 / 40"/>
-  <Element elementId="it-approval" gridColumn="1 / 25" gridRow="40 / 50"/>
-  <Element elementId="note-capex" gridColumn="1 / 25" gridRow="50 / 54"/>
-  <Element elementId="it-capex" gridColumn="1 / 25" gridRow="54 / 78"/>
+  <Element elementId="scope-3" gridColumn="1 / 25" gridRow="4 / 5"/>
+  <Element elementId="ctrl-scenario" gridColumn="1 / 10" gridRow="5 / 8"/>
+  <Element elementId="ctrl-comment" gridColumn="10 / 18" gridRow="5 / 8"/>
+  <Element elementId="btn-submit" gridColumn="18 / 21" gridRow="5 / 8"/>
+  <Element elementId="btn-approve" gridColumn="21 / 25" gridRow="5 / 8"/>
+  <Element elementId="kpi-fnoi" gridColumn="1 / 9" gridRow="8 / 16"/>
+  <Element elementId="kpi-remaining" gridColumn="9 / 17" gridRow="8 / 16"/>
+  <Element elementId="kpi-sens" gridColumn="17 / 25" gridRow="8 / 16"/>
+  <Element elementId="it-budget" gridColumn="1 / 19" gridRow="16 / 38"/>
+  <Element elementId="chat-agent-budget" gridColumn="19 / 25" gridRow="16 / 38"/>
+  <Element elementId="it-approval" gridColumn="1 / 25" gridRow="38 / 48"/>
+  <Element elementId="it-capex" gridColumn="1 / 25" gridRow="48 / 72"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-prove">
 {_hdr(4)}
-  <Element elementId="scope-4" gridColumn="1 / 25" gridRow="4 / 7"/>
-  <Element elementId="kpi-tie-noi" gridColumn="1 / 7" gridRow="7 / 15"/>
-  <Element elementId="kpi-tie-value" gridColumn="7 / 13" gridRow="7 / 15"/>
-  <Element elementId="kpi-tie-debt" gridColumn="13 / 19" gridRow="7 / 15"/>
-  <Element elementId="kpi-tie-count" gridColumn="19 / 25" gridRow="7 / 15"/>
-  <Element elementId="tbl-tie" gridColumn="1 / 19" gridRow="15 / 40"/>
-  <Element elementId="chat-agent-tie" gridColumn="19 / 25" gridRow="15 / 40"/>
-  <Element elementId="note-process" gridColumn="1 / 25" gridRow="40 / 44"/>
-  <Element elementId="tbl-tabs" gridColumn="1 / 25" gridRow="44 / 72"/>
+  <Element elementId="scope-4" gridColumn="1 / 25" gridRow="4 / 5"/>
+  <Element elementId="kpi-tie-noi" gridColumn="1 / 7" gridRow="5 / 13"/>
+  <Element elementId="kpi-tie-value" gridColumn="7 / 13" gridRow="5 / 13"/>
+  <Element elementId="kpi-tie-debt" gridColumn="13 / 19" gridRow="5 / 13"/>
+  <Element elementId="kpi-tie-count" gridColumn="19 / 25" gridRow="5 / 13"/>
+  <Element elementId="tbl-tie" gridColumn="1 / 19" gridRow="13 / 38"/>
+  <Element elementId="chat-agent-tie" gridColumn="19 / 25" gridRow="13 / 38"/>
+  <Element elementId="tbl-tabs" gridColumn="1 / 25" gridRow="38 / 66"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-data">
   <Element elementId="src-property" gridColumn="1 / 13" gridRow="1 / 12"/>
