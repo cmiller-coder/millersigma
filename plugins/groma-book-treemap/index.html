@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Book treemap — Groma NAV REIT</title>
+<!-- React must load BEFORE the Sigma plugin SDK: the UMD factory calls
+     React.createContext() at module top level, so without window.React the
+     module throws and window.SigmaPlugin is never attached. -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@sigmacomputing/plugin"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+       background:#fff;color:#152b26;overflow:hidden}
+  #wrap{height:100%;width:100%;display:flex;flex-direction:column;padding:12px 14px 8px;gap:6px}
+  #top{display:flex;justify-content:space-between;align-items:center;flex:0 0 auto;gap:12px}
+  #ttl{font-size:13px;font-weight:600}
+  #legend{display:flex;align-items:center;gap:6px;font-size:10px;color:#5c6b63;white-space:nowrap}
+  #ramp{width:110px;height:8px;border-radius:4px;
+        background:linear-gradient(90deg,#ed5737,#f3b9a6,#e8ece9,#9cb5a8,#2e423d)}
+  #stage{flex:1;min-height:0;position:relative}
+  svg{display:block;width:100%;height:100%}
+  #tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .08s;z-index:20;
+       background:#041915;color:#fff;border-radius:6px;padding:7px 9px;font-size:11px;
+       box-shadow:0 6px 20px rgba(0,0,0,.28);white-space:nowrap}
+  #tip b{color:#f3b9a6}
+  #foot{flex:0 0 auto;font-size:9.5px;color:#8a978f}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="top">
+    <div id="ttl">The whole book — tile area = REIT equity, colour = gap to its own neighbourhood cohort</div>
+    <div id="legend"><span>below cohort</span><div id="ramp"></div><span>above</span><span id="mode" style="margin-left:8px"></span></div>
+  </div>
+  <div id="stage"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div id="foot"></div>
+</div>
+<div id="tip"></div>
+<script>
+(function(){
+  var client = (window.SigmaPlugin && window.SigmaPlugin.client) || null;
+
+  var INK='#152b26', MUTED='#5c6b63', BORDER='#ffffff';
+  // diverging ramp in Groma's own palette: coral accent for below-cohort,
+  // their deep green for above.
+  var RAMP = [[237,87,55],[243,185,166],[232,236,233],[156,181,168],[46,66,61]];
+
+  if (client) {
+    client.config.configureEditorPanel([
+      {name:'source', type:'element'},
+      {name:'property',     type:'column', source:'source', label:'Property'},
+      {name:'neighborhood', type:'column', source:'source', label:'Neighbourhood'},
+      {name:'equity',       type:'column', source:'source', allowedTypes:['number','integer'], label:'REIT equity (size)'},
+      {name:'gap',          type:'column', source:'source', allowedTypes:['number','integer'], label:'Margin gap (colour)'},
+      {name:'margin',       type:'column', source:'source', allowedTypes:['number','integer'], label:'NOI margin'}
+    ]);
+  }
+
+  function money(v){
+    var a=Math.abs(v);
+    if(a>=1e9) return '$'+(v/1e9).toFixed(2)+'B';
+    if(a>=1e6) return '$'+(v/1e6).toFixed(1)+'M';
+    if(a>=1e3) return '$'+Math.round(v/1e3)+'k';
+    return '$'+Math.round(v);
+  }
+  function pct(v){ return (v*100).toFixed(1)+'%'; }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function colorFor(gap){
+    // gap is in margin points (e.g. -0.06). Clamp to +/- 8 points.
+    var t = Math.max(0, Math.min(1, (gap + 0.08) / 0.16));
+    var s = t*(RAMP.length-1), i = Math.min(RAMP.length-2, Math.floor(s)), f = s-i;
+    var c = [0,1,2].map(function(k){ return Math.round(lerp(RAMP[i][k], RAMP[i+1][k], f)); });
+    return 'rgb('+c[0]+','+c[1]+','+c[2]+')';
+  }
+
+  /* ---- squarified treemap (Bruls, Huizing, van Wijk) ---------------------
+     Proper squarify, not slice-and-dice: tiles stay close to square so the
+     areas are actually comparable by eye, which is the whole point of using a
+     treemap instead of the ranked bar chart Sigma can already draw. */
+  function squarify(items, x, y, w, h){
+    var out = [];
+    items = items.slice().sort(function(a,b){ return b.value - a.value; });
+    var total = items.reduce(function(s,i){ return s+i.value; }, 0);
+    if (total <= 0 || w <= 0 || h <= 0) return out;
+    var scale = (w*h)/total;
+    var idx = 0;
+    while (idx < items.length){
+      var short = Math.min(w,h);
+      var row = [], rowSum = 0, best = Infinity;
+      // grow the row while the worst aspect ratio keeps improving
+      for (var j = idx; j < items.length; j++){
+        var trySum = rowSum + items[j].value*scale;
+        var len = trySum/short;
+        var worst = 0;
+        for (var k = idx; k <= j; k++){
+          var side = (items[k].value*scale)/len;
+          worst = Math.max(worst, Math.max(len/side, side/len));
+        }
+        if (worst > best && row.length) break;
+        row.push(items[j]); rowSum = trySum; best = worst;
+      }
+      var len2 = rowSum/short;
+      var off = 0;
+      for (var m = 0; m < row.length; m++){
+        var side2 = (row[m].value*scale)/len2;
+        if (w >= h) out.push({item:row[m], x:x, y:y+off, w:len2, h:side2});
+        else        out.push({item:row[m], x:x+off, y:y, w:side2, h:len2});
+        off += side2;
+      }
+      if (w >= h){ x += len2; w -= len2; } else { y += len2; h -= len2; }
+      idx += row.length;
+    }
+    return out;
+  }
+
+  function synth(){
+    var hoods = ['East Boston','Chelsea','Somerville','Roxbury','Jamaica Plain','Dorchester',
+                 'South Boston','Everett','Malden','Revere','Quincy','Allston'];
+    var out = [], n = 0;
+    for (var i=0;i<hoods.length;i++){
+      var count = 8 + (i*5 % 7);
+      for (var j=0;j<count;j++){
+        n++;
+        var eq = 1.2e6 + ((n*7919) % 9000)*900;
+        var gap = (((n*104729) % 1600)/10000) - 0.08;
+        out.push({p:hoods[i].split(' ')[0]+' '+(100+n), n:hoods[i], e:eq, g:gap,
+                  m:0.615+gap});
+      }
+    }
+    return out;
+  }
+
+  var tip = document.getElementById('tip');
+
+  function draw(rows, live){
+    var svg = document.getElementById('svg');
+    var stg = document.getElementById('stage');
+    var W = stg.clientWidth || 900, H = stg.clientHeight || 420;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    function el(n,a,t){
+      var e=document.createElementNS('http://www.w3.org/2000/svg',n);
+      for (var k in a) e.setAttribute(k,a[k]);
+      if (t!=null) e.textContent=t;
+      svg.appendChild(e); return e;
+    }
+
+    // level 1: neighbourhoods
+    var byHood = {};
+    rows.forEach(function(r){ (byHood[r.n] = byHood[r.n] || []).push(r); });
+    var hoods = Object.keys(byHood).map(function(k){
+      return {key:k, value:byHood[k].reduce(function(s,r){return s+r.e;},0), rows:byHood[k]};
+    });
+    var cells = squarify(hoods, 0, 0, W, H);
+
+    var below = 0;
+    cells.forEach(function(c){
+      var pad = 1.5, labelH = c.h > 46 ? 15 : 0;
+      // level 2: properties inside the neighbourhood
+      var inner = squarify(
+        c.item.rows.map(function(r){ return {value:Math.max(r.e,1), row:r}; }),
+        c.x+pad, c.y+pad+labelH, Math.max(0,c.w-pad*2), Math.max(0,c.h-pad*2-labelH));
+
+      inner.forEach(function(t){
+        var r = t.item.row;
+        if (r.g < -0.05) below++;
+        var rect = el('rect',{x:t.x,y:t.y,width:Math.max(0,t.w-1),height:Math.max(0,t.h-1),
+                              fill:colorFor(r.g), stroke:BORDER,'stroke-width':0.8, rx:1.5});
+        rect.style.cursor='default';
+        rect.addEventListener('mousemove', function(ev){
+          tip.innerHTML = '<b>'+r.p+'</b><br>'+r.n+
+            '<br>REIT equity '+money(r.e)+
+            '<br>NOI margin '+pct(r.m)+
+            '<br>gap to cohort '+(r.g>=0?'+':'')+(r.g*100).toFixed(1)+' pts';
+          tip.style.opacity=1;
+          tip.style.left=Math.min(window.innerWidth-190, ev.clientX+12)+'px';
+          tip.style.top=(ev.clientY+12)+'px';
+        });
+        rect.addEventListener('mouseleave', function(){ tip.style.opacity=0; });
+      });
+
+      // neighbourhood frame + label on top
+      el('rect',{x:c.x,y:c.y,width:Math.max(0,c.w),height:Math.max(0,c.h),
+                 fill:'none',stroke:'#ffffff','stroke-width':2.5});
+      if (labelH && c.w > 64){
+        el('text',{x:c.x+6,y:c.y+11,style:'font-size:10px;font-weight:600;fill:'+INK},
+           c.item.key);
+        if (c.w > 150) {
+          el('text',{x:c.x+c.w-6,y:c.y+11,'text-anchor':'end',
+                     style:'font-size:9px;fill:'+MUTED}, money(c.item.value));
+        }
+      }
+    });
+
+    document.getElementById('mode').textContent = live ? '· live' : '· illustrative';
+    document.getElementById('foot').textContent =
+      (live
+        ? rows.length+' properties · '+cells.length+' neighbourhoods · '
+        : 'ILLUSTRATIVE, not bound to live data · '+rows.length+' properties · ')
+      + below + ' more than 5 points below their own cohort';
+  }
+
+  var st = {cfg:{}, data:null, unsub:null};
+  window.__dbg = st;
+
+  function recompute(){
+    var c = st.cfg || {};
+    if (st.data && c.property && c.equity && st.data[c.property] && st.data[c.equity]){
+      var P=st.data[c.property], N=(c.neighborhood&&st.data[c.neighborhood])||[],
+          E=st.data[c.equity], G=(c.gap&&st.data[c.gap])||[], M=(c.margin&&st.data[c.margin])||[];
+      var rows=[];
+      for (var i=0;i<P.length;i++){
+        if (P[i]==null) continue;
+        rows.push({p:String(P[i]), n:N[i]!=null?String(N[i]):'Unassigned',
+                   e:Math.max(Number(E[i])||0,0), g:Number(G[i])||0, m:Number(M[i])||0});
+      }
+      rows = rows.filter(function(r){ return r.e > 0; });
+      if (rows.length){ draw(rows, true); return; }
+    }
+    draw(synth(), false);
+  }
+
+  if (client){
+    client.config.subscribe(function(cfg){
+      st.cfg = cfg || {};
+      if (st.unsub){ st.unsub(); st.unsub=null; }
+      if (cfg && cfg.source){
+        st.unsub = client.elements.subscribeToElementData(cfg.source, function(d){
+          st.data = d; recompute();
+        });
+      }
+      recompute();
+    });
+  } else {
+    recompute();
+  }
+
+  if (window.ResizeObserver){
+    new ResizeObserver(function(){ recompute(); }).observe(document.getElementById('stage'));
+  }
+})();
+</script>
+</body>
+</html>
