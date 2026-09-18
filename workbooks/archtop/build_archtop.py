@@ -1051,7 +1051,7 @@ def build_spec() -> dict:
         "style": {"backgroundColor": SKY, "borderRadius": "round"},
     })
     add({
-        "id": "it-growth",
+        "id": "it-growth-v2",
         "kind": "input-table",
         "name": "Growth Scenarios",
         "source": {"kind": "linked", "from": "tbl-growth"},
@@ -1189,7 +1189,7 @@ def build_spec() -> dict:
     })
     growth = "Growth Scenarios"
     kpi(
-        "kpi-open-locs", "it-growth", "Clean opportunity locations",
+        "kpi-open-locs", "it-growth-v2", "Clean opportunity locations",
         f"Sum(Greatest([{growth}/Serviceable Locations] - "
         f"[{growth}/Subscribers], 0) * [{growth}/Address Quality])",
         f"Sum(Greatest([{growth}/Serviceable Locations] - "
@@ -1197,7 +1197,7 @@ def build_spec() -> dict:
         NUM0, NAVY_DARK, comparison_label="Raw locations",
     )
     kpi(
-        "kpi-project-adds", "it-growth", "Projected net adds",
+        "kpi-project-adds", "it-growth-v2", "Projected net adds",
         f"Sum([{growth}/Projected Net Adds])",
         f"Sum((Greatest([{growth}/Serviceable Locations] - "
         f"[{growth}/Subscribers], 0)) * [{growth}/Base Take Rate] "
@@ -1205,7 +1205,7 @@ def build_spec() -> dict:
         NUM0, CORAL_DARK, comparison_label="Base case",
     )
     kpi(
-        "kpi-project-arr", "it-growth", "Projected incremental ARR",
+        "kpi-project-arr", "it-growth-v2", "Projected incremental ARR",
         f"Sum([{growth}/Projected ARR])",
         f"Sum((Greatest([{growth}/Serviceable Locations] - "
         f"[{growth}/Subscribers], 0)) * [{growth}/Base Take Rate] "
@@ -1213,7 +1213,7 @@ def build_spec() -> dict:
         MONEY, NAVY, comparison_label="Base case",
     )
     kpi(
-        "kpi-cac", "it-growth", "Blended projected CAC",
+        "kpi-cac", "it-growth-v2", "Blended projected CAC",
         f"Sum([{growth}/Effective Budget]) / "
         f"NullIf(Sum([{growth}/Projected Net Adds]), 0)",
         f"Sum([{growth}/Recommended Budget]) / "
@@ -1226,7 +1226,7 @@ def build_spec() -> dict:
         "id": "ch-growth",
         "kind": "bar-chart",
         "name": "Projected net adds by market",
-        "source": {"kind": "table", "elementId": "it-growth"},
+        "source": {"kind": "table", "elementId": "it-growth-v2"},
         "columns": [
             {"id": "grow-market", "name": "Market",
              "formula": f"[{growth}/Market]"},
@@ -1257,7 +1257,7 @@ def build_spec() -> dict:
         "id": "ch-quality",
         "kind": "bar-chart",
         "name": "Penetration vs address quality",
-        "source": {"kind": "table", "elementId": "it-growth"},
+        "source": {"kind": "table", "elementId": "it-growth-v2"},
         "columns": [
             {"id": "quality-market", "name": "Market",
              "formula": f"[{growth}/Market]"},
@@ -1594,7 +1594,7 @@ def build_spec() -> dict:
         "id": "tbl-growth-drill",
         "kind": "table",
         "name": "Growth scenario",
-        "source": {"kind": "table", "elementId": "it-growth"},
+        "source": {"kind": "table", "elementId": "it-growth-v2"},
         "columns": [
             {"id": "dg-market", "name": "Market",
              "formula": f"[{growth}/Market]"},
@@ -1858,7 +1858,7 @@ def build_spec() -> dict:
   <Element elementId="kpi-cac" gridColumn="19 / 25" gridRow="12 / 20"/>
   <Element elementId="ch-growth" gridColumn="1 / 13" gridRow="20 / 35"/>
   <Element elementId="ch-quality" gridColumn="13 / 25" gridRow="20 / 35"/>
-  <Element elementId="it-growth" gridColumn="1 / 20" gridRow="35 / 55"/>
+  <Element elementId="it-growth-v2" gridColumn="1 / 20" gridRow="35 / 55"/>
   <Element elementId="growth-note" gridColumn="20 / 25" gridRow="35 / 55"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-fcc">
