@@ -97,7 +97,7 @@ base AS (
     DATEADD('month', month_n - 17, DATE_TRUNC('month', CURRENT_DATE())) AS period,
     m.market, m.state, m.legacy_company, m.source_system, m.market_order,
     p.plan, p.monthly_price, p.plan_order,
-    ROUND((1030 + m.market_order * 115 + month_n * (18 + m.market_order))
+    ROUND((2060 + m.market_order * 230 + month_n * (36 + m.market_order * 2))
           * p.mix, 0) AS subscribers,
     ROUND((42 + m.market_order * 3 + month_n * 1.6) * p.mix, 0) AS gross_adds,
     ROUND((21 + m.market_order * 1.2 + month_n * 0.45) * p.mix, 0) AS churned,
@@ -107,7 +107,7 @@ base AS (
       AS campaign_leads,
     8400 + m.market_order * 610 + month_n * 180 AS campaign_spend,
     p.monthly_price
-      * ROUND((1030 + m.market_order * 115 + month_n * (18 + m.market_order))
+      * ROUND((2060 + m.market_order * 230 + month_n * (36 + m.market_order * 2))
               * p.mix, 0) AS billed_revenue,
     IFF(
       m.source_system = 'Legacy CSV',

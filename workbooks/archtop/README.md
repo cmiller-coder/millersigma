@@ -2,6 +2,10 @@
 
 Papercrane staging proof of value for Archtop Fiber's IT and FP&A teams.
 
+Workbook ID: `4357e1af-f26a-4c1b-b7d4-4eb9a11a0f45`
+
+URL ID: `234Eayu0tuMYDGw0JrV6wB`
+
 The workbook deliberately follows the meeting's finance-first decision path:
 
 1. **FP&A Control Room** — billing-to-GL reconciliation, ARPU, subscribers,
