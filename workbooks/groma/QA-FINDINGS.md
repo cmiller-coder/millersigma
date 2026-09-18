@@ -91,3 +91,50 @@ The `Publish` button was already clear after each `PUT /v2/workbooks/{id}/spec`
 and the changes were live in the published view, so no UI publish was needed
 for spec changes. The Data entry permission in (1) is the exception, because it
 lives outside the spec.
+
+
+---
+
+# v2 rebuild — additional verified platform facts (2026-09-18)
+
+## 8. `waterfall-chart` exists
+
+Not in any docs I had. It is a real element kind, but it **crashes the
+validator** (`Cannot read properties of undefined (reading 'label')`) if you
+pass a scale-based `color` block. With `source` + `columns` + `xAxis` + `yAxis`
+and no `color`, it renders a proper bridge. Used for the NAV bridge, where the
+equity-method add-back is its own bar.
+
+## 9. `scatter-chart` silently ignores `groupings`
+
+It aggregates by the **x-axis value** instead. Two properties that happened to
+share a value per unit had their NOI margins **added**, producing two
+impossible 127% points. `groupings` was accepted and did nothing. Fix: use
+`Avg(...)` rather than `Sum(...)` for measure-vs-measure scatters, so ties
+average instead of accumulating.
+
+## 10. Linked input-table column shapes
+
+```
+{"id": "ib-noi", "key": "p-noi", "hidden": true}          # passthrough
+{"id": "ib-fnoi", "type": "number", "name": "PM Forecast NOI"}   # editable
+{"id": "ib-remaining", "formula": "...", "name": "...", "format": ...}  # derived
+```
+Passthrough columns need `key` pointing at the **source element's column id**;
+derived formulas reference other columns by **display name** (`[Raw NOI]`,
+`[Effective Capex Budget]`) and controls by control id (`[Scenario]`). Omitting
+`key`/`formula` fails as `Invalid kind: "input-table"`.
+
+## 11. `conditionalFormats` has no `contains` condition
+
+Use `{"condition": "formula", "formula": "Contains([Col], \"x\")"}`. Passing
+`"condition": "contains"` fails as `Invalid kind: "table"` - another case of a
+bad *field value* being reported as a bad kind.
+
+## 12. Probing technique: submit a deliberately invalid value
+
+Unknown field *names* are often silently ignored, so name-probing proves
+nothing. Submitting an invalid *value* for a candidate field does: if the value
+is rejected, the field is real and enum-checked. This is how
+`orientation: "horizontal"` on bar-chart was confirmed (`"vertical"` is
+rejected).
