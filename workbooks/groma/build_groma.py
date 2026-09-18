@@ -48,7 +48,7 @@ SCOPE = (
 PROPERTY_SQL = r"""
 WITH properties AS (
   SELECT * FROM VALUES
-    ('BLD-1001','Harbor House','Groma Residential I LLC','East Boston',18,'2019-04-18',6200000,9150000,4860000,1.00,FALSE,FALSE,824000,246000,0,93000,320000,5700000,823600,9150000,4860000),
+    ('BLD-1001','Harbor House','Groma Residential I LLC','East Boston',18,'2019-04-18',6200000,9150000,4860000,1.00,FALSE,FALSE,824000,246000,0,93000,320000,5700000,824000,9150000,4860000),
     ('BLD-1002','Maverick Flats','Groma Residential I LLC','East Boston',24,'2020-08-07',8400000,12600000,6720000,1.00,FALSE,FALSE,1090000,331000,0,128000,415000,7220000,1090000,12600000,6720000),
     ('BLD-1003','Chelsea Commons','Groma Residential II LLC','Chelsea',31,'2021-02-11',11200000,14800000,8010000,0.82,FALSE,FALSE,1345000,438000,0,154000,530000,9580000,1345000,14800000,8010000),
     ('BLD-1004','Broadway Lofts','Groma Residential II LLC','Chelsea',16,'2021-11-19',6900000,8750000,4380000,0.82,FALSE,TRUE,712000,198000,96000,101000,287000,6010000,616000,8750000,4380000),
@@ -82,13 +82,13 @@ SELECT
   (total_income - total_expense - master_tenant_expense - cash_interest - recurring_capex) * ownership_pct AS reit_cash_contribution,
   IFF(equity_method, 'Equity method — in-LLC debt excluded',
       IFF(master_lease, 'Consolidated — master rent allocated', 'Consolidated')) AS accounting_treatment,
-  api_income - total_expense - master_tenant_expense AS api_noi,
+  api_income - total_expense AS api_noi,
   nav_tracker_value,
   control_debt,
-  (total_income - total_expense - master_tenant_expense) - (api_income - total_expense - master_tenant_expense) AS noi_tie_delta,
+  (total_income - total_expense - master_tenant_expense) - (api_income - total_expense) AS noi_tie_delta,
   approved_value - nav_tracker_value AS value_tie_delta,
   debt - control_debt AS debt_tie_delta,
-  IFF(ABS((total_income - total_expense - master_tenant_expense) - (api_income - total_expense - master_tenant_expense)) <= 500
+  IFF(ABS((total_income - total_expense - master_tenant_expense) - (api_income - total_expense)) <= 500
       AND ABS(approved_value-nav_tracker_value) <= 500
       AND ABS(debt-control_debt) <= 500, 'Tied', 'Review') AS tie_status,
   IFF(DATEDIFF('month', TO_DATE(acq_date), '2026-06-30') >= 36, 'Seasoned', 'Lease-up') AS maturity,
