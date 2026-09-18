@@ -43,18 +43,25 @@ HERE = pathlib.Path(__file__).resolve().parent
 CONNECTION_ID = "a9d45cfe-ff65-4515-8193-a7072602a1ee"
 FOLDER_ID = "a758d7ee-8c23-423d-9d60-5b635d9e9b58"
 
-INK = "#172B2D"
-FOREST = "#174A3A"
-GREEN = "#2F745B"
-MINT = "#DCEDE5"
-GOLD = "#D29B3D"
-CREAM = "#F7F4EC"
+# Groma's own palette, sampled by frequency from groma.com's stylesheet -
+# not guessed. Deep muted greens with a coral accent; the previous build used
+# an evergreen/gold scheme that was nobody's brand.
+INK = "#152B26"          # their body ink
+FOREST = "#041915"       # darkest green - header band
+GREEN = "#3A524B"        # dominant brand green (48 occurrences on their site)
+GREEN_MID = "#2E423D"
+SAGE = "#7A9B8E"
+CORAL = "#ED5737"        # their accent
+MINT = "#E8ECE9"
+CREAM = "#F4F6F5"
 WHITE = "#FFFFFF"
 BORDER = "#D9DED8"
-GOOD = "#19725B"
-WARN = "#A96F12"
+GOOD = "#2E6B57"
+WARN = "#C4551F"         # darkened coral, legible as text on white
 BAD = "#B33C32"
 MUTED = "#5C6B63"
+GOLD = CORAL             # accent alias: every former "gold" accent is coral now
+LOGO = (Path := __import__("pathlib").Path)(__file__).resolve().parent.joinpath("logo.txt").read_text().strip()
 
 MONEY = {"kind": "number", "formatString": "$.3~s"}
 MONEY0 = {"kind": "number", "formatString": "$,.0f"}
@@ -425,13 +432,18 @@ NAV_OPTIONS = [
 
 
 def header(idx, title):
-    add({"id": f"hdr-{idx}", "kind": "container", "style": panel(WHITE)})
-    add({"id": f"brand-{idx}", "kind": "text", "verticalAlign": "center",
-         "body": f'<span style="color: {MUTED}">**GROMA** NAV REIT</span>'})
+    # Dark brand band carrying Groma's real white logo, per the standing
+    # header convention. Their own site is near-black green, so the white
+    # wordmark they publish drops straight in with no recolouring.
+    add({"id": f"hdr-{idx}", "kind": "container",
+         "style": {"backgroundColor": FOREST, "borderRadius": "round"}})
+    add({"id": f"brand-{idx}", "kind": "image",
+         "source": {"kind": "url", "url": LOGO},
+         "style": {"fit": "contain", "align": "start", "padding": "none"}})
     add({"id": f"title-{idx}", "kind": "text", "verticalAlign": "center",
-         "body": f"### **{title}**"})
+         "body": f'### **<span style="color: {WHITE}">{title}</span>**'})
     add({"id": f"nav-{idx}", "kind": "navigation", "mode": "manual", "showIcons": False,
-         "optionStyle": {"textColor": FOREST, "selectedColor": GOLD,
+         "optionStyle": {"textColor": SAGE, "selectedColor": CORAL,
                          "style": "pill", "orientation": "horizontal"},
          "options": [{"label": l, "destination": {"type": "page", "pageId": p}}
                      for l, p in NAV_OPTIONS]})
@@ -647,12 +659,12 @@ def build_spec() -> dict:
              {"id": "h-count", "name": "Properties", "formula": f"CountDistinct([{PROP}/Buildium ID])", "format": NUM0},
              {"id": "h-units", "name": "Units", "formula": f"Sum([{PROP}/Units])", "format": NUM0},
              {"id": "h-own", "name": "REIT %", "formula": f"Max([{PROP}/REIT %])", "format": PCT1},
-             {"id": "h-value", "name": "100% Value", "formula": f"Sum([{PROP}/Approved Value])", "format": MONEY0},
-             {"id": "h-debt", "name": "100% Debt", "formula": f"Sum([{PROP}/Debt])", "format": MONEY0},
-             {"id": "h-rv", "name": "REIT Value", "formula": f"Sum([{PROP}/REIT Value])", "format": MONEY0},
-             {"id": "h-rd", "name": "REIT Debt", "formula": f"Sum([{PROP}/REIT Debt])", "format": MONEY0},
-             {"id": "h-re", "name": "REIT Equity", "formula": f"Sum([{PROP}/REIT Equity])", "format": MONEY0},
-             {"id": "h-noi", "name": "REIT NOI", "formula": f"Sum([{PROP}/REIT NOI])", "format": MONEY0},
+             {"id": "h-value", "name": "100% Value", "formula": f"Sum([{PROP}/Approved Value])", "format": MONEY},
+             {"id": "h-debt", "name": "100% Debt", "formula": f"Sum([{PROP}/Debt])", "format": MONEY},
+             {"id": "h-rv", "name": "REIT Value", "formula": f"Sum([{PROP}/REIT Value])", "format": MONEY},
+             {"id": "h-rd", "name": "REIT Debt", "formula": f"Sum([{PROP}/REIT Debt])", "format": MONEY},
+             {"id": "h-re", "name": "REIT Equity", "formula": f"Sum([{PROP}/REIT Equity])", "format": MONEY},
+             {"id": "h-noi", "name": "REIT NOI", "formula": f"Sum([{PROP}/REIT NOI])", "format": MONEY},
              {"id": "h-treat", "name": "Treatment", "formula": f"Max([{PROP}/Accounting Treatment])"},
          ],
          "groupings": [{"id": "h-grp", "groupBy": ["h-hold"],
@@ -699,25 +711,22 @@ def build_spec() -> dict:
         f"CountDistinct(If([{PROP}/Tie Status] = \"Review\", [{PROP}/Buildium ID], null))",
         "0", NUM0, BAD, "Target", invert=True)
 
-    add({"id": "chart-scatter", "kind": "scatter-chart",
-         "name": "NOI margin vs value per unit - every property, coloured by maturity",
-         "source": {"kind": "table", "elementId": "src-property"},
-         "columns": [
-             # Avg, not Sum. scatter-chart silently ignores `groupings` and
-             # aggregates by the x-axis value instead, so two properties that
-             # happen to share a value per unit got their margins ADDED - which
-             # is what produced two impossible 127% NOI-margin points.
-             {"id": "sc-vpu", "name": "Value per Unit", "formula": f"Avg([{PROP}/Value per Unit])", "format": MONEY0},
-             {"id": "sc-margin", "name": "NOI Margin", "formula": f"Avg([{PROP}/NOI Margin])", "format": PCT1},
-             {"id": "sc-name", "name": "Property", "formula": f"[{PROP}/Property]"},
-             {"id": "sc-mat", "name": "Maturity", "formula": f"[{PROP}/Maturity]"},
-         ],
-         "xAxis": {"columnId": "sc-vpu"},
-         "yAxis": {"columnIds": ["sc-margin"],
-                   "format": {"scale": {"type": "linear", "zero": False}}},
-         "color": {"by": "category", "column": "sc-mat", "scheme": [FOREST, GOLD]},
-         "legend": {"visibility": "visible"},
-         "style": panel()})
+    # Bespoke plugin: Sigma has no treemap kind, so this is genuinely not
+    # expressible natively - and it is this page's argument, not decoration.
+    # Area = REIT equity, colour = gap to that property's OWN neighbourhood
+    # cohort, which is the comparison the whole page is built on.
+    add({"id": "plg-treemap", "kind": "plugin",
+         "pluginId": "9a060e72-6678-4abd-8705-a8bd2dc1cd02",
+         "displayName": "The whole book by neighbourhood",
+         "config": {
+             "source": {"kind": "element", "elementId": "src-property"},
+             "property": "p-name",
+             "neighborhood": "p-hood",
+             "equity": "p-reit-equity",
+             "gap": "p-gap",
+             "margin": "p-margin",
+         },
+         "style": {"backgroundColor": WHITE}})
 
     add({"id": "tbl-attention", "kind": "table",
          "name": "Action queue - widest negative gap to neighborhood cohort first",
@@ -730,9 +739,9 @@ def build_spec() -> dict:
              {"id": "a-margin", "name": "NOI Margin", "formula": f"[{PROP}/NOI Margin]", "format": PCT1},
              {"id": "a-hoodm", "name": "Cohort Avg", "formula": f"[{PROP}/Neighborhood Avg Margin]", "format": PCT1},
              {"id": "a-gap", "name": "Gap", "formula": f"[{PROP}/Margin Gap vs Cohort]", "format": PCT1},
-             {"id": "a-noi", "name": "Raw NOI", "formula": f"[{PROP}/Raw NOI]", "format": MONEY0},
-             {"id": "a-capex", "name": "Recurring Capex", "formula": f"[{PROP}/Recurring Capex]", "format": MONEY0},
-             {"id": "a-headroom", "name": "Budget Headroom", "formula": f"[{PROP}/Budget Headroom]", "format": MONEY0},
+             {"id": "a-noi", "name": "Raw NOI", "formula": f"[{PROP}/Raw NOI]", "format": MONEY},
+             {"id": "a-capex", "name": "Recurring Capex", "formula": f"[{PROP}/Recurring Capex]", "format": MONEY},
+             {"id": "a-headroom", "name": "Budget Headroom", "formula": f"[{PROP}/Budget Headroom]", "format": MONEY},
              {"id": "a-mat", "name": "Maturity", "formula": f"[{PROP}/Maturity]"},
              {"id": "a-treat", "name": "Treatment", "formula": f"[{PROP}/Accounting Treatment]"},
          ],
@@ -1031,7 +1040,7 @@ LAYOUT = f"""<?xml version="1.0" encoding="utf-8"?>
   <Element elementId="kpi-over" gridColumn="7 / 13" gridRow="8 / 16"/>
   <Element elementId="kpi-leaseup" gridColumn="13 / 19" gridRow="8 / 16"/>
   <Element elementId="kpi-review" gridColumn="19 / 25" gridRow="8 / 16"/>
-  <Element elementId="chart-scatter" gridColumn="1 / 19" gridRow="16 / 35"/>
+  <Element elementId="plg-treemap" gridColumn="1 / 19" gridRow="16 / 35"/>
   <Element elementId="chat-agent-port" gridColumn="19 / 25" gridRow="16 / 35"/>
   <Element elementId="tbl-attention" gridColumn="1 / 25" gridRow="35 / 59"/>
 </Page>
