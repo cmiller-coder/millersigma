@@ -17,12 +17,25 @@ Open here.
 Line: **"This replaces the Python merge and exported workbook, not Excel
 thinking."**
 
-## 2. Growth Planner — 10 minutes
+## 2. Budget & Forecast App — 10 minutes
 
 This is the data-application moment.
 
-1. Show the live Base Case: clean opportunity locations, projected net adds,
-   incremental ARR and blended CAC.
+1. Point out the four editable assumptions: **Your Net Adds, Your ARPU,
+   Your Opex, Your Capex**. Blank cells use a visible Base Case.
+2. Override Hudson net adds (try `600`) or capex.
+3. Watch projected ARR, EBITDA, margin and free cash flow update.
+4. Name the plan, add a submission comment and click **Submit plan**.
+5. Show the appended user/timestamp event in Plan Approval History, then click
+   **Approve plan**.
+
+Line: **"This is where Excel operations become a governed finance
+application—not another dashboard."**
+
+## 3. Growth Planner — 7 minutes
+
+1. Show clean opportunity locations, projected net adds, incremental ARR and
+   blended CAC.
 2. In Hudson, type a new **Take Rate Override** (try `7%`) and change
    **Promo Budget**.
 3. Watch projected adds, ARR, CAC and the market bars update.
@@ -35,7 +48,7 @@ Tie it to their questions:
 - Which promotion should run in which serviceable area?
 - What changes after cleaning false passings?
 
-## 3. FCC Reporting — 7 minutes
+## 4. FCC Reporting — 5 minutes
 
 1. Open the BDC filing summary.
 2. Filter **Review status → Needs review**.

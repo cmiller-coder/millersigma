@@ -167,6 +167,23 @@ SELECT * FROM (
 )
 """.strip()
 
+BUDGET_SQL = r"""
+SELECT * FROM (
+  VALUES
+    ('Kingston', 'NY', 8620, 52.40, 3340000, 820000, 410, 53.50, 3400000, 880000),
+    ('Saugerties', 'NY', 4870, 50.90, 1840000, 510000, 285, 52.00, 1880000, 535000),
+    ('Rhinebeck', 'NY', 4010, 56.10, 1720000, 430000, 190, 56.80, 1750000, 445000),
+    ('Hudson', 'NY', 2640, 48.80, 1080000, 760000, 460, 51.50, 1180000, 790000),
+    ('Warwick', 'NY', 7160, 51.70, 2820000, 690000, 330, 53.20, 2890000, 715000),
+    ('Hancock', 'NY', 1040, 47.50, 520000, 580000, 260, 50.50, 610000, 610000),
+    ('Stroudsburg', 'PA', 1180, 49.20, 610000, 1210000, 620, 52.50, 790000, 1280000),
+    ('Pittsfield', 'MA', 920, 49.70, 490000, 1080000, 560, 53.00, 650000, 1140000)
+) AS t(
+  market, state, subscribers, current_arpu, current_opex, current_capex,
+  base_case_net_adds, base_case_arpu, base_case_opex, base_case_capex
+)
+""".strip()
+
 FCC_SQL = r"""
 WITH counties AS (
   SELECT column1::STRING AS state, column2::STRING AS county,
@@ -254,11 +271,13 @@ def nav(eid: str) -> None:
             "orientation": "horizontal",
         },
         "options": [
-            {"label": "FP&A Control Room",
+            {"label": "FP&A",
              "destination": {"type": "page", "pageId": "pg-finance"}},
-            {"label": "Growth Planner",
+            {"label": "Budget App",
+             "destination": {"type": "page", "pageId": "pg-budget"}},
+            {"label": "Growth",
              "destination": {"type": "page", "pageId": "pg-growth"}},
-            {"label": "FCC Reporting",
+            {"label": "FCC",
              "destination": {"type": "page", "pageId": "pg-fcc"}},
         ],
     })
@@ -448,6 +467,27 @@ def build_spec() -> dict:
          "formula": "[Custom SQL/recommended_campaign]"},
     ])
 
+    sql_table("tbl-budget", "Budget Baseline", BUDGET_SQL, [
+        {"id": "bd-market", "name": "Market", "formula": "[Custom SQL/market]"},
+        {"id": "bd-state", "name": "State", "formula": "[Custom SQL/state]"},
+        {"id": "bd-subs", "name": "Subscribers",
+         "formula": "[Custom SQL/subscribers]", "format": NUM0},
+        {"id": "bd-arpu", "name": "Current ARPU",
+         "formula": "[Custom SQL/current_arpu]", "format": MONEY0},
+        {"id": "bd-opex", "name": "Current Opex",
+         "formula": "[Custom SQL/current_opex]", "format": MONEY0},
+        {"id": "bd-capex", "name": "Current Capex",
+         "formula": "[Custom SQL/current_capex]", "format": MONEY0},
+        {"id": "bd-base-adds", "name": "Base Case Net Adds",
+         "formula": "[Custom SQL/base_case_net_adds]", "format": NUM0},
+        {"id": "bd-base-arpu", "name": "Base Case ARPU",
+         "formula": "[Custom SQL/base_case_arpu]", "format": MONEY0},
+        {"id": "bd-base-opex", "name": "Base Case Opex",
+         "formula": "[Custom SQL/base_case_opex]", "format": MONEY0},
+        {"id": "bd-base-capex", "name": "Base Case Capex",
+         "formula": "[Custom SQL/base_case_capex]", "format": MONEY0},
+    ])
+
     sql_table("tbl-fcc", "FCC Source", FCC_SQL, [
         {"id": "fc-period", "name": "Filing Period",
          "formula": "[Custom SQL/filing_period]"},
@@ -615,7 +655,261 @@ def build_spec() -> dict:
         "style": panel("#FFF3F1"),
     })
 
-    # Page 2 — service-location growth data application.
+    # Page 2 — FP&A budget and approval application.
+    header(4, "FY27 Budget & Forecast Application",
+           "Edit market assumptions, see EBITDA and cash impact, then submit or approve")
+    add({
+        "id": "scope-budget",
+        "kind": "text",
+        "body": (
+            SCOPE + " Editable assumptions are stored in a warehouse-backed input "
+            "table. Submit and Approve append immutable workflow events with user "
+            "and timestamp context."
+        ),
+        "style": {"backgroundColor": SKY, "borderRadius": "round"},
+    })
+    add({
+        "id": "ctrl-plan-name",
+        "kind": "control",
+        "controlId": "PlanName",
+        "name": "Plan name",
+        "controlType": "text",
+        "mode": "equals",
+        "case": "insensitive",
+        "value": "FY27 Board Plan",
+        "includeNulls": "when-no-value-is-selected",
+        "showOperators": False,
+    })
+    add({
+        "id": "ctrl-plan-comment",
+        "kind": "control",
+        "controlId": "PlanComment",
+        "name": "Submission comment",
+        "controlType": "text",
+        "mode": "equals",
+        "case": "insensitive",
+        "value": "",
+        "includeNulls": "when-no-value-is-selected",
+        "showOperators": False,
+    })
+    add({
+        "id": "it-budget",
+        "kind": "input-table",
+        "name": "FY27 Market Budget",
+        "source": {"kind": "linked", "from": "tbl-budget"},
+        "inputMode": "view",
+        "columns": [
+            {"id": "ib-market", "key": "bd-market"},
+            {"id": "ib-state", "key": "bd-state"},
+            {"id": "ib-subs", "key": "bd-subs"},
+            {"id": "ib-current-arpu", "key": "bd-arpu"},
+            {"id": "ib-current-opex", "key": "bd-opex"},
+            {"id": "ib-current-capex", "key": "bd-capex"},
+            {"id": "ib-base-adds", "key": "bd-base-adds"},
+            {"id": "ib-base-arpu", "key": "bd-base-arpu"},
+            {"id": "ib-base-opex", "key": "bd-base-opex"},
+            {"id": "ib-base-capex", "key": "bd-base-capex"},
+            {"id": "ib-adds-entry", "name": "Your Net Adds", "type": "number",
+             "format": NUM0},
+            {"id": "ib-arpu-entry", "name": "Your ARPU", "type": "number",
+             "format": MONEY0},
+            {"id": "ib-opex-entry", "name": "Your Opex", "type": "number",
+             "format": MONEY0},
+            {"id": "ib-capex-entry", "name": "Your Capex", "type": "number",
+             "format": MONEY0},
+            {"id": "ib-comment", "name": "Finance Comment", "type": "text"},
+            {"id": "ib-current-arr", "name": "Current ARR",
+             "formula": "[Subscribers] * [Current ARPU] * 12",
+             "format": MONEY0},
+            {"id": "ib-current-ebitda", "name": "Current EBITDA",
+             "formula": "[Current ARR] - [Current Opex]",
+             "format": MONEY0},
+            {"id": "ib-effective-adds", "name": "Effective Net Adds",
+             "formula": "Coalesce([Your Net Adds], [Base Case Net Adds])",
+             "format": NUM0},
+            {"id": "ib-effective-arpu", "name": "Effective ARPU",
+             "formula": "Coalesce([Your ARPU], [Base Case ARPU])",
+             "format": MONEY0},
+            {"id": "ib-effective-opex", "name": "Effective Opex",
+             "formula": "Coalesce([Your Opex], [Base Case Opex])",
+             "format": MONEY0},
+            {"id": "ib-effective-capex", "name": "Effective Capex",
+             "formula": "Coalesce([Your Capex], [Base Case Capex])",
+             "format": MONEY0},
+            {"id": "ib-projected-arr", "name": "Projected ARR",
+             "formula": (
+                 "[Current ARR] + [Effective Net Adds] * [Effective ARPU] * 12"
+             ), "format": MONEY0},
+            {"id": "ib-projected-ebitda", "name": "Projected EBITDA",
+             "formula": "[Projected ARR] - [Effective Opex]",
+             "format": MONEY0},
+            {"id": "ib-ebitda-margin", "name": "EBITDA Margin",
+             "formula": "[Projected EBITDA] / NullIf([Projected ARR], 0)",
+             "format": PCT1},
+            {"id": "ib-free-cash", "name": "Free Cash Flow",
+             "formula": "[Projected EBITDA] - [Effective Capex]",
+             "format": MONEY0},
+            {"id": "ib-ebitda-delta", "name": "EBITDA Δ vs current",
+             "formula": "[Projected EBITDA] - [Current EBITDA]",
+             "format": MONEY0},
+            {"id": "ib-capex-delta", "name": "Capex Δ vs current",
+             "formula": "[Effective Capex] - [Current Capex]",
+             "format": MONEY0},
+        ],
+        "tableComponents": {"summaryBar": "hidden"},
+        "tableStyle": {
+            "preset": "presentation",
+            "cellSpacing": "small",
+            "gridLines": "horizontal",
+        },
+        "style": panel(),
+    })
+    add({
+        "id": "it-plan-log",
+        "kind": "input-table",
+        "name": "Plan Approval History",
+        "source": {"kind": "empty", "connectionId": CONNECTION_ID},
+        "inputMode": "view",
+        "columns": [
+            {"id": "log-plan", "name": "Plan", "type": "text"},
+            {"id": "log-status", "name": "Status", "type": "text",
+             "allowedValues": {
+                 "kind": "list",
+                 "values": ["Submitted", "Approved"],
+                 "pills": "color-by-option",
+             }},
+            {"id": "log-by", "name": "By", "type": "text"},
+            {"id": "log-at", "name": "At", "type": "datetime"},
+            {"id": "log-note", "name": "Comment", "type": "text"},
+        ],
+        "tableComponents": {"summaryBar": "hidden"},
+        "tableStyle": {
+            "preset": "presentation",
+            "cellSpacing": "small",
+            "gridLines": "horizontal",
+        },
+        "style": panel(),
+    })
+    for button_id, label, status, appearance in [
+        ("btn-submit-plan", "Submit plan", "Submitted", "filled"),
+        ("btn-approve-plan", "Approve plan", "Approved", "outline"),
+    ]:
+        add({
+            "id": button_id,
+            "kind": "button",
+            "text": label,
+            "appearance": appearance,
+            "actions": [{
+                "id": f"act-{button_id}",
+                "trigger": "on-click",
+                "successToast": {
+                    "showMessage": "shown",
+                    "title": f"Plan {status.lower()}",
+                },
+                "effects": [{
+                    "effect": "insert-rows",
+                    "table": "it-plan-log",
+                    "values": {
+                        "log-plan": {
+                            "type": "control",
+                            "control": "PlanName",
+                        },
+                        "log-status": {
+                            "type": "constant",
+                            "value": {"type": "text", "value": status},
+                        },
+                        "log-by": {
+                            "type": "formula",
+                            "formula": "CurrentUserEmail()",
+                        },
+                        "log-at": {
+                            "type": "formula",
+                            "formula": "Now()",
+                        },
+                        "log-note": {
+                            "type": "control",
+                            "control": "PlanComment",
+                        },
+                    },
+                }],
+            }],
+        })
+    budget = "FY27 Market Budget"
+    kpi(
+        "kpi-budget-arr", "it-budget", "Projected ARR",
+        f"Sum([{budget}/Projected ARR])",
+        f"Sum([{budget}/Current ARR])",
+        MONEY, NAVY_DARK, comparison_label="Current run rate",
+    )
+    kpi(
+        "kpi-budget-ebitda", "it-budget", "Projected EBITDA",
+        f"Sum([{budget}/Projected EBITDA])",
+        f"Sum([{budget}/Current EBITDA])",
+        MONEY, NAVY, comparison_label="Current EBITDA",
+    )
+    kpi(
+        "kpi-budget-margin", "it-budget", "EBITDA margin",
+        f"Sum([{budget}/Projected EBITDA]) / "
+        f"NullIf(Sum([{budget}/Projected ARR]), 0)",
+        f"Sum([{budget}/Current EBITDA]) / "
+        f"NullIf(Sum([{budget}/Current ARR]), 0)",
+        PCT1, CORAL_DARK, comparison_label="Current margin",
+    )
+    kpi(
+        "kpi-budget-fcf", "it-budget", "Free cash flow",
+        f"Sum([{budget}/Free Cash Flow])",
+        f"Sum([{budget}/Current EBITDA]) - "
+        f"Sum([{budget}/Current Capex])",
+        MONEY, NAVY_DARK, comparison_label="Current FCF",
+    )
+    add({
+        "id": "ch-budget-ebitda",
+        "kind": "bar-chart",
+        "name": "Current vs projected EBITDA by market",
+        "source": {"kind": "table", "elementId": "it-budget"},
+        "columns": [
+            {"id": "be-market", "name": "Market",
+             "formula": f"[{budget}/Market]"},
+            {"id": "be-current", "name": "Current EBITDA",
+             "formula": f"Sum([{budget}/Current EBITDA])", "format": MONEY},
+            {"id": "be-projected", "name": "Projected EBITDA",
+             "formula": f"Sum([{budget}/Projected EBITDA])", "format": MONEY},
+        ],
+        "xAxis": {"columnId": "be-market"},
+        "yAxis": {"columnIds": ["be-current", "be-projected"]},
+        "stacking": "none",
+        "legend": {"position": "top"},
+        "style": panel(),
+    })
+    add({
+        "id": "ch-budget-cash",
+        "kind": "bar-chart",
+        "name": "Projected free cash flow by market",
+        "source": {"kind": "table", "elementId": "it-budget"},
+        "columns": [
+            {"id": "bc-market", "name": "Market",
+             "formula": f"[{budget}/Market]"},
+            {"id": "bc-fcf", "name": "Free Cash Flow",
+             "formula": f"Sum([{budget}/Free Cash Flow])", "format": MONEY},
+        ],
+        "xAxis": {"columnId": "bc-market"},
+        "yAxis": {"columnIds": ["bc-fcf"]},
+        "legend": {"visibility": "hidden"},
+        "style": panel(),
+    })
+    add({
+        "id": "budget-note",
+        "kind": "text",
+        "body": (
+            "**The finance app moment:** override Hudson net adds, ARPU, opex or "
+            "capex. Projected ARR, EBITDA, margin and free cash flow update from "
+            "the same editable grid. Then add a comment and Submit; approval history "
+            "writes back with the acting user and timestamp."
+        ),
+        "style": panel("#FFF3F1"),
+    })
+
+    # Page 3 — service-location growth data application.
     header(2, "Serviceable Location Growth Planner",
            "Turn passings, address quality and campaign economics into a governed action plan")
     add({
@@ -933,6 +1227,28 @@ def build_spec() -> dict:
   <Element elementId="tbl-recon" gridColumn="1 / 20" gridRow="35 / 54"/>
   <Element elementId="fin-note" gridColumn="20 / 25" gridRow="35 / 54"/>
 </Page>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-budget">
+  <Container elementId="hdr-4" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="logo-4" gridColumn="1 / 6" gridRow="1 / 6"/>
+    <Element elementId="title-4" gridColumn="6 / 16" gridRow="1 / 4"/>
+    <Element elementId="subtitle-4" gridColumn="6 / 16" gridRow="4 / 6"/>
+    <Element elementId="nav-4" gridColumn="16 / 25" gridRow="2 / 6"/>
+  </Container>
+  <Element elementId="scope-budget" gridColumn="1 / 25" gridRow="6 / 9"/>
+  <Element elementId="ctrl-plan-name" gridColumn="1 / 9" gridRow="9 / 12"/>
+  <Element elementId="ctrl-plan-comment" gridColumn="9 / 17" gridRow="9 / 12"/>
+  <Element elementId="btn-submit-plan" gridColumn="17 / 21" gridRow="9 / 12"/>
+  <Element elementId="btn-approve-plan" gridColumn="21 / 25" gridRow="9 / 12"/>
+  <Element elementId="kpi-budget-arr" gridColumn="1 / 7" gridRow="12 / 20"/>
+  <Element elementId="kpi-budget-ebitda" gridColumn="7 / 13" gridRow="12 / 20"/>
+  <Element elementId="kpi-budget-margin" gridColumn="13 / 19" gridRow="12 / 20"/>
+  <Element elementId="kpi-budget-fcf" gridColumn="19 / 25" gridRow="12 / 20"/>
+  <Element elementId="ch-budget-ebitda" gridColumn="1 / 13" gridRow="20 / 35"/>
+  <Element elementId="ch-budget-cash" gridColumn="13 / 25" gridRow="20 / 35"/>
+  <Element elementId="it-budget" gridColumn="1 / 20" gridRow="35 / 54"/>
+  <Element elementId="budget-note" gridColumn="20 / 25" gridRow="35 / 54"/>
+  <Element elementId="it-plan-log" gridColumn="1 / 25" gridRow="54 / 66"/>
+</Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-growth">
   <Container elementId="hdr-2" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
     <Element elementId="logo-2" gridColumn="1 / 6" gridRow="1 / 6"/>
@@ -973,6 +1289,7 @@ def build_spec() -> dict:
   <Element elementId="tbl-fin" gridColumn="1 / 13" gridRow="1 / 18"/>
   <Element elementId="tbl-growth" gridColumn="13 / 25" gridRow="1 / 18"/>
   <Element elementId="tbl-fcc" gridColumn="1 / 13" gridRow="18 / 36"/>
+  <Element elementId="tbl-budget" gridColumn="13 / 25" gridRow="18 / 36"/>
 </Page>
 """
 
@@ -985,6 +1302,7 @@ def build_spec() -> dict:
             "elements": elements,
             "pages": [
                 {"id": "pg-finance", "name": "FP&A Control Room"},
+                {"id": "pg-budget", "name": "Budget & Forecast App"},
                 {"id": "pg-growth", "name": "Growth Planner"},
                 {"id": "pg-fcc", "name": "FCC Reporting"},
                 {"id": "pg-data", "name": "Data", "visibility": "hidden"},

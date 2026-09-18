@@ -10,10 +10,12 @@ The workbook deliberately follows the meeting's finance-first decision path:
 
 1. **FP&A Control Room** — billing-to-GL reconciliation, ARPU, subscribers,
    duplicates and address completeness across MBS and legacy CSV sources.
-2. **Growth Planner** — editable market-level campaign assumptions connected to
+2. **Budget & Forecast App** — editable market assumptions feeding projected
+   ARR, EBITDA, margin and free cash flow, plus submit/approve writeback history.
+3. **Growth Planner** — editable market-level campaign assumptions connected to
    serviceable locations, penetration, address quality, projected net adds,
    incremental ARR and CAC.
-3. **FCC Reporting** — export-ready BDC summary plus an editable exception
+4. **FCC Reporting** — export-ready BDC summary plus an editable exception
    review queue.
 
 All records are deterministic synthetic data generated in Snowflake and shaped
