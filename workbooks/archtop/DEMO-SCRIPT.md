@@ -23,23 +23,29 @@ This is the data-application moment.
 
 1. Point out the four editable assumptions: **Your Net Adds, Your ARPU,
    Your Opex, Your Capex**. Blank cells use a visible Base Case.
-2. Override Hudson net adds (try `600`) or capex.
-3. Watch projected ARR, EBITDA, margin and free cash flow update.
-4. Name the plan, add a submission comment and click **Submit plan**.
-5. Show the appended user/timestamp event in Plan Approval History, then click
+2. Switch **Active scenario** between Base Case, FY27 Board Plan and Downside;
+   the assumptions and financial outcomes move without rebuilding the page.
+3. Override Hudson net adds (try `600`) or capex.
+4. Watch projected ARR, EBITDA, margin and free cash flow update.
+5. Add a submission comment and click **Submit plan**.
+6. Show the appended user/timestamp event in Plan Approval History, then click
    **Approve plan**.
+7. Click Hudson in either chart. The market drawer opens with billing,
+   budget and growth detail together.
 
 Line: **"This is where Excel operations become a governed finance
 application—not another dashboard."**
 
 ## 3. Growth Planner — 7 minutes
 
-1. Show clean opportunity locations, projected net adds, incremental ARR and
+1. Switch between Base Case, Targeted Expansion and Conservative.
+2. Show clean opportunity locations, projected net adds, incremental ARR and
    blended CAC.
-2. In Hudson, type a new **Take Rate Override** (try `7%`) and change
+3. In Hudson, type a new **Take Rate Override** (try `7%`) and change
    **Promo Budget**.
-3. Watch projected adds, ARR, CAC and the market bars update.
-4. Add an FP&A note.
+4. Watch projected adds, ARR, CAC and the market bars update.
+5. Add an owner and move Campaign Status from Draft → Proposed → Approved.
+6. Click a market bar to open its cross-functional detail drawer.
 
 Tie it to their questions:
 
@@ -54,6 +60,8 @@ Tie it to their questions:
 2. Filter **Review status → Needs review**.
 3. Show the same source driving the submission summary and the exception queue.
 4. Type a review owner, resolution and certification status.
+5. Click Orange County in the filing summary to open the speed-tier evidence
+   drawer.
 
 Line: **"The report is no longer a once-a-quarter archaeology project."**
 

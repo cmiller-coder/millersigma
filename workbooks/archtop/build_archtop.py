@@ -228,6 +228,7 @@ CROSS JOIN tech t
 
 
 elements: list[dict] = []
+overlays: list[dict] = []
 
 
 def add(element: dict) -> dict:
@@ -384,6 +385,7 @@ def list_control(
 
 def build_spec() -> dict:
     elements.clear()
+    overlays.clear()
 
     sql_table("tbl-fin", "Finance Ledger", FINANCE_SQL, [
         {"id": "fin-period", "name": "Period",
@@ -700,16 +702,32 @@ def build_spec() -> dict:
         "style": {"backgroundColor": SKY, "borderRadius": "round"},
     })
     add({
+        "id": "ctrl-growth-scenario",
+        "kind": "control",
+        "controlId": "GrowthScenario",
+        "name": "Active growth scenario",
+        "controlType": "segmented",
+        "source": {
+            "kind": "manual",
+            "valueType": "text",
+            "values": ["Base Case", "Targeted Expansion", "Conservative"],
+            "labels": ["Base Case", "Targeted Expansion", "Conservative"],
+        },
+        "value": "Targeted Expansion",
+    })
+    add({
         "id": "ctrl-plan-name",
         "kind": "control",
         "controlId": "PlanName",
-        "name": "Plan name",
-        "controlType": "text",
-        "mode": "equals",
-        "case": "insensitive",
+        "name": "Active scenario",
+        "controlType": "segmented",
+        "source": {
+            "kind": "manual",
+            "valueType": "text",
+            "values": ["Base Case", "FY27 Board Plan", "Downside"],
+            "labels": ["Base Case", "FY27 Board Plan", "Downside"],
+        },
         "value": "FY27 Board Plan",
-        "includeNulls": "when-no-value-is-selected",
-        "showOperators": False,
     })
     add({
         "id": "ctrl-plan-comment",
@@ -756,16 +774,32 @@ def build_spec() -> dict:
              "formula": "[Current ARR] - [Current Opex]",
              "format": MONEY0},
             {"id": "ib-effective-adds", "name": "Effective Net Adds",
-             "formula": "Coalesce([Your Net Adds], [Base Case Net Adds])",
+             "formula": (
+                 "Coalesce([Your Net Adds], [Base Case Net Adds] * "
+                 'Switch([PlanName], "FY27 Board Plan", 1.15, '
+                 '"Downside", 0.70, 1.00))'
+             ),
              "format": NUM0},
             {"id": "ib-effective-arpu", "name": "Effective ARPU",
-             "formula": "Coalesce([Your ARPU], [Base Case ARPU])",
+             "formula": (
+                 "Coalesce([Your ARPU], [Base Case ARPU] * "
+                 'Switch([PlanName], "FY27 Board Plan", 1.01, '
+                 '"Downside", 0.96, 1.00))'
+             ),
              "format": MONEY0},
             {"id": "ib-effective-opex", "name": "Effective Opex",
-             "formula": "Coalesce([Your Opex], [Base Case Opex])",
+             "formula": (
+                 "Coalesce([Your Opex], [Base Case Opex] * "
+                 'Switch([PlanName], "FY27 Board Plan", 1.03, '
+                 '"Downside", 0.95, 1.00))'
+             ),
              "format": MONEY0},
             {"id": "ib-effective-capex", "name": "Effective Capex",
-             "formula": "Coalesce([Your Capex], [Base Case Capex])",
+             "formula": (
+                 "Coalesce([Your Capex], [Base Case Capex] * "
+                 'Switch([PlanName], "FY27 Board Plan", 1.05, '
+                 '"Downside", 0.78, 1.00))'
+             ),
              "format": MONEY0},
             {"id": "ib-projected-arr", "name": "Projected ARR",
              "formula": (
@@ -1033,6 +1067,13 @@ def build_spec() -> dict:
             {"id": "it-target", "name": "Target ARPU Override", "type": "number",
              "format": MONEY0},
             {"id": "it-note", "name": "FP&A Note", "type": "text"},
+            {"id": "it-owner", "name": "Campaign Owner", "type": "text"},
+            {"id": "it-status", "name": "Campaign Status", "type": "text",
+             "allowedValues": {
+                 "kind": "list",
+                 "values": ["Draft", "Proposed", "Approved", "Launched"],
+                 "pills": "color-by-option",
+             }},
             {"id": "it-locs", "key": "gr-locs"},
             {"id": "it-subs", "key": "gr-subs"},
             {"id": "it-pen", "key": "gr-pen"},
@@ -1046,13 +1087,25 @@ def build_spec() -> dict:
             {"id": "it-competitor", "key": "gr-competitor"},
             {"id": "it-campaign", "key": "gr-campaign"},
             {"id": "it-effective-budget", "name": "Effective Budget",
-             "formula": "Coalesce([Promo Budget], [Recommended Budget])",
+             "formula": (
+                 "Coalesce([Promo Budget], [Recommended Budget] * "
+                 'Switch([GrowthScenario], "Targeted Expansion", 1.25, '
+                 '"Conservative", 0.75, 1.00))'
+             ),
              "format": MONEY0},
             {"id": "it-effective-take", "name": "Effective Take Rate",
-             "formula": "Coalesce([Take Rate Override], [Base Take Rate])",
+             "formula": (
+                 "Coalesce([Take Rate Override], [Base Take Rate] * "
+                 'Switch([GrowthScenario], "Targeted Expansion", 1.20, '
+                 '"Conservative", 0.80, 1.00))'
+             ),
              "format": PCT1},
             {"id": "it-effective-arpu", "name": "Effective Target ARPU",
-             "formula": "Coalesce([Target ARPU Override], [Target ARPU])",
+             "formula": (
+                 "Coalesce([Target ARPU Override], [Target ARPU] * "
+                 'Switch([GrowthScenario], "Targeted Expansion", 1.02, '
+                 '"Conservative", 0.98, 1.00))'
+             ),
              "format": MONEY0},
             {"id": "it-project-adds", "name": "Projected Net Adds",
              "formula": (
@@ -1074,7 +1127,8 @@ def build_spec() -> dict:
         ],
         "order": [
             "it-market", "it-state", "it-phase", "it-budget", "it-take",
-            "it-target", "it-note", "it-locs", "it-subs", "it-pen",
+            "it-target", "it-note", "it-owner", "it-status",
+            "it-locs", "it-subs", "it-pen",
             "it-arpu", "it-quality", "it-rec-budget", "it-base-take",
             "it-rec-arpu", "it-sales", "it-score", "it-competitor",
             "it-campaign", "it-effective-budget", "it-effective-take",
@@ -1083,7 +1137,10 @@ def build_spec() -> dict:
         ],
         "conditionalFormats": [
             {"type": "single",
-             "columnIds": ["it-budget", "it-take", "it-target", "it-note"],
+             "columnIds": [
+                 "it-budget", "it-take", "it-target", "it-note",
+                 "it-owner", "it-status"
+             ],
              "condition": "formula", "formula": "True",
              "style": {"backgroundColor": "#FFF0ED"}},
             {"type": "dataBars", "columnIds": ["it-project-adds"],
@@ -1107,6 +1164,18 @@ def build_spec() -> dict:
             {"type": "single", "columnIds": ["it-quality"],
              "condition": ">", "value": 0.95,
              "style": {"backgroundColor": "#E5F5EF", "color": GOOD}},
+            {"type": "single", "columnIds": ["it-status"],
+             "condition": "=", "value": "Proposed",
+             "style": {"backgroundColor": "#FFF1D6", "color": WARN,
+                       "bold": True}},
+            {"type": "single", "columnIds": ["it-status"],
+             "condition": "=", "value": "Approved",
+             "style": {"backgroundColor": "#E5F5EF", "color": GOOD,
+                       "bold": True}},
+            {"type": "single", "columnIds": ["it-status"],
+             "condition": "=", "value": "Launched",
+             "style": {"backgroundColor": SKY, "color": NAVY_DARK,
+                       "bold": True}},
         ],
         "tableComponents": {"summaryBar": "hidden"},
         "tableStyle": {
@@ -1388,6 +1457,351 @@ def build_spec() -> dict:
         "style": panel("#FFF3F1"),
     })
 
+    # Drill drawers — selected marks become a governed detail workflow.
+    overlays.extend([
+        {
+            "id": "drawer-market",
+            "type": "drawer",
+            "name": "Market Detail",
+            "drawer": {
+                "width": "large",
+                "position": "end",
+                "showShadow": "shown",
+                "header": {
+                    "title": "Market detail",
+                    "showCloseIcon": "shown",
+                },
+            },
+        },
+        {
+            "id": "drawer-fcc",
+            "type": "drawer",
+            "name": "FCC County Detail",
+            "drawer": {
+                "width": "large",
+                "position": "end",
+                "showShadow": "shown",
+                "header": {
+                    "title": "FCC county detail",
+                    "showCloseIcon": "shown",
+                },
+            },
+        },
+    ])
+    add({
+        "id": "market-drill-title",
+        "kind": "text",
+        "body": (
+            "## **Market operating detail**\n"
+            "Billing reconciliation, board-plan economics and campaign assumptions "
+            "for the selected market."
+        ),
+        "style": panel("#FFF3F1"),
+    })
+    add({
+        "id": "tbl-fin-drill",
+        "kind": "table",
+        "name": "Billing and reconciliation",
+        "source": {"kind": "table", "elementId": "tbl-fin"},
+        "columns": [
+            {"id": "df-market", "name": "Market",
+             "formula": f"[{fin}/Market]"},
+            {"id": "df-plan", "name": "Plan",
+             "formula": f"[{fin}/Plan]"},
+            {"id": "df-subs", "name": "Subscribers",
+             "formula": f"Sum(If({current}, [{fin}/Subscribers], 0))",
+             "format": NUM0},
+            {"id": "df-bill", "name": "Billing Revenue",
+             "formula": f"Sum(If({current}, [{fin}/Billing Revenue], 0))",
+             "format": MONEY0},
+            {"id": "df-gl", "name": "GL Revenue",
+             "formula": f"Sum(If({current}, [{fin}/GL Revenue], 0))",
+             "format": MONEY0},
+            {"id": "df-var", "name": "Variance",
+             "formula": "[GL Revenue] - [Billing Revenue]", "format": MONEY0},
+            {"id": "df-quality", "name": "Address Completeness",
+             "formula": f"Avg(If({current}, [{fin}/Address Completeness], Null))",
+             "format": PCT1},
+        ],
+        "groupings": [{
+            "id": "df-group",
+            "groupBy": ["df-market", "df-plan"],
+            "calculations": [
+                "df-subs", "df-bill", "df-gl", "df-var", "df-quality"
+            ],
+        }],
+        "conditionalFormats": [
+            {"type": "single", "columnIds": ["df-var"],
+             "condition": "formula", "formula": "Abs([Variance]) >= 500",
+             "style": {"backgroundColor": "#FCE8E6", "color": BAD,
+                       "bold": True}},
+            {"type": "single", "columnIds": ["df-quality"],
+             "condition": "<", "value": 0.90,
+             "style": {"backgroundColor": "#FCE8E6", "color": BAD,
+                       "bold": True}},
+        ],
+        "tableComponents": {"summaryBar": "hidden"},
+        "tableStyle": {
+            "preset": "presentation",
+            "cellSpacing": "small",
+            "gridLines": "horizontal",
+        },
+        "style": panel(),
+    })
+    add({
+        "id": "tbl-budget-drill",
+        "kind": "table",
+        "name": "Budget scenario",
+        "source": {"kind": "table", "elementId": "it-budget"},
+        "columns": [
+            {"id": "db-market", "name": "Market",
+             "formula": f"[{budget}/Market]"},
+            {"id": "db-scenario", "name": "Scenario", "formula": "[PlanName]"},
+            {"id": "db-arr", "name": "Projected ARR",
+             "formula": f"Sum([{budget}/Projected ARR])", "format": MONEY0},
+            {"id": "db-ebitda", "name": "Projected EBITDA",
+             "formula": f"Sum([{budget}/Projected EBITDA])", "format": MONEY0},
+            {"id": "db-margin", "name": "EBITDA Margin",
+             "formula": f"Avg([{budget}/EBITDA Margin])", "format": PCT1},
+            {"id": "db-fcf", "name": "Free Cash Flow",
+             "formula": f"Sum([{budget}/Free Cash Flow])", "format": MONEY0},
+            {"id": "db-adds", "name": "Effective Net Adds",
+             "formula": f"Sum([{budget}/Effective Net Adds])", "format": NUM0},
+        ],
+        "groupings": [{
+            "id": "db-group",
+            "groupBy": ["db-market", "db-scenario"],
+            "calculations": [
+                "db-arr", "db-ebitda", "db-margin", "db-fcf", "db-adds"
+            ],
+        }],
+        "conditionalFormats": [
+            {"type": "single", "columnIds": ["db-fcf"],
+             "condition": "<", "value": 0,
+             "style": {"backgroundColor": "#FCE8E6", "color": BAD,
+                       "bold": True}},
+            {"type": "single", "columnIds": ["db-fcf"],
+             "condition": ">", "value": 0,
+             "style": {"backgroundColor": "#E5F5EF", "color": GOOD}},
+        ],
+        "tableComponents": {"summaryBar": "hidden"},
+        "tableStyle": {
+            "preset": "presentation",
+            "cellSpacing": "small",
+            "gridLines": "horizontal",
+        },
+        "style": panel(),
+    })
+    add({
+        "id": "tbl-growth-drill",
+        "kind": "table",
+        "name": "Growth scenario",
+        "source": {"kind": "table", "elementId": "it-growth"},
+        "columns": [
+            {"id": "dg-market", "name": "Market",
+             "formula": f"[{growth}/Market]"},
+            {"id": "dg-scenario", "name": "Scenario",
+             "formula": "[GrowthScenario]"},
+            {"id": "dg-phase", "name": "Build Phase",
+             "formula": f"[{growth}/Build Phase]"},
+            {"id": "dg-pen", "name": "Penetration",
+             "formula": f"Avg([{growth}/Penetration])", "format": PCT1},
+            {"id": "dg-quality", "name": "Address Quality",
+             "formula": f"Avg([{growth}/Address Quality])", "format": PCT1},
+            {"id": "dg-adds", "name": "Projected Net Adds",
+             "formula": f"Sum([{growth}/Projected Net Adds])", "format": NUM0},
+            {"id": "dg-arr", "name": "Projected ARR",
+             "formula": f"Sum([{growth}/Projected ARR])", "format": MONEY0},
+            {"id": "dg-cac", "name": "Projected CAC",
+             "formula": f"Avg([{growth}/Projected CAC])", "format": MONEY0},
+            {"id": "dg-owner", "name": "Campaign Owner",
+             "formula": f"Max([{growth}/Campaign Owner])"},
+            {"id": "dg-status", "name": "Campaign Status",
+             "formula": f"Max([{growth}/Campaign Status])"},
+        ],
+        "groupings": [{
+            "id": "dg-group",
+            "groupBy": ["dg-market", "dg-scenario", "dg-phase"],
+            "calculations": [
+                "dg-pen", "dg-quality", "dg-adds", "dg-arr", "dg-cac",
+                "dg-owner", "dg-status"
+            ],
+        }],
+        "conditionalFormats": [
+            {"type": "single", "columnIds": ["dg-pen"],
+             "condition": "<", "value": 0.20,
+             "style": {"backgroundColor": "#FCE8E6", "color": BAD,
+                       "bold": True}},
+            {"type": "single", "columnIds": ["dg-status"],
+             "condition": "=", "value": "Approved",
+             "style": {"backgroundColor": "#E5F5EF", "color": GOOD,
+                       "bold": True}},
+        ],
+        "tableComponents": {"summaryBar": "hidden"},
+        "tableStyle": {
+            "preset": "presentation",
+            "cellSpacing": "small",
+            "gridLines": "horizontal",
+        },
+        "style": panel(),
+    })
+    add({
+        "id": "ctrl-market-drill",
+        "kind": "control",
+        "controlId": "MarketDrill",
+        "name": "Selected market",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "single",
+        "value": "Hudson",
+        "values": ["Hudson"],
+        "filters": [
+            {"source": {"kind": "table", "elementId": "tbl-fin-drill"},
+             "columnId": "df-market"},
+            {"source": {"kind": "table", "elementId": "tbl-budget-drill"},
+             "columnId": "db-market"},
+            {"source": {"kind": "table", "elementId": "tbl-growth-drill"},
+             "columnId": "dg-market"},
+        ],
+        "source": {
+            "kind": "source",
+            "source": {"kind": "table", "elementId": "tbl-budget-drill"},
+            "columnId": "db-market",
+        },
+    })
+    add({
+        "id": "fcc-drill-title",
+        "kind": "text",
+        "body": (
+            "## **FCC filing detail**\n"
+            "Speed-tier evidence, source mapping and validation exceptions for "
+            "the selected county."
+        ),
+        "style": panel("#FFF3F1"),
+    })
+    add({
+        "id": "tbl-fcc-drill",
+        "kind": "table",
+        "name": "County filing evidence",
+        "source": {"kind": "table", "elementId": "tbl-fcc"},
+        "columns": [
+            {"id": "dc-county", "name": "County",
+             "formula": f"[{fcc}/County]"},
+            {"id": "dc-market", "name": "Market",
+             "formula": f"[{fcc}/Market]"},
+            {"id": "dc-speed", "name": "Download Mbps",
+             "formula": f"[{fcc}/Max Download Mbps]", "format": NUM0},
+            {"id": "dc-served", "name": "Served Locations",
+             "formula": f"Sum([{fcc}/Served Locations])", "format": NUM0},
+            {"id": "dc-fabric", "name": "Fabric Locations",
+             "formula": f"Sum([{fcc}/Fabric Locations])", "format": NUM0},
+            {"id": "dc-valid", "name": "Valid BSL IDs",
+             "formula": f"Sum([{fcc}/Valid BSL IDs])", "format": NUM0},
+            {"id": "dc-address", "name": "Address Exceptions",
+             "formula": f"Sum([{fcc}/Address Exceptions])", "format": NUM0},
+            {"id": "dc-tech", "name": "Technology Mismatches",
+             "formula": f"Sum([{fcc}/Technology Mismatches])", "format": NUM0},
+            {"id": "dc-source", "name": "Source Mapping",
+             "formula": f"Max([{fcc}/Source Mapping])"},
+            {"id": "dc-status", "name": "Review Status",
+             "formula": f"Max([{fcc}/Review Status])"},
+        ],
+        "groupings": [{
+            "id": "dc-group",
+            "groupBy": ["dc-county", "dc-market", "dc-speed"],
+            "calculations": [
+                "dc-served", "dc-fabric", "dc-valid", "dc-address",
+                "dc-tech", "dc-source", "dc-status"
+            ],
+        }],
+        "conditionalFormats": [
+            {"type": "single", "columnIds": ["dc-status"],
+             "condition": "=", "value": "Needs review",
+             "style": {"backgroundColor": "#FCE8E6", "color": BAD,
+                       "bold": True}},
+            {"type": "dataBars", "columnIds": ["dc-address"],
+             "scheme": [CORAL, "#F7FAFC"]},
+        ],
+        "tableComponents": {"summaryBar": "hidden"},
+        "tableStyle": {
+            "preset": "presentation",
+            "cellSpacing": "small",
+            "gridLines": "horizontal",
+        },
+        "style": panel(),
+    })
+    add({
+        "id": "ctrl-county-drill",
+        "kind": "control",
+        "controlId": "CountyDrill",
+        "name": "Selected county",
+        "controlType": "list",
+        "mode": "include",
+        "selectionMode": "single",
+        "value": "Orange",
+        "values": ["Orange"],
+        "filters": [{
+            "source": {"kind": "table", "elementId": "tbl-fcc-drill"},
+            "columnId": "dc-county",
+        }],
+        "source": {
+            "kind": "source",
+            "source": {"kind": "table", "elementId": "tbl-fcc-drill"},
+            "columnId": "dc-county",
+        },
+    })
+
+    by_id = {element["id"]: element for element in elements}
+
+    def add_drill_action(
+        element_id: str,
+        column_id: str,
+        action_id: str,
+        control_id: str,
+        overlay_id: str,
+    ) -> None:
+        by_id[element_id]["actions"] = [{
+            "id": action_id,
+            "trigger": {
+                "on": "on-select",
+                "condition": {
+                    "type": "column",
+                    "columnId": column_id,
+                    "condition": "IsNotNull",
+                },
+            },
+            "effects": [
+                {
+                    "effect": "set-control-value",
+                    "control": control_id,
+                    "value": {"type": "column", "columnId": column_id},
+                },
+                {"effect": "open-overlay", "overlayId": overlay_id},
+            ],
+        }]
+
+    for target, column in [
+        ("tbl-recon", "rc-market"),
+        ("ch-budget-ebitda", "be-market"),
+        ("ch-budget-cash", "bc-market"),
+        ("ch-growth", "grow-market"),
+        ("ch-quality", "quality-market"),
+    ]:
+        add_drill_action(
+            target,
+            column,
+            f"drill-{target}",
+            "MarketDrill",
+            "drawer-market",
+        )
+    add_drill_action(
+        "tbl-fcc-summary",
+        "fs-county",
+        "drill-fcc-county",
+        "CountyDrill",
+        "drawer-fcc",
+    )
+
     layout = """<?xml version="1.0" encoding="utf-8"?>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-finance">
   <Container elementId="hdr-1" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
@@ -1439,14 +1853,15 @@ def build_spec() -> dict:
     <Element elementId="nav-2" gridColumn="16 / 25" gridRow="2 / 6"/>
   </Container>
   <Element elementId="scope-growth" gridColumn="1 / 25" gridRow="6 / 9"/>
-  <Element elementId="kpi-open-locs" gridColumn="1 / 7" gridRow="9 / 17"/>
-  <Element elementId="kpi-project-adds" gridColumn="7 / 13" gridRow="9 / 17"/>
-  <Element elementId="kpi-project-arr" gridColumn="13 / 19" gridRow="9 / 17"/>
-  <Element elementId="kpi-cac" gridColumn="19 / 25" gridRow="9 / 17"/>
-  <Element elementId="ch-growth" gridColumn="1 / 13" gridRow="17 / 32"/>
-  <Element elementId="ch-quality" gridColumn="13 / 25" gridRow="17 / 32"/>
-  <Element elementId="it-growth" gridColumn="1 / 20" gridRow="32 / 52"/>
-  <Element elementId="growth-note" gridColumn="20 / 25" gridRow="32 / 52"/>
+  <Element elementId="ctrl-growth-scenario" gridColumn="1 / 13" gridRow="9 / 12"/>
+  <Element elementId="kpi-open-locs" gridColumn="1 / 7" gridRow="12 / 20"/>
+  <Element elementId="kpi-project-adds" gridColumn="7 / 13" gridRow="12 / 20"/>
+  <Element elementId="kpi-project-arr" gridColumn="13 / 19" gridRow="12 / 20"/>
+  <Element elementId="kpi-cac" gridColumn="19 / 25" gridRow="12 / 20"/>
+  <Element elementId="ch-growth" gridColumn="1 / 13" gridRow="20 / 35"/>
+  <Element elementId="ch-quality" gridColumn="13 / 25" gridRow="20 / 35"/>
+  <Element elementId="it-growth" gridColumn="1 / 20" gridRow="35 / 55"/>
+  <Element elementId="growth-note" gridColumn="20 / 25" gridRow="35 / 55"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-fcc">
   <Container elementId="hdr-3" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
@@ -1473,6 +1888,18 @@ def build_spec() -> dict:
   <Element elementId="tbl-fcc" gridColumn="1 / 13" gridRow="18 / 36"/>
   <Element elementId="tbl-budget" gridColumn="13 / 25" gridRow="18 / 36"/>
 </Page>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="drawer-market">
+  <Element elementId="market-drill-title" gridColumn="1 / 25" gridRow="1 / 5"/>
+  <Element elementId="ctrl-market-drill" gridColumn="1 / 25" gridRow="5 / 8"/>
+  <Element elementId="tbl-fin-drill" gridColumn="1 / 25" gridRow="8 / 22"/>
+  <Element elementId="tbl-budget-drill" gridColumn="1 / 25" gridRow="22 / 34"/>
+  <Element elementId="tbl-growth-drill" gridColumn="1 / 25" gridRow="34 / 48"/>
+</Page>
+<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="drawer-fcc">
+  <Element elementId="fcc-drill-title" gridColumn="1 / 25" gridRow="1 / 5"/>
+  <Element elementId="ctrl-county-drill" gridColumn="1 / 25" gridRow="5 / 8"/>
+  <Element elementId="tbl-fcc-drill" gridColumn="1 / 25" gridRow="8 / 30"/>
+</Page>
 """
 
     return {
@@ -1482,6 +1909,7 @@ def build_spec() -> dict:
             "schemaVersion": 1,
             "kind": "workbook",
             "elements": elements,
+            "overlays": overlays,
             "pages": [
                 {"id": "pg-finance", "name": "FP&A Control Room"},
                 {"id": "pg-budget", "name": "Budget & Forecast App"},
