@@ -756,6 +756,17 @@ def build_spec() -> dict:
              "formula": "[Effective Capex] - [Current Capex]",
              "format": MONEY0},
         ],
+        "order": [
+            "ib-market", "ib-state", "ib-adds-entry", "ib-arpu-entry",
+            "ib-opex-entry", "ib-capex-entry", "ib-comment",
+            "ib-base-adds", "ib-base-arpu", "ib-base-opex", "ib-base-capex",
+            "ib-subs", "ib-current-arpu", "ib-current-opex",
+            "ib-current-capex", "ib-current-arr", "ib-current-ebitda",
+            "ib-effective-adds", "ib-effective-arpu", "ib-effective-opex",
+            "ib-effective-capex", "ib-projected-arr", "ib-projected-ebitda",
+            "ib-ebitda-margin", "ib-free-cash", "ib-ebitda-delta",
+            "ib-capex-delta",
+        ],
         "tableComponents": {"summaryBar": "hidden"},
         "tableStyle": {
             "preset": "presentation",
@@ -976,6 +987,15 @@ def build_spec() -> dict:
                  "([Serviceable Locations] - [Subscribers]) * [Base Take Rate] "
                  "* [Address Quality] * [Current ARPU] * 12"
              ), "format": MONEY0},
+        ],
+        "order": [
+            "it-market", "it-state", "it-phase", "it-budget", "it-take",
+            "it-target", "it-note", "it-locs", "it-subs", "it-pen",
+            "it-arpu", "it-quality", "it-rec-budget", "it-base-take",
+            "it-rec-arpu", "it-sales", "it-score", "it-competitor",
+            "it-campaign", "it-effective-budget", "it-effective-take",
+            "it-effective-arpu", "it-project-adds", "it-project-arr",
+            "it-cac", "it-delta",
         ],
         "tableComponents": {"summaryBar": "hidden"},
         "tableStyle": {
