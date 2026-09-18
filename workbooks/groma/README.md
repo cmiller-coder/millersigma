@@ -3,6 +3,10 @@
 Sigma staging proof of value based on the June 30, 2026 REIT Cockpit
 specification.
 
+Workbook ID: `50c50986-7e82-4f6a-8575-d387a118dbe6`
+
+URL ID: `2spqOczwpYSanDiTgNhfCK`
+
 The workbook compresses twenty-four decision tabs into a five-page demo path:
 
 1. **NAV Control Room** — fund NAV, raw NOI, cash contribution, leverage, and

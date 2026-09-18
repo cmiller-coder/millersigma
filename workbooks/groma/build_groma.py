@@ -1011,6 +1011,7 @@ class SigmaApi:
             self.base + path,
             data=data,
             headers={"Authorization": "Bearer " + self.token,
+                     "Accept": "application/json",
                      "Content-Type": "application/json"},
             method=method,
         )
@@ -1020,7 +1021,12 @@ class SigmaApi:
         except urllib.error.HTTPError as error:
             raw = error.read().decode()
             raise RuntimeError(f"Sigma {method} {path} failed ({error.code}): {raw}") from error
-        return json.loads(raw) if raw else {}
+        if not raw:
+            return {}
+        try:
+            return json.loads(raw)
+        except ValueError:
+            return {"raw": raw}
 
 
 def main() -> None:
@@ -1040,6 +1046,8 @@ def main() -> None:
         result = api.request("POST", "/v2/workbooks/spec/verify", spec)
     elif args.command == "create":
         result = api.request("POST", "/v2/workbooks/spec", spec)
+        if result.get("workbookId"):
+            (HERE / "workbook_id.txt").write_text(result["workbookId"] + "\n")
     else:
         result = api.request(
             "PUT",
