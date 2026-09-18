@@ -31,6 +31,7 @@ BORDER = "#D9DED8"
 GOOD = "#19725B"
 WARN = "#A96F12"
 BAD = "#B33C32"
+MUTED = "#5C6B63"
 
 MONEY = {"kind": "number", "formatString": "$.3~s"}
 MONEY0 = {"kind": "number", "formatString": "$,.0f"}
@@ -45,25 +46,167 @@ SCOPE = (
     "valuation, tenant, or investor data is present."
 )
 
-PROPERTY_SQL = r"""
+# ---------------------------------------------------------------------------
+# Layer 1 source facts.
+#
+# recurring_capex and capex_budget are DERIVED from the 15xx capex lines below,
+# never typed a second time. The blueprint's rule is "the tagging is the
+# number": the amount deducted to reach cash contribution must BE the sum of
+# the lines tagged recurring. Typing them separately is how a cockpit ends up
+# deducting $6.4M on the property page while its capex queue only totals
+# $1.3M, which is exactly what the first version did.
+#
+# capex_budget follows the blueprint's candidate definition for an open field:
+# a per-unit reserve plus that property's approved project capex, with
+# contingency -- not a value-scaled plug.
+# ---------------------------------------------------------------------------
+RESERVE_PER_UNIT = 1500
+BUDGET_CONTINGENCY = 1.10
+
+# buildium_id, name, holding, neighborhood, units, acq_date, acq_cost,
+# approved_value, debt, ownership_pct, equity_method, master_lease,
+# total_income, total_expense, master_tenant_expense, cash_interest
+PROPERTIES = [
+    ("BLD-1001", "Harbor House", "Groma Residential I LLC", "East Boston", 18,
+     "2019-04-18", 6200000, 9150000, 4860000, 1.00, False, False, 824000, 246000, 0, 93000),
+    ("BLD-1002", "Maverick Flats", "Groma Residential I LLC", "East Boston", 24,
+     "2020-08-07", 8400000, 12600000, 6720000, 1.00, False, False, 1090000, 331000, 0, 128000),
+    ("BLD-1003", "Chelsea Commons", "Groma Residential II LLC", "Chelsea", 31,
+     "2021-02-11", 11200000, 14800000, 8010000, 0.82, False, False, 1345000, 438000, 0, 154000),
+    ("BLD-1004", "Broadway Lofts", "Groma Residential II LLC", "Chelsea", 16,
+     "2021-11-19", 6900000, 8750000, 4380000, 0.82, False, True, 712000, 198000, 96000, 101000),
+    ("BLD-1005", "Winter Hill Place", "Groma Residential III LLC", "Somerville", 22,
+     "2022-03-25", 10100000, 13750000, 7330000, 0.74, False, False, 1210000, 389000, 0, 142000),
+    ("BLD-1006", "Union Square Row", "Groma Residential III LLC", "Somerville", 14,
+     "2022-09-09", 7450000, 10300000, 5280000, 0.74, False, False, 895000, 302000, 0, 99000),
+    ("BLD-1007", "Roxbury Crossing", "Groma Opportunity LLC", "Roxbury", 38,
+     "2023-01-17", 13900000, 17800000, 9610000, 0.68, False, False, 1570000, 565000, 0, 186000),
+    ("BLD-1008", "Dudley Terrace", "Groma Opportunity LLC", "Roxbury", 27,
+     "2023-06-02", 9700000, 12100000, 6400000, 0.68, False, True, 1040000, 314000, 126000, 139000),
+    ("BLD-1009", "Jamaica Plain Court", "Groma Residential IV LLC", "Jamaica Plain", 20,
+     "2023-10-12", 8900000, 10900000, 5720000, 0.61, False, False, 965000, 346000, 0, 112000),
+    ("BLD-1010", "Centre Street Homes", "Groma Residential IV LLC", "Jamaica Plain", 12,
+     "2024-02-23", 5700000, 6650000, 3380000, 0.61, False, False, 562000, 221000, 0, 71000),
+    ("BLD-1011", "Seaport Residential JV", "Harbor Equity JV LLC", "South Boston", 74,
+     "2020-06-30", 31600000, 47500000, 26800000, 0.43, True, False, 4180000, 1520000, 0, 382000),
+    ("BLD-1012", "Dorchester Garden", "Groma Workforce Housing LLC", "Dorchester", 42,
+     "2024-07-15", 15600000, 16900000, 8900000, 0.57, False, False, 1780000, 702000, 0, 211000),
+]
+
+# One deliberate, explainable second-source break so the Controls page can
+# actually demonstrate catching something. The blueprint is explicit that a
+# divergence is a data problem fixed at the source, never patched with a
+# constant -- so this surfaces as Review with a named reason.
+NOI_BREAKS = {
+    "BLD-1003": (24600, "Buildium API pull missing a June maintenance invoice batch "
+                        "- reconcile at the source, do not adjust the workbook"),
+}
+
+# transaction_id, buildium_id, posted_date, description, amount, auto_class, rule_reason
+CAPEX_LINES = [
+    ("TX-2601", "BLD-1001", "2026-01-14", "Roof membrane replacement", 118000, "Recurring", "Description: roof preserves rentability"),
+    ("TX-2613", "BLD-1001", "2026-02-27", "Common stair tread repair", 14200, "Recurring", "Description: maintenance preserves existing use"),
+    ("TX-2614", "BLD-1001", "2026-05-19", "Hallway light fixture swap", 2100, "Recurring", "Auto floor: amount below $2,500"),
+    ("TX-2602", "BLD-1002", "2026-02-08", "Unit 3A gut renovation", 94000, "Value-add", "Description: renovation changes unit basis"),
+    ("TX-2615", "BLD-1002", "2026-03-16", "Boiler replacement", 86000, "Recurring", "Description: required existing-system work"),
+    ("TX-2616", "BLD-1002", "2026-06-05", "Turnover flooring, 4 units", 21400, "Recurring", "Description: turnover maintenance"),
+    ("TX-2603", "BLD-1003", "2026-02-19", "Boiler circulation pump", 2100, "Recurring", "Auto floor: amount below $2,500"),
+    ("TX-2617", "BLD-1003", "2026-04-02", "Parking deck membrane", 96000, "Recurring", "Description: envelope maintenance"),
+    ("TX-2618", "BLD-1003", "2026-05-28", "Unit turnover package, 6 units", 34500, "Recurring", "Description: turnover maintenance"),
+    ("TX-2619", "BLD-1003", "2026-06-11", "Bike room build-out", 78000, "Value-add", "Description: adds rentable amenity"),
+    ("TX-2604", "BLD-1004", "2026-03-03", "Master lease unit refresh", 62000, "Value-add", "Manual pick: acquisition plan scope"),
+    ("TX-2620", "BLD-1004", "2026-04-21", "Sprinkler head certification", 71000, "Recurring", "Description: life-safety maintenance"),
+    ("TX-2621", "BLD-1004", "2026-06-09", "Exterior paint touch-up", 12800, "Recurring", "Description: envelope maintenance"),
+    ("TX-2605", "BLD-1005", "2026-03-22", "Fire alarm panel replacement", 136000, "Recurring", "Description: life-safety maintenance"),
+    ("TX-2622", "BLD-1005", "2026-05-14", "Basement drainage repair", 16900, "Recurring", "Description: maintenance preserves existing use"),
+    ("TX-2623", "BLD-1006", "2026-02-12", "Water heater replacement", 48000, "Recurring", "Description: required existing-system work"),
+    ("TX-2606", "BLD-1006", "2026-04-04", "Kitchen repositioning package", 151000, "Value-add", "Description: renovation changes unit basis"),
+    ("TX-2624", "BLD-1006", "2026-06-20", "Gutter and downspout repair", 9600, "Recurring", "Description: envelope maintenance"),
+    ("TX-2607", "BLD-1007", "2026-04-18", "Exterior masonry stabilization", 228000, "Recurring", "Manual pick: preserves existing use"),
+    ("TX-2625", "BLD-1007", "2026-05-30", "Elevator controller service", 27500, "Recurring", "Description: required existing-system work"),
+    ("TX-2626", "BLD-1008", "2026-03-11", "Window seal remediation", 64000, "Recurring", "Description: envelope maintenance"),
+    ("TX-2608", "BLD-1008", "2026-04-29", "New basement amenity", 87000, "Value-add", "Description: adds rentable amenity"),
+    ("TX-2627", "BLD-1008", "2026-06-18", "Unit turnover package, 3 units", 19800, "Recurring", "Description: turnover maintenance"),
+    ("TX-2628", "BLD-1009", "2026-03-27", "Porch structural repair", 58000, "Recurring", "Description: maintenance preserves existing use"),
+    ("TX-2609", "BLD-1009", "2026-05-07", "Turnover paint and flooring", 2400, "Recurring", "Auto floor: amount below $2,500"),
+    ("TX-2629", "BLD-1009", "2026-06-02", "HVAC condenser replacement", 13600, "Recurring", "Description: required existing-system work"),
+    ("TX-2610", "BLD-1010", "2026-05-21", "Electrical service upgrade", 73000, "Recurring", "Manual pick: required existing-system work"),
+    ("TX-2630", "BLD-1010", "2026-06-14", "Entry door replacement", 8400, "Recurring", "Description: envelope maintenance"),
+    ("TX-2631", "BLD-1011", "2026-02-05", "Garage waterproofing", 164000, "Recurring", "Description: envelope maintenance"),
+    ("TX-2632", "BLD-1011", "2026-04-09", "Curtain wall gasket replacement", 92000, "Recurring", "Description: envelope maintenance"),
+    ("TX-2611", "BLD-1011", "2026-06-02", "Penthouse reconfiguration", 315000, "Value-add", "Description: renovation changes unit basis"),
+    ("TX-2633", "BLD-1011", "2026-06-25", "Unit turnover package, 9 units", 41300, "Recurring", "Description: turnover maintenance"),
+    ("TX-2634", "BLD-1012", "2026-03-05", "Roof drain replacement", 88000, "Recurring", "Description: roof preserves rentability"),
+    ("TX-2636", "BLD-1012", "2026-04-15", "Unit repositioning, 4 units", 124000, "Value-add", "Description: renovation changes unit basis"),
+    ("TX-2635", "BLD-1012", "2026-05-23", "Corridor flooring, 3 floors", 26400, "Recurring", "Description: maintenance preserves existing use"),
+    ("TX-2612", "BLD-1012", "2026-06-16", "Window seal remediation", 46000, "Recurring", "Description: envelope maintenance"),
+]
+
+_NAMES = {p[0]: p[1] for p in PROPERTIES}
+_UNITS = {p[0]: p[4] for p in PROPERTIES}
+
+
+def _recurring_capex(pid: str) -> int:
+    return sum(l[4] for l in CAPEX_LINES if l[1] == pid and l[5] == "Recurring")
+
+
+def _total_capex(pid: str) -> int:
+    return sum(l[4] for l in CAPEX_LINES if l[1] == pid)
+
+
+def _capex_budget(pid: str) -> int:
+    raw = RESERVE_PER_UNIT * _UNITS[pid] + _total_capex(pid) * BUDGET_CONTINGENCY
+    return int(round(raw / 1000.0) * 1000)
+
+
+def _sql_str(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _property_values() -> str:
+    rows = []
+    for (pid, name, holding, hood, units, acq, cost, value, debt, own,
+         eq, ml, income, expense, master, interest) in PROPERTIES:
+        break_amt, break_reason = NOI_BREAKS.get(pid, (0, ""))
+        # The independent Buildium API pull nets master-tenant rent the same way
+        # the primary income statement does; an earlier bug subtracted it twice
+        # on the check side and produced false Review flags.
+        api_income = income - master - break_amt
+        rows.append(
+            "    (" + ",".join([
+                _sql_str(pid), _sql_str(name), _sql_str(holding), _sql_str(hood),
+                str(units), _sql_str(acq), str(cost), str(value), str(debt),
+                f"{own:.2f}", "TRUE" if eq else "FALSE", "TRUE" if ml else "FALSE",
+                str(income), str(expense), str(master), str(interest),
+                str(_recurring_capex(pid)), str(_capex_budget(pid)),
+                str(api_income), str(value), str(debt),
+                _sql_str(break_reason),
+            ]) + ")"
+        )
+    return ",\n".join(rows)
+
+
+def _capex_values() -> str:
+    rows = []
+    for (tid, pid, date, desc, amount, auto, reason) in CAPEX_LINES:
+        rows.append(
+            "  (" + ",".join([
+                _sql_str(tid), _sql_str(pid), _sql_str(_NAMES[pid]), _sql_str(date),
+                _sql_str(desc), str(amount), _sql_str(auto), _sql_str(reason),
+                "TRUE" if auto == "Recurring" else "FALSE",
+            ]) + ")"
+        )
+    return ",\n".join(rows)
+
+
+PROPERTY_SQL = """
 WITH properties AS (
   SELECT * FROM VALUES
-    ('BLD-1001','Harbor House','Groma Residential I LLC','East Boston',18,'2019-04-18',6200000,9150000,4860000,1.00,FALSE,FALSE,824000,246000,0,93000,320000,5700000,824000,9150000,4860000),
-    ('BLD-1002','Maverick Flats','Groma Residential I LLC','East Boston',24,'2020-08-07',8400000,12600000,6720000,1.00,FALSE,FALSE,1090000,331000,0,128000,415000,7220000,1090000,12600000,6720000),
-    ('BLD-1003','Chelsea Commons','Groma Residential II LLC','Chelsea',31,'2021-02-11',11200000,14800000,8010000,0.82,FALSE,FALSE,1345000,438000,0,154000,530000,9580000,1345000,14800000,8010000),
-    ('BLD-1004','Broadway Lofts','Groma Residential II LLC','Chelsea',16,'2021-11-19',6900000,8750000,4380000,0.82,FALSE,TRUE,712000,198000,96000,101000,287000,6010000,616000,8750000,4380000),
-    ('BLD-1005','Winter Hill Place','Groma Residential III LLC','Somerville',22,'2022-03-25',10100000,13750000,7330000,0.74,FALSE,FALSE,1210000,389000,0,142000,476000,8650000,1210000,13750000,7330000),
-    ('BLD-1006','Union Square Row','Groma Residential III LLC','Somerville',14,'2022-09-09',7450000,10300000,5280000,0.74,FALSE,FALSE,895000,302000,0,99000,364000,6890000,895000,10300000,5280000),
-    ('BLD-1007','Roxbury Crossing','Groma Opportunity LLC','Roxbury',38,'2023-01-17',13900000,17800000,9610000,0.68,FALSE,FALSE,1570000,565000,0,186000,690000,11300000,1570000,17800000,9610000),
-    ('BLD-1008','Dudley Terrace','Groma Opportunity LLC','Roxbury',27,'2023-06-02',9700000,12100000,6400000,0.68,FALSE,TRUE,1040000,314000,126000,139000,522000,8440000,914000,12100000,6400000),
-    ('BLD-1009','Jamaica Plain Court','Groma Residential IV LLC','Jamaica Plain',20,'2023-10-12',8900000,10900000,5720000,0.61,FALSE,FALSE,965000,346000,0,112000,401000,7510000,965000,10900000,5720000),
-    ('BLD-1010','Centre Street Homes','Groma Residential IV LLC','Jamaica Plain',12,'2024-02-23',5700000,6650000,3380000,0.61,FALSE,FALSE,562000,221000,0,71000,248000,4990000,562000,6650000,3380000),
-    ('BLD-1011','Seaport Residential JV','Harbor Equity JV LLC','South Boston',74,'2020-06-30',31600000,47500000,26800000,0.43,TRUE,FALSE,4180000,1520000,0,382000,1250000,23800000,4180000,47500000,26800000),
-    ('BLD-1012','Dorchester Garden','Groma Workforce Housing LLC','Dorchester',42,'2024-07-15',15600000,16900000,8900000,0.57,FALSE,FALSE,1780000,702000,0,211000,930000,12700000,1780000,16900000,8900000)
+""" + _property_values() + """
   AS p(buildium_id,property_name,holding,neighborhood,units,acq_date,acq_cost,
        approved_value,debt,ownership_pct,equity_method,master_lease,total_income,
        total_expense,master_tenant_expense,cash_interest,recurring_capex,
-       capex_budget,api_income,nav_tracker_value,control_debt)
+       capex_budget,api_income,nav_tracker_value,control_debt,break_reason)
 )
 SELECT
   buildium_id, property_name, holding, neighborhood, units,
@@ -72,6 +215,7 @@ SELECT
   master_tenant_expense,
   total_income - total_expense - master_tenant_expense AS raw_noi,
   cash_interest, recurring_capex, capex_budget,
+  capex_budget - recurring_capex AS budget_headroom,
   total_income - total_expense - master_tenant_expense - cash_interest AS cash_earnings,
   total_income - total_expense - master_tenant_expense - cash_interest - recurring_capex AS cash_contribution,
   approved_value * ownership_pct AS reit_value,
@@ -80,8 +224,8 @@ SELECT
       (approved_value - debt) * ownership_pct) AS reit_equity,
   (total_income - total_expense - master_tenant_expense) * ownership_pct AS reit_noi,
   (total_income - total_expense - master_tenant_expense - cash_interest - recurring_capex) * ownership_pct AS reit_cash_contribution,
-  IFF(equity_method, 'Equity method — in-LLC debt excluded',
-      IFF(master_lease, 'Consolidated — master rent allocated', 'Consolidated')) AS accounting_treatment,
+  IFF(equity_method, 'Equity method - in-LLC debt excluded',
+      IFF(master_lease, 'Consolidated - master rent allocated', 'Consolidated')) AS accounting_treatment,
   api_income - total_expense AS api_noi,
   nav_tracker_value,
   control_debt,
@@ -91,26 +235,16 @@ SELECT
   IFF(ABS((total_income - total_expense - master_tenant_expense) - (api_income - total_expense)) <= 500
       AND ABS(approved_value-nav_tracker_value) <= 500
       AND ABS(debt-control_debt) <= 500, 'Tied', 'Review') AS tie_status,
+  break_reason,
   IFF(DATEDIFF('month', TO_DATE(acq_date), '2026-06-30') >= 36, 'Seasoned', 'Lease-up') AS maturity,
   IFF(approved_value = 0, NULL, debt / approved_value) AS asset_ltv,
   (total_income - total_expense - master_tenant_expense) / NULLIF(approved_value,0) AS implied_yield
 FROM properties
 """.strip()
 
-CAPEX_SQL = r"""
+CAPEX_SQL = """
 SELECT * FROM VALUES
-  ('TX-2601','BLD-1001','Harbor House','2026-01-14','Roof membrane replacement',118000,'Recurring','Description: roof preserves rentability',TRUE),
-  ('TX-2602','BLD-1002','Maverick Flats','2026-02-08','Unit 3A gut renovation',94000,'Value-add','Description: renovation changes unit basis',FALSE),
-  ('TX-2603','BLD-1003','Chelsea Commons','2026-02-19','Boiler circulation pump',2100,'Recurring','Auto floor: amount below $2,500',TRUE),
-  ('TX-2604','BLD-1004','Broadway Lofts','2026-03-03','Master lease unit refresh',62000,'Value-add','Manual pick: acquisition plan scope',FALSE),
-  ('TX-2605','BLD-1005','Winter Hill Place','2026-03-22','Fire alarm panel replacement',136000,'Recurring','Description: life-safety maintenance',TRUE),
-  ('TX-2606','BLD-1006','Union Square Row','2026-04-04','Kitchen repositioning package',151000,'Value-add','Description: renovation changes unit basis',FALSE),
-  ('TX-2607','BLD-1007','Roxbury Crossing','2026-04-18','Exterior masonry stabilization',228000,'Recurring','Manual pick: preserves existing use',TRUE),
-  ('TX-2608','BLD-1008','Dudley Terrace','2026-04-29','New basement amenity',87000,'Value-add','Description: adds rentable amenity',FALSE),
-  ('TX-2609','BLD-1009','Jamaica Plain Court','2026-05-07','Turnover paint and flooring',2400,'Recurring','Auto floor: amount below $2,500',TRUE),
-  ('TX-2610','BLD-1010','Centre Street Homes','2026-05-21','Electrical service upgrade',73000,'Recurring','Manual pick: required existing-system work',TRUE),
-  ('TX-2611','BLD-1011','Seaport Residential JV','2026-06-02','Penthouse reconfiguration',315000,'Value-add','Description: renovation changes unit basis',FALSE),
-  ('TX-2612','BLD-1012','Dorchester Garden','2026-06-16','Window seal remediation',46000,'Recurring','Description: envelope maintenance',TRUE)
+""" + _capex_values() + """
   AS c(transaction_id,buildium_id,property_name,posted_date,description,amount,
        auto_class,rule_reason,deduct_from_cash)
 """.strip()
@@ -143,6 +277,104 @@ SELECT * FROM VALUES
   (24,'Budget vs Actual','Capex & configuration','Property plan + GL actuals','Config')
   AS t(tab_number,tab_name,decision_group,direct_source,demo_destination)
 """.strip()
+
+AGENT_GUARDRAIL = (
+    "The figures are deterministic synthetic records shaped to the June 30, 2026 "
+    "cockpit specification. Never claim they are production Groma, Buildium, loan, "
+    "ownership, valuation, tenant or investor data, and never claim the workbook is "
+    "connected to Groma systems. If you are asked for something the governed layer "
+    "does not contain, say so plainly instead of estimating."
+)
+
+AGENT_RULES = (
+    "Accounting rules that govern every answer. (1) NOI is raw: Buildium total income "
+    "minus total expense over the TTM window, with an explicit master-tenant rent "
+    "allocation for master-lease properties. No normalisations or add-backs. "
+    "(2) Seaport Residential JV is an equity-method joint venture: its mortgage sits "
+    "inside the LLC below the REIT, so its REIT debt is $0 and REIT equity equals REIT "
+    "value. Applying ownership percent to that in-LLC mortgage double-counts a material "
+    "amount of debt and understates NAV. (3) Broadway Lofts and Dudley Terrace are "
+    "master-lease properties: a naive account sum overstates their NOI, so the offsetting "
+    "master-tenant rent is allocated explicitly. (4) Capex classification is nature-based, "
+    "never dollar size: description rules, an auto-recurring floor at $2,500, and manual "
+    "picks that persist. Only recurring capex is deducted to reach cash contribution. "
+    "(5) Every REIT column is the 100 percent figure times the quarter-specific ownership "
+    "percent from the register."
+)
+
+AGENTS = [
+    {
+        "id": "agent-nav",
+        "name": "NAV & Accounting Copilot",
+        "pageId": "pg-nav",
+        "instructions": (
+            "You are a REIT accounting analyst for the Groma NAV REIT cockpit. You answer "
+            "questions about net asset value, raw TTM NOI, cash contribution, leverage and "
+            "per-property ownership from the Layer 1 property-quarter dataset. When a number "
+            "looks surprising, explain which accounting rule produced it and name the "
+            "property. Prefer a short answer plus the one rule that matters. "
+            + AGENT_RULES + " " + AGENT_GUARDRAIL
+        ),
+        "greeting": {
+            "mode": "static",
+            "message": (
+                "Ask me about REIT NAV, raw NOI, cash contribution or leverage. Good "
+                "openers: \"Why is Seaport Residential JV's REIT debt zero?\", \"Which "
+                "holdings carry the most REIT equity?\", or \"Show the properties where "
+                "master rent is allocated.\""
+            ),
+        },
+        "dataSources": [{"kind": "table", "elementId": "src-property"}],
+    },
+    {
+        "id": "agent-capex",
+        "name": "Capex Judgment Copilot",
+        "pageId": "pg-capex",
+        "instructions": (
+            "You are a capital-projects analyst governing recurring versus value-add capex "
+            "classification on the 15xx GL for the Groma NAV REIT cockpit. Recurring capex "
+            "preserves rentability and is deducted to reach cash contribution and AFFO; "
+            "value-add changes the unit basis and is shown but not deducted. Classification "
+            "follows the nature of the work, not the dollar amount: a six-figure roof is "
+            "recurring, a gut renovation is value-add. Cite the transaction id, the property "
+            "and the rule reason when you explain a classification. "
+            + AGENT_RULES + " " + AGENT_GUARDRAIL
+        ),
+        "greeting": {
+            "mode": "static",
+            "message": (
+                "Ask me why a capex line landed where it did. Try \"Why is the $118k roof "
+                "recurring but the $94k renovation value-add?\", \"Which lines cleared the "
+                "$2,500 auto floor?\", or \"What is the recurring total by property?\""
+            ),
+        },
+        "dataSources": [{"kind": "table", "elementId": "src-capex"}],
+    },
+    {
+        "id": "agent-controls",
+        "name": "Tie-out Copilot",
+        "pageId": "pg-controls",
+        "instructions": (
+            "You are a financial controls analyst for the Groma NAV REIT cockpit. Every "
+            "important figure is checked against an independent second source: NOI against a "
+            "Buildium API pull, approved value against the NAV tracker, and debt against the "
+            "mortgage control centre. Agreement within $500 is reported as Tied; anything "
+            "else is Review and must be explained with both numbers and the named break "
+            "reason. A divergence is a data problem to reconcile at the source, never "
+            "something to patch with a constant in the workbook. "
+            + AGENT_RULES + " " + AGENT_GUARDRAIL
+        ),
+        "greeting": {
+            "mode": "static",
+            "message": (
+                "Ask me what ties and what does not. Try \"Which properties require "
+                "review and why?\", \"What is the NOI tie delta for Chelsea Commons?\", "
+                "or \"Confirm debt ties to the mortgage control centre.\""
+            ),
+        },
+        "dataSources": [{"kind": "table", "elementId": "src-property"}],
+    },
+]
 
 elements: list[dict] = []
 overlays: list[dict] = []
@@ -199,17 +431,20 @@ def nav(eid: str) -> None:
 
 
 def header(idx: int, title: str, subtitle: str) -> None:
+    # One compact band: small wordmark, page title, nav. A 48px display title
+    # plus a wordmark block plus an ad-copy subtitle is marketing-page
+    # anatomy, not product UI, and it pushed the first KPI below the fold.
     add({"id": f"hdr-{idx}", "kind": "container", "style": panel(WHITE)})
     add({
         "id": f"brand-{idx}",
         "kind": "text",
-        "body": "## **GROMA**\nNAV REIT",
+        "body": f'<span style="color: {MUTED}">**GROMA** NAV REIT</span>',
         "verticalAlign": "center",
     })
     add({
         "id": f"title-{idx}",
         "kind": "text",
-        "body": f"# **{title}**\n{subtitle}",
+        "body": f"### **{title}**",
         "verticalAlign": "center",
     })
     nav(f"nav-{idx}")
@@ -226,6 +461,12 @@ def kpi(
     comparison_label: str = "Reference",
     invert: bool = False,
 ) -> None:
+    # Native Sigma KPI cards are light surfaces with dark values and a
+    # coloured delta chip. The saturated-fill version rendered its delta and
+    # comparison label in pale mint/gold on dark green, which was unreadable
+    # at any size -- the "$0 vs Target" problem. `background` is kept in the
+    # signature and reinterpreted as a semantic accent for the value.
+    accent = WARN if background == GOLD else INK
     add({
         "id": eid,
         "kind": "kpi-chart",
@@ -234,16 +475,17 @@ def kpi(
             {"id": f"{eid}-value", "name": label, "formula": current, "format": fmt},
             {"id": f"{eid}-ref", "name": comparison_label, "formula": prior, "format": fmt},
         ],
-        "value": {"columnId": f"{eid}-value", "color": WHITE, "fontSize": 27},
+        "value": {"columnId": f"{eid}-value", "color": accent, "fontSize": 28},
         "comparisonColumn": {"columnId": f"{eid}-ref"},
         "comparison": {
             "display": "delta",
-            "colorGood": "#F5DFAE" if invert else "#C8E9D8",
-            "colorBad": "#C8E9D8" if invert else "#F5DFAE",
+            "colorGood": BAD if invert else GOOD,
+            "colorBad": GOOD if invert else BAD,
             "fontSize": 12,
         },
-        "name": {"text": label, "color": WHITE, "fontSize": 13},
-        "style": {"backgroundColor": background, "borderRadius": "round"},
+        "name": {"text": label, "color": MUTED, "fontSize": 12},
+        "style": {"backgroundColor": WHITE, "borderRadius": "round",
+                  "borderColor": BORDER, "borderWidth": 1},
     })
 
 
@@ -294,6 +536,7 @@ def build_spec() -> dict:
         {"id": "p-interest", "name": "Cash Interest", "formula": "[Custom SQL/cash_interest]", "format": MONEY0},
         {"id": "p-rec-capex", "name": "Recurring Capex", "formula": "[Custom SQL/recurring_capex]", "format": MONEY0},
         {"id": "p-budget", "name": "Capex Budget", "formula": "[Custom SQL/capex_budget]", "format": MONEY0},
+        {"id": "p-headroom", "name": "Budget Headroom", "formula": "[Custom SQL/budget_headroom]", "format": MONEY0},
         {"id": "p-cash-earnings", "name": "Cash Earnings", "formula": "[Custom SQL/cash_earnings]", "format": MONEY0},
         {"id": "p-cash-contribution", "name": "Cash Contribution", "formula": "[Custom SQL/cash_contribution]", "format": MONEY0},
         {"id": "p-reit-value", "name": "REIT Value", "formula": "[Custom SQL/reit_value]", "format": MONEY0},
@@ -309,6 +552,7 @@ def build_spec() -> dict:
         {"id": "p-value-delta", "name": "Value Tie Delta", "formula": "[Custom SQL/value_tie_delta]", "format": MONEY0},
         {"id": "p-debt-delta", "name": "Debt Tie Delta", "formula": "[Custom SQL/debt_tie_delta]", "format": MONEY0},
         {"id": "p-tie", "name": "Tie Status", "formula": "[Custom SQL/tie_status]"},
+        {"id": "p-break", "name": "Break Reason", "formula": "[Custom SQL/break_reason]"},
         {"id": "p-maturity", "name": "Maturity", "formula": "[Custom SQL/maturity]"},
         {"id": "p-ltv", "name": "Asset LTV", "formula": "[Custom SQL/asset_ltv]", "format": PCT1},
         {"id": "p-yield", "name": "Implied Yield", "formula": "[Custom SQL/implied_yield]", "format": PCT1},
@@ -325,6 +569,11 @@ def build_spec() -> dict:
         {"id": "c-reason", "name": "Rule Reason", "formula": "[Custom SQL/rule_reason]"},
         {"id": "c-deduct", "name": "Deduct From Cash", "formula": "[Custom SQL/deduct_from_cash]"},
     ])
+
+    for _cid, _aid in (("chat-nav", "agent-nav"),
+                       ("chat-capex", "agent-capex"),
+                       ("chat-controls", "agent-controls")):
+        add({"id": _cid, "kind": "chat", "agentId": _aid, "style": panel()})
 
     sql_table("src-tabs", "Decision Tab Lineage", TAB_SQL, [
         {"id": "t-num", "name": "#", "formula": "[Custom SQL/tab_number]", "format": NUM0},
@@ -363,9 +612,10 @@ def build_spec() -> dict:
             {"id": "nv-equity", "name": "REIT Equity", "formula": f"Sum([{prop}/REIT Equity])", "format": MONEY},
             {"id": "nv-color", "name": "REIT Equity Color", "formula": f"Sum([{prop}/REIT Equity])", "format": MONEY},
         ],
+        "orientation": "horizontal",
         "xAxis": {"columnId": "nv-name", "sort": {"by": "nv-equity", "aggregation": "sum", "direction": "descending"}},
         "yAxis": {"columnIds": ["nv-equity"]},
-        "color": {"by": "scale", "column": "nv-color", "scheme": [MINT, FOREST],
+        "color": {"by": "scale", "column": "nv-color", "scheme": [GREEN, GREEN],
                   "domain": {"min": 1000000, "max": 21000000}},
         "legend": {"visibility": "hidden"},
         "style": panel(),
@@ -380,7 +630,8 @@ def build_spec() -> dict:
             {"id": "nc-cash", "name": "REIT Cash Contribution", "formula": f"Sum([{prop}/REIT Cash Contribution])", "format": MONEY},
             {"id": "nc-color", "name": "Cash Color", "formula": f"Sum([{prop}/REIT Cash Contribution])", "format": MONEY},
         ],
-        "xAxis": {"columnId": "nc-name"},
+        "orientation": "horizontal",
+        "xAxis": {"columnId": "nc-name", "sort": {"by": "nc-cash", "aggregation": "sum", "direction": "descending"}},
         "yAxis": {"columnIds": ["nc-cash"]},
         "color": {"by": "scale", "column": "nc-color", "scheme": [WARN, MINT, GOOD],
                   "domain": {"min": 0, "mid": 250000, "max": 700000}},
@@ -614,10 +865,11 @@ def build_spec() -> dict:
             {"id": "br-value", "name": "Budget Remaining", "formula": f"Sum([{budget}/Budget Remaining])", "format": MONEY},
             {"id": "br-color", "name": "Remaining Color", "formula": f"Sum([{budget}/Budget Remaining])", "format": MONEY},
         ],
-        "xAxis": {"columnId": "br-name"},
+        "orientation": "horizontal",
+        "xAxis": {"columnId": "br-name", "sort": {"by": "br-value", "aggregation": "sum", "direction": "descending"}},
         "yAxis": {"columnIds": ["br-value"]},
         "color": {"by": "scale", "column": "br-color", "scheme": [BAD, CREAM, GOOD],
-                  "domain": {"min": -100000, "mid": 0, "max": 12000000}},
+                  "domain": {"min": -40000, "mid": 120000, "max": 520000}},
         "legend": {"visibility": "hidden"},
         "style": panel(),
     })
@@ -676,17 +928,18 @@ def build_spec() -> dict:
     add({
         "id": "chart-capex",
         "kind": "bar-chart",
-        "name": "Capex by effective class",
+        "name": "Capex by property, split by effective class",
         "source": {"kind": "table", "elementId": "it-capex"},
         "columns": [
-            {"id": "cx-class", "name": "Class", "formula": f"[{capex}/Effective Class]"},
+            {"id": "cx-prop", "name": "Property", "formula": f"[{capex}/Property]"},
             {"id": "cx-amount", "name": "Amount", "formula": f"Sum([{capex}/Amount])", "format": MONEY},
-            {"id": "cx-color", "name": "Class Color", "formula": f"[{capex}/Effective Class]"},
+            {"id": "cx-color", "name": "Effective Class", "formula": f"[{capex}/Effective Class]"},
         ],
-        "xAxis": {"columnId": "cx-class"},
+        "orientation": "horizontal",
+        "xAxis": {"columnId": "cx-prop", "sort": {"by": "cx-amount", "aggregation": "sum", "direction": "descending"}},
         "yAxis": {"columnIds": ["cx-amount"]},
         "color": {"by": "category", "column": "cx-color", "scheme": [GOLD, GREEN]},
-        "legend": {"visibility": "hidden"},
+        "legend": {"visibility": "visible"},
         "style": panel(),
     })
     add({"id": "capex-note", "kind": "text",
@@ -720,9 +973,10 @@ def build_spec() -> dict:
             {"id": "to-control", "name": "Mortgage Control", "formula": f"Sum([{prop}/Debt Control Check])", "format": MONEY0},
             {"id": "to-debt-d", "name": "Debt Δ", "formula": f"Sum([{prop}/Debt Tie Delta])", "format": MONEY0},
             {"id": "to-status", "name": "Status", "formula": f"Max([{prop}/Tie Status])"},
+            {"id": "to-reason", "name": "Break Reason", "formula": f"Max([{prop}/Break Reason])"},
         ],
         "groupings": [{"id": "to-group", "groupBy": ["to-name"],
-                       "calculations": ["to-noi", "to-api", "to-noi-d", "to-value", "to-nav", "to-value-d", "to-debt", "to-control", "to-debt-d", "to-status"]}],
+                       "calculations": ["to-noi", "to-api", "to-noi-d", "to-value", "to-nav", "to-value-d", "to-debt", "to-control", "to-debt-d", "to-status", "to-reason"]}],
         "conditionalFormats": [
             {"type": "single", "columnIds": ["to-status"], "condition": "=", "value": "Tied",
              "style": {"backgroundColor": MINT, "color": GOOD, "bold": True}},
@@ -840,86 +1094,89 @@ def build_spec() -> dict:
 
     layout = """<?xml version="1.0" encoding="utf-8"?>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-nav">
-  <Container elementId="hdr-1" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="brand-1" gridColumn="1 / 5" gridRow="1 / 6"/>
-    <Element elementId="title-1" gridColumn="5 / 15" gridRow="1 / 6"/>
-    <Element elementId="nav-1" gridColumn="15 / 25" gridRow="2 / 6"/>
+  <Container elementId="hdr-1" type="grid" gridColumn="1 / 25" gridRow="1 / 4" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="brand-1" gridColumn="1 / 4" gridRow="1 / 4"/>
+    <Element elementId="title-1" gridColumn="4 / 16" gridRow="1 / 4"/>
+    <Element elementId="nav-1" gridColumn="16 / 25" gridRow="1 / 4"/>
   </Container>
-  <Element elementId="scope-nav" gridColumn="1 / 25" gridRow="6 / 8"/>
-  <Element elementId="ctrl-nav-holding" gridColumn="1 / 13" gridRow="8 / 11"/>
-  <Element elementId="ctrl-nav-neighborhood" gridColumn="13 / 25" gridRow="8 / 11"/>
-  <Element elementId="kpi-nav" gridColumn="1 / 7" gridRow="11 / 19"/>
-  <Element elementId="kpi-noi" gridColumn="7 / 13" gridRow="11 / 19"/>
-  <Element elementId="kpi-cash" gridColumn="13 / 19" gridRow="11 / 19"/>
-  <Element elementId="kpi-ltv" gridColumn="19 / 25" gridRow="11 / 19"/>
-  <Element elementId="chart-nav" gridColumn="1 / 13" gridRow="19 / 35"/>
-  <Element elementId="chart-cash" gridColumn="13 / 25" gridRow="19 / 35"/>
-  <Element elementId="tbl-holdings" gridColumn="1 / 25" gridRow="35 / 57"/>
+  <Element elementId="scope-nav" gridColumn="1 / 25" gridRow="4 / 6"/>
+  <Element elementId="ctrl-nav-holding" gridColumn="1 / 13" gridRow="6 / 9"/>
+  <Element elementId="ctrl-nav-neighborhood" gridColumn="13 / 25" gridRow="6 / 9"/>
+  <Element elementId="kpi-nav" gridColumn="1 / 7" gridRow="9 / 17"/>
+  <Element elementId="kpi-noi" gridColumn="7 / 13" gridRow="9 / 17"/>
+  <Element elementId="kpi-cash" gridColumn="13 / 19" gridRow="9 / 17"/>
+  <Element elementId="kpi-ltv" gridColumn="19 / 25" gridRow="9 / 17"/>
+  <Element elementId="chart-nav" gridColumn="1 / 13" gridRow="17 / 33"/>
+  <Element elementId="chart-cash" gridColumn="13 / 25" gridRow="17 / 33"/>
+  <Element elementId="tbl-holdings" gridColumn="1 / 19" gridRow="33 / 55"/>
+  <Element elementId="chat-nav" gridColumn="19 / 25" gridRow="33 / 55"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-property">
-  <Container elementId="hdr-2" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="brand-2" gridColumn="1 / 5" gridRow="1 / 6"/>
-    <Element elementId="title-2" gridColumn="5 / 15" gridRow="1 / 6"/>
-    <Element elementId="nav-2" gridColumn="15 / 25" gridRow="2 / 6"/>
+  <Container elementId="hdr-2" type="grid" gridColumn="1 / 25" gridRow="1 / 4" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="brand-2" gridColumn="1 / 4" gridRow="1 / 4"/>
+    <Element elementId="title-2" gridColumn="4 / 16" gridRow="1 / 4"/>
+    <Element elementId="nav-2" gridColumn="16 / 25" gridRow="1 / 4"/>
   </Container>
-  <Element elementId="scope-property" gridColumn="1 / 25" gridRow="6 / 8"/>
-  <Element elementId="ctrl-prop-neighborhood" gridColumn="1 / 13" gridRow="8 / 11"/>
-  <Element elementId="ctrl-prop-maturity" gridColumn="13 / 25" gridRow="8 / 11"/>
-  <Element elementId="kpi-prop-noi" gridColumn="1 / 7" gridRow="11 / 19"/>
-  <Element elementId="kpi-prop-margin" gridColumn="7 / 13" gridRow="11 / 19"/>
-  <Element elementId="kpi-prop-rec-capex" gridColumn="13 / 19" gridRow="11 / 19"/>
-  <Element elementId="kpi-prop-cash" gridColumn="19 / 25" gridRow="11 / 19"/>
-  <Element elementId="tbl-property" gridColumn="1 / 20" gridRow="19 / 47"/>
-  <Element elementId="property-note" gridColumn="20 / 25" gridRow="19 / 47"/>
+  <Element elementId="scope-property" gridColumn="1 / 25" gridRow="4 / 6"/>
+  <Element elementId="ctrl-prop-neighborhood" gridColumn="1 / 13" gridRow="6 / 9"/>
+  <Element elementId="ctrl-prop-maturity" gridColumn="13 / 25" gridRow="6 / 9"/>
+  <Element elementId="kpi-prop-noi" gridColumn="1 / 7" gridRow="9 / 17"/>
+  <Element elementId="kpi-prop-margin" gridColumn="7 / 13" gridRow="9 / 17"/>
+  <Element elementId="kpi-prop-rec-capex" gridColumn="13 / 19" gridRow="9 / 17"/>
+  <Element elementId="kpi-prop-cash" gridColumn="19 / 25" gridRow="9 / 17"/>
+  <Element elementId="tbl-property" gridColumn="1 / 20" gridRow="17 / 45"/>
+  <Element elementId="property-note" gridColumn="20 / 25" gridRow="17 / 45"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-budget">
-  <Container elementId="hdr-3" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="brand-3" gridColumn="1 / 5" gridRow="1 / 6"/>
-    <Element elementId="title-3" gridColumn="5 / 15" gridRow="1 / 6"/>
-    <Element elementId="nav-3" gridColumn="15 / 25" gridRow="2 / 6"/>
+  <Container elementId="hdr-3" type="grid" gridColumn="1 / 25" gridRow="1 / 4" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="brand-3" gridColumn="1 / 4" gridRow="1 / 4"/>
+    <Element elementId="title-3" gridColumn="4 / 16" gridRow="1 / 4"/>
+    <Element elementId="nav-3" gridColumn="16 / 25" gridRow="1 / 4"/>
   </Container>
-  <Element elementId="scope-budget" gridColumn="1 / 25" gridRow="6 / 8"/>
-  <Element elementId="ctrl-scenario" gridColumn="1 / 9" gridRow="8 / 11"/>
-  <Element elementId="ctrl-budget-comment" gridColumn="9 / 17" gridRow="8 / 11"/>
-  <Element elementId="btn-budget-submit" gridColumn="17 / 21" gridRow="8 / 11"/>
-  <Element elementId="btn-budget-approve" gridColumn="21 / 25" gridRow="8 / 11"/>
-  <Element elementId="kpi-budget-noi" gridColumn="1 / 9" gridRow="11 / 19"/>
-  <Element elementId="kpi-budget-remain" gridColumn="9 / 17" gridRow="11 / 19"/>
-  <Element elementId="kpi-budget-value" gridColumn="17 / 25" gridRow="11 / 19"/>
-  <Element elementId="chart-budget" gridColumn="1 / 19" gridRow="19 / 34"/>
-  <Element elementId="budget-note" gridColumn="19 / 25" gridRow="19 / 34"/>
-  <Element elementId="it-budget" gridColumn="1 / 25" gridRow="34 / 57"/>
-  <Element elementId="it-approval" gridColumn="1 / 25" gridRow="57 / 69"/>
+  <Element elementId="scope-budget" gridColumn="1 / 25" gridRow="4 / 6"/>
+  <Element elementId="ctrl-scenario" gridColumn="1 / 9" gridRow="6 / 9"/>
+  <Element elementId="ctrl-budget-comment" gridColumn="9 / 17" gridRow="6 / 9"/>
+  <Element elementId="btn-budget-submit" gridColumn="17 / 21" gridRow="6 / 9"/>
+  <Element elementId="btn-budget-approve" gridColumn="21 / 25" gridRow="6 / 9"/>
+  <Element elementId="kpi-budget-noi" gridColumn="1 / 9" gridRow="9 / 17"/>
+  <Element elementId="kpi-budget-remain" gridColumn="9 / 17" gridRow="9 / 17"/>
+  <Element elementId="kpi-budget-value" gridColumn="17 / 25" gridRow="9 / 17"/>
+  <Element elementId="chart-budget" gridColumn="1 / 19" gridRow="17 / 32"/>
+  <Element elementId="budget-note" gridColumn="19 / 25" gridRow="17 / 32"/>
+  <Element elementId="it-budget" gridColumn="1 / 25" gridRow="32 / 55"/>
+  <Element elementId="it-approval" gridColumn="1 / 25" gridRow="55 / 67"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-capex">
-  <Container elementId="hdr-4" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="brand-4" gridColumn="1 / 5" gridRow="1 / 6"/>
-    <Element elementId="title-4" gridColumn="5 / 15" gridRow="1 / 6"/>
-    <Element elementId="nav-4" gridColumn="15 / 25" gridRow="2 / 6"/>
+  <Container elementId="hdr-4" type="grid" gridColumn="1 / 25" gridRow="1 / 4" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="brand-4" gridColumn="1 / 4" gridRow="1 / 4"/>
+    <Element elementId="title-4" gridColumn="4 / 16" gridRow="1 / 4"/>
+    <Element elementId="nav-4" gridColumn="16 / 25" gridRow="1 / 4"/>
   </Container>
-  <Element elementId="scope-capex" gridColumn="1 / 25" gridRow="6 / 8"/>
-  <Element elementId="ctrl-capex-property" gridColumn="1 / 13" gridRow="8 / 11"/>
-  <Element elementId="kpi-capex-total" gridColumn="1 / 9" gridRow="11 / 19"/>
-  <Element elementId="kpi-capex-rec" gridColumn="9 / 17" gridRow="11 / 19"/>
-  <Element elementId="kpi-capex-value" gridColumn="17 / 25" gridRow="11 / 19"/>
-  <Element elementId="chart-capex" gridColumn="1 / 13" gridRow="19 / 34"/>
-  <Element elementId="capex-note" gridColumn="13 / 25" gridRow="19 / 34"/>
-  <Element elementId="it-capex" gridColumn="1 / 25" gridRow="34 / 59"/>
+  <Element elementId="scope-capex" gridColumn="1 / 25" gridRow="4 / 6"/>
+  <Element elementId="ctrl-capex-property" gridColumn="1 / 13" gridRow="6 / 9"/>
+  <Element elementId="kpi-capex-total" gridColumn="1 / 9" gridRow="9 / 17"/>
+  <Element elementId="kpi-capex-rec" gridColumn="9 / 17" gridRow="9 / 17"/>
+  <Element elementId="kpi-capex-value" gridColumn="17 / 25" gridRow="9 / 17"/>
+  <Element elementId="chart-capex" gridColumn="1 / 13" gridRow="17 / 32"/>
+  <Element elementId="capex-note" gridColumn="13 / 25" gridRow="17 / 22"/>
+  <Element elementId="chat-capex" gridColumn="13 / 25" gridRow="22 / 32"/>
+  <Element elementId="it-capex" gridColumn="1 / 25" gridRow="32 / 57"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-controls">
-  <Container elementId="hdr-5" type="grid" gridColumn="1 / 25" gridRow="1 / 6" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
-    <Element elementId="brand-5" gridColumn="1 / 5" gridRow="1 / 6"/>
-    <Element elementId="title-5" gridColumn="5 / 15" gridRow="1 / 6"/>
-    <Element elementId="nav-5" gridColumn="15 / 25" gridRow="2 / 6"/>
+  <Container elementId="hdr-5" type="grid" gridColumn="1 / 25" gridRow="1 / 4" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="brand-5" gridColumn="1 / 4" gridRow="1 / 4"/>
+    <Element elementId="title-5" gridColumn="4 / 16" gridRow="1 / 4"/>
+    <Element elementId="nav-5" gridColumn="16 / 25" gridRow="1 / 4"/>
   </Container>
-  <Element elementId="scope-controls" gridColumn="1 / 25" gridRow="6 / 9"/>
-  <Element elementId="kpi-tie-noi" gridColumn="1 / 7" gridRow="9 / 17"/>
-  <Element elementId="kpi-tie-value" gridColumn="7 / 13" gridRow="9 / 17"/>
-  <Element elementId="kpi-tie-debt" gridColumn="13 / 19" gridRow="9 / 17"/>
-  <Element elementId="kpi-tie-count" gridColumn="19 / 25" gridRow="9 / 17"/>
-  <Element elementId="tbl-tieouts" gridColumn="1 / 25" gridRow="17 / 39"/>
-  <Element elementId="controls-note" gridColumn="1 / 25" gridRow="39 / 43"/>
-  <Element elementId="tbl-tabs" gridColumn="1 / 25" gridRow="43 / 70"/>
+  <Element elementId="scope-controls" gridColumn="1 / 25" gridRow="4 / 7"/>
+  <Element elementId="kpi-tie-noi" gridColumn="1 / 7" gridRow="7 / 15"/>
+  <Element elementId="kpi-tie-value" gridColumn="7 / 13" gridRow="7 / 15"/>
+  <Element elementId="kpi-tie-debt" gridColumn="13 / 19" gridRow="7 / 15"/>
+  <Element elementId="kpi-tie-count" gridColumn="19 / 25" gridRow="7 / 15"/>
+  <Element elementId="tbl-tieouts" gridColumn="1 / 19" gridRow="15 / 37"/>
+  <Element elementId="chat-controls" gridColumn="19 / 25" gridRow="15 / 37"/>
+  <Element elementId="controls-note" gridColumn="1 / 25" gridRow="37 / 41"/>
+  <Element elementId="tbl-tabs" gridColumn="1 / 25" gridRow="41 / 68"/>
 </Page>
 <Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto" id="pg-data">
   <Element elementId="src-property" gridColumn="1 / 25" gridRow="1 / 24"/>
@@ -941,6 +1198,7 @@ def build_spec() -> dict:
             "schemaVersion": 1,
             "kind": "workbook",
             "elements": elements,
+            "agents": AGENTS,
             "overlays": overlays,
             "pages": [
                 {"id": "pg-nav", "name": "NAV Control Room"},
