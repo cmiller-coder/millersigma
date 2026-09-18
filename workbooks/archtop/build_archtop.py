@@ -306,6 +306,7 @@ def kpi(
     background: str = NAVY,
     good: str = "#C7F0DD",
     bad: str = "#FFD0CB",
+    comparison_label: str = "Prior month",
 ) -> None:
     add({
         "id": eid,
@@ -313,7 +314,8 @@ def kpi(
         "source": {"kind": "table", "elementId": source},
         "columns": [
             {"id": f"{eid}-current", "name": label, "formula": current, "format": fmt},
-            {"id": f"{eid}-prior", "name": "Prior month", "formula": prior, "format": fmt},
+            {"id": f"{eid}-prior", "name": comparison_label,
+             "formula": prior, "format": fmt},
         ],
         "value": {"columnId": f"{eid}-current", "color": WHITE, "fontSize": 28},
         "comparisonColumn": {"columnId": f"{eid}-prior"},
@@ -477,7 +479,7 @@ def build_spec() -> dict:
     ])
 
     # Page 1 — FP&A reconciliation control room.
-    header(1, "FP and A Control Room",
+    header(1, "FP&A Control Room",
            "Billing → Snowflake → general ledger, reconciled at subscriber and plan grain")
     add({
         "id": "scope-fin",
@@ -696,7 +698,7 @@ def build_spec() -> dict:
         f"[{growth}/Subscribers], 0) * [{growth}/Address Quality])",
         f"Sum(Greatest([{growth}/Serviceable Locations] - "
         f"[{growth}/Subscribers], 0))",
-        NUM0, NAVY_DARK,
+        NUM0, NAVY_DARK, comparison_label="Raw locations",
     )
     kpi(
         "kpi-project-adds", "it-growth", "Projected net adds",
@@ -704,7 +706,7 @@ def build_spec() -> dict:
         f"Sum((Greatest([{growth}/Serviceable Locations] - "
         f"[{growth}/Subscribers], 0)) * [{growth}/Base Take Rate] "
         f"* [{growth}/Address Quality])",
-        NUM0, CORAL_DARK,
+        NUM0, CORAL_DARK, comparison_label="Base case",
     )
     kpi(
         "kpi-project-arr", "it-growth", "Projected incremental ARR",
@@ -712,7 +714,7 @@ def build_spec() -> dict:
         f"Sum((Greatest([{growth}/Serviceable Locations] - "
         f"[{growth}/Subscribers], 0)) * [{growth}/Base Take Rate] "
         f"* [{growth}/Address Quality] * [{growth}/Current ARPU] * 12)",
-        MONEY, NAVY,
+        MONEY, NAVY, comparison_label="Base case",
     )
     kpi(
         "kpi-cac", "it-growth", "Blended projected CAC",
@@ -722,7 +724,7 @@ def build_spec() -> dict:
         f"NullIf(Sum((Greatest([{growth}/Serviceable Locations] - "
         f"[{growth}/Subscribers], 0)) * [{growth}/Base Take Rate] "
         f"* [{growth}/Address Quality]), 0)",
-        MONEY0, NAVY_DARK,
+        MONEY0, NAVY_DARK, comparison_label="Base case",
     )
     add({
         "id": "ch-growth",
@@ -798,25 +800,27 @@ def build_spec() -> dict:
         "kpi-fcc-served", "tbl-fcc", "Served locations",
         f"Sum([{fcc}/Served Locations])",
         f"Sum([{fcc}/Fabric Locations])",
-        NUM0, NAVY_DARK,
+        NUM0, NAVY_DARK, comparison_label="Fabric locations",
     )
     kpi(
         "kpi-fcc-valid", "tbl-fcc", "Valid BSL coverage",
         f"Sum([{fcc}/Valid BSL IDs]) / NullIf(Sum([{fcc}/Served Locations]), 0)",
         "0.985",
-        PCT1, NAVY,
+        PCT1, NAVY, comparison_label="98.5% target",
     )
     kpi(
         "kpi-fcc-exceptions", "tbl-fcc", "Address exceptions",
         f"Sum([{fcc}/Address Exceptions])",
         f"Sum([{fcc}/Address Exceptions]) * 1.18",
         NUM0, CORAL_DARK, good="#FFD0CB", bad="#C7F0DD",
+        comparison_label="Prior run",
     )
     kpi(
         "kpi-fcc-risk", "tbl-fcc", "Illustrative support at risk",
         f"Sum([{fcc}/Illustrative Support at Risk])",
         f"Sum([{fcc}/Illustrative Support at Risk]) * 1.25",
         MONEY, BAD, good="#FFD0CB", bad="#C7F0DD",
+        comparison_label="Prior exposure",
     )
     add({
         "id": "fcc-report-title",
