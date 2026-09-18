@@ -663,7 +663,7 @@ def build_spec() -> dict:
         "kind": "text",
         "body": (
             SCOPE + " Editable assumptions are stored in a warehouse-backed input "
-            "table. Submit and Approve append immutable workflow events with user "
+            "table. Submit and Approve append workflow events with user "
             "and timestamp context."
         ),
         "style": {"backgroundColor": SKY, "borderRadius": "round"},
