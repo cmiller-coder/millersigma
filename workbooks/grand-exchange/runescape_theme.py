@@ -556,7 +556,7 @@ def build_spec() -> dict:
             {"id": "l-buy", "name": "Bought At", "formula": "Sum([Flip History/Bought At])", "format": GP},
             {"id": "l-sell", "name": "Sold At", "formula": "Sum([Flip History/Sold At])", "format": GP},
             {"id": "l-tax", "name": "Exchange Tax",
-             "formula": "Min(Floor([Sold At] * 0.02), 5000000) * [Quantity]", "format": GP},
+             "formula": "Least(Floor([Sold At] * 0.02), 5000000) * [Quantity]", "format": GP},
             {"id": "l-profit", "name": "Profit After Tax",
              "formula": "([Sold At] - [Bought At]) * [Quantity] - [Exchange Tax]", "format": GP},
         ],
