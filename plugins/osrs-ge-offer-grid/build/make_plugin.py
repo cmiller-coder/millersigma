@@ -204,7 +204,9 @@ HTML = """<!doctype html>
   }
   function row(k, v){ return '<div class="r"><span class="k">' + k + '</span><span>' + v + '</span></div>'; }
 
+  var painted = false;
   function render(rows, bound){
+    painted = true;
     grid.innerHTML = '';
     if (!rows.length){
       grid.innerHTML = '<div id="empty">No tradeable offers in the current selection.</div>';
@@ -292,8 +294,19 @@ HTML = """<!doctype html>
     });
   }
 
-  if (client) { client.config.subscribe(bind); }
-  else        { render(fromSnapshot(), false); }
+  // ORDERING IS LOAD-BEARING, verified live against this org:
+  //  * config.subscribe() emits ONCE, early. Any real work done before
+  //    registering the handler (even just painting the fallback grid) loses
+  //    that emission, and then nothing ever binds.
+  //  * subscribeToElementData() only delivers when it is called from INSIDE the
+  //    config callback. Calling it later with the same id -- even with a
+  //    config.get() that demonstrably holds the right source -- never fires.
+  // So: register the config handler FIRST, before touching the DOM, and fall
+  // back to the captured snapshot only if nothing has painted shortly after.
+  if (client) {
+    try { client.config.subscribe(bind); } catch (e) {}
+  }
+  setTimeout(function () { if (!painted) render(fromSnapshot(), false); }, 900);
 
   // No animation loop: a headless PNG export has to be able to reach idle.
   new ResizeObserver(function(){}).observe(document.getElementById('frame'));

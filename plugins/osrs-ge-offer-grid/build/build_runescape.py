@@ -184,6 +184,7 @@ MARKET_COLS = [
     ("m-appc",    "AVG_PROFIT_PER_CYCLE",    "Profit per Cycle 24h Avg", GPBIG),
     ("m-averd",   "AVG_VERDICT",             "Verdict 24h Avg",     None),
     ("m-aprof",   "AVG_IS_PROFITABLE",       "Profitable 24h Avg",  NUM),
+    ("m-works",   "FLIP_WORKS",              "Flip Works",          None),
 ]
 
 def page1():
@@ -200,6 +201,7 @@ def page1():
         f"Live Grand Exchange capture &middot; {CAPTURED} &middot; 240 liquid items "
         "&middot; 2% sale tax, 5m cap and 4-hour buy limits modelled exactly", 12)))
 
+    els.append(container("ctl-1", PARCH))
     els.append(list_ctrl("ctrl-cat",     "Category",  "Category",       "tbl-market", "m-cat"))
     els.append(list_ctrl("ctrl-access",  "Access",    "Access",         "tbl-market", "m-access"))
     els.append(list_ctrl("ctrl-liq",     "Liquidity", "Liquidity",      "tbl-market", "m-liq"))
@@ -225,14 +227,19 @@ def page1():
     # return against liquidity. scatter-chart aggregates by x-value, so the y
     # measure is an Avg and therefore cannot silently sum on a collision.
     els.append({"id": "chart-flipmap", "kind": "scatter-chart",
-        "name": title("Return against liquidity"),
+        "name": title("Does the spread survive the tax?"),
         "source": {"kind": "table", "elementId": "tbl-market"},
         "columns": [col("fm-x", "[Market/Volume 24h]", "Volume 24h", NUM),
                     col("fm-y", "Avg([Market/ROI])", "ROI", PCT),
-                    col("fm-c", "[Market/Category]", "Category")],
-        "xAxis": {"columnId": "fm-x", "format": AXIS_DARK},
+                    col("fm-c", "[Market/Flip Works]", "Flip Works")],
+        # 24h volume spans four orders of magnitude, so a linear x-axis piles
+        # every item against the left edge; log spreads them out.
+        "xAxis": {"columnId": "fm-x",
+                  "format": {"labels": {"color": CREAM}, "marks": "grid",
+                             "scale": {"type": "log"}}},
         "yAxis": {"columnIds": ["fm-y"], "format": AXIS_DARK},
-        "color": {"by": "category", "column": "fm-c", "scheme": SCHEME},
+        # two categories, not sixteen -- a 16-item legend ate half the chart
+        "color": {"by": "category", "column": "fm-c", "scheme": [GOOD, BAD]},
         "style": PANEL_DARK})
 
     els.append({"id": "chart-cat", "kind": "bar-chart",
@@ -288,20 +295,22 @@ LAYOUT_P1 = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTempl
     <Element elementId="txt-title" gridColumn="7 / 25" gridRow="1 / 5"/>
     <Element elementId="txt-scope" gridColumn="7 / 25" gridRow="5 / 7"/>
   </Container>
-  <Element elementId="ctrl-cat"      gridColumn="1 / 7"   gridRow="8 / 11"/>
-  <Element elementId="ctrl-access"   gridColumn="7 / 13"  gridRow="8 / 11"/>
-  <Element elementId="ctrl-liq"      gridColumn="13 / 19" gridRow="8 / 11"/>
-  <Element elementId="ctrl-verdict"  gridColumn="19 / 25" gridRow="8 / 11"/>
-  <Element elementId="kpi-items"     gridColumn="1 / 7"   gridRow="11 / 17"/>
-  <Element elementId="kpi-value"     gridColumn="7 / 13"  gridRow="11 / 17"/>
-  <Element elementId="kpi-tax"       gridColumn="13 / 19" gridRow="11 / 17"/>
-  <Element elementId="kpi-killed"    gridColumn="19 / 25" gridRow="11 / 17"/>
-  <Element elementId="plg-grid"      gridColumn="1 / 17"  gridRow="17 / 39"/>
-  <Element elementId="chat-market"   gridColumn="17 / 25" gridRow="17 / 39"/>
-  <Element elementId="chart-flipmap" gridColumn="1 / 13"  gridRow="39 / 52"/>
-  <Element elementId="chart-cat"     gridColumn="13 / 25" gridRow="39 / 52"/>
-  <Element elementId="tbl-top"       gridColumn="1 / 25"  gridRow="52 / 70"/>
-  <Element elementId="tbl-market"    gridColumn="1 / 25"  gridRow="70 / 82"/>
+  <Container elementId="ctl-1" type="grid" gridColumn="1 / 25" gridRow="8 / 12" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ctrl-cat"     gridColumn="1 / 7"   gridRow="1 / 4"/>
+    <Element elementId="ctrl-access"  gridColumn="7 / 13"  gridRow="1 / 4"/>
+    <Element elementId="ctrl-liq"     gridColumn="13 / 19" gridRow="1 / 4"/>
+    <Element elementId="ctrl-verdict" gridColumn="19 / 25" gridRow="1 / 4"/>
+  </Container>
+  <Element elementId="kpi-items"     gridColumn="1 / 7"   gridRow="12 / 18"/>
+  <Element elementId="kpi-value"     gridColumn="7 / 13"  gridRow="12 / 18"/>
+  <Element elementId="kpi-tax"       gridColumn="13 / 19" gridRow="12 / 18"/>
+  <Element elementId="kpi-killed"    gridColumn="19 / 25" gridRow="12 / 18"/>
+  <Element elementId="plg-grid"      gridColumn="1 / 17"  gridRow="18 / 40"/>
+  <Element elementId="chat-market"   gridColumn="17 / 25" gridRow="18 / 40"/>
+  <Element elementId="chart-flipmap" gridColumn="1 / 13"  gridRow="40 / 53"/>
+  <Element elementId="chart-cat"     gridColumn="13 / 25" gridRow="40 / 53"/>
+  <Element elementId="tbl-top"       gridColumn="1 / 25"  gridRow="53 / 71"/>
+  <Element elementId="tbl-market"    gridColumn="1 / 25"  gridRow="71 / 83"/>
 </Page>"""
 
 # ================================================================= page 2
@@ -339,7 +348,10 @@ def page2():
         "style": PANEL_PARCH})
 
     # 2. parameters, declared before anything whose formulas reference them
-    els.append(number_ctrl("ctrl-capital", "CapitalGp", "Capital available (gp)", 500000000))
+    els.append(container("ctl-2", PARCH))
+    # 3b gp: the shortlist at suggested size needs ~2.8b, so a 500m default
+    # opened with a red "capital left over" and read like a broken KPI.
+    els.append(number_ctrl("ctrl-capital", "CapitalGp", "Capital available (gp)", 3000000000))
     els.append(segmented("ctrl-fill", "FillRate", "Fill assumption",
                          ["Conservative", "Base", "Aggressive"], "Base"))
     els.append(text_ctrl("ctrl-note", "PlanNote", "Note for the ticket"))
@@ -370,7 +382,7 @@ def page2():
         "style": PANEL_PARCH})
 
     # 4. append-only ticket log
-    els.append({"id": "it-log", "kind": "input-table", "name": "Trade Log",
+    els.append({"id": "it-log", "kind": "input-table", "name": "Ticket History",
         "source": {"kind": "empty", "connectionId": CONN}, "inputMode": "edit",
         "columns": [
             {"id": "lg-note",   "type": "text",   "name": "Note"},
@@ -382,6 +394,8 @@ def page2():
             {"id": "CREATED_AT"},
             {"id": "CREATED_BY"},
         ],
+        "sort": [{"columnId": "CREATED_AT", "direction": "descending", "nulls": "last"}],
+        "tableStyle": {"banding": "shown", "cellSpacing": "medium"},
         "style": PANEL_PARCH})
 
     # 5. KPIs off the editable plan
@@ -427,22 +441,6 @@ def page2():
     els.append(button("btn-approve", "Approve plan", ticket("Approved"),
                       fill="#3E7A4E", font="#FFFFFF"))
 
-    els.append({"id": "tbl-history", "kind": "table", "name": title("Ticket history", INK),
-        "source": {"kind": "table", "elementId": "it-log"},
-        "columns": [
-            col("h-when",   "[Trade Log/Created At]", "When"),
-            col("h-who",    "[Trade Log/Created By]", "Who"),
-            col("h-scen",   "[Trade Log/Scenario]", "Scenario"),
-            col("h-cap",    "[Trade Log/Capital Committed]", "Capital", GPBIG),
-            col("h-prof",   "[Trade Log/Expected Profit]", "Expected profit", GPBIG),
-            col("h-status", "[Trade Log/Status]", "Status"),
-            col("h-note",   "[Trade Log/Note]", "Note"),
-        ],
-        "order": ["h-when","h-who","h-scen","h-cap","h-prof","h-status","h-note"],
-        "sort": [{"columnId": "h-when", "direction": "descending", "nulls": "last"}],
-        "tableStyle": {"banding": "shown", "cellSpacing": "medium"},
-        "style": PANEL_PARCH})
-
     # 7. header last; nothing depends on it
     els.append(container("hdr-2"))
     els.append({"id": "img-logo2", "kind": "image",
@@ -463,22 +461,23 @@ LAYOUT_P2 = """<Page type="grid" gridTemplateColumns="repeat(24, 1fr)" gridTempl
     <Element elementId="txt-title2" gridColumn="7 / 25" gridRow="1 / 5"/>
     <Element elementId="txt-scope2" gridColumn="7 / 25" gridRow="5 / 7"/>
   </Container>
-  <Element elementId="ctrl-capital"  gridColumn="1 / 9"   gridRow="8 / 11"/>
-  <Element elementId="ctrl-fill"     gridColumn="9 / 17"  gridRow="8 / 11"/>
-  <Element elementId="ctrl-note"     gridColumn="17 / 25" gridRow="8 / 11"/>
-  <Element elementId="kpi-deployed"  gridColumn="1 / 7"   gridRow="11 / 17"/>
-  <Element elementId="kpi-profit"    gridColumn="7 / 13"  gridRow="11 / 17"/>
-  <Element elementId="kpi-roi"       gridColumn="13 / 19" gridRow="11 / 17"/>
-  <Element elementId="kpi-left"      gridColumn="19 / 25" gridRow="11 / 17"/>
-  <Element elementId="it-plan"       gridColumn="1 / 17"  gridRow="17 / 35"/>
-  <Element elementId="chat-merch"    gridColumn="17 / 25" gridRow="17 / 35"/>
-  <Element elementId="chart-plan"    gridColumn="1 / 25"  gridRow="35 / 48"/>
-  <Element elementId="btn-submit"    gridColumn="1 / 7"   gridRow="48 / 51"/>
-  <Element elementId="btn-approve"   gridColumn="7 / 13"  gridRow="48 / 51"/>
-  <Element elementId="tbl-history"   gridColumn="1 / 25"  gridRow="51 / 65"/>
-  <Element elementId="it-log"        gridColumn="1 / 25"  gridRow="65 / 75"/>
-  <Element elementId="pvt-plan"      gridColumn="1 / 25"  gridRow="75 / 83"/>
-  <Element elementId="tbl-plan"      gridColumn="1 / 25"  gridRow="83 / 91"/>
+  <Container elementId="ctl-2" type="grid" gridColumn="1 / 25" gridRow="8 / 12" gridTemplateColumns="repeat(24, 1fr)" gridTemplateRows="auto">
+    <Element elementId="ctrl-capital" gridColumn="1 / 9"   gridRow="1 / 4"/>
+    <Element elementId="ctrl-fill"    gridColumn="9 / 17"  gridRow="1 / 4"/>
+    <Element elementId="ctrl-note"    gridColumn="17 / 25" gridRow="1 / 4"/>
+  </Container>
+  <Element elementId="kpi-deployed"  gridColumn="1 / 7"   gridRow="12 / 18"/>
+  <Element elementId="kpi-profit"    gridColumn="7 / 13"  gridRow="12 / 18"/>
+  <Element elementId="kpi-roi"       gridColumn="13 / 19" gridRow="12 / 18"/>
+  <Element elementId="kpi-left"      gridColumn="19 / 25" gridRow="12 / 18"/>
+  <Element elementId="it-plan"       gridColumn="1 / 17"  gridRow="18 / 36"/>
+  <Element elementId="chat-merch"    gridColumn="17 / 25" gridRow="18 / 36"/>
+  <Element elementId="chart-plan"    gridColumn="1 / 25"  gridRow="36 / 49"/>
+  <Element elementId="btn-submit"    gridColumn="1 / 7"   gridRow="49 / 52"/>
+  <Element elementId="btn-approve"   gridColumn="7 / 13"  gridRow="49 / 52"/>
+  <Element elementId="it-log"        gridColumn="1 / 25"  gridRow="52 / 66"/>
+  <Element elementId="pvt-plan"      gridColumn="1 / 25"  gridRow="66 / 74"/>
+  <Element elementId="tbl-plan"      gridColumn="1 / 25"  gridRow="74 / 82"/>
 </Page>"""
 
 # ================================================================= agents
@@ -525,7 +524,7 @@ AGENTS = [
      "Conservative 40%, Base 70%, Aggressive 100%. Share of 4h Limit above 100% is "
      "impossible and shows red. Capital available is a parameter; Capital left over "
      "going negative means the plan is not fundable. Submitting or approving writes a "
-     "row to the Trade Log with user, timestamp, scenario and the committed amounts. "
+     "row to the Ticket History with user, timestamp, scenario and the committed amounts. "
      "Be concrete about gp and about which row to change.",
    "greeting": {"mode": "static", "message":
      "Ask me to size the plan. Try 'Which row uses the most capital for the least "

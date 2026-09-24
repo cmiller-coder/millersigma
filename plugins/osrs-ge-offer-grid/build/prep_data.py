@@ -152,6 +152,8 @@ calc AS (
          WHEN insta_sell >=   100000 THEN 'White stack (100k+)'
          ELSE 'Yellow stack' END                                AS stack_tier,
     CASE WHEN members THEN 'Members' ELSE 'Free-to-play' END    AS access_tier,
+    CASE WHEN gross_margin - ge_tax > 0 THEN 'Clears tax'
+         ELSE 'Tax eats it' END                                 AS flip_works,
     CASE WHEN ge_tax >= gross_margin THEN 1 ELSE 0 END          AS tax_killed,
     CASE WHEN gross_margin - ge_tax > 0 THEN 1 ELSE 0 END       AS is_profitable,
     -- Second basis. The live tick is what you can transact on this second and
@@ -187,7 +189,7 @@ FROM calc
 (OUT / "market_layer.sql").write_text(sql)
 
 # --- summary for sanity + the plugin snapshot ---
-top = sorted(rows, key=lambda r: -(r["net"] * min(r["limit"] * 6, r["vol"])))[:24]
+top = sorted(rows, key=lambda r: -(r["net"] * min(r["limit"] * 6, r["vol"])))[:40]
 json.dump(top, open(OUT / "top_flips.json", "w"), indent=1)
 json.dump({"snapshot": snapshot, "count": len(rows)}, open(OUT / "meta.json", "w"))
 

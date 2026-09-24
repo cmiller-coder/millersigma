@@ -60,7 +60,28 @@ error — it fires when a *field* on a known kind is wrong, so it never means
 | every element | must appear in the layout XML or create fails |
 | valid `source.kind` | `warehouse-table, csv-table, metric-view, semantic-view, sql, table, data-model, code-output, join, union, transpose, unnest` |
 
-Known platform gaps hit: `chat.name` is dropped (chat panels render as "New chat"
-with no agent name), `clear-control` rejects every field shape tried, and
-`visibleAsSource` is data-model-only. Export is data-only — no server-side PNG/PDF
-render, so pixels must be checked in a browser.
+Also verified: a scatter/bar axis takes `format.scale.type:"log"` (**not**
+`"logarithmic"`, which fails masked), and conditional-format `style` survives while
+`format` does not.
+
+Known platform gaps hit:
+
+* **Plugin element DATA is never delivered.** `subscribeToElementColumns` fires and
+  returns the right column ids, but `subscribeToElementData` **and**
+  `subscribeToIncrementalElementData` both go uncalled indefinitely — with a config
+  that `config.get()` proves is correct, and regardless of whether the source
+  element is scrolled into view. It delivered exactly once across ~8 runs, so it is
+  not simply unimplemented; it is unreliable. The grid therefore runs on a captured
+  real-data snapshot, labelled with its capture time in the panel header.
+* `config.subscribe()` emits **once, early** — a handler registered after any real
+  work (even painting a fallback grid) never hears it. Register it before touching
+  the DOM.
+* `chat.name` is dropped, so chat panels render as "New chat" with no agent name.
+* `clear-control` rejects every field shape tried.
+* `visibleAsSource` is data-model-only.
+* Export is data-only — no server-side PNG/PDF render, so pixels must be checked in
+  a browser.
+* **A text element can be silently deleted by the UI.** Two `kind:"text"` elements
+  present through version 5 (the last API write) were gone in version 6, which no API
+  call made — the render path stripped them and persisted the removal as a new
+  version. Re-add and re-verify with a GET after opening a workbook in the UI.
