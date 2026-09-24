@@ -277,10 +277,21 @@
     });
   }
 
-  // Paint the captured snapshot straight away so the panel is never blank while
-  // the SDK scripts load; a live config.subscribe callback then replaces it.
+  // Paint the captured snapshot straight away so the panel is never blank.
   render(fromSnapshot(), false);
-  if (client) { client.config.subscribe(bind); }
+
+  // IMPORTANT: do NOT rely on client.config.subscribe() to deliver the initial
+  // config. It emits ONCE, early, and a handler registered after that emission
+  // never hears anything -- verified live: config.subscribe() gave no callback
+  // in 10s while config.get() already held the full config. Read it
+  // synchronously, then subscribe only to pick up later edits.
+  if (client) {
+    var cfg0 = null;
+    try { cfg0 = client.config.get(); } catch (e) {}
+    if (cfg0 && cfg0.source) bind(cfg0);
+    try { client.config.subscribe(function (cfg) { if (cfg && cfg.source) bind(cfg); }); }
+    catch (e) {}
+  }
 
   // No animation loop: a headless PNG export has to be able to reach idle.
   new ResizeObserver(function(){}).observe(document.getElementById('frame'));
