@@ -189,7 +189,9 @@
   }
   function row(k, v){ return '<div class="r"><span class="k">' + k + '</span><span>' + v + '</span></div>'; }
 
+  var painted = false;
   function render(rows, bound){
+    painted = true;
     grid.innerHTML = '';
     if (!rows.length){
       grid.innerHTML = '<div id="empty">No tradeable offers in the current selection.</div>';
@@ -277,21 +279,19 @@
     });
   }
 
-  // Paint the captured snapshot straight away so the panel is never blank.
-  render(fromSnapshot(), false);
-
-  // IMPORTANT: do NOT rely on client.config.subscribe() to deliver the initial
-  // config. It emits ONCE, early, and a handler registered after that emission
-  // never hears anything -- verified live: config.subscribe() gave no callback
-  // in 10s while config.get() already held the full config. Read it
-  // synchronously, then subscribe only to pick up later edits.
+  // ORDERING IS LOAD-BEARING, verified live against this org:
+  //  * config.subscribe() emits ONCE, early. Any real work done before
+  //    registering the handler (even just painting the fallback grid) loses
+  //    that emission, and then nothing ever binds.
+  //  * subscribeToElementData() only delivers when it is called from INSIDE the
+  //    config callback. Calling it later with the same id -- even with a
+  //    config.get() that demonstrably holds the right source -- never fires.
+  // So: register the config handler FIRST, before touching the DOM, and fall
+  // back to the captured snapshot only if nothing has painted shortly after.
   if (client) {
-    var cfg0 = null;
-    try { cfg0 = client.config.get(); } catch (e) {}
-    if (cfg0 && cfg0.source) bind(cfg0);
-    try { client.config.subscribe(function (cfg) { if (cfg && cfg.source) bind(cfg); }); }
-    catch (e) {}
+    try { client.config.subscribe(bind); } catch (e) {}
   }
+  setTimeout(function () { if (!painted) render(fromSnapshot(), false); }, 900);
 
   // No animation loop: a headless PNG export has to be able to reach idle.
   new ResizeObserver(function(){}).observe(document.getElementById('frame'));
