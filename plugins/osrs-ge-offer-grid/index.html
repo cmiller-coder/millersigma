@@ -277,8 +277,10 @@
     });
   }
 
+  // Paint the captured snapshot straight away so the panel is never blank while
+  // the SDK scripts load; a live config.subscribe callback then replaces it.
+  render(fromSnapshot(), false);
   if (client) { client.config.subscribe(bind); }
-  else        { render(fromSnapshot(), false); }
 
   // No animation loop: a headless PNG export has to be able to reach idle.
   new ResizeObserver(function(){}).observe(document.getElementById('frame'));
